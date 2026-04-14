@@ -202,7 +202,7 @@ defmodule Elixirbits.MixProject do
       "assets.setup": [
         "tailwind.install --if-missing",
         "esbuild.install --if-missing",
-        "ash_typescript.npm_install"
+        "ash_typescript.npm_install --bun"
       ],
       "assets.build": ["compile", "tailwind elixirbits", "esbuild elixirbits"],
       "assets.deploy": [

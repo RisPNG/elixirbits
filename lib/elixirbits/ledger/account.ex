@@ -9,6 +9,11 @@ defmodule Elixirbits.Ledger.Account do
     balance_resource Elixirbits.Ledger.Balance
   end
 
+  postgres do
+    table "ledger_accounts"
+    repo Elixirbits.Repo
+  end
+
   events do
     event_log Elixirbits.Events.Event
   end
@@ -17,11 +22,6 @@ defmodule Elixirbits.Ledger.Account do
     primary_key_type :uuid_v7
     change_tracking_mode :changes_only
     store_action_name? true
-  end
-
-  postgres do
-    table "ledger_accounts"
-    repo Elixirbits.Repo
   end
 
   actions do
