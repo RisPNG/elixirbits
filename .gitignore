@@ -273,8 +273,5 @@ vite.config.ts.timestamp-*
 !/priv/static/images/
 !/priv/static/favicon.ico
 !/priv/static/robots.txt
-CLAUDE.md
-.claude/
-AGENTS.md
 
 ## user-defined ##
