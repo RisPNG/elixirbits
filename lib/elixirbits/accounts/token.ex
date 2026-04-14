@@ -4,7 +4,11 @@ defmodule Elixirbits.Accounts.Token do
     domain: Elixirbits.Accounts,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshAuthentication.TokenResource]
+    extensions: [AshAuthentication.TokenResource, AshAdmin.Resource]
+
+  admin do
+    read_actions [:read, :expired]
+  end
 
   postgres do
     table "tokens"
