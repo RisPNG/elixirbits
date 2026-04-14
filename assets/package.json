@@ -3,12 +3,9 @@
     "phoenix": "file:../deps/phoenix",
     "phoenix_html": "file:../deps/phoenix_html",
     "phoenix_live_view": "file:../deps/phoenix_live_view",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "topbar": "^3.0.0"
-  },
-  "devDependencies": {
-    "@types/react": "^19.1.13",
-    "@types/react-dom": "^19.1.9"
+    "topbar": ">=3.0.0",
+    "@chenglou/pretext": ">=0.0.5",
+    "chart.js": ">=4.5.1",
+    "web-haptics": ">=0.0.6"
   }
 }
