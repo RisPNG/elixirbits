@@ -19,7 +19,8 @@ defmodule Elixirbits.Repo.Migrations.AddAuditInfra do
             name: "users_versions_version_source_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :changes, :map
 
@@ -54,7 +55,8 @@ defmodule Elixirbits.Repo.Migrations.AddAuditInfra do
             name: "ledger_transfers_versions_version_source_id_fkey",
             type: :binary,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :changes, :map
 
@@ -78,7 +80,8 @@ defmodule Elixirbits.Repo.Migrations.AddAuditInfra do
             name: "ledger_accounts_versions_version_source_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :changes, :map
 
@@ -116,7 +119,8 @@ defmodule Elixirbits.Repo.Migrations.AddAuditInfra do
             name: "api_keys_versions_version_source_id_fkey",
             type: :uuid,
             prefix: "public"
-          ), null: false
+          ),
+          null: false
 
       add :changes, :map
 

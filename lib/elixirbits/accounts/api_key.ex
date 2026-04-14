@@ -6,6 +6,11 @@ defmodule Elixirbits.Accounts.ApiKey do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events, AshPaperTrail.Resource]
 
+  postgres do
+    table "api_keys"
+    repo Elixirbits.Repo
+  end
+
   events do
     event_log Elixirbits.Events.Event
   end
@@ -15,11 +20,6 @@ defmodule Elixirbits.Accounts.ApiKey do
     change_tracking_mode :changes_only
     store_action_name? true
     ignore_attributes [:api_key_hash]
-  end
-
-  postgres do
-    table "api_keys"
-    repo Elixirbits.Repo
   end
 
   actions do

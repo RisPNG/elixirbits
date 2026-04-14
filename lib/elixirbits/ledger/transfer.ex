@@ -4,16 +4,6 @@ defmodule Elixirbits.Ledger.Transfer do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshDoubleEntry.Transfer, AshEvents.Events, AshPaperTrail.Resource]
 
-  events do
-    event_log Elixirbits.Events.Event
-  end
-
-  paper_trail do
-    primary_key_type :uuid_v7
-    change_tracking_mode :changes_only
-    store_action_name? true
-  end
-
   transfer do
     account_resource Elixirbits.Ledger.Account
     balance_resource Elixirbits.Ledger.Balance
@@ -22,6 +12,16 @@ defmodule Elixirbits.Ledger.Transfer do
   postgres do
     table "ledger_transfers"
     repo Elixirbits.Repo
+  end
+
+  events do
+    event_log Elixirbits.Events.Event
+  end
+
+  paper_trail do
+    primary_key_type :uuid_v7
+    change_tracking_mode :changes_only
+    store_action_name? true
   end
 
   actions do
