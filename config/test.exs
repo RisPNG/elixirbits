@@ -1,4 +1,7 @@
 import Config
+config :elixirbits, token_signing_secret: "8YuYSkLBTQBCx4OouCMyG3OqM+AHy0lz"
+config :bcrypt_elixir, log_rounds: 1
+config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 
 # Configure your database
 #
