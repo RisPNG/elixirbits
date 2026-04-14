@@ -4,7 +4,12 @@ defmodule Elixirbits.Accounts.User do
     domain: Elixirbits.Accounts,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshAuthentication]
+    extensions: [
+      AshAuthentication,
+      AshEvents.Events,
+      AshPaperTrail.Resource,
+      AshArchival.Resource
+    ]
 
   authentication do
     add_ons do
@@ -64,6 +69,26 @@ defmodule Elixirbits.Accounts.User do
   postgres do
     table "users"
     repo Elixirbits.Repo
+    base_filter_sql "(archived_at IS NULL)"
+  end
+
+  resource do
+    base_filter expr(is_nil(archived_at))
+  end
+
+  events do
+    event_log Elixirbits.Events.Event
+  end
+
+  paper_trail do
+    primary_key_type :uuid_v7
+    change_tracking_mode :changes_only
+    store_action_name? true
+    ignore_attributes [:hashed_password, :archived_at]
+  end
+
+  archive do
+    base_filter? true
   end
 
   actions do

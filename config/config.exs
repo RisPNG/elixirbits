@@ -94,7 +94,7 @@ config :spark,
 config :elixirbits,
   ecto_repos: [Elixirbits.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Elixirbits.Ledger, Elixirbits.Accounts],
+  ash_domains: [Elixirbits.Ledger, Elixirbits.Accounts, Elixirbits.Events],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
 # Configure the endpoint

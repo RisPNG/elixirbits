@@ -4,6 +4,8 @@
     :ash_typescript,
     :ash_double_entry,
     :ash_events,
+    :ash_paper_trail,
+    :ash_archival,
     :ash_state_machine,
     :ash_admin,
     :ash_authentication_phoenix,

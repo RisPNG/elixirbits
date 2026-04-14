@@ -2,7 +2,17 @@ defmodule Elixirbits.Ledger.Transfer do
   use Ash.Resource,
     domain: Elixir.Elixirbits.Ledger,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshDoubleEntry.Transfer]
+    extensions: [AshDoubleEntry.Transfer, AshEvents.Events, AshPaperTrail.Resource]
+
+  events do
+    event_log Elixirbits.Events.Event
+  end
+
+  paper_trail do
+    primary_key_type :uuid_v7
+    change_tracking_mode :changes_only
+    store_action_name? true
+  end
 
   transfer do
     account_resource Elixirbits.Ledger.Account

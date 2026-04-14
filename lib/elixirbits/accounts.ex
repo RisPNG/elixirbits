@@ -1,8 +1,14 @@
 defmodule Elixirbits.Accounts do
-  use Ash.Domain, otp_app: :elixirbits, extensions: [AshAdmin.Domain]
+  use Ash.Domain,
+    otp_app: :elixirbits,
+    extensions: [AshAdmin.Domain, AshPaperTrail.Domain]
 
   admin do
     show? true
+  end
+
+  paper_trail do
+    include_versions? true
   end
 
   resources do

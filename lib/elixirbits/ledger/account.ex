@@ -2,17 +2,21 @@ defmodule Elixirbits.Ledger.Account do
   use Ash.Resource,
     domain: Elixir.Elixirbits.Ledger,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshDoubleEntry.Account]
+    extensions: [AshDoubleEntry.Account, AshEvents.Events, AshPaperTrail.Resource]
 
   account do
-    # configure the other resources it will interact with
     transfer_resource Elixirbits.Ledger.Transfer
     balance_resource Elixirbits.Ledger.Balance
   end
 
-  account do
-    transfer_resource Elixirbits.Ledger.Transfer
-    balance_resource Elixirbits.Ledger.Balance
+  events do
+    event_log Elixirbits.Events.Event
+  end
+
+  paper_trail do
+    primary_key_type :uuid_v7
+    change_tracking_mode :changes_only
+    store_action_name? true
   end
 
   postgres do
