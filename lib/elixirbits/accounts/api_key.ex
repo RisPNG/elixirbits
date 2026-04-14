@@ -3,7 +3,19 @@ defmodule Elixirbits.Accounts.ApiKey do
     otp_app: :elixirbits,
     domain: Elixirbits.Accounts,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshEvents.Events, AshPaperTrail.Resource]
+
+  events do
+    event_log Elixirbits.Events.Event
+  end
+
+  paper_trail do
+    primary_key_type :uuid_v7
+    change_tracking_mode :changes_only
+    store_action_name? true
+    ignore_attributes [:api_key_hash]
+  end
 
   postgres do
     table "api_keys"
