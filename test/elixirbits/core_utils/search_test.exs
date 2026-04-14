@@ -1,6 +1,8 @@
 defmodule Elixirbits.CoreUtils.SearchTest do
   use Elixirbits.DataCase, async: true
 
+  alias Elixirbits.CoreUtils
+  alias Elixirbits.CoreUtils.Resource, as: CoreResource
   alias Elixirbits.CoreUtils.Search
   alias Elixirbits.Repo
   alias Elixirbits.SearchTest.Category
@@ -744,40 +746,42 @@ defmodule Elixirbits.CoreUtils.SearchTest do
       fresh = Repo.get(Category, category.id)
       refute Ash.Resource.loaded?(fresh, :records)
 
-      skipped = Search.ensure_loaded_associations(fresh, [:other])
+      skipped = CoreResource.ensure_loaded_associations(fresh, [:other])
       refute Ash.Resource.loaded?(skipped, :records)
 
-      loaded = Search.ensure_loaded_associations(fresh, [:records])
+      loaded = CoreResource.ensure_loaded_associations(fresh, [:records])
       assert Ash.Resource.loaded?(loaded, :records)
 
-      loaded_default = Search.ensure_loaded_associations(fresh)
+      loaded_default = CoreResource.ensure_loaded_associations(fresh)
       assert Ash.Resource.loaded?(loaded_default, :records)
     end
   end
 
   describe "utility helpers" do
     test "detect_schema_field? reflects resource metadata" do
-      assert Search.detect_schema_field?(Record, :name) == :string
-      assert Search.detect_schema_field?(Record, :amount) == :decimal
-      assert Search.detect_schema_field?(Record, :tags) == {:array, :string}
+      assert CoreResource.detect_schema_field?(Record, :name) == :string
+      assert CoreResource.detect_schema_field?(Record, :amount) == :decimal
+      assert CoreResource.detect_schema_field?(Record, :tags) == {:array, :string}
     end
 
     test "convert_value_to_field handles date and datetime conversions" do
-      assert Search.convert_value_to_field(Record, :due_date, "2023-02-01") == ~D[2023-02-01]
-      assert Search.convert_value_to_field(Record, :due_date, "") == nil
+      assert CoreResource.convert_value_to_field(Record, :due_date, "2023-02-01") ==
+               ~D[2023-02-01]
+
+      assert CoreResource.convert_value_to_field(Record, :due_date, "") == nil
 
       naive = ~N[2023-02-01 10:30:00]
 
       utc_from_naive =
-        Search.convert_value_to_field(Record, :shipped_at, naive, "Asia/Kuala_Lumpur")
+        CoreResource.convert_value_to_field(Record, :shipped_at, naive, "Asia/Kuala_Lumpur")
 
       assert utc_from_naive.time_zone == "Etc/UTC"
 
       existing = ~U[2023-02-01 05:00:00Z]
-      assert Search.convert_value_to_field(Record, :shipped_at, existing) == existing
+      assert CoreResource.convert_value_to_field(Record, :shipped_at, existing) == existing
 
       parsed =
-        Search.convert_value_to_field(
+        CoreResource.convert_value_to_field(
           Record,
           :shipped_at,
           "2023-02-01T05:00:00",
@@ -786,31 +790,31 @@ defmodule Elixirbits.CoreUtils.SearchTest do
 
       assert parsed.time_zone == "Etc/UTC"
 
-      assert Search.convert_value_to_field(Record, :published_at, "2023-02-01T05:00:00") ==
+      assert CoreResource.convert_value_to_field(Record, :published_at, "2023-02-01T05:00:00") ==
                ~N[2023-02-01 05:00:00]
 
-      assert Search.convert_value_to_field(Record, :opens_at, "11:59:00") == ~T[11:59:00]
+      assert CoreResource.convert_value_to_field(Record, :opens_at, "11:59:00") == ~T[11:59:00]
     end
 
     test "convert_value_to_field handles numeric, decimal, boolean, text, and list types" do
-      assert Search.convert_value_to_field(Record, :count, "7") == 7
-      assert_in_delta Search.convert_value_to_field(Record, :rating, "4.75"), 4.75, 0.0001
+      assert CoreResource.convert_value_to_field(Record, :count, "7") == 7
+      assert_in_delta CoreResource.convert_value_to_field(Record, :rating, "4.75"), 4.75, 0.0001
 
-      assert Search.convert_value_to_field(Record, :amount, "15.10") == Decimal.new("15.10")
-      assert Search.convert_value_to_field(Record, :amount, 22.5) == Decimal.new("22.5")
-      assert Search.convert_value_to_field(Record, :active, true)
-      refute Search.convert_value_to_field(Record, :active, "false")
-      assert Search.convert_value_to_field(Record, :active, "maybe") == nil
+      assert CoreResource.convert_value_to_field(Record, :amount, "15.10") == Decimal.new("15.10")
+      assert CoreResource.convert_value_to_field(Record, :amount, 22.5) == Decimal.new("22.5")
+      assert CoreResource.convert_value_to_field(Record, :active, true)
+      refute CoreResource.convert_value_to_field(Record, :active, "false")
+      assert CoreResource.convert_value_to_field(Record, :active, "maybe") == nil
 
-      assert Search.convert_value_to_field(Record, :name, 123) == "123"
+      assert CoreResource.convert_value_to_field(Record, :name, 123) == "123"
       binary = <<1, 2>>
-      assert Search.convert_value_to_field(Record, :code, binary) == binary
-      assert Search.convert_value_to_field(Record, :code, 123) == 123
+      assert CoreResource.convert_value_to_field(Record, :code, binary) == binary
+      assert CoreResource.convert_value_to_field(Record, :code, 123) == 123
       map_value = %{"k" => "v"}
-      assert Search.convert_value_to_field(Record, :meta, map_value) == map_value
+      assert CoreResource.convert_value_to_field(Record, :meta, map_value) == map_value
 
       list_value = ["a", "b"]
-      assert Search.convert_value_to_field(Record, :tags, list_value) == list_value
+      assert CoreResource.convert_value_to_field(Record, :tags, list_value) == list_value
     end
 
     test "construct_date_map handles atom and string keys" do
@@ -841,9 +845,9 @@ defmodule Elixirbits.CoreUtils.SearchTest do
     test "extract_square_bracket_from_string picks indexed segment" do
       id = "ID[alpha][beta][]"
 
-      assert Search.extract_square_bracket_from_string(id, 0) == "alpha"
-      assert Search.extract_square_bracket_from_string(id, 1) == "beta"
-      assert Search.extract_square_bracket_from_string(id, 2) == nil
+      assert CoreUtils.extract_square_bracket_from_string(id, 0) == "alpha"
+      assert CoreUtils.extract_square_bracket_from_string(id, 1) == "beta"
+      assert CoreUtils.extract_square_bracket_from_string(id, 2) == nil
     end
   end
 end
