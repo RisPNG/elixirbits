@@ -15,5 +15,6 @@ defmodule Elixirbits.Accounts do
     resource Elixirbits.Accounts.Token
     resource Elixirbits.Accounts.User
     resource Elixirbits.Accounts.ApiKey
+    resource Elixirbits.Accounts.Address
   end
 end

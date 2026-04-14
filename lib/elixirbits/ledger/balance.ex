@@ -44,6 +44,8 @@ defmodule Elixirbits.Ledger.Balance do
     attribute :balance, :money do
       constraints storage_type: :money_with_currency
     end
+
+    timestamps()
   end
 
   relationships do
