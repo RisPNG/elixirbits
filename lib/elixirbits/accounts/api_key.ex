@@ -51,6 +51,8 @@ defmodule Elixirbits.Accounts.ApiKey do
     attribute :expires_at, :utc_datetime_usec do
       allow_nil? false
     end
+
+    timestamps()
   end
 
   relationships do

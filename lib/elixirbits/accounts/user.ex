@@ -322,11 +322,36 @@ defmodule Elixirbits.Accounts.User do
     end
 
     attribute :confirmed_at, :utc_datetime_usec
+
+    attribute :roles, {:array, :string} do
+      allow_nil? false
+      default []
+    end
+
+    attribute :username, :string
+    attribute :display_name, :string
+    attribute :display_pic_url, :string
+    attribute :display_pic_name, :string
+    attribute :first_name, :string
+    attribute :middle_name, :string
+    attribute :last_name, :string
+    attribute :tel_no, :string
+    attribute :weight_kg, :decimal
+    attribute :height_cm, :decimal
+    attribute :dob, :utc_datetime
+    attribute :sex, Elixirbits.Types.UserSex
+    attribute :locale, :string
+
+    timestamps()
   end
 
   relationships do
     has_many :valid_api_keys, Elixirbits.Accounts.ApiKey do
       filter expr(valid)
+    end
+
+    has_many :addresses, Elixirbits.Accounts.Address do
+      destination_attribute :user_id
     end
   end
 
