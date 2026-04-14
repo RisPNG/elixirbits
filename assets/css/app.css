@@ -93,6 +93,19 @@
   --noise: 0;
 }
 
+/* Non-daisyUI tokens: brand + decorative + topbar */
+:root {
+  --color-brand-phoenix: #fd4f00;
+  --color-decor-1: #ee7868;
+  --color-decor-2: #ff9f92;
+  --color-decor-3: #fa8372;
+  --color-decor-4: #e96856;
+  --color-decor-5: #c42652;
+  --color-decor-6: #a41c42;
+  --color-topbar: #29d;
+  --color-topbar-shadow: rgba(0, 0, 0, 0.3);
+}
+
 /* Add variants based on LiveView classes */
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);

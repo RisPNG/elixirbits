@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@chenglou/pretext": "^0.0.5",
+    "chart.js": "^4.5.1",
+    "web-haptics": "^0.0.6"
+  }
+}
