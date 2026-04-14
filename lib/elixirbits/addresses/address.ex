@@ -1,4 +1,4 @@
-defmodule Elixirbits.Accounts.Address do
+defmodule Elixirbits.Address do
   use Ash.Resource,
     domain: Elixirbits.Accounts,
     data_layer: AshPostgres.DataLayer,
@@ -79,7 +79,7 @@ defmodule Elixirbits.Accounts.Address do
     attribute :state, :string
     attribute :latitudde, :decimal
     attribute :longitude, :decimal
-    attribute :label, Elixirbits.Types.AddressLabel
+    attribute :label, Elixirbits.CoreUtils.EnumTypes.AddressLabel
     attribute :other_label, :string
 
     timestamps()
