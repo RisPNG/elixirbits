@@ -83,7 +83,7 @@ defmodule Elixirbits.AccessControl.Sitenav do
     attribute :url, :string
     attribute :sequence, :integer
 
-    attribute :state, Elixirbits.Types.SitenavState do
+    attribute :state, Elixirbits.CoreUtils.EnumTypes.SitenavState do
       allow_nil? false
       default :ENABLED
     end

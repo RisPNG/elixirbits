@@ -339,7 +339,7 @@ defmodule Elixirbits.Accounts.User do
     attribute :weight_kg, :decimal
     attribute :height_cm, :decimal
     attribute :dob, :utc_datetime
-    attribute :sex, Elixirbits.Types.UserSex
+    attribute :sex, Elixirbits.CoreUtils.EnumTypes.UserSex
     attribute :locale, :string
 
     timestamps()
@@ -350,7 +350,7 @@ defmodule Elixirbits.Accounts.User do
       filter expr(valid)
     end
 
-    has_many :addresses, Elixirbits.Accounts.Address do
+    has_many :addresses, Elixirbits.Address do
       destination_attribute :user_id
     end
   end
