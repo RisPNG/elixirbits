@@ -15,7 +15,8 @@ defmodule Elixirbits.Application do
       # Start a worker by calling: Elixirbits.Worker.start_link(arg)
       # {Elixirbits.Worker, arg},
       # Start to serve requests, typically the last entry
-      ElixirbitsWeb.Endpoint
+      ElixirbitsWeb.Endpoint,
+      {AshAuthentication.Supervisor, [otp_app: :elixirbits]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
