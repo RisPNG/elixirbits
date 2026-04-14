@@ -273,5 +273,6 @@ vite.config.ts.timestamp-*
 !/priv/static/images/
 !/priv/static/favicon.ico
 !/priv/static/robots.txt
+/priv/plts
 
 ## user-defined ##
