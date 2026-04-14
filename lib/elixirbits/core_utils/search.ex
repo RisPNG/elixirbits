@@ -13,6 +13,7 @@ defmodule Elixirbits.CoreUtils.Search do
   alias Ash.Query.Operator.LessThan
   alias Ash.Query.Operator.LessThanOrEqual
   alias Ash.Query.Ref
+  alias Elixirbits.CoreUtils.Resource
 
   @sensitive_fields [
     "hashed_password",
@@ -77,51 +78,6 @@ defmodule Elixirbits.CoreUtils.Search do
     execute_query(query, pagination)
   end
 
-  def detect_schema_field?(resource, field) do
-    case Ash.Resource.Info.field(resource, field) do
-      nil -> nil
-      field_info -> normalize_type(field_info.type)
-    end
-  end
-
-  def convert_value_to_field(resource, field, value, user_timezone \\ "Etc/UTC") do
-    convert_path_value_to_field(resource, [], field, value, user_timezone)
-  end
-
-  def ensure_loaded_associations(data, preloads \\ true)
-
-  def ensure_loaded_associations(nil, _preloads), do: nil
-
-  def ensure_loaded_associations(%Offset{results: results} = page, preloads) do
-    %{page | results: ensure_loaded_associations(results, preloads)}
-  end
-
-  def ensure_loaded_associations(%Keyset{results: results} = page, preloads) do
-    %{page | results: ensure_loaded_associations(results, preloads)}
-  end
-
-  def ensure_loaded_associations([], _preloads), do: []
-
-  def ensure_loaded_associations([record | _] = records, preloads) do
-    loads = normalize_relationship_loads(record.__struct__, preloads)
-
-    if loads == [] do
-      records
-    else
-      Ash.load!(records, loads, domain: Ash.Resource.Info.domain(record.__struct__))
-    end
-  end
-
-  def ensure_loaded_associations(%resource{} = record, preloads) do
-    loads = normalize_relationship_loads(resource, preloads)
-
-    if loads == [] do
-      record
-    else
-      Ash.load!(record, loads, domain: Ash.Resource.Info.domain(resource))
-    end
-  end
-
   def construct_date_map(from_date, to_date, key) when is_binary(key) or is_atom(key) do
     cond do
       from_date not in ["", nil] and to_date not in ["", nil] ->
@@ -151,16 +107,6 @@ defmodule Elixirbits.CoreUtils.Search do
 
       true ->
         []
-    end
-  end
-
-  def extract_square_bracket_from_string(id, at) do
-    ~r/\[([^\]]*)\]/
-    |> Regex.scan(id, capture: :all_but_first)
-    |> Enum.at(at)
-    |> case do
-      [value] when value not in ["", nil] -> value
-      _ -> nil
     end
   end
 
@@ -538,7 +484,7 @@ defmodule Elixirbits.CoreUtils.Search do
          resource,
          path,
          field,
-         field_info,
+         _field_info,
          values,
          user_timezone,
          combinator
@@ -547,7 +493,9 @@ defmodule Elixirbits.CoreUtils.Search do
     |> Enum.reject(&non_value?/1)
     |> Enum.map(fn value ->
       inner_value =
-        convert_array_item(field_info.type, field_info.constraints, value, user_timezone)
+        resource
+        |> convert_path_value_to_field(path, field, value, user_timezone)
+        |> List.first()
 
       parse_statement_expression(resource, wrap_path(path, field, has: inner_value))
     end)
@@ -703,7 +651,7 @@ defmodule Elixirbits.CoreUtils.Search do
     {raw_fields, thresholds} =
       Enum.split_while(raw_values, fn item ->
         is_atom(item) or
-          (is_binary(item) and not is_nil(Ash.Resource.Info.field(resource, item)))
+          (is_binary(item) and not is_nil(Resource.detect_schema_field?(resource, item)))
       end)
 
     fields =
@@ -872,210 +820,6 @@ defmodule Elixirbits.CoreUtils.Search do
     end
   end
 
-  defp field_info!(resource, path, field) do
-    target_resource = related_resource!(resource, path)
-
-    case Ash.Resource.Info.field(target_resource, field) do
-      nil ->
-        raise "Field #{inspect(field)} not found on resource #{inspect(target_resource)}"
-
-      field_info ->
-        field_info
-    end
-  end
-
-  defp related_resource!(resource, []), do: resource
-
-  defp related_resource!(resource, [relationship | rest]) do
-    resource
-    |> relationship_info!(relationship)
-    |> Map.fetch!(:destination)
-    |> related_resource!(rest)
-  end
-
-  defp convert_path_value_to_field(resource, path, field, value, user_timezone) do
-    field_info = field_info!(resource, path, field)
-    convert_type_value(field_info.type, field_info.constraints, value, user_timezone)
-  end
-
-  defp convert_type_value(_type, _constraints, value, _user_timezone) when value in ["", nil] do
-    nil
-  end
-
-  defp convert_type_value({:array, type}, constraints, value, user_timezone)
-       when is_list(value) do
-    value
-    |> Enum.reject(&non_value?/1)
-    |> Enum.map(fn item ->
-      convert_type_value(type, item_constraints(constraints), item, user_timezone)
-    end)
-  end
-
-  defp convert_type_value({:array, type}, constraints, value, user_timezone) do
-    [convert_type_value(type, item_constraints(constraints), value, user_timezone)]
-  end
-
-  defp convert_type_value(type, constraints, value, user_timezone) do
-    normalized_type = normalize_type(type)
-
-    cond do
-      normalized_type in [:utc_datetime, :utc_datetime_usec] ->
-        convert_datetime_value(value, user_timezone, normalized_type)
-
-      normalized_type in [:naive_datetime, :naive_datetime_usec] ->
-        convert_naive_datetime_value(value)
-
-      normalized_type == :date and match?(%Date{}, value) ->
-        value
-
-      normalized_type == :date and is_binary(value) ->
-        case Date.from_iso8601(value) do
-          {:ok, date} -> date
-          _ -> nil
-        end
-
-      normalized_type == :time and match?(%Time{}, value) ->
-        value
-
-      normalized_type == :time and is_binary(value) ->
-        case Time.from_iso8601(value) do
-          {:ok, time} -> time
-          _ -> nil
-        end
-
-      normalized_type in @text_types ->
-        case cast_with_ash(type, constraints, value) do
-          {:ok, casted} -> casted
-          _ -> if(is_nil(value), do: nil, else: to_string(value))
-        end
-
-      normalized_type == :binary ->
-        value
-
-      normalized_type == :map ->
-        value
-
-      true ->
-        case cast_with_ash(type, constraints, value) do
-          {:ok, casted} ->
-            casted
-
-          _ when normalized_type in [:boolean, :integer, :float, :decimal, :date, :time] ->
-            nil
-
-          _ ->
-            value
-        end
-    end
-  end
-
-  defp cast_with_ash(type, constraints, value) do
-    Ash.Type.cast_input(type, value, constraints || [])
-  end
-
-  defp convert_datetime_value(%DateTime{} = value, _user_timezone, _type) do
-    DateTime.shift_zone!(value, "Etc/UTC")
-  end
-
-  defp convert_datetime_value(%NaiveDateTime{} = value, user_timezone, _type) do
-    value
-    |> DateTime.from_naive!(user_timezone)
-    |> DateTime.shift_zone!("Etc/UTC")
-  end
-
-  defp convert_datetime_value(%Date{} = value, user_timezone, type) do
-    value
-    |> DateTime.new!(~T[00:00:00], user_timezone)
-    |> normalize_datetime_precision(type)
-    |> DateTime.shift_zone!("Etc/UTC")
-  end
-
-  defp convert_datetime_value(value, user_timezone, type) when is_binary(value) do
-    cond do
-      date_only_string?(value) ->
-        value
-        |> Date.from_iso8601!()
-        |> convert_datetime_value(user_timezone, type)
-
-      true ->
-        case DateTime.from_iso8601(value) do
-          {:ok, datetime, _offset} ->
-            DateTime.shift_zone!(datetime, "Etc/UTC")
-
-          _ ->
-            case NaiveDateTime.from_iso8601(value) do
-              {:ok, naive_datetime} ->
-                naive_datetime
-                |> DateTime.from_naive!(user_timezone)
-                |> normalize_datetime_precision(type)
-                |> DateTime.shift_zone!("Etc/UTC")
-
-              _ ->
-                nil
-            end
-        end
-    end
-  end
-
-  defp convert_datetime_value(_value, _user_timezone, _type), do: nil
-
-  defp convert_naive_datetime_value(%NaiveDateTime{} = value), do: value
-  defp convert_naive_datetime_value(%DateTime{} = value), do: DateTime.to_naive(value)
-  defp convert_naive_datetime_value(%Date{} = value), do: NaiveDateTime.new!(value, ~T[00:00:00])
-
-  defp convert_naive_datetime_value(value) when is_binary(value) do
-    cond do
-      date_only_string?(value) ->
-        value
-        |> Date.from_iso8601!()
-        |> convert_naive_datetime_value()
-
-      true ->
-        case NaiveDateTime.from_iso8601(value) do
-          {:ok, naive_datetime} ->
-            naive_datetime
-
-          _ ->
-            case DateTime.from_iso8601(value) do
-              {:ok, datetime, _offset} -> DateTime.to_naive(datetime)
-              _ -> nil
-            end
-        end
-    end
-  end
-
-  defp convert_naive_datetime_value(_value), do: nil
-
-  defp normalize_datetime_precision(%DateTime{} = value, :utc_datetime_usec), do: value
-
-  defp normalize_datetime_precision(%DateTime{} = value, _type) do
-    %{value | microsecond: {0, 0}}
-  end
-
-  defp range_end_value(resource, path, field, value, user_timezone) do
-    field_info = field_info!(resource, path, field)
-
-    converted_value =
-      convert_type_value(field_info.type, field_info.constraints, value, user_timezone)
-
-    normalized_type = normalize_type(field_info.type)
-
-    cond do
-      normalized_type in [:utc_datetime, :utc_datetime_usec] and date_only?(value) and
-          not is_nil(converted_value) ->
-        converted_value
-        |> DateTime.add(86_399, :second)
-        |> normalize_datetime_precision(normalized_type)
-
-      normalized_type in [:naive_datetime, :naive_datetime_usec] and date_only?(value) and
-          not is_nil(converted_value) ->
-        NaiveDateTime.add(converted_value, 86_399, :second)
-
-      true ->
-        converted_value
-    end
-  end
-
   defp normalize_relationship_loads(resource, true) do
     Enum.map(Ash.Resource.Info.relationships(resource), & &1.name)
   end
@@ -1098,6 +842,127 @@ defmodule Elixirbits.CoreUtils.Search do
       nil -> []
       normalized -> [normalized]
     end
+  end
+
+  defp normalize_relationship_load(resource, {relationship, nested}) do
+    case Ash.Resource.Info.relationship(resource, relationship) do
+      nil ->
+        nil
+
+      relationship_info ->
+        normalized_nested = normalize_relationship_loads(relationship_info.destination, nested)
+
+        if normalized_nested == [] do
+          relationship_info.name
+        else
+          {relationship_info.name, normalized_nested}
+        end
+    end
+  end
+
+  defp normalize_relationship_load(resource, relationship) do
+    case Ash.Resource.Info.relationship(resource, relationship) do
+      nil -> nil
+      relationship_info -> relationship_info.name
+    end
+  end
+
+  defp normalize_relationship_path!(resource, path) do
+    normalize_relationship_path(resource, path, [])
+  end
+
+  defp normalize_relationship_path(_resource, [], normalized_path),
+    do: Enum.reverse(normalized_path)
+
+  defp normalize_relationship_path(resource, [relationship | rest], normalized_path) do
+    relationship_info = relationship_info!(resource, relationship)
+
+    normalize_relationship_path(
+      relationship_info.destination,
+      rest,
+      [relationship_info.name | normalized_path]
+    )
+  end
+
+  defp field_info!(resource, path, field) do
+    target_resource = related_resource!(resource, path)
+
+    case Ash.Resource.Info.field(target_resource, field) do
+      nil ->
+        raise "Field #{inspect(field)} not found on resource #{inspect(target_resource)}"
+
+      field_info ->
+        field_info
+    end
+  end
+
+  defp related_resource!(resource, []), do: resource
+
+  defp related_resource!(resource, [relationship | rest]) do
+    resource
+    |> relationship_info!(relationship)
+    |> Map.fetch!(:destination)
+    |> related_resource!(rest)
+  end
+
+  defp relationship_info!(resource, relationship) do
+    case Ash.Resource.Info.relationship(resource, relationship) do
+      nil ->
+        raise "Relationship #{inspect(relationship)} not found on resource #{inspect(resource)}"
+
+      relationship_info ->
+        relationship_info
+    end
+  end
+
+  defp convert_path_value_to_field(resource, path, field, value, user_timezone) do
+    target_resource = related_resource!(resource, path)
+    Resource.convert_value_to_field(target_resource, field, value, user_timezone)
+  end
+
+  defp range_end_value(resource, path, field, value, user_timezone) do
+    field_info = field_info!(resource, path, field)
+
+    converted_value = convert_path_value_to_field(resource, path, field, value, user_timezone)
+    normalized_type = normalize_type(field_info.type)
+
+    cond do
+      normalized_type in [:utc_datetime, :utc_datetime_usec] and date_only?(value) and
+          not is_nil(converted_value) ->
+        converted_value
+        |> DateTime.add(86_399, :second)
+        |> normalize_datetime_precision(normalized_type)
+
+      normalized_type in [:naive_datetime, :naive_datetime_usec] and date_only?(value) and
+          not is_nil(converted_value) ->
+        NaiveDateTime.add(converted_value, 86_399, :second)
+
+      true ->
+        converted_value
+    end
+  end
+
+  defp normalize_datetime_precision(%DateTime{} = value, :utc_datetime_usec), do: value
+
+  defp normalize_datetime_precision(%DateTime{} = value, _type) do
+    %{value | microsecond: {0, 0}}
+  end
+
+  defp normalize_type({:array, type}), do: {:array, normalize_type(type)}
+
+  defp normalize_type(type) do
+    case Enum.find(Ash.Type.short_names(), &(elem(&1, 1) == type)) do
+      {short_name, _module} -> short_name
+      nil -> type
+    end
+  end
+
+  defp date_only?(%Date{}), do: true
+  defp date_only?(value) when is_binary(value), do: date_only_string?(value)
+  defp date_only?(_value), do: false
+
+  defp date_only_string?(value) do
+    String.match?(value, ~r/^\d{4}-\d{2}-\d{2}$/)
   end
 
   defp normalize_order_by(resource, order_by, default_method) do
@@ -1180,68 +1045,6 @@ defmodule Elixirbits.CoreUtils.Search do
     end
   end
 
-  defp item_constraints(constraints) do
-    Keyword.get(constraints || [], :items, [])
-  end
-
-  defp normalize_relationship_path!(resource, path) do
-    normalize_relationship_path(resource, path, [])
-  end
-
-  defp normalize_relationship_path(_resource, [], normalized_path),
-    do: Enum.reverse(normalized_path)
-
-  defp normalize_relationship_path(resource, [relationship | rest], normalized_path) do
-    relationship_info = relationship_info!(resource, relationship)
-
-    normalize_relationship_path(
-      relationship_info.destination,
-      rest,
-      [relationship_info.name | normalized_path]
-    )
-  end
-
-  defp relationship_info!(resource, relationship) do
-    case Ash.Resource.Info.relationship(resource, relationship) do
-      nil ->
-        raise "Relationship #{inspect(relationship)} not found on resource #{inspect(resource)}"
-
-      relationship_info ->
-        relationship_info
-    end
-  end
-
-  defp normalize_relationship_load(resource, {relationship, nested}) do
-    case Ash.Resource.Info.relationship(resource, relationship) do
-      nil ->
-        nil
-
-      relationship_info ->
-        normalized_nested = normalize_relationship_loads(relationship_info.destination, nested)
-
-        if normalized_nested == [] do
-          relationship_info.name
-        else
-          {relationship_info.name, normalized_nested}
-        end
-    end
-  end
-
-  defp normalize_relationship_load(resource, relationship) do
-    case Ash.Resource.Info.relationship(resource, relationship) do
-      nil -> nil
-      relationship_info -> relationship_info.name
-    end
-  end
-
-  defp convert_array_item({:array, type}, constraints, value, user_timezone) do
-    convert_type_value(type, item_constraints(constraints), value, user_timezone)
-  end
-
-  defp convert_array_item(type, constraints, value, user_timezone) do
-    convert_type_value(type, constraints, value, user_timezone)
-  end
-
   defp array_type?({:array, _type}), do: true
   defp array_type?(_type), do: false
 
@@ -1249,23 +1052,6 @@ defmodule Elixirbits.CoreUtils.Search do
 
   defp field_match_mode(type) do
     if text_type?(type), do: :fuzzy, else: :exact
-  end
-
-  defp date_only?(%Date{}), do: true
-  defp date_only?(value) when is_binary(value), do: date_only_string?(value)
-  defp date_only?(_value), do: false
-
-  defp date_only_string?(value) do
-    String.match?(value, ~r/^\d{4}-\d{2}-\d{2}$/)
-  end
-
-  defp normalize_type({:array, type}), do: {:array, normalize_type(type)}
-
-  defp normalize_type(type) do
-    case Enum.find(Ash.Type.short_names(), &(elem(&1, 1) == type)) do
-      {short_name, _module} -> short_name
-      nil -> type
-    end
   end
 
   defp primary_read_action_name(resource) do
