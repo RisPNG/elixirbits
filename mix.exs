@@ -46,27 +46,28 @@ defmodule Elixirbits.MixProject do
   end
 
   defp usage_rules do
-    # Example for those using claude.
+    baseline_skills = ["implementation-guidelines"]
+
     [
       file: "CLAUDE.md",
-      # rules to include directly in CLAUDE.md
-      usage_rules: ["usage_rules:all"],
+      usage_rules: ["usage_rules:all" | baseline_skills],
       skills: [
         location: ".claude/skills",
-        # build skills that combine multiple usage rules
         build: [
+          "implementation-guidelines": [
+            description:
+              "Use this skill for any implementation task in this codebase. Consult it before adding new code, changing behaviour, refactoring, or integrating dependencies. It defines baseline implementation conventions that apply across all frameworks, libraries, plugins, packages, and internal modules.",
+            usage_rules: [~r/^[a-z0-9_]+$/]
+          ],
           "ash-framework": [
-            # The description tells people how to use this skill.
             description:
               "Use this skill working with Ash Framework or any of its extensions. Always consult this when making any domain changes, features or fixes.",
-            # Include all Ash dependencies
-            usage_rules: [:ash, ~r/^ash_/]
+            usage_rules: baseline_skills ++ [:ash, ~r/^ash_/]
           ],
           "phoenix-framework": [
             description:
               "Use this skill working with Phoenix Framework. Consult this when working with the web layer, controllers, views, liveviews etc.",
-            # Include all Phoenix dependencies
-            usage_rules: [:phoenix, ~r/^phoenix_/]
+            usage_rules: baseline_skills ++ [:phoenix, ~r/^phoenix_/]
           ]
         ]
       ]
