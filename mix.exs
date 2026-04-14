@@ -79,7 +79,7 @@ defmodule Elixirbits.MixProject do
   def application do
     [
       mod: {Elixirbits.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
