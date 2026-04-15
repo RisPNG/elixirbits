@@ -363,6 +363,8 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
     IO.inspect(matches, label: "Matches")
   ```
 
+From this section forward, if any of the following rules are contradicting the above, the following rule takes precedence.
+
 ## Other Guidelines
 
 ### Implementation Guidelines
@@ -379,6 +381,8 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
 - Never ever add new comments (this include docs, or anything alike) unless instructed to. However, you are allowed to modify comments when necessary for example when removing or adding a feature from a function to keep it accurate but follow a similar writing style.
 - Always prefer using Tailwind's grid-cols when positioning elements, and adhere to `#### Detailed Specifications for Layout Grids`.
 - When a reference implementation is provided or a similar implementation already exists within the system, default to reference fidelity over cleverness. Matching the existing structure, flow, processing, relative placement of the logic, layers, UI, and abstraction boundary down to the granular level. This is preferred over producing a different but equivalent implementation unless there is a strong reason not to.
+- Always separate the frontend from the backend file-wise in the same folder (e.g. .ex and .html.heex files).
+- Never define or use colours outside of what has been defined inside the .css asset.
 - Adhere to `#### Detailed Specifications for Abstraction / Helper / Function Creation Rules`.
 - Adhere to `#### Detailed Specifications for Layout Grids`.
 - You are required to run the following after every implementation:
