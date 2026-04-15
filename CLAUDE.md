@@ -453,6 +453,7 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
 - If the helper only standardizes syntax-level cleanup, it is not a valid helper.
 - The consolidation rules do not apply to primitive local mechanics, syntax cleanup, or inline callback logic.
 - Do not move trivial repeated local mechanics into shared utilities/modules.
+- If you think that the helper functions that you are going to create might be useful throughout the entire project going forward, consider building them inside `core_utils` or expand similar functions that already exists in `core_utils`. However, this requires confirmation from me and has to be consulted before implementation.
 
 #### Detailed Specifications for Layout Grids
 
