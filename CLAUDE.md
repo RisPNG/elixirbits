@@ -2,10 +2,9 @@ This is a web application written using the Phoenix web framework. The following
 
 ## Project guidelines
 
-- Use `mix precommit` alias when you are done with all changes and fix any pending issues.
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps.
 
-### Phoenix v1.8 guidelines
+### Phoenix > v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content.
 - The `MyAppWeb.Layouts` module is aliased in the `my_app_web.ex` file, so you can use it without needing to alias it again.
@@ -19,7 +18,7 @@ This is a web application written using the Phoenix web framework. The following
 
 ### JS and CSS guidelines
 
-- **Use Tailwind CSS classes and custom CSS rules** to create polished, responsive, and visually stunning interfaces.
+- **Use Tailwind CSS classes and custom CSS rules** to create and build interfaces.
 - Tailwindcss v4 **no longer needs a tailwind.config.js** and uses a new import syntax in `app.css`:
   ```elixir
     @import "tailwindcss" source(none);
@@ -363,14 +362,12 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
     IO.inspect(matches, label: "Matches")
   ```
 
-From this section forward, if any of the following rules are contradicting the above, the following rule takes precedence.
-
-## Other Guidelines
+## Strict Guidelines
 
 ### Implementation Guidelines
 
 - Refer to the codebase, other files, and functions to understand how things are done. Match existing patterns and conventions rather than inventing new ones.
-- Always look for and use the latest for everything.
+- Always use the latest applicable documentation and best current knowledge for the versions already in this project, and look for and use the latest for everything else.
 - Do not re-implement functionality that already exists in the codebase or in any existing utility/dependency/plugin/package functions. Check first.
 - Check project existing utilities/dependencies/plugins/packages before writing new functions, a utility/dependency/plugin/package may already provide what you need. Use existing utility/dependency/plugin/package rather than reinventing their functionality.
 - Do not overdo. Avoid adding excessive safeguards for unlikely cases. Raise an error or a terminal output instead. Adhere to `### Detailed Specifications for Abstraction / Helper / Function Creation Rules`.
@@ -382,14 +379,17 @@ From this section forward, if any of the following rules are contradicting the a
 - Always prefer using Tailwind's grid-cols when positioning elements, and adhere to `#### Detailed Specifications for Layout Grids`.
 - When a reference implementation is provided or a similar implementation already exists within the system, default to reference fidelity over cleverness. Matching the existing structure, flow, processing, relative placement of the logic, layers, UI, and abstraction boundary down to the granular level. This is preferred over producing a different but equivalent implementation unless there is a strong reason not to.
 - Always separate the frontend from the backend file-wise in the same folder (e.g. .ex and .html.heex files).
-- Never define or use colours outside of what has been defined inside the .css asset.
+- Always use centrally defined project colours from the global CSS/theme layer. Do not introduce page-local or ad hoc colours. Colours should come from a centralized source so updates stay global and consistent.
+- Do not use responsive utility variant classes like `grid-cols-[1fr] md:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1fr_1fr]`, and `w-16 md:w-32 lg:w-48`.
 - Adhere to `#### Detailed Specifications for Abstraction / Helper / Function Creation Rules`.
 - Adhere to `#### Detailed Specifications for Layout Grids`.
+- Adhere to `#### Designing w/ Layout Grids`.
 - You are required to run the following after every implementation:
     - `mise exec -- mix format`
     - `mise exec -- mix test`
     - `MIX_ENV=test mise exec -- mix dialyzer`
     - If anything fails whether it's related to the user proposed change or not, fix it and continue fixing it until everything passes. Do not move on to the next piece of work until tests pass. New changes must not break existing functionality.
+- Use `mix precommit` alias when you are done with all changes and fix any pending issues.
 
 #### Detailed Specifications for Abstraction / Helper / Function Creation Rules
 
@@ -458,12 +458,83 @@ From this section forward, if any of the following rules are contradicting the a
 
 - Always use Tailwind `grid-cols-[...]` with explicit `fr`/fixed-width values instead of preset classes like `grid-cols-2`, `grid-cols-3`, etc.
 - Always use explicit bracketed grid columns such as `grid-cols-[1fr_1fr]` or `grid-cols-[2.75rem_1fr_1fr_2.75rem]`.
-- Do not use Tailwind preset grid column counts like `grid-cols-2`, `grid-cols-3`, `lg:grid-cols-4`, etc., unless I explicitly ask for it.
-- Use `rem` for fixed elements like action/button columns.
-- If the same grid column definition is reused more than once within the same related section/component/template, define it once in a variable such as `items_grid_cols` and reuse it.
+- Do not use Tailwind preset grid column counts like `grid-cols-2`, `grid-cols-3`, `grid-cols-4`, etc., unless I explicitly ask for it.
+- Use `rem` for fixed elements like action/button/sequence columns.
+- Only if the same grid column definition is reused/referenced more than once within the same related section/component/template, define it once in a variable such as `items_grid_cols` and reuse/reference it. Otherwise define it inline.:
+  """
+    **Never do this (invalid)**:
+      ```elixir
+        three_field_grid_cols = "grid grid-cols-[1fr_1fr_1fr]"
+
+        <div class={three_field_grid_cols}>
+          <.input field={f[:input_1]} type="text" label="Input 1" />
+          <.input field={f[:input_2]} type="text" label="Input 2" />
+          <.input field={f[:input_3]} type="text" label="Input 3" />
+        </div>
+
+        <div class={three_field_grid_cols}>
+          <.input field={f[:input_1]} type="text" label="Input 1" />
+          <.input field={f[:input_2]} type="text" label="Input 2" />
+          <.input field={f[:input_3]} type="text" label="Input 3" />
+        </div>
+
+        <div class={three_field_grid_cols}>
+          <.input field={f[:input_1]} type="text" label="Input 1" />
+          <.input field={f[:input_2]} type="text" label="Input 2" />
+          <.input field={f[:input_3]} type="text" label="Input 3" />
+        </div>
+      ```
+    Just because the string happens to match, do not extract unrelated repeated grid definitions into a shared variable.
+
+    However, the following is **valid**:
+      ```elixir
+        <% items_grid_cols = "grid-cols-[2.75rem_1fr_1fr_2.75rem]" %>
+        ...
+        <div class={"w-full grid #{items_grid_cols} gap-2 pb-2 pt-2 border-b-[1px] border-b-white"}>
+          <div class="text-center">No.</div>
+          <div class="ps-1">Code</div>
+          <div class="ps-1">Name</div>
+          <div>Delete</div>
+        </div>
+        <.inputs_for :let={item_f} field={f[:items]}>
+          <div
+            id={"item-#{item_f.index}"}
+            class={"w-full grid #{items_grid_cols} gap-2 pb-2 border-b-[1px] border-b-white"}
+          >
+            <.input field={item_f[:number]} type="text"/>
+            <.input field={item_f[:code]} type="text"/>
+            <.input field={item_f[:name]} type="text"/>
+              <.button
+                type="button"
+                phx-click="remove_item"
+                phx-value-number={item_f[:number].value}
+              >
+                <.icon name="hero-trash" />
+              </.button>
+          </div>
+        </.inputs_for>
+      ```
+    The above is **valid** because the `items_grid_cols` variable repeated usages are part of the same logical layout block.
+  """
 - Only extract a grid column variable when the repeated usages are part of the same logical layout block. Do not extract unrelated repeated grid definitions into a shared variable just because the string happens to match.
 - Keep the variable local and on top of the file where it is used.
 - When editing an existing file, normalize any touched repeated grid layout in that same section to this pattern.
+
+#### Designing w/ Layout Grids
+
+- Compose each section on a fixed even grid. Think in `1x`, `2x`, and clean half-blocks, not arbitrary widths.
+- Preserve the visual center seam. Rows should feel like balanced left/right bands, not drift into uneven 3-part compositions.
+- Prefer layouts that resolve in multiples of `2`. If the structure starts feeling like `3` uneven groups, the rhythm is probably wrong.
+- Fields may span across neighboring fields, but only in whole grid units. Their left and right edges must land on real grid lines used by the rows around them.
+- A field should not start or stop at the middle of a field above or below unless that midpoint is part of a deliberate, symmetric subdivision in both rows.
+- Cross-row alignment matters more than strict field order. Reorder within the section if needed to keep edges clean.
+- Wide fields are used to absorb space cleanly, not just because they can be wider.
+- Empty space should collect only at the far right edge of the final row. Avoid holes in the middle, bottom-right appendices, or orphan closing rows.
+- Similar-density fields should keep a steady rhythm. Dates, short enums, codes, and numeric fields should usually sit in consistent-width slots.
+- A good span feels anchored to the surrounding grid.
+- Another acceptable case is an internal split that stays self-contained and symmetric.
+- A bad span is one where the upper row cuts awkwardly across the lower row’s field boundaries.
+- If the occupied area forms a staircase, inverted `L`, or dangling last-row hook, the layout is not balanced.
 
 ### Description / Explanation / Analysis Guidelines
 
