@@ -10,6 +10,28 @@ defmodule Elixirbits.SearchTest.Record do
 
   actions do
     defaults [:read]
+
+    create :create do
+      primary? true
+
+      accept [
+        :name,
+        :description,
+        :count,
+        :secondary_count,
+        :rating,
+        :amount,
+        :due_date,
+        :shipped_at,
+        :published_at,
+        :opens_at,
+        :active,
+        :meta,
+        :code,
+        :tags,
+        :category_id
+      ]
+    end
   end
 
   attributes do
@@ -37,6 +59,7 @@ defmodule Elixirbits.SearchTest.Record do
     belongs_to :category, Elixirbits.SearchTest.Category do
       allow_nil? false
       attribute_type :integer
+      attribute_writable? true
     end
   end
 end

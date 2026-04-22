@@ -10,6 +10,11 @@ defmodule Elixirbits.SearchTest.Category do
 
   actions do
     defaults [:read]
+
+    create :create do
+      primary? true
+      accept [:name, :code]
+    end
   end
 
   attributes do

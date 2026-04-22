@@ -5,9 +5,20 @@ defmodule Elixirbits.Events.ClearAllRecords do
 
   @impl true
   def clear_records!(_opts) do
-    Repo.query!(
-      "TRUNCATE TABLE users, api_keys, ledger_accounts, ledger_transfers, ledger_balances RESTART IDENTITY CASCADE"
-    )
+    tables =
+      :elixirbits
+      |> Ash.Info.domains_and_resources()
+      |> Map.values()
+      |> List.flatten()
+      |> Enum.filter(fn resource ->
+        match?({:ok, Elixirbits.Events.Event}, AshEvents.Events.Info.events_event_log(resource))
+      end)
+      |> Enum.map(&AshPostgres.DataLayer.Info.table/1)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    Repo.query!("TRUNCATE TABLE #{Enum.join(tables, ", ")} RESTART IDENTITY CASCADE")
 
     :ok
   end

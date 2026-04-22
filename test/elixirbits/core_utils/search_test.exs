@@ -1,6 +1,8 @@
 defmodule Elixirbits.CoreUtils.SearchTest do
   use Elixirbits.DataCase, async: true
 
+  @domain Elixirbits.SearchTest.Domain
+
   alias Elixirbits.CoreUtils
   alias Elixirbits.CoreUtils.Resource, as: CoreResource
   alias Elixirbits.CoreUtils.Search
@@ -64,7 +66,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
 
     attrs = Map.merge(defaults, attrs)
 
-    Repo.insert!(struct(Category, attrs))
+    Ash.create!(Category, attrs, domain: @domain)
   end
 
   defp record_fixture(attrs \\ %{}) do
@@ -91,7 +93,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
 
     params = Map.merge(defaults, attrs)
 
-    Repo.insert!(struct(Record, params))
+    Ash.create!(Record, params, domain: @domain)
   end
 
   describe "search/1 basic filtering" do
@@ -743,7 +745,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
       category = category_fixture()
       record_fixture(%{category: category})
 
-      fresh = Repo.get(Category, category.id)
+      fresh = Ash.get!(Category, category.id, domain: @domain)
       refute Ash.Resource.loaded?(fresh, :records)
 
       skipped = CoreResource.ensure_loaded_associations(fresh, [:other])
