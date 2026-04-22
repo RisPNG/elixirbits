@@ -376,9 +376,10 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
 - Question my method of approaching a problem when necessary, especially if it is not optimal or not sensible to implement.
 - If you want to run any command, consider trying it with `mise exec -- ` appended first since most of my tools are configured under mise for proper version control.
 - New resources should:
-  - Default string columns to text, unless a more specific type is needed like citext or an extension-specific type.
-  - Default to UUIDv7 primary keys, unless the resource or dependency has a stronger reason to use another key strategy.
-  - Explicitly decide whether it needs AshPaperTrail, AshEvents, AshArchival, and AshStateMachine, especially when user didn't specify. Always recap to the user simply with example what each of the options mean.
+  - always include timestamps() (inserted_at, and updated_at) unless there is a strong reason to not include them.
+  - default string columns to text, unless a more specific type is needed like citext or an extension-specific type.
+  - default to UUIDv7 primary keys, unless the resource or dependency has a stronger reason to use another key strategy.
+  - explicitly decide whether it needs AshPaperTrail, AshEvents, AshArchival, and AshStateMachine, especially when user didn't specify. Always recap to the user simply with example what each of the options mean.
 - All database/resource operations are preferably required to go through Ash actions to ensure that Paper Trail, Event Sourcing, and Archival works as expected. However, direct Repo and SQL query calls are always allowed when it is intentional and acceptable.
 - Never ever execute any `git`-related commands, what you see is what you work with.
 - Never ever add new comments (this include docs, or anything alike) unless instructed to. However, you are allowed to modify comments when necessary for example when removing or adding a feature from a function to keep it accurate but follow a similar writing style.

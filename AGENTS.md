@@ -376,6 +376,7 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
 - Question my method of approaching a problem when necessary, especially if it is not optimal or not sensible to implement.
 - If you want to run any command, consider trying it with `mise exec -- ` appended first since most of my tools are configured under mise for proper version control.
 - New resources should:
+  - Must always include timestamps() (inserted_at, and updated_at) unless there is a strong reason to not include them.
   - Default string columns to text, unless a more specific type is needed like citext or an extension-specific type.
   - Default to UUIDv7 primary keys, unless the resource or dependency has a stronger reason to use another key strategy.
   - Explicitly decide whether it needs AshPaperTrail, AshEvents, AshArchival, and AshStateMachine, especially when user didn't specify. Always recap to the user simply with example what each of the options mean.
