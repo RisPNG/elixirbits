@@ -1,0 +1,593 @@
+<Layouts.app
+  flash={@flash}
+  current_scope={@current_scope}
+  content_class="mx-auto w-full max-w-[110rem] space-y-6"
+>
+  <section class="rounded-box border border-base-300 bg-base-100 shadow-sm">
+    <div class="space-y-5 p-6">
+      <.header>
+        Layout Test
+        <:subtitle>
+          Showcases local core components and dependency-powered frontend pieces.
+        </:subtitle>
+      </.header>
+
+      <div
+        id="layout-test-tabs"
+        role="tablist"
+        aria-label="Layout test sections"
+        class="flex flex-wrap items-center gap-2"
+      >
+        <button
+          id="layout-test-local-tab"
+          type="button"
+          role="tab"
+          aria-selected={if(@current_tab == "local", do: "true", else: "false")}
+          phx-click="change_tab"
+          phx-value-tab="local"
+          class={[
+            "btn",
+            if(@current_tab == "local", do: "btn-primary", else: "btn-soft")
+          ]}
+        >
+          Local
+        </button>
+
+        <button
+          id="layout-test-ecosystem-tab"
+          type="button"
+          role="tab"
+          aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
+          phx-click="change_tab"
+          phx-value-tab="ecosystem"
+          class={[
+            "btn",
+            if(@current_tab == "ecosystem", do: "btn-primary", else: "btn-soft")
+          ]}
+        >
+          Ecosystem
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <%= if @current_tab == "local" do %>
+    <div id="layout-test-local-panel" role="tabpanel" class="space-y-6">
+      <section class="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
+        <article
+          id="layout-test-header-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Core Header
+              <:subtitle>Title, subtitle, action slot, button variants.</:subtitle>
+              <:actions>
+                <.button type="button" id="layout-test-inline-action" class="btn btn-soft btn-sm">
+                  Action
+                </.button>
+              </:actions>
+            </.header>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <.button type="button" id="layout-test-soft-button" class="btn btn-soft btn-sm">
+                Soft
+              </.button>
+              <.button
+                type="button"
+                id="layout-test-primary-button"
+                variant="primary"
+                class="btn btn-primary btn-sm"
+              >
+                Primary
+              </.button>
+              <.button navigate={~p"/"} id="layout-test-home-link" class="btn btn-ghost btn-sm">
+                Home
+              </.button>
+            </div>
+          </div>
+        </article>
+
+        <article
+          id="layout-test-flash-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Flashes
+              <:subtitle>Triggered here, rendered by `Layouts.flash_group`.</:subtitle>
+            </.header>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <.button
+                type="button"
+                id="layout-test-flash-info"
+                phx-click="show_flash"
+                phx-value-kind="info"
+                class="btn btn-soft btn-sm"
+              >
+                Info Flash
+              </.button>
+              <.button
+                type="button"
+                id="layout-test-flash-error"
+                phx-click="show_flash"
+                phx-value-kind="error"
+                class="btn btn-error btn-sm"
+              >
+                Error Flash
+              </.button>
+            </div>
+          </div>
+        </article>
+
+        <article
+          id="layout-test-theme-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Theme Toggle
+              <:subtitle>Light, dark, system from shared site layout.</:subtitle>
+            </.header>
+
+            <div class="flex items-center justify-between gap-4 rounded-box border border-base-300 bg-base-200 p-4">
+              <div class="space-y-1">
+                <p class="font-medium">Site Theme</p>
+                <p class="text-sm text-base-content/70">
+                  Uses shared `Layouts.theme_toggle`.
+                </p>
+              </div>
+              <Layouts.theme_toggle />
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section
+        id="layout-test-form-section"
+        class="card border border-base-300 bg-base-100 shadow-sm"
+      >
+        <div class="card-body gap-6">
+          <.header>
+            Core Inputs
+            <:subtitle>Showcases `&lt;.input&gt;` variants from local component layer.</:subtitle>
+          </.header>
+
+          <.form for={@local_form} id="layout-test-form" class="space-y-4">
+            <.input field={@local_form[:hidden_token]} type="hidden" />
+
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4">
+              <.input field={@local_form[:project_name]} type="text" label="Text" />
+              <.input field={@local_form[:email]} type="email" label="Email" />
+              <.input field={@local_form[:password]} type="password" label="Password" />
+              <.input field={@local_form[:budget]} type="number" label="Number" />
+              <.input field={@local_form[:launch_date]} type="date" label="Date" />
+              <.input field={@local_form[:launch_time]} type="time" label="Time" />
+              <.input field={@local_form[:launch_week]} type="week" label="Week" />
+              <.input field={@local_form[:launch_month]} type="month" label="Month" />
+              <.input field={@local_form[:launch_at]} type="datetime-local" label="Datetime" />
+              <.input field={@local_form[:accent]} type="color" label="Color" />
+              <.input field={@local_form[:search]} type="search" label="Search" />
+              <.input field={@local_form[:website]} type="url" label="URL" />
+              <.input field={@local_form[:phone]} type="tel" label="Telephone" />
+              <.input
+                field={@local_form[:role]}
+                type="select"
+                label="Select"
+                options={[
+                  {"Administrator", "admin"},
+                  {"Designer", "designer"},
+                  {"Viewer", "viewer"}
+                ]}
+              />
+              <.input field={@local_form[:notes]} type="textarea" label="Textarea" rows="4" />
+              <.input field={@local_form[:enabled]} type="checkbox" label="Checkbox" />
+              <.input field={@local_form[:upload]} type="file" label="File" />
+            </div>
+          </.form>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-[repeat(auto-fit,minmax(22rem,1fr))] gap-4">
+        <article
+          id="layout-test-table-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Core Table
+              <:subtitle>Reusable table component with action slot.</:subtitle>
+            </.header>
+
+            <div class="overflow-x-auto">
+              <.table
+                id="layout-test-core-table"
+                rows={[
+                  %{section: "Header", scope: "Page framing", status: "Ready"},
+                  %{section: "Inputs", scope: "Form states", status: "Ready"},
+                  %{section: "Dependencies", scope: "LiveSelect + pages", status: "Ready"}
+                ]}
+              >
+                <:col :let={row} label="Section">{row.section}</:col>
+                <:col :let={row} label="Scope">{row.scope}</:col>
+                <:col :let={row} label="Status">
+                  <span class="badge badge-soft badge-success">{row.status}</span>
+                </:col>
+                <:action>
+                  <.button type="button" class="btn btn-soft btn-xs">Inspect</.button>
+                </:action>
+              </.table>
+            </div>
+          </div>
+        </article>
+
+        <article
+          id="layout-test-list-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Core List
+              <:subtitle>Simple label/value presentation for compact detail groups.</:subtitle>
+            </.header>
+
+            <.list>
+              <:item title="Surface">Local core components</:item>
+              <:item title="Theme">Shared dark and light tokens</:item>
+              <:item title="Flash">Global toast stack</:item>
+              <:item title="Tabs">Single LiveView state</:item>
+            </.list>
+          </div>
+        </article>
+      </section>
+
+      <section
+        id="layout-test-icons-card"
+        class="card border border-base-300 bg-base-100 shadow-sm"
+      >
+        <div class="card-body gap-6">
+          <.header>
+            Core Icons
+            <:subtitle>Heroicons via shared `&lt;.icon&gt;` component.</:subtitle>
+          </.header>
+
+          <div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
+            <div
+              :for={
+                icon <- [
+                  {"hero-sparkles", "Sparkles"},
+                  {"hero-bolt", "Bolt"},
+                  {"hero-cog-6-tooth", "Cog"},
+                  {"hero-command-line", "CLI"},
+                  {"hero-server-stack", "Server"},
+                  {"hero-swatch", "Swatch"}
+                ]
+              }
+              class="rounded-box border border-base-300 bg-base-200 p-4"
+            >
+              <div class="flex items-center gap-3">
+                <.icon name={elem(icon, 0)} class="size-5" />
+                <span class="text-sm font-medium">{elem(icon, 1)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  <% end %>
+
+  <%= if @current_tab == "ecosystem" do %>
+    <div id="layout-test-ecosystem-panel" role="tabpanel" class="space-y-6">
+      <section class="grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4">
+        <article class="card border border-base-300 bg-base-100 shadow-sm">
+          <div class="card-body gap-2">
+            <p class="text-sm text-base-content/70">Dependency Pages</p>
+            <p class="text-3xl font-semibold">{length(@dependency_pages)}</p>
+          </div>
+        </article>
+
+        <article class="card border border-base-300 bg-base-100 shadow-sm">
+          <div class="card-body gap-2">
+            <p class="text-sm text-base-content/70">Ash Components</p>
+            <p class="text-3xl font-semibold">2</p>
+          </div>
+        </article>
+
+        <article class="card border border-base-300 bg-base-100 shadow-sm">
+          <div class="card-body gap-2">
+            <p class="text-sm text-base-content/70">Cinder Surfaces</p>
+            <p class="text-3xl font-semibold">2</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-4">
+        <article
+          id="layout-test-ash-banner-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Ash Banner
+              <:subtitle>Standalone auth banner component with dependency overrides.</:subtitle>
+            </.header>
+
+            <div class="rounded-box border border-base-300 bg-base-200 p-4">
+              <.live_component
+                module={AshAuthentication.Phoenix.Components.Banner}
+                id="layout-test-ash-banner"
+                overrides={@ash_auth_overrides}
+              />
+            </div>
+          </div>
+        </article>
+
+        <article
+          id="layout-test-ash-sign-in-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Ash Sign In
+              <:subtitle>
+                Embedded dependency auth component, not just linked route pages.
+              </:subtitle>
+            </.header>
+
+            <div class="rounded-box border border-base-300 bg-base-200 p-4">
+              <.live_component
+                module={AshAuthentication.Phoenix.Components.SignIn}
+                id="layout-test-ash-sign-in"
+                resources={[Elixirbits.Accounts.User]}
+                auth_routes_prefix="/auth"
+                path={~p"/sign-in"}
+                reset_path={~p"/reset"}
+                register_path={~p"/register"}
+                overrides={@ash_auth_overrides}
+              />
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-4">
+        <article
+          id="layout-test-cinder-collection-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Cinder Collection
+              <:subtitle>List layout with Ash-backed search, filters, and pagination.</:subtitle>
+            </.header>
+
+            <div
+              id="layout-test-cinder-collection"
+              class="rounded-box border border-base-300 bg-base-200 p-4"
+            >
+              <Cinder.collection
+                id="layout-test-cinder-collection-component"
+                query={@sitenav_query}
+                actor={nil}
+                layout={:list}
+                page_size={5}
+                show_filters={true}
+                theme="daisy_ui"
+                search={[label: "Search sitenav", placeholder: "Code, name, description"]}
+                query_opts={[authorize?: false]}
+              >
+                <:col :let={entry} field="code" label="Code" sort filter search>
+                  {entry.code}
+                </:col>
+                <:col :let={entry} field="name" label="Name" sort filter search>
+                  {entry.name}
+                </:col>
+                <:col :let={entry} field="state" label="State" filter sort>
+                  {entry.state}
+                </:col>
+                <:item :let={entry}>
+                  <div class="rounded-box border border-base-300 bg-base-100 p-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="badge badge-soft badge-primary">{entry.code}</span>
+                      <span class="badge badge-ghost">{entry.state}</span>
+                    </div>
+                    <div class="mt-3 space-y-1">
+                      <p class="font-semibold">{entry.name}</p>
+                      <p class="text-sm text-base-content/70">{entry.description}</p>
+                      <p class="text-xs text-base-content/60">{entry.url}</p>
+                    </div>
+                  </div>
+                </:item>
+              </Cinder.collection>
+            </div>
+          </div>
+        </article>
+
+        <article
+          id="layout-test-cinder-table-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              Cinder Table
+              <:subtitle>
+                Table wrapper over the same Ash data source for sortable rows.
+              </:subtitle>
+            </.header>
+
+            <div
+              id="layout-test-cinder-table"
+              class="rounded-box border border-base-300 bg-base-200 p-4"
+            >
+              <Cinder.Table.table
+                id="layout-test-cinder-table-component"
+                query={@sitenav_query}
+                actor={nil}
+                page_size={5}
+                show_filters={true}
+                theme="daisy_ui"
+                search={[label: "Search table", placeholder: "Code, name, URL"]}
+                query_opts={[authorize?: false]}
+              >
+                <:col :let={entry} field="code" label="Code" sort filter search>
+                  {entry.code}
+                </:col>
+                <:col :let={entry} field="name" label="Name" sort filter search>
+                  {entry.name}
+                </:col>
+                <:col :let={entry} field="level" label="Level" sort filter>
+                  {entry.level}
+                </:col>
+                <:col :let={entry} field="url" label="Route" filter search>
+                  <code>{entry.url}</code>
+                </:col>
+                <:col :let={entry} field="sequence" label="Sequence" sort>
+                  {entry.sequence}
+                </:col>
+              </Cinder.Table.table>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] gap-4">
+        <article
+          id="layout-test-live-select-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              LiveSelect
+              <:subtitle>Dependency component with JS hooks and daisyUI styling.</:subtitle>
+            </.header>
+
+            <.form
+              for={@dependency_form}
+              id="layout-test-dependency-form"
+              phx-change="dependency_change"
+            >
+              <LiveSelect.live_select
+                field={@dependency_form[:component_search]}
+                placeholder="Search dependency pages"
+                style={:daisyui}
+              />
+            </.form>
+
+            <div
+              id="layout-test-selected-dependency"
+              class="rounded-box border border-base-300 bg-base-200 p-4"
+            >
+              <%= if @selected_dependency do %>
+                <div class="space-y-3">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="badge badge-soft badge-primary">
+                      {@selected_dependency.source}
+                    </span>
+                    <span class="badge badge-ghost">{@selected_dependency.availability}</span>
+                  </div>
+                  <div class="space-y-1">
+                    <p class="font-semibold">{@selected_dependency.name}</p>
+                    <p class="text-sm text-base-content/70">{@selected_dependency.description}</p>
+                    <p class="text-xs text-base-content/60">{@selected_dependency.path}</p>
+                  </div>
+                  <.button href={@selected_dependency.path} class="btn btn-primary btn-sm">
+                    Open Selected Page
+                  </.button>
+                </div>
+              <% else %>
+                <p class="text-sm text-base-content/70">
+                  Pick one dependency page above to preview target route and source package.
+                </p>
+              <% end %>
+            </div>
+          </div>
+        </article>
+
+        <article
+          id="layout-test-daisyui-card"
+          class="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div class="card-body gap-4">
+            <.header>
+              DaisyUI Kit
+              <:subtitle>
+                Dependency classes already available to HEEx and auth overrides.
+              </:subtitle>
+            </.header>
+
+            <div class="space-y-3">
+              <div class="alert alert-info">
+                <.icon name="hero-information-circle" class="size-5" />
+                <span>Info alert surface</span>
+              </div>
+              <div class="alert alert-success">
+                <.icon name="hero-check-circle" class="size-5" />
+                <span>Success alert surface</span>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="badge badge-soft badge-primary">Primary</span>
+                <span class="badge badge-outline">Outline</span>
+                <span class="badge badge-success">Success</span>
+                <span class="badge badge-warning">Warning</span>
+              </div>
+              <progress class="progress progress-primary w-full" value="72" max="100">
+                72%
+              </progress>
+              <ul class="steps w-full">
+                <li class="step step-primary">Tokens</li>
+                <li class="step step-primary">Hooks</li>
+                <li class="step">Route Scan</li>
+              </ul>
+              <ul class="menu rounded-box bg-base-200">
+                <li><a href="/sign-in">Auth Flow</a></li>
+                <li><a href="/api/json/swaggerui">API Browser</a></li>
+                <li><a href="/admin">Admin Surface</a></li>
+              </ul>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section
+        id="layout-test-dependency-pages"
+        class="card border border-base-300 bg-base-100 shadow-sm"
+      >
+        <div class="card-body gap-6">
+          <.header>
+            Dependency Pages
+            <:subtitle>
+              Live pages and route surfaces supplied by installed dependencies.
+            </:subtitle>
+          </.header>
+
+          <div class="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
+            <article
+              :for={page <- @dependency_pages}
+              id={"dependency-page-#{page.id}"}
+              class="rounded-box border border-base-300 bg-base-200 p-4"
+            >
+              <div class="space-y-4">
+                <div class="space-y-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="badge badge-soft badge-primary">{page.source}</span>
+                    <span class="badge badge-ghost">{page.availability}</span>
+                  </div>
+                  <div class="space-y-1">
+                    <h3 class="font-semibold">{page.name}</h3>
+                    <p class="text-sm text-base-content/70">{page.description}</p>
+                    <p class="text-xs text-base-content/60">{page.path}</p>
+                  </div>
+                </div>
+
+                <.button href={page.path} class="btn btn-soft btn-sm w-full">
+                  Open Page
+                </.button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </div>
+  <% end %>
+</Layouts.app>

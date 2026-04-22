@@ -4,6 +4,7 @@
 @import "tailwindcss" source(none);
 @source "../../deps/cinder";
 @source "../../deps/ash_authentication_phoenix";
+@source "../../deps/live_select/lib/live_select/component.*ex";
 @source "../css";
 @source "../js";
 @source "../../lib/elixirbits_web";

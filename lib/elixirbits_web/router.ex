@@ -30,7 +30,8 @@ defmodule ElixirbitsWeb.Router do
   scope "/", ElixirbitsWeb do
     pipe_through :browser
 
-    ash_authentication_live_session :authenticated_routes do
+    ash_authentication_live_session :authenticated_routes,
+      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
       # in each liveview, add one of the following at the top of the module:
       #
       # If an authenticated user must be present:
@@ -41,6 +42,12 @@ defmodule ElixirbitsWeb.Router do
       #
       # If an authenticated user must *not* be present:
       # on_mount {ElixirbitsWeb.LiveUserAuth, :live_no_user}
+
+      scope "/dev_panel", Admin do
+        # live "/", DevPanelLive, :index
+        live "/layout_test", LayoutTestLive, :index
+        # live "/users", UsersLive, :index
+      end
     end
 
     post "/rpc/run", AshTypescriptRpcController, :run
