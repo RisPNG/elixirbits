@@ -8,12 +8,8 @@ defmodule ElixirbitsWeb.CoreComponents do
   with doc strings and declarative assigns. You may customize and style
   them in any way you want, based on your application growth and needs.
 
-  The foundation for styling is Tailwind CSS, a utility-first CSS framework,
-  augmented with daisyUI, a Tailwind CSS plugin that provides UI components
-  and themes. Here are useful references:
-
-    * [daisyUI](https://daisyui.com/docs/intro/) - a good place to get
-      started and see the available components.
+  The foundation for styling is Tailwind CSS, a utility-first CSS framework.
+  Here are useful references:
 
     * [Tailwind CSS](https://tailwindcss.com) - the foundational framework
       we build on. You will use it for layout, sizing, flexbox, grid, and
@@ -56,13 +52,13 @@ defmodule ElixirbitsWeb.CoreComponents do
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
-      class="toast toast-top toast-end z-50"
+      class="fixed top-4 right-4 z-50 flex flex-col gap-2"
       {@rest}
     >
       <div class={[
-        "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
-        @kind == :info && "alert-info",
-        @kind == :error && "alert-error"
+        "flex items-start gap-3 p-4 rounded-md border w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap shadow-sm",
+        @kind == :info && "bg-info/10 border-info/30 text-info",
+        @kind == :error && "bg-error/10 border-error/30 text-error"
       ]}>
         <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
         <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
@@ -89,17 +85,36 @@ defmodule ElixirbitsWeb.CoreComponents do
       <.button navigate={~p"/"}>Home</.button>
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
-  attr :class, :any
-  attr :variant, :string, values: ~w(primary)
+  attr :class, :any, default: nil
+  attr :variant, :string, default: nil
+  attr :size, :string, default: nil
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
+    base =
+      "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50 disabled:pointer-events-none"
+
+    sizes = %{
+      nil => "px-4 py-2 text-sm",
+      "sm" => "px-3 py-1.5 text-sm",
+      "xs" => "px-2 py-1 text-xs"
+    }
+
+    variants = %{
+      nil => "bg-primary/15 text-primary hover:bg-primary/25",
+      "primary" => "bg-primary text-primary-content hover:bg-primary/90",
+      "soft" => "bg-primary/15 text-primary hover:bg-primary/25",
+      "ghost" => "bg-transparent text-base-content hover:bg-base-200",
+      "error" => "bg-error text-error-content hover:bg-error/90"
+    }
 
     assigns =
-      assign_new(assigns, :class, fn ->
-        ["btn", Map.fetch!(variants, assigns[:variant])]
-      end)
+      assign(assigns, :class, [
+        base,
+        Map.fetch!(sizes, assigns[:size]),
+        Map.fetch!(variants, assigns[:variant]),
+        assigns[:class]
+      ])
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
@@ -205,8 +220,8 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     ~H"""
-    <div class="fieldset mb-2">
-      <label for={@id}>
+    <div class="mb-2">
+      <label for={@id} class="inline-flex items-center gap-2">
         <input
           type="hidden"
           name={@name}
@@ -214,17 +229,16 @@ defmodule ElixirbitsWeb.CoreComponents do
           disabled={@rest[:disabled]}
           form={@rest[:form]}
         />
-        <span class="label">
-          <input
-            type="checkbox"
-            id={@id}
-            name={@name}
-            value="true"
-            checked={@checked}
-            class={@class || "checkbox checkbox-sm"}
-            {@rest}
-          />{@label}
-        </span>
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@checked}
+          class={@class || "h-4 w-4 rounded border border-base-300 accent-primary"}
+          {@rest}
+        />
+        <span class="text-sm font-medium text-base-content">{@label}</span>
       </label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
@@ -233,13 +247,17 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div class="fieldset mb-2">
-      <label for={@id}>
-        <span :if={@label} class="label mb-1">{@label}</span>
+    <div class="mb-2">
+      <label for={@id} class="block">
+        <span :if={@label} class="block text-sm font-medium text-base-content mb-1">{@label}</span>
         <select
           id={@id}
           name={@name}
-          class={[@class || "w-full select", @errors != [] && (@error_class || "select-error")]}
+          class={[
+            @class ||
+              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20",
+            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+          ]}
           multiple={@multiple}
           {@rest}
         >
@@ -254,15 +272,16 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div class="fieldset mb-2">
-      <label for={@id}>
-        <span :if={@label} class="label mb-1">{@label}</span>
+    <div class="mb-2">
+      <label for={@id} class="block">
+        <span :if={@label} class="block text-sm font-medium text-base-content mb-1">{@label}</span>
         <textarea
           id={@id}
           name={@name}
           class={[
-            @class || "w-full textarea",
-            @errors != [] && (@error_class || "textarea-error")
+            @class ||
+              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20",
+            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
           ]}
           {@rest}
         >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -275,17 +294,18 @@ defmodule ElixirbitsWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div class="fieldset mb-2">
-      <label for={@id}>
-        <span :if={@label} class="label mb-1">{@label}</span>
+    <div class="mb-2">
+      <label for={@id} class="block">
+        <span :if={@label} class="block text-sm font-medium text-base-content mb-1">{@label}</span>
         <input
           type={@type}
           name={@name}
           id={@id}
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
           class={[
-            @class || "w-full input",
-            @errors != [] && (@error_class || "input-error")
+            @class ||
+              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20",
+            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
           ]}
           {@rest}
         />
@@ -360,11 +380,11 @@ defmodule ElixirbitsWeb.CoreComponents do
       end
 
     ~H"""
-    <table class="table table-zebra">
+    <table class="w-full text-left [&_tbody_tr:nth-child(even)]:bg-base-200">
       <thead>
         <tr>
-          <th :for={col <- @col}>{col[:label]}</th>
-          <th :if={@action != []}>
+          <th :for={col <- @col} class="px-3 py-2 font-semibold">{col[:label]}</th>
+          <th :if={@action != []} class="px-3 py-2">
             <span class="sr-only">{gettext("Actions")}</span>
           </th>
         </tr>
@@ -374,11 +394,11 @@ defmodule ElixirbitsWeb.CoreComponents do
           <td
             :for={col <- @col}
             phx-click={@row_click && @row_click.(row)}
-            class={@row_click && "hover:cursor-pointer"}
+            class={["px-3 py-2", @row_click && "hover:cursor-pointer"]}
           >
             {render_slot(col, @row_item.(row))}
           </td>
-          <td :if={@action != []} class="w-0 font-semibold">
+          <td :if={@action != []} class="px-3 py-2 w-0 font-semibold">
             <div class="flex gap-4">
               <%= for action <- @action do %>
                 {render_slot(action, @row_item.(row))}
@@ -407,9 +427,9 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def list(assigns) do
     ~H"""
-    <ul class="list">
-      <li :for={item <- @item} class="list-row">
-        <div class="list-col-grow">
+    <ul class="flex flex-col divide-y divide-base-300">
+      <li :for={item <- @item} class="flex gap-4 p-3 items-center">
+        <div class="flex-1">
           <div class="font-bold">{item.title}</div>
           <div>{render_slot(item)}</div>
         </div>

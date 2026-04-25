@@ -3,7 +3,7 @@
   current_scope={@current_scope}
   content_class="mx-auto w-full max-w-[110rem] space-y-6"
 >
-  <section class="rounded-box border border-base-300 bg-base-100 shadow-sm">
+  <section class="rounded-lg border border-base-300 bg-base-100 shadow-sm">
     <div class="space-y-5 p-6">
       <.header>
         Layout Test
@@ -18,35 +18,29 @@
         aria-label="Layout test sections"
         class="flex flex-wrap items-center gap-2"
       >
-        <button
+        <.button
           id="layout-test-local-tab"
           type="button"
           role="tab"
           aria-selected={if(@current_tab == "local", do: "true", else: "false")}
+          variant={if(@current_tab == "local", do: "primary", else: "soft")}
           phx-click="change_tab"
           phx-value-tab="local"
-          class={[
-            "btn",
-            if(@current_tab == "local", do: "btn-primary", else: "btn-soft")
-          ]}
         >
           Local
-        </button>
+        </.button>
 
-        <button
+        <.button
           id="layout-test-ecosystem-tab"
           type="button"
           role="tab"
           aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
+          variant={if(@current_tab == "ecosystem", do: "primary", else: "soft")}
           phx-click="change_tab"
           phx-value-tab="ecosystem"
-          class={[
-            "btn",
-            if(@current_tab == "ecosystem", do: "btn-primary", else: "btn-soft")
-          ]}
         >
           Ecosystem
-        </button>
+        </.button>
       </div>
     </div>
   </section>
@@ -56,32 +50,32 @@
       <section class="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
         <article
           id="layout-test-header-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Core Header
               <:subtitle>Title, subtitle, action slot, button variants.</:subtitle>
               <:actions>
-                <.button type="button" id="layout-test-inline-action" class="btn btn-soft btn-sm">
+                <.button type="button" id="layout-test-inline-action" variant="soft" size="sm">
                   Action
                 </.button>
               </:actions>
             </.header>
 
             <div class="flex flex-wrap items-center gap-2">
-              <.button type="button" id="layout-test-soft-button" class="btn btn-soft btn-sm">
+              <.button type="button" id="layout-test-soft-button" variant="soft" size="sm">
                 Soft
               </.button>
               <.button
                 type="button"
                 id="layout-test-primary-button"
                 variant="primary"
-                class="btn btn-primary btn-sm"
+                size="sm"
               >
                 Primary
               </.button>
-              <.button navigate={~p"/"} id="layout-test-home-link" class="btn btn-ghost btn-sm">
+              <.button navigate={~p"/"} id="layout-test-home-link" variant="ghost" size="sm">
                 Home
               </.button>
             </div>
@@ -90,9 +84,9 @@
 
         <article
           id="layout-test-flash-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Flashes
               <:subtitle>Triggered here, rendered by `Layouts.flash_group`.</:subtitle>
@@ -104,7 +98,8 @@
                 id="layout-test-flash-info"
                 phx-click="show_flash"
                 phx-value-kind="info"
-                class="btn btn-soft btn-sm"
+                variant="soft"
+                size="sm"
               >
                 Info Flash
               </.button>
@@ -113,7 +108,8 @@
                 id="layout-test-flash-error"
                 phx-click="show_flash"
                 phx-value-kind="error"
-                class="btn btn-error btn-sm"
+                variant="error"
+                size="sm"
               >
                 Error Flash
               </.button>
@@ -123,15 +119,15 @@
 
         <article
           id="layout-test-theme-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Theme Toggle
               <:subtitle>Light, dark, system from shared site layout.</:subtitle>
             </.header>
 
-            <div class="flex items-center justify-between gap-4 rounded-box border border-base-300 bg-base-200 p-4">
+            <div class="flex items-center justify-between gap-4 rounded-lg border border-base-300 bg-base-200 p-4">
               <div class="space-y-1">
                 <p class="font-medium">Site Theme</p>
                 <p class="text-sm text-base-content/70">
@@ -146,9 +142,9 @@
 
       <section
         id="layout-test-form-section"
-        class="card border border-base-300 bg-base-100 shadow-sm"
+        class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
       >
-        <div class="card-body gap-6">
+        <div class="flex flex-col p-6 gap-6">
           <.header>
             Core Inputs
             <:subtitle>Showcases `&lt;.input&gt;` variants from local component layer.</:subtitle>
@@ -192,9 +188,9 @@
       <section class="grid grid-cols-[repeat(auto-fit,minmax(22rem,1fr))] gap-4">
         <article
           id="layout-test-table-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Core Table
               <:subtitle>Reusable table component with action slot.</:subtitle>
@@ -212,10 +208,12 @@
                 <:col :let={row} label="Section">{row.section}</:col>
                 <:col :let={row} label="Scope">{row.scope}</:col>
                 <:col :let={row} label="Status">
-                  <span class="badge badge-soft badge-success">{row.status}</span>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success/15 text-success">
+                    {row.status}
+                  </span>
                 </:col>
                 <:action>
-                  <.button type="button" class="btn btn-soft btn-xs">Inspect</.button>
+                  <.button type="button" variant="soft" size="xs">Inspect</.button>
                 </:action>
               </.table>
             </div>
@@ -224,9 +222,9 @@
 
         <article
           id="layout-test-list-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Core List
               <:subtitle>Simple label/value presentation for compact detail groups.</:subtitle>
@@ -244,9 +242,9 @@
 
       <section
         id="layout-test-icons-card"
-        class="card border border-base-300 bg-base-100 shadow-sm"
+        class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
       >
-        <div class="card-body gap-6">
+        <div class="flex flex-col p-6 gap-6">
           <.header>
             Core Icons
             <:subtitle>Heroicons via shared `&lt;.icon&gt;` component.</:subtitle>
@@ -264,7 +262,7 @@
                   {"hero-swatch", "Swatch"}
                 ]
               }
-              class="rounded-box border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-base-300 bg-base-200 p-4"
             >
               <div class="flex items-center gap-3">
                 <.icon name={elem(icon, 0)} class="size-5" />
@@ -280,22 +278,22 @@
   <%= if @current_tab == "ecosystem" do %>
     <div id="layout-test-ecosystem-panel" role="tabpanel" class="space-y-6">
       <section class="grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4">
-        <article class="card border border-base-300 bg-base-100 shadow-sm">
-          <div class="card-body gap-2">
+        <article class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm">
+          <div class="flex flex-col p-6 gap-2">
             <p class="text-sm text-base-content/70">Dependency Pages</p>
             <p class="text-3xl font-semibold">{length(@dependency_pages)}</p>
           </div>
         </article>
 
-        <article class="card border border-base-300 bg-base-100 shadow-sm">
-          <div class="card-body gap-2">
+        <article class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm">
+          <div class="flex flex-col p-6 gap-2">
             <p class="text-sm text-base-content/70">Ash Components</p>
             <p class="text-3xl font-semibold">2</p>
           </div>
         </article>
 
-        <article class="card border border-base-300 bg-base-100 shadow-sm">
-          <div class="card-body gap-2">
+        <article class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm">
+          <div class="flex flex-col p-6 gap-2">
             <p class="text-sm text-base-content/70">Cinder Surfaces</p>
             <p class="text-3xl font-semibold">2</p>
           </div>
@@ -305,15 +303,15 @@
       <section class="grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-4">
         <article
           id="layout-test-ash-banner-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Ash Banner
               <:subtitle>Standalone auth banner component with dependency overrides.</:subtitle>
             </.header>
 
-            <div class="rounded-box border border-base-300 bg-base-200 p-4">
+            <div class="rounded-lg border border-base-300 bg-base-200 p-4">
               <.live_component
                 module={AshAuthentication.Phoenix.Components.Banner}
                 id="layout-test-ash-banner"
@@ -325,9 +323,9 @@
 
         <article
           id="layout-test-ash-sign-in-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Ash Sign In
               <:subtitle>
@@ -335,7 +333,7 @@
               </:subtitle>
             </.header>
 
-            <div class="rounded-box border border-base-300 bg-base-200 p-4">
+            <div class="rounded-lg border border-base-300 bg-base-200 p-4">
               <.live_component
                 module={AshAuthentication.Phoenix.Components.SignIn}
                 id="layout-test-ash-sign-in"
@@ -354,9 +352,9 @@
       <section class="grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-4">
         <article
           id="layout-test-cinder-collection-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Cinder Collection
               <:subtitle>List layout with Ash-backed search, filters, and pagination.</:subtitle>
@@ -364,7 +362,7 @@
 
             <div
               id="layout-test-cinder-collection"
-              class="rounded-box border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-base-300 bg-base-200 p-4"
             >
               <Cinder.collection
                 id="layout-test-cinder-collection-component"
@@ -373,7 +371,6 @@
                 layout={:list}
                 page_size={5}
                 show_filters={true}
-                theme="daisy_ui"
                 search={[label: "Search sitenav", placeholder: "Code, name, description"]}
                 query_opts={[authorize?: false]}
               >
@@ -387,10 +384,14 @@
                   {entry.state}
                 </:col>
                 <:item :let={entry}>
-                  <div class="rounded-box border border-base-300 bg-base-100 p-4">
+                  <div class="rounded-lg border border-base-300 bg-base-100 p-4">
                     <div class="flex flex-wrap items-center gap-2">
-                      <span class="badge badge-soft badge-primary">{entry.code}</span>
-                      <span class="badge badge-ghost">{entry.state}</span>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
+                        {entry.code}
+                      </span>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-200 text-base-content">
+                        {entry.state}
+                      </span>
                     </div>
                     <div class="mt-3 space-y-1">
                       <p class="font-semibold">{entry.name}</p>
@@ -406,9 +407,9 @@
 
         <article
           id="layout-test-cinder-table-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               Cinder Table
               <:subtitle>
@@ -418,7 +419,7 @@
 
             <div
               id="layout-test-cinder-table"
-              class="rounded-box border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-base-300 bg-base-200 p-4"
             >
               <Cinder.Table.table
                 id="layout-test-cinder-table-component"
@@ -426,7 +427,6 @@
                 actor={nil}
                 page_size={5}
                 show_filters={true}
-                theme="daisy_ui"
                 search={[label: "Search table", placeholder: "Code, name, URL"]}
                 query_opts={[authorize?: false]}
               >
@@ -454,12 +454,12 @@
       <section class="grid grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] gap-4">
         <article
           id="layout-test-live-select-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
               LiveSelect
-              <:subtitle>Dependency component with JS hooks and daisyUI styling.</:subtitle>
+              <:subtitle>Dependency component with JS hooks.</:subtitle>
             </.header>
 
             <.form
@@ -470,28 +470,29 @@
               <LiveSelect.live_select
                 field={@dependency_form[:component_search]}
                 placeholder="Search dependency pages"
-                style={:daisyui}
               />
             </.form>
 
             <div
               id="layout-test-selected-dependency"
-              class="rounded-box border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-base-300 bg-base-200 p-4"
             >
               <%= if @selected_dependency do %>
                 <div class="space-y-3">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="badge badge-soft badge-primary">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
                       {@selected_dependency.source}
                     </span>
-                    <span class="badge badge-ghost">{@selected_dependency.availability}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-200 text-base-content">
+                      {@selected_dependency.availability}
+                    </span>
                   </div>
                   <div class="space-y-1">
                     <p class="font-semibold">{@selected_dependency.name}</p>
                     <p class="text-sm text-base-content/70">{@selected_dependency.description}</p>
                     <p class="text-xs text-base-content/60">{@selected_dependency.path}</p>
                   </div>
-                  <.button href={@selected_dependency.path} class="btn btn-primary btn-sm">
+                  <.button href={@selected_dependency.path} variant="primary" size="sm">
                     Open Selected Page
                   </.button>
                 </div>
@@ -505,44 +506,73 @@
         </article>
 
         <article
-          id="layout-test-daisyui-card"
-          class="card border border-base-300 bg-base-100 shadow-sm"
+          id="layout-test-ui-kit-card"
+          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
         >
-          <div class="card-body gap-4">
+          <div class="flex flex-col p-6 gap-4">
             <.header>
-              DaisyUI Kit
+              UI Kit
               <:subtitle>
-                Dependency classes already available to HEEx and auth overrides.
+                Raw Tailwind primitives for alerts, badges, progress, steps, menu.
               </:subtitle>
             </.header>
 
             <div class="space-y-3">
-              <div class="alert alert-info">
+              <div class="flex items-center gap-2 p-4 rounded-md border bg-info/10 border-info/30 text-info">
                 <.icon name="hero-information-circle" class="size-5" />
                 <span>Info alert surface</span>
               </div>
-              <div class="alert alert-success">
+              <div class="flex items-center gap-2 p-4 rounded-md border bg-success/10 border-success/30 text-success">
                 <.icon name="hero-check-circle" class="size-5" />
                 <span>Success alert surface</span>
               </div>
               <div class="flex flex-wrap gap-2">
-                <span class="badge badge-soft badge-primary">Primary</span>
-                <span class="badge badge-outline">Outline</span>
-                <span class="badge badge-success">Success</span>
-                <span class="badge badge-warning">Warning</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
+                  Primary
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-base-content/30 text-base-content">
+                  Outline
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success text-success-content">
+                  Success
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning text-warning-content">
+                  Warning
+                </span>
               </div>
-              <progress class="progress progress-primary w-full" value="72" max="100">
-                72%
-              </progress>
-              <ul class="steps w-full">
-                <li class="step step-primary">Tokens</li>
-                <li class="step step-primary">Hooks</li>
-                <li class="step">Route Scan</li>
-              </ul>
-              <ul class="menu rounded-box bg-base-200">
-                <li><a href="/sign-in">Auth Flow</a></li>
-                <li><a href="/api/json/swaggerui">API Browser</a></li>
-                <li><a href="/admin">Admin Surface</a></li>
+              <div class="w-full h-2 rounded-full bg-base-200 overflow-hidden">
+                <div class="h-full bg-primary" style="width: 72%"></div>
+              </div>
+              <ol class="flex items-center gap-2 w-full">
+                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-primary text-primary">
+                  Tokens
+                </li>
+                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-primary text-primary">
+                  Hooks
+                </li>
+                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-base-300 text-base-content/60">
+                  Route Scan
+                </li>
+              </ol>
+              <ul class="rounded-lg bg-base-200 p-2 flex flex-col">
+                <li>
+                  <a href="/sign-in" class="block px-3 py-2 rounded-md hover:bg-base-300">
+                    Auth Flow
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/api/json/swaggerui"
+                    class="block px-3 py-2 rounded-md hover:bg-base-300"
+                  >
+                    API Browser
+                  </a>
+                </li>
+                <li>
+                  <a href="/admin" class="block px-3 py-2 rounded-md hover:bg-base-300">
+                    Admin Surface
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
@@ -551,9 +581,9 @@
 
       <section
         id="layout-test-dependency-pages"
-        class="card border border-base-300 bg-base-100 shadow-sm"
+        class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
       >
-        <div class="card-body gap-6">
+        <div class="flex flex-col p-6 gap-6">
           <.header>
             Dependency Pages
             <:subtitle>
@@ -565,13 +595,17 @@
             <article
               :for={page <- @dependency_pages}
               id={"dependency-page-#{page.id}"}
-              class="rounded-box border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-base-300 bg-base-200 p-4"
             >
               <div class="space-y-4">
                 <div class="space-y-2">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="badge badge-soft badge-primary">{page.source}</span>
-                    <span class="badge badge-ghost">{page.availability}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
+                      {page.source}
+                    </span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-200 text-base-content">
+                      {page.availability}
+                    </span>
                   </div>
                   <div class="space-y-1">
                     <h3 class="font-semibold">{page.name}</h3>
@@ -580,7 +614,7 @@
                   </div>
                 </div>
 
-                <.button href={page.path} class="btn btn-soft btn-sm w-full">
+                <.button href={page.path} variant="soft" size="sm" class="w-full">
                   Open Page
                 </.button>
               </div>

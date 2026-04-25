@@ -20,16 +20,7 @@ This is a web application written using the Phoenix web framework. The following
 ### JS and CSS guidelines
 
 - **Use Tailwind CSS classes and custom CSS rules** to create and build interfaces.
-- Tailwindcss v4 **no longer needs a tailwind.config.js** and uses a new import syntax in `app.css`:
-  ```elixir
-    @import "tailwindcss" source(none);
-    @source "../css";
-    @source "../js";
-    @source "../../lib/my_app_web";
-  ```
-- **Always use and maintain this import syntax** in the app.css file for projects generated with `phx.new`.
-- **Never** use `@apply` when writing raw css.
-- **Always** manually write your own tailwind-based components instead of using daisyUI for a unique, world-class design.
+- **Always** manually write your own tailwind-based components instead of using daisyUI for design.
 - Out of the box **only the app.js and app.css bundles are supported**.
   - You cannot reference an external vendor'd script `src` or link `href` in the layouts.
   - You must import the vendor deps into app.js and app.css to use them which means you **never write inline <script>custom js</script> tags** as well as **inline styles**.
