@@ -94,6 +94,26 @@
 
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
+[data-key="filter_clear_button_class"].invisible { display: none; }
+
+[data-key="filter_input_wrapper_class"] > .flex.items-center {
+  position: relative;
+}
+[data-key="filter_input_wrapper_class"] > .flex.items-center > [data-key="filter_clear_button_class"] {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
+}
+[data-key="filter_input_wrapper_class"] [data-key="filter_text_input_class"],
+[data-key="filter_input_wrapper_class"] [data-key="filter_number_input_class"],
+[data-key="filter_input_wrapper_class"] [data-key="filter_date_input_class"],
+[data-key="filter_input_wrapper_class"] [data-key="filter_select_input_class"],
+[data-key="filter_input_wrapper_class"] [data-key="search_input_class"] {
+  padding-right: 2rem;
+}
+
 body {
   background-color: var(--color-base-100);
   color: var(--color-base-content);

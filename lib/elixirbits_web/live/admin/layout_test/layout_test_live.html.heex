@@ -180,6 +180,35 @@
               <.input field={@local_form[:notes]} type="textarea" label="Textarea" rows="4" />
               <.input field={@local_form[:enabled]} type="checkbox" label="Checkbox" />
               <.input field={@local_form[:upload]} type="file" label="File" />
+              <.input
+                name="demo_error"
+                type="text"
+                label="Errored"
+                value="invalid value"
+                errors={["Has an error"]}
+              />
+              <.input
+                name="demo_disabled"
+                type="text"
+                label="Disabled"
+                value="cannot edit"
+                disabled
+              />
+              <.input
+                name="demo_disabled_select"
+                type="select"
+                label="Disabled Select"
+                options={[{"Locked", "locked"}]}
+                value="locked"
+                disabled
+              />
+              <.input
+                name="demo_disabled_checkbox"
+                type="checkbox"
+                label="Disabled Checkbox"
+                checked
+                disabled
+              />
             </div>
           </.form>
         </div>

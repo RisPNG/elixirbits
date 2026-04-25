@@ -9,7 +9,7 @@ import Config
 
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
-config :cinder, default_theme: "modern"
+config :cinder, default_theme: ElixirbitsWeb.CinderTheme
 
 config :ash_typescript,
   output_file: "assets/js/ash_rpc.ts",
