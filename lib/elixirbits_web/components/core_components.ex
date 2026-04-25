@@ -235,7 +235,10 @@ defmodule ElixirbitsWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class={@class || "h-4 w-4 rounded border border-base-300 accent-primary"}
+          class={
+            @class ||
+              "h-4 w-4 rounded border border-base-300 accent-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          }
           {@rest}
         />
         <span class="text-sm font-medium text-base-content">{@label}</span>
@@ -255,7 +258,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           name={@name}
           class={[
             @class ||
-              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20",
+              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
             @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
           ]}
           multiple={@multiple}
@@ -280,7 +283,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           name={@name}
           class={[
             @class ||
-              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20",
+              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
             @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
           ]}
           {@rest}
@@ -304,7 +307,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
           class={[
             @class ||
-              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20",
+              "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
             @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
           ]}
           {@rest}
