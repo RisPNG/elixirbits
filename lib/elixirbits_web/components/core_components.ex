@@ -274,24 +274,60 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   def input(%{type: "textarea"} = assigns) do
-    ~H"""
-    <div class="mb-2">
-      <label for={@id} class="block">
-        <span :if={@label} class="block text-sm font-medium text-base-content mb-1">{@label}</span>
-        <textarea
-          id={@id}
-          name={@name}
-          class={[
-            @class ||
-              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
-            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
-          ]}
-          {@rest}
-        >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
-      </label>
-      <.error :for={msg <- @errors}>{msg}</.error>
-    </div>
-    """
+    if assigns[:label] do
+      placeholder = assigns.rest[:placeholder]
+      label_as_placeholder = placeholder in [nil, ""]
+
+      assigns =
+        assigns
+        |> assign(:rest, Map.delete(assigns.rest, :placeholder))
+        |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
+        |> assign(:label_as_placeholder, label_as_placeholder)
+
+      ~H"""
+      <div class="mb-2">
+        <label for={@id} class="relative block">
+          <textarea
+            id={@id}
+            name={@name}
+            placeholder={@placeholder}
+            class={[
+              @class ||
+                "input-floating-control input-floating-textarea block w-full px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+            ]}
+            {@rest}
+          >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
+          <span class={[
+            "input-floating-label",
+            !@label_as_placeholder && "input-floating-label-hidden",
+            @errors != [] && "input-floating-label-error"
+          ]}>
+            {@label}
+          </span>
+        </label>
+        <.error :for={msg <- @errors}>{msg}</.error>
+      </div>
+      """
+    else
+      ~H"""
+      <div class="mb-2">
+        <label for={@id} class="block">
+          <textarea
+            id={@id}
+            name={@name}
+            class={[
+              @class ||
+                "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+            ]}
+            {@rest}
+          >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
+        </label>
+        <.error :for={msg <- @errors}>{msg}</.error>
+      </div>
+      """
+    end
   end
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...

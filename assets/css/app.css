@@ -117,6 +117,18 @@
   opacity: 0;
 }
 
+.input-floating-textarea {
+  min-height: 2.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.input-floating-textarea:focus,
+.input-floating-textarea:not(:placeholder-shown) {
+  padding-top: 1rem;
+  padding-bottom: 0.5rem;
+}
+
 .input-floating-label {
   pointer-events: none;
   position: absolute;
@@ -145,6 +157,11 @@
   opacity: 0;
 }
 
+.input-floating-textarea + .input-floating-label {
+  top: 0.75rem;
+  transform: translateY(0);
+}
+
 .input-floating-control:focus + .input-floating-label,
 .input-floating-control:not(:placeholder-shown) + .input-floating-label {
   top: 0;
@@ -152,6 +169,11 @@
   font-size: 0.75rem;
   line-height: 1rem;
   opacity: 1;
+}
+
+.input-floating-textarea:focus + .input-floating-label,
+.input-floating-textarea:not(:placeholder-shown) + .input-floating-label {
+  transform: translateY(-50%);
 }
 
 .input-floating-control:not(:focus):not(:placeholder-shown) + .input-floating-label {
