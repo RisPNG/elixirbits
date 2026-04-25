@@ -163,7 +163,9 @@
 }
 
 .input-floating-control:focus + .input-floating-label,
-.input-floating-control:not(:placeholder-shown) + .input-floating-label {
+.input-floating-control:not(:placeholder-shown) + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label {
   top: 0;
   color: var(--color-accent);
   font-size: 0.75rem;
@@ -176,17 +178,20 @@
   transform: translateY(-50%);
 }
 
-.input-floating-control:not(:focus):not(:placeholder-shown) + .input-floating-label {
+.input-floating-control:not(:focus):not(:placeholder-shown) + .input-floating-label,
+.input-floating-wrapper:not(:has(.input-floating-control:focus)):has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label {
   color: color-mix(in oklch, var(--color-base-content) 78%, transparent);
 }
 
-.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label {
+.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label {
   isolation: isolate;
   background-color: transparent;
   box-shadow: none;
 }
 
-.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::before {
+.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::before,
+.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label::before {
   content: "";
   position: absolute;
   z-index: -2;
@@ -195,7 +200,8 @@
   border-radius: calc(var(--radius-field) + 0.1875rem);
 }
 
-.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::after {
+.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::after,
+.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label::after {
   content: "";
   position: absolute;
   z-index: -1;
@@ -212,7 +218,9 @@
 
 .input-floating-label-error,
 .input-floating-control:focus + .input-floating-label-error,
-.input-floating-control:not(:placeholder-shown) + .input-floating-label-error {
+.input-floating-control:not(:placeholder-shown) + .input-floating-label-error,
+.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label-error,
+.input-floating-wrapper:has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label-error {
   color: var(--color-error);
 }
 

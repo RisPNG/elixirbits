@@ -179,7 +179,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :type, :string,
     default: "text",
     values: ~w(checkbox color date datetime-local email file month number password
-               search select tel text textarea time url week hidden)
+               search select switch tel text textarea time url week hidden)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -200,7 +200,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
     assigns
-    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(field: nil, form_field: field, id: assigns.id || field.id)
     |> assign(:errors, Enum.map(errors, &translate_error(&1)))
     |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
     |> assign_new(:value, fn -> field.value end)
@@ -221,27 +221,86 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     ~H"""
     <div class="mb-2">
-      <label for={@id} class="inline-flex items-center gap-2">
-        <input
-          type="hidden"
-          name={@name}
-          value="false"
-          disabled={@rest[:disabled]}
-          form={@rest[:form]}
-        />
-        <input
-          type="checkbox"
-          id={@id}
-          name={@name}
-          value="true"
-          checked={@checked}
-          class={
-            @class ||
-              "h-4 w-4 rounded border border-base-300 accent-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          }
-          {@rest}
-        />
-        <span class="text-sm font-medium text-base-content">{@label}</span>
+      <label
+        for={@id}
+        class={[
+          "cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20",
+          "has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-base-200",
+          @errors != [] &&
+            (@error_class || "border-error focus-within:border-error focus-within:ring-error/20")
+        ]}
+      >
+        <span class="flex items-center gap-2 text-sm font-medium text-base-content">
+          {@label}
+        </span>
+        <div class="flex items-center gap-2">
+          <input
+            type="hidden"
+            name={@name}
+            value="false"
+            disabled={@rest[:disabled]}
+            form={@rest[:form]}
+          />
+          <input
+            type="checkbox"
+            id={@id}
+            name={@name}
+            value="true"
+            checked={@checked}
+            class={
+              @class ||
+                "appearance-none h-5 w-5 shrink-0 rounded border border-base-300 bg-base-200 checked:bg-primary checked:border-primary focus:ring-0 focus:outline-none disabled:cursor-not-allowed checked:bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:100%_100%]"
+            }
+            {@rest}
+          />
+        </div>
+      </label>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  def input(%{type: "switch"} = assigns) do
+    assigns =
+      assign_new(assigns, :checked, fn ->
+        Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
+      end)
+
+    ~H"""
+    <div class="mb-2">
+      <label
+        for={@id}
+        class={[
+          "cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20",
+          "has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-base-200",
+          @errors != [] &&
+            (@error_class || "border-error focus-within:border-error focus-within:ring-error/20")
+        ]}
+      >
+        <span class="flex items-center gap-2 text-sm font-medium text-base-content">
+          {@label}
+        </span>
+        <div class="flex items-center gap-2">
+          <input
+            type="hidden"
+            name={@name}
+            value="false"
+            disabled={@rest[:disabled]}
+            form={@rest[:form]}
+          />
+          <input
+            type="checkbox"
+            id={@id}
+            name={@name}
+            value="true"
+            checked={@checked}
+            class={
+              @class ||
+                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-base-300 bg-base-200 checked:bg-primary checked:border-primary focus:outline-none focus:ring-0 disabled:cursor-not-allowed transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-base-content/40 checked:before:translate-x-5 checked:before:bg-base-100 before:transition-transform before:duration-200 before:ease-in-out"
+            }
+            {@rest}
+          />
+        </div>
       </label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
@@ -249,28 +308,98 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   def input(%{type: "select"} = assigns) do
-    ~H"""
-    <div class="mb-2">
-      <label for={@id} class="block">
-        <span :if={@label} class="block text-sm font-medium text-base-content mb-1">{@label}</span>
-        <select
-          id={@id}
-          name={@name}
-          class={[
-            @class ||
-              "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
-            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
-          ]}
-          multiple={@multiple}
-          {@rest}
-        >
-          <option :if={@prompt} value="">{@prompt}</option>
-          {Phoenix.HTML.Form.options_for_select(@options, @value)}
-        </select>
-      </label>
-      <.error :for={msg <- @errors}>{msg}</.error>
-    </div>
-    """
+    assigns = assign_new(assigns, :form_field, fn -> nil end)
+
+    assigns =
+      assign_new(assigns, :safe_field, fn ->
+        assigns.form_field ||
+          %{
+            to_form(%{assigns.name => assigns.value}, as: "dummy")[assigns.name]
+            | id: assigns.id || assigns.name,
+              name: assigns.name,
+              errors: assigns[:errors] || []
+          }
+      end)
+
+    if assigns[:label] do
+      placeholder = assigns.rest[:placeholder]
+      label_as_placeholder = placeholder in [nil, ""]
+
+      assigns =
+        assigns
+        |> assign(:rest, Map.delete(assigns.rest, :placeholder))
+        |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
+        |> assign(:label_as_placeholder, label_as_placeholder)
+
+      ~H"""
+      <div class="mb-2">
+        <label for={@id || @safe_field.id} class="relative block">
+          <LiveSelect.live_select
+            field={@safe_field}
+            id={@safe_field.id}
+            mode={if @multiple, do: :tags, else: :single}
+            options={@options}
+            text_input_class={[
+              @class ||
+                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+            ]}
+            text_input_selected_class=""
+            dropdown_class="absolute top-full mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto"
+            option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
+            selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
+            active_option_class="bg-base-200"
+            container_class="input-floating-wrapper relative flex flex-col w-full"
+            clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
+            tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
+            clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
+            tags_container_extra_class="order-last flex flex-wrap"
+            placeholder={@placeholder}
+            {@rest}
+          />
+          <span class={[
+            "input-floating-label",
+            !@label_as_placeholder && "input-floating-label-hidden",
+            @errors != [] && "input-floating-label-error"
+          ]}>
+            {@label}
+          </span>
+        </label>
+        <.error :for={msg <- @errors}>{msg}</.error>
+      </div>
+      """
+    else
+      ~H"""
+      <div class="mb-2">
+        <label for={@id || @safe_field.id} class="block">
+          <LiveSelect.live_select
+            field={@safe_field}
+            id={@safe_field.id}
+            mode={if @multiple, do: :tags, else: :single}
+            options={@options}
+            text_input_class={[
+              @class ||
+                "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+            ]}
+            text_input_selected_class=""
+            dropdown_class="absolute top-full mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto"
+            option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
+            selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
+            active_option_class="bg-base-200"
+            container_class="relative flex flex-col w-full"
+            clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
+            tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
+            clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
+            tags_container_extra_class="order-last flex flex-wrap"
+            placeholder={@prompt}
+            {@rest}
+          />
+        </label>
+        <.error :for={msg <- @errors}>{msg}</.error>
+      </div>
+      """
+    end
   end
 
   def input(%{type: "textarea"} = assigns) do
