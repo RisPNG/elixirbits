@@ -94,6 +94,106 @@
 
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
+.input-floating-control {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  line-height: 1.25rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease, padding 150ms ease;
+}
+
+.input-floating-control::placeholder {
+  color: color-mix(in oklch, var(--color-base-content) 55%, transparent);
+  opacity: 1;
+  transition: opacity 150ms ease;
+}
+
+.input-floating-control:focus,
+.input-floating-control:not(:placeholder-shown) {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.input-floating-control:focus::placeholder {
+  opacity: 0;
+}
+
+.input-floating-label {
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: var(--radius-field);
+  background-color: var(--color-base-100);
+  box-shadow: 0 0 0 0.1875rem var(--color-base-100);
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  color: color-mix(in oklch, var(--color-base-content) 65%, transparent);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  opacity: 1;
+  transition:
+    top 150ms ease,
+    color 150ms ease,
+    font-size 150ms ease,
+    line-height 150ms ease,
+    opacity 150ms ease;
+}
+
+.input-floating-label-hidden {
+  opacity: 0;
+}
+
+.input-floating-control:focus + .input-floating-label,
+.input-floating-control:not(:placeholder-shown) + .input-floating-label {
+  top: 0;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  opacity: 1;
+}
+
+.input-floating-control:not(:focus):not(:placeholder-shown) + .input-floating-label {
+  color: color-mix(in oklch, var(--color-base-content) 78%, transparent);
+}
+
+.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label {
+  isolation: isolate;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: -0.1875rem;
+  background-color: var(--color-base-100);
+  border-radius: calc(var(--radius-field) + 0.1875rem);
+}
+
+.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -0.1875rem;
+  bottom: -0.1875rem;
+  left: -0.1875rem;
+  height: 0.69rem;
+  border-right: 1px solid var(--color-base-200);
+  border-bottom: 1px solid var(--color-base-200);
+  border-left: 1px solid var(--color-base-200);
+  border-radius: 0 0 calc(var(--radius-field) + 0.1875rem)
+    calc(var(--radius-field) + 0.1875rem);
+}
+
+.input-floating-label-error,
+.input-floating-control:focus + .input-floating-label-error,
+.input-floating-control:not(:placeholder-shown) + .input-floating-label-error {
+  color: var(--color-error);
+}
+
 [data-key="filter_clear_button_class"].invisible { display: none; }
 
 [data-key="filter_input_wrapper_class"] > .flex.items-center {

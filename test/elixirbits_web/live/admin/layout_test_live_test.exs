@@ -28,6 +28,8 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     assert has_element?(view, "#layout-test-local-tab[aria-selected=\"true\"]")
     assert has_element?(view, "#layout-test-local-panel")
     assert has_element?(view, "#layout-test-core-table")
+    assert has_element?(view, "#local_project_name.input-floating-control[placeholder=\" \"]")
+    assert has_element?(view, "label[for=\"local_project_name\"] .input-floating-label")
     refute has_element?(view, "#layout-test-ecosystem-panel")
 
     render_click(element(view, "#layout-test-ecosystem-tab"))
