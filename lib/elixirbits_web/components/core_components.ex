@@ -663,6 +663,12 @@ defmodule ElixirbitsWeb.CoreComponents do
     end
   end
 
+  def input(%{type: "date"} = assigns), do: vcalendar_input(assigns)
+  def input(%{type: "datetime-local"} = assigns), do: vcalendar_input(assigns)
+  def input(%{type: "time"} = assigns), do: vcalendar_input(assigns)
+  def input(%{type: "week"} = assigns), do: vcalendar_input(assigns)
+  def input(%{type: "month"} = assigns), do: vcalendar_input(assigns)
+
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     if assigns[:label] && assigns.type in ~w(email number password search tel text url) do
@@ -720,6 +726,205 @@ defmodule ElixirbitsWeb.CoreComponents do
             {@rest}
           />
         </label>
+        <.error :for={msg <- @errors}>{msg}</.error>
+      </div>
+      """
+    end
+  end
+
+  defp vcalendar_input(assigns) do
+    if assigns[:label] do
+      placeholder = assigns.rest[:placeholder]
+      label_as_placeholder = placeholder in [nil, ""]
+
+      assigns =
+        assigns
+        |> assign(:rest, Map.delete(assigns.rest, :placeholder))
+        |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
+        |> assign(:label_as_placeholder, label_as_placeholder)
+
+      ~H"""
+      <div class="mb-2">
+        <div class="relative block">
+          <input
+            type="text"
+            name={@name}
+            id={@id}
+            value={Phoenix.HTML.Form.normalize_value("text", @value)}
+            placeholder={@placeholder}
+            data-vc-mode={@type}
+            phx-hook=".VCalendar"
+            phx-update="ignore"
+            autocomplete="off"
+            readonly
+            class={[
+              @class ||
+                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+            ]}
+            {@rest}
+          />
+          <span class={[
+            "input-floating-label",
+            !@label_as_placeholder && "input-floating-label-hidden",
+            @errors != [] && "input-floating-label-error"
+          ]}>
+            {@label}
+          </span>
+        </div>
+        <.error :for={msg <- @errors}>{msg}</.error>
+      </div>
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".VCalendar">
+        import {Calendar} from "vanilla-calendar-pro"
+
+        const pad = (n) => String(n).padStart(2, "0")
+
+        const parseInitial = (mode, value) => {
+          if (!value) return {dates: [], time: ""}
+          if (mode === "date") {
+            return /^\d{4}-\d{2}-\d{2}$/.test(value) ? {dates: [value], time: ""} : {dates: [], time: ""}
+          }
+          if (mode === "datetime-local") {
+            const m = value.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/)
+            return m ? {dates: [m[1]], time: m[2]} : {dates: [], time: ""}
+          }
+          if (mode === "time") {
+            return /^\d{2}:\d{2}$/.test(value) ? {dates: [], time: value} : {dates: [], time: ""}
+          }
+          if (mode === "week") {
+            const m = value.match(/^(\d{4})-W(\d{2})$/)
+            if (!m) return {dates: [], time: ""}
+            const year = parseInt(m[1], 10)
+            const week = parseInt(m[2], 10)
+            const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7))
+            const dow = simple.getUTCDay()
+            const monday = new Date(simple)
+            monday.setUTCDate(simple.getUTCDate() - ((dow + 6) % 7))
+            const iso = `${monday.getUTCFullYear()}-${pad(monday.getUTCMonth() + 1)}-${pad(monday.getUTCDate())}`
+            return {dates: [iso], time: ""}
+          }
+          if (mode === "month") {
+            const m = value.match(/^(\d{4})-(\d{2})$/)
+            return m ? {year: parseInt(m[1], 10), month: parseInt(m[2], 10) - 1} : {}
+          }
+          return {dates: [], time: ""}
+        }
+
+        const setValue = (input, value) => {
+          input.value = value
+          input.dispatchEvent(new Event("input", {bubbles: true}))
+          input.dispatchEvent(new Event("change", {bubbles: true}))
+        }
+
+        export default {
+          mounted() {
+            const input = this.el
+            const mode = input.dataset.vcMode
+            const initial = parseInitial(mode, input.value)
+
+            const base = {
+              inputMode: true,
+              openOnFocus: false,
+              positionToInput: ["bottom", "left"],
+            }
+
+            const opts =
+              mode === "date" ? {
+                ...base,
+                type: "default",
+                selectionDatesMode: "single",
+                selectedDates: initial.dates,
+                onClickDate: (self) => {
+                  const [d] = self.context.selectedDates
+                  if (d) setValue(input, d)
+                  self.hide()
+                },
+              }
+              : mode === "datetime-local" ? {
+                ...base,
+                type: "default",
+                selectionDatesMode: "single",
+                selectionTimeMode: 24,
+                selectedDates: initial.dates,
+                selectedTime: initial.time || "00:00",
+                onClickDate: (self) => {
+                  const [d] = self.context.selectedDates
+                  const t = self.context.selectedTime || "00:00"
+                  if (d) setValue(input, `${d}T${t}`)
+                },
+                onChangeTime: (self) => {
+                  const [d] = self.context.selectedDates
+                  const t = self.context.selectedTime || "00:00"
+                  if (d) setValue(input, `${d}T${t}`)
+                },
+              }
+              : mode === "time" ? {
+                ...base,
+                type: "default",
+                selectionDatesMode: false,
+                selectionMonthsMode: false,
+                selectionYearsMode: false,
+                selectionTimeMode: 24,
+                selectedTime: initial.time || "00:00",
+                onChangeTime: (self) => {
+                  setValue(input, self.context.selectedTime || "00:00")
+                },
+              }
+              : mode === "week" ? {
+                ...base,
+                type: "default",
+                selectionDatesMode: false,
+                enableWeekNumbers: true,
+                selectedDates: initial.dates,
+                onClickWeekNumber: (self, weekNumber, year) => {
+                  setValue(input, `${year}-W${pad(weekNumber)}`)
+                  self.hide()
+                },
+              }
+              : {
+                ...base,
+                type: "month",
+                selectionDatesMode: false,
+                selectionMonthsMode: true,
+                selectedYear: initial.year,
+                selectedMonth: initial.month,
+                onClickMonth: (self) => {
+                  const y = self.context.selectedYear
+                  const m = self.context.selectedMonth
+                  if (y != null && m != null) setValue(input, `${y}-${pad(m + 1)}`)
+                  self.hide()
+                },
+              }
+
+            this.calendar = new Calendar(input, opts)
+            this.calendar.init()
+          },
+          destroyed() {
+            this.calendar?.destroy()
+          },
+        }
+      </script>
+      """
+    else
+      ~H"""
+      <div class="mb-2">
+        <input
+          type="text"
+          name={@name}
+          id={@id}
+          value={Phoenix.HTML.Form.normalize_value("text", @value)}
+          data-vc-mode={@type}
+          phx-hook=".VCalendar"
+          phx-update="ignore"
+          autocomplete="off"
+          readonly
+          class={[
+            @class ||
+              "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+          ]}
+          {@rest}
+        />
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>
       """
