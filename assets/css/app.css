@@ -162,10 +162,18 @@
   transform: translateY(0);
 }
 
+.input-floating-wrapper-tags + .input-floating-label,
+*:has(> .input-floating-wrapper-tags) + .input-floating-label {
+  top: 1.375rem;
+  transform: translateY(-50%);
+}
+
 .input-floating-control:focus + .input-floating-label,
 .input-floating-control:not(:placeholder-shown) + .input-floating-label,
 .input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label,
-.input-floating-wrapper:has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label {
+.input-floating-wrapper:has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label,
+*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label,
+*:has(> .input-floating-wrapper .input-floating-control:not(:placeholder-shown)) + .input-floating-label {
   top: 0;
   color: var(--color-accent);
   font-size: 0.75rem;
@@ -179,7 +187,8 @@
 }
 
 .input-floating-control:not(:focus):not(:placeholder-shown) + .input-floating-label,
-.input-floating-wrapper:not(:has(.input-floating-control:focus)):has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label {
+.input-floating-wrapper:not(:has(.input-floating-control:focus)):has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label,
+*:has(> .input-floating-wrapper:not(:has(.input-floating-control:focus)) .input-floating-control:not(:placeholder-shown)) + .input-floating-label {
   color: color-mix(in oklch, var(--color-base-content) 78%, transparent);
 }
 
@@ -220,7 +229,9 @@
 .input-floating-control:focus + .input-floating-label-error,
 .input-floating-control:not(:placeholder-shown) + .input-floating-label-error,
 .input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label-error,
-.input-floating-wrapper:has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label-error {
+.input-floating-wrapper:has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label-error,
+*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label-error,
+*:has(> .input-floating-wrapper .input-floating-control:not(:placeholder-shown)) + .input-floating-label-error {
   color: var(--color-error);
 }
 

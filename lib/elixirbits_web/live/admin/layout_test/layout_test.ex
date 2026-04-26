@@ -62,6 +62,22 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
     }
   ]
 
+  @dependency_options Enum.map(@dependency_pages, fn page ->
+                        {"#{page.name} (#{page.source})", page.path}
+                      end)
+
+  @role_options [
+    {"Administrator", "admin"},
+    {"Designer", "designer"},
+    {"Viewer", "viewer"}
+  ]
+
+  @tag_options [
+    {"Elixir", "elixir"},
+    {"Phoenix", "phoenix"},
+    {"LiveView", "liveview"}
+  ]
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
@@ -74,6 +90,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
      ])
      |> assign(:dependency_form, to_form(%{}, as: :dependency))
      |> assign(:dependency_pages, @dependency_pages)
+     |> assign(:dependency_options, @dependency_options)
      |> assign(
        :local_form,
        to_form(
@@ -154,14 +171,30 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
     text = Map.get(params, "text", "") |> String.downcase()
 
     options =
-      @dependency_pages
-      |> Enum.filter(fn page ->
-        text == "" or
-          String.contains?(String.downcase(page.name), text) or
-          String.contains?(String.downcase(page.source), text) or
-          String.contains?(String.downcase(page.path), text)
-      end)
-      |> Enum.map(fn page -> {"#{page.name} (#{page.source})", page.path} end)
+      cond do
+        id == "layout-test-local-role" ->
+          Enum.filter(@role_options, fn {label, _} ->
+            String.contains?(String.downcase(label), text)
+          end)
+
+        id == "layout-test-local-tags" ->
+          Enum.filter(@tag_options, fn {label, _} ->
+            String.contains?(String.downcase(label), text)
+          end)
+
+        true ->
+          if text == "" do
+            @dependency_options
+          else
+            @dependency_pages
+            |> Enum.filter(fn page ->
+              String.contains?(String.downcase(page.name), text) or
+                String.contains?(String.downcase(page.source), text) or
+                String.contains?(String.downcase(page.path), text)
+            end)
+            |> Enum.map(fn page -> {"#{page.name} (#{page.source})", page.path} end)
+          end
+      end
 
     send_update(Component, id: id, options: options)
 

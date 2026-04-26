@@ -168,6 +168,7 @@
               <.input field={@local_form[:website]} type="url" label="URL" />
               <.input field={@local_form[:phone]} type="tel" label="Telephone" />
               <.input
+                id="layout-test-local-role"
                 field={@local_form[:role]}
                 type="select"
                 label="Select"
@@ -176,9 +177,24 @@
                   {"Designer", "designer"},
                   {"Viewer", "viewer"}
                 ]}
+                phx-focus="live_select_change"
               />
               <.input field={@local_form[:notes]} type="textarea" label="Textarea" rows="4" />
               <.input field={@local_form[:enabled]} type="checkbox" label="Checkbox" />
+              <.input field={@local_form[:switch]} type="switch" label="Switch" />
+              <.input
+                id="layout-test-local-tags"
+                field={@local_form[:tags]}
+                type="select"
+                label="Tags (Quick Tag)"
+                mode={:quick_tags}
+                options={[
+                  {"Elixir", "elixir"},
+                  {"Phoenix", "phoenix"},
+                  {"LiveView", "liveview"}
+                ]}
+                phx-focus="live_select_change"
+              />
               <.input field={@local_form[:upload]} type="file" label="File" />
               <.input
                 name="demo_error"
@@ -498,8 +514,26 @@
             >
               <LiveSelect.live_select
                 field={@dependency_form[:component_search]}
+                id="layout-test-dependency-live-select"
+                options={@dependency_options}
                 placeholder="Search dependency pages"
-              />
+                phx-focus="live_select_change"
+                keep_options_on_select
+                keep_label_on_select
+                allow_clear
+                text_input_class="block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200"
+                text_input_selected_class=""
+                dropdown_class="absolute top-full mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto"
+                option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
+                selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
+                active_option_class="bg-base-200"
+                container_class="relative flex flex-col w-full"
+                clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
+              >
+                <:clear_button>
+                  <.icon name="hero-x-mark" class="size-4" />
+                </:clear_button>
+              </LiveSelect.live_select>
             </.form>
 
             <div

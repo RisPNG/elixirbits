@@ -53,4 +53,36 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     render_click(element(view, "#layout-test-flash-error"))
     assert has_element?(view, "#flash-error")
   end
+
+  test "dependency LiveSelect refreshes backend options after selection", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    render_click(element(view, "#layout-test-ecosystem-tab"))
+
+    assert has_element?(view, "#layout-test-dependency-live-select")
+
+    render_focus(element(view, "#layout-test-dependency-live-select input[type=\"text\"]"))
+
+    render_hook(view, "live_select_change", %{
+      "id" => "layout-test-dependency-live-select",
+      "text" => "dashboard"
+    })
+
+    assert has_element?(view, "#layout-test-dependency-live-select ul li div[data-idx=\"0\"]")
+
+    render_hook(element(view, "#layout-test-dependency-live-select"), "option_click", %{
+      "idx" => "0"
+    })
+
+    refute has_element?(view, "#layout-test-dependency-live-select ul")
+
+    render_focus(element(view, "#layout-test-dependency-live-select input[type=\"text\"]"))
+
+    render_hook(view, "live_select_change", %{
+      "id" => "layout-test-dependency-live-select",
+      "text" => ""
+    })
+
+    assert has_element?(view, "#layout-test-dependency-live-select ul li div[data-idx=\"0\"]")
+  end
 end
