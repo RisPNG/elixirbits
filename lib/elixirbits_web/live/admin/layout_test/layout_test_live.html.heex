@@ -219,6 +219,19 @@
                 disabled
               />
               <.input
+                name="demo_disabled_tags"
+                type="select"
+                label="Disabled Tags"
+                mode={:quick_tags}
+                options={[
+                  {"Elixir", "elixir"},
+                  {"Phoenix", "phoenix"},
+                  {"LiveView", "liveview"}
+                ]}
+                value={["elixir", "phoenix"]}
+                disabled
+              />
+              <.input
                 name="demo_disabled_checkbox"
                 type="checkbox"
                 label="Disabled Checkbox"
