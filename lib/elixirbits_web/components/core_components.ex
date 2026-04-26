@@ -337,6 +337,64 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
+  def input(%{type: "select", rest: %{disabled: disabled}} = assigns)
+      when disabled not in [false, nil] do
+    assigns = assign_new(assigns, :form_field, fn -> nil end)
+
+    assigns =
+      assign_new(assigns, :safe_field, fn ->
+        assigns.form_field ||
+          %{
+            to_form(%{assigns.name => assigns.value}, as: "dummy")[assigns.name]
+            | id: assigns.id || assigns.name,
+              name: assigns.name,
+              errors: assigns[:errors] || []
+          }
+      end)
+
+    field = assigns.safe_field
+    options = assigns[:options] || []
+    value = assigns[:value]
+
+    display =
+      case value do
+        v when is_list(v) ->
+          v |> Enum.map(&option_display_label(&1, options)) |> Enum.join(", ")
+
+        v ->
+          option_display_label(v, options)
+      end
+
+    hidden_name =
+      if assigns.mode in [:tags, :quick_tags], do: field.name <> "[]", else: field.name
+
+    hidden_values =
+      value
+      |> List.wrap()
+      |> Enum.reject(&(&1 in [nil, ""]))
+
+    assigns =
+      assigns
+      |> assign(:display, display)
+      |> assign(:hidden_name, hidden_name)
+      |> assign(:hidden_values, hidden_values)
+
+    ~H"""
+    <.input
+      id={@id || @safe_field.id}
+      name={@safe_field.name}
+      type="text"
+      label={assigns[:label]}
+      value={@display}
+      disabled
+      class={@class}
+      error_class={@error_class}
+      errors={@errors}
+    />
+    <input :for={v <- @hidden_values} type="hidden" name={@hidden_name} value={v} />
+    """
+  end
+
   def input(%{type: "select"} = assigns) do
     assigns = assign_new(assigns, :form_field, fn -> nil end)
 
@@ -666,6 +724,23 @@ defmodule ElixirbitsWeb.CoreComponents do
       </div>
       """
     end
+  end
+
+  defp option_display_label(value, _options) when value in [nil, ""], do: ""
+
+  defp option_display_label(value, options) do
+    Enum.find_value(options, to_string(value), fn opt ->
+      {opt_value, opt_label} =
+        case opt do
+          {l, v} -> {v, l}
+          %{value: v, label: l} -> {v, l}
+          %{"value" => v, "label" => l} -> {v, l}
+          v -> {v, to_string(v)}
+        end
+
+      if opt_value == value or to_string(opt_value) == to_string(value),
+        do: opt_label
+    end)
   end
 
   # Helper used by inputs to generate form errors
