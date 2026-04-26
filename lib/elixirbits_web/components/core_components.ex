@@ -188,13 +188,41 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
-  attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
+
+  attr :mode, :atom,
+    default: :single,
+    values: [:single, :tags, :quick_tags],
+    doc: "the LiveSelect mode for select inputs"
+
   attr :class, :any, default: nil, doc: "the input class to use over defaults"
   attr :error_class, :any, default: nil, doc: "the input error class to use over defaults"
 
+  @live_select_rest_global (if Code.ensure_loaded?(LiveSelect.Component) do
+                              LiveSelect.Component.default_opts()
+                              |> Keyword.keys()
+                              |> Kernel.++([
+                                :field,
+                                :id,
+                                :options,
+                                :"phx-target",
+                                :"phx-blur",
+                                :"phx-focus",
+                                :option,
+                                :tag,
+                                :clear_button,
+                                :hide_dropdown,
+                                :value_mapper,
+                                :form
+                              ])
+                            else
+                              []
+                            end)
+
   attr :rest, :global,
-    include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
-                multiple pattern placeholder readonly required rows size step)
+    include:
+      ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
+                 multiple pattern placeholder readonly required rows size step) ++
+        (@live_select_rest_global |> Enum.map(&Atom.to_string/1))
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
@@ -202,7 +230,9 @@ defmodule ElixirbitsWeb.CoreComponents do
     assigns
     |> assign(field: nil, form_field: field, id: assigns.id || field.id)
     |> assign(:errors, Enum.map(errors, &translate_error(&1)))
-    |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
+    |> assign_new(:name, fn ->
+      if assigns.mode in [:tags, :quick_tags], do: field.name <> "[]", else: field.name
+    end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
   end
@@ -321,42 +351,153 @@ defmodule ElixirbitsWeb.CoreComponents do
           }
       end)
 
+    field = assigns.safe_field
+
+    {div_attrs, live_select_attrs} =
+      Enum.split_with(assigns.rest, fn {k, _v} ->
+        k = to_string(k)
+
+        cond do
+          k == "class" -> true
+          k == "phx-click" -> true
+          k == "phx-hook" -> true
+          String.starts_with?(k, "phx-value-") -> true
+          true -> false
+        end
+      end)
+
+    custom_class =
+      Enum.find_value(div_attrs, fn {k, v} ->
+        if to_string(k) == "class", do: v
+      end)
+
+    div_attrs = Enum.reject(div_attrs, fn {k, _v} -> to_string(k) == "class" end)
+
+    hook_wrapper_id =
+      if Enum.any?(div_attrs, fn {k, _v} -> to_string(k) == "phx-hook" end) do
+        live_select_id =
+          Enum.find_value(live_select_attrs, field.id, fn {k, v} ->
+            if to_string(k) == "id" && v not in [nil, ""], do: v
+          end)
+
+        "lswrapper-" <> to_string(live_select_id)
+      end
+
+    live_select_attrs =
+      live_select_attrs
+      |> Keyword.take(@live_select_rest_global)
+      |> Keyword.drop([:value])
+
+    mode = assigns.mode
+
+    live_select_attrs =
+      Keyword.drop(live_select_attrs, [
+        :field,
+        :id,
+        :options,
+        :mode,
+        :dropdown_class,
+        :placeholder,
+        :text_input_class,
+        :text_input_selected_class,
+        :option_class,
+        :selected_option_class,
+        :active_option_class,
+        :container_class,
+        :clear_button_extra_class,
+        :tag_class,
+        :clear_tag_button_extra_class,
+        :tags_container_extra_class,
+        :keep_label_on_select
+      ])
+
+    dropdown_class =
+      if mode == :single do
+        "absolute top-full mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
+      else
+        "absolute top-11 mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
+      end
+
+    live_select_attrs =
+      if Keyword.has_key?(live_select_attrs, :value_mapper) do
+        live_select_attrs
+      else
+        case field.form.source do
+          %Ecto.Changeset{types: types} ->
+            case Map.get(types, field.field) do
+              :integer ->
+                Keyword.put(
+                  live_select_attrs,
+                  :value_mapper,
+                  &Elixirbits.CoreUtils.Parse.to_integer/1
+                )
+
+              _ ->
+                live_select_attrs
+            end
+
+          _ ->
+            live_select_attrs
+        end
+      end
+
+    container_class =
+      if mode == :single do
+        "input-floating-wrapper relative flex flex-col w-full"
+      else
+        "input-floating-wrapper input-floating-wrapper-tags relative flex flex-col w-full"
+      end
+
+    assigns =
+      assigns
+      |> assign(:live_select_opts, live_select_attrs)
+      |> assign(:div_attrs, div_attrs)
+      |> assign(:custom_class, custom_class)
+      |> assign(:hook_wrapper_id, hook_wrapper_id)
+      |> assign(:dropdown_class, dropdown_class)
+      |> assign(:mode, mode)
+      |> assign(:container_class, container_class)
+
     if assigns[:label] do
       placeholder = assigns.rest[:placeholder]
       label_as_placeholder = placeholder in [nil, ""]
 
       assigns =
         assigns
-        |> assign(:rest, Map.delete(assigns.rest, :placeholder))
         |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
         |> assign(:label_as_placeholder, label_as_placeholder)
 
       ~H"""
-      <div class="mb-2">
+      <div class={["mb-2", @custom_class]} {@div_attrs}>
         <label for={@id || @safe_field.id} class="relative block">
-          <LiveSelect.live_select
-            field={@safe_field}
-            id={@safe_field.id}
-            mode={if @multiple, do: :tags, else: :single}
-            options={@options}
-            text_input_class={[
-              @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
-            ]}
-            text_input_selected_class=""
-            dropdown_class="absolute top-full mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto"
-            option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
-            selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
-            active_option_class="bg-base-200"
-            container_class="input-floating-wrapper relative flex flex-col w-full"
-            clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
-            tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
-            clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
-            tags_container_extra_class="order-last flex flex-wrap"
-            placeholder={@placeholder}
-            {@rest}
-          />
+          <div id={@hook_wrapper_id}>
+            <LiveSelect.live_select
+              field={@safe_field}
+              id={@safe_field.id}
+              mode={@mode}
+              options={@options}
+              text_input_class={[
+                @class ||
+                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                @errors != [] &&
+                  (@error_class || "border-error focus:border-error focus:ring-error/20")
+              ]}
+              text_input_selected_class=""
+              dropdown_class={@dropdown_class}
+              option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
+              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
+              active_option_class="bg-base-200"
+              container_class={@container_class}
+              clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
+              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
+              clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
+              tags_container_extra_class="order-last flex flex-wrap"
+              placeholder={@placeholder}
+              keep_label_on_select
+              allow_clear
+              {@live_select_opts}
+            />
+          </div>
           <span class={[
             "input-floating-label",
             !@label_as_placeholder && "input-floating-label-hidden",
@@ -370,31 +511,36 @@ defmodule ElixirbitsWeb.CoreComponents do
       """
     else
       ~H"""
-      <div class="mb-2">
+      <div class={["mb-2", @custom_class]} {@div_attrs}>
         <label for={@id || @safe_field.id} class="block">
-          <LiveSelect.live_select
-            field={@safe_field}
-            id={@safe_field.id}
-            mode={if @multiple, do: :tags, else: :single}
-            options={@options}
-            text_input_class={[
-              @class ||
-                "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
-            ]}
-            text_input_selected_class=""
-            dropdown_class="absolute top-full mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto"
-            option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
-            selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
-            active_option_class="bg-base-200"
-            container_class="relative flex flex-col w-full"
-            clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
-            tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
-            clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
-            tags_container_extra_class="order-last flex flex-wrap"
-            placeholder={@prompt}
-            {@rest}
-          />
+          <div id={@hook_wrapper_id}>
+            <LiveSelect.live_select
+              field={@safe_field}
+              id={@safe_field.id}
+              mode={@mode}
+              options={@options}
+              text_input_class={[
+                @class ||
+                  "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                @errors != [] &&
+                  (@error_class || "border-error focus:border-error focus:ring-error/20")
+              ]}
+              text_input_selected_class=""
+              dropdown_class={@dropdown_class}
+              option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
+              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
+              active_option_class="bg-base-200"
+              container_class="relative flex flex-col w-full"
+              clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
+              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
+              clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
+              tags_container_extra_class="order-last flex flex-wrap"
+              placeholder={@prompt}
+              keep_label_on_select
+              allow_clear
+              {@live_select_opts}
+            />
+          </div>
         </label>
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>
