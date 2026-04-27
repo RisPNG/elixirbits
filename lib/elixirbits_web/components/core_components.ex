@@ -816,16 +816,43 @@ defmodule ElixirbitsWeb.CoreComponents do
           input.dispatchEvent(new Event("change", {bubbles: true}))
         }
 
+        if (typeof HTMLElement !== "undefined" && !HTMLElement.prototype._vcFocusPatched) {
+          HTMLElement.prototype._vcFocusPatched = true
+          const origFocus = HTMLElement.prototype.focus
+          HTMLElement.prototype.focus = function(opts) {
+            if (this.closest && this.closest("[data-vc=calendar]")) {
+              return origFocus.call(this, { ...(opts || {}), preventScroll: true })
+            }
+            return origFocus.call(this, opts)
+          }
+        }
+
         export default {
           mounted() {
             const input = this.el
             const mode = input.dataset.vcMode
             const initial = parseInitial(mode, input.value)
 
+            const markMode = (self) => {
+              const main = self?.context?.mainElement
+              if (main && main instanceof HTMLElement) {
+                main.setAttribute("data-vc-mode", mode)
+                main.classList.add(`vc-mode-${mode}`)
+                const w = input.offsetWidth
+                if (w > 0) {
+                  main.style.minWidth = `${w}px`
+                  main.style.width = `${w}px`
+                }
+              }
+            }
+
             const base = {
               inputMode: true,
               openOnFocus: false,
               positionToInput: ["bottom", "left"],
+              onInit: markMode,
+              onShow: markMode,
+              onUpdate: markMode,
             }
 
             const opts =
