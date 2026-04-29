@@ -143,6 +143,19 @@ defmodule Elixirbits.Repo.Migrations.InitializeAndAddAuthenticationResourcesAndA
     VOLATILE;
     """)
 
+    execute("""
+    CREATE OR REPLACE FUNCTION uuidv7()
+    RETURNS UUID
+    AS $$
+    BEGIN
+      RETURN uuid_generate_v7();
+    END
+    $$
+    LANGUAGE PLPGSQL
+    SET search_path = ''
+    VOLATILE;
+    """)
+
     execute("CREATE EXTENSION IF NOT EXISTS \"citext\"")
     execute "CREATE TYPE public.money_with_currency AS (currency_code varchar, amount numeric);"
 
@@ -738,7 +751,7 @@ defmodule Elixirbits.Repo.Migrations.InitializeAndAddAuthenticationResourcesAndA
     # Uncomment this if you actually want to uninstall the extensions
     # when this migration is rolled back:
     execute(
-      "DROP FUNCTION IF EXISTS uuid_generate_v7(), timestamp_from_uuid_v7(uuid), ash_raise_error(jsonb), ash_raise_error(jsonb, ANYCOMPATIBLE), ash_elixir_and(BOOLEAN, ANYCOMPATIBLE), ash_elixir_and(ANYCOMPATIBLE, ANYCOMPATIBLE), ash_elixir_or(ANYCOMPATIBLE, ANYCOMPATIBLE), ash_elixir_or(BOOLEAN, ANYCOMPATIBLE), ash_trim_whitespace(text[]), ash_required(ANYCOMPATIBLE, jsonb)"
+      "DROP FUNCTION IF EXISTS uuidv7(), uuid_generate_v7(), timestamp_from_uuid_v7(uuid), ash_raise_error(jsonb), ash_raise_error(jsonb, ANYCOMPATIBLE), ash_elixir_and(BOOLEAN, ANYCOMPATIBLE), ash_elixir_and(ANYCOMPATIBLE, ANYCOMPATIBLE), ash_elixir_or(ANYCOMPATIBLE, ANYCOMPATIBLE), ash_elixir_or(BOOLEAN, ANYCOMPATIBLE), ash_trim_whitespace(text[]), ash_required(ANYCOMPATIBLE, jsonb)"
     )
 
     # execute("DROP EXTENSION IF EXISTS \"citext\"")
