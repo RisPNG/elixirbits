@@ -455,41 +455,51 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
 
 #### Detailed Specifications for Layout Grids
 
+##### Syntax rules
 - Always use Tailwind `grid-cols-[...]` with explicit `fr`/fixed-width values instead of preset classes like `grid-cols-2`, `grid-cols-3`, etc.
 - Always use explicit bracketed grid columns such as `grid-cols-[1fr_1fr]` or `grid-cols-[2.75rem_1fr_1fr_2.75rem]`.
 - Do not use Tailwind preset grid column counts like `grid-cols-2`, `grid-cols-3`, `grid-cols-4`, etc., unless I explicitly ask for it.
 - Use `rem` for fixed elements like action/button/sequence columns.
-- Only if the same grid column definition is reused/referenced more than once within the same related section/component/template, define it once in a variable such as `items_grid_cols` and reuse/reference it. Otherwise define it inline.:
+
+##### Encoding field width
+- A field's visual width is determined by the `fr` units of its column in the row's `grid-cols-[...]` definition. To make a field wider, give that column a larger `fr` value (e.g. `grid-cols-[1fr_3fr]` makes the second column three times as wide; `[1fr_1fr_2fr]` makes the third column twice as wide as the first two).
+- **Do not use `col-span-N` to widen fields.** `col-span` is reserved for the rare case where a single field must literally cross multiple discrete cells that exist as separately-sized columns for other rows in a sub-component (such as a table-like structure where one header cell genuinely spans two adjacent body columns). For ordinary form layouts, the answer is always to size the row's columns directly, never to span.
+- Use subgap Tailwind plugin I implemented when wanting to implement gap along with grid.
+
+##### Section composition
+- There are no fixed shape for each section of a form. Pick whichever composition fits the field set.
+- The two common compositions (use whichever is right for the data — neither is a default):
+  - **Row-based section.** The whole section is a vertical stack of full-width rows. Each row is its own `grid grid-cols-[...]` and spans the full width of the section. Use this when fields don't naturally split into side-by-side groupings.
+  - **Region-based section.** An outer grid (commonly `grid-cols-[1fr_1fr]` for halves, sometimes `[1fr_1fr_1fr]` for thirds) splits the section into side-by-side regions. Inside each region, rows are stacked vertically with `flex flex-col subgap-N`, and each stacked row is its own inner `grid grid-cols-[...]`. Use this when the field set naturally divides into parallel sub-groups.
+- A section can also mix: e.g. a row-based top half followed by a region-based bottom half, or a single full-width row at the top and split regions below it. Use what reads cleanest.
+- Whichever composition you choose, **each individual row picks its own `grid-cols-[...]` based on the fields it holds.** Different rows may use different column counts and different fr ratios — that is expected and correct.
+  - Row-based section example:
+    ```elixir
+      <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] subgap-2 mt-2">...</div>     <%!-- 5 fields, name wider --%>
+      <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] subgap-2 mt-2">...</div>     <%!-- another 5 --%>
+      <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] subgap-2 mt-2">...</div>         <%!-- 6 same-density fields --%>
+    ```
+  - Region-based section example (inside one region):
+    ```elixir
+      <div class="flex flex-col subgap-2">
+        <div class="grid grid-cols-[1fr_1fr_2fr] subgap-2 items-end">...</div>      <%!-- 3 fields, last wider --%>
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-2">...</div>             <%!-- 4 same-density --%>
+        <div class="grid grid-cols-[1fr_1fr] subgap-2">...</div>                     <%!-- 2 fields --%>
+      </div>
+    ```
+- The row's grid-cols is the single source of truth for that row's field widths. Pick fr ratios that match the natural density of the fields on that row (short codes/numbers → 1fr, names/descriptions → 2fr or 3fr).
+- When several adjacent rows hold same-density fields (e.g. four rows of 4 short fields each), they will naturally share the same `grid-cols-[1fr_1fr_1fr_1fr]` string. That is a coincidence of the field sets, not a rule — keep each row's grid-cols inline.
+
+##### Variable extraction
+- Inline the `grid-cols-[...]` string in each row by default.
+- Only extract the grid-cols string into a variable (e.g. `items_grid_cols`) when the repeated rows form a single logical layout block — meaning the rows are structurally bound to each other as parts of one composite unit (e.g. a list header row plus its `<.inputs_for>` item rows; or a table header row plus its body rows). In that case the variable lives at the top of the file/component scope where it is used.
+- Form-section rows that happen to share the same grid-cols string are NOT a logical layout block. The fact that the strings match is coincidence — these rows are independent visually-aligned rows, not a single composite unit. Inline each.
   """
-    **Never do this (invalid)**:
-      ```elixir
-        three_field_grid_cols = "grid grid-cols-[1fr_1fr_1fr]"
-
-        <div class={three_field_grid_cols}>
-          <.input field={f[:input_1]} type="text" label="Input 1" />
-          <.input field={f[:input_2]} type="text" label="Input 2" />
-          <.input field={f[:input_3]} type="text" label="Input 3" />
-        </div>
-
-        <div class={three_field_grid_cols}>
-          <.input field={f[:input_1]} type="text" label="Input 1" />
-          <.input field={f[:input_2]} type="text" label="Input 2" />
-          <.input field={f[:input_3]} type="text" label="Input 3" />
-        </div>
-
-        <div class={three_field_grid_cols}>
-          <.input field={f[:input_1]} type="text" label="Input 1" />
-          <.input field={f[:input_2]} type="text" label="Input 2" />
-          <.input field={f[:input_3]} type="text" label="Input 3" />
-        </div>
-      ```
-    Just because the string happens to match, do not extract unrelated repeated grid definitions into a shared variable.
-
-    However, the following is **valid**:
+    **VALID — single logical layout block (header + items list share one grid):**
       ```elixir
         <% items_grid_cols = "grid-cols-[2.75rem_1fr_1fr_2.75rem]" %>
         ...
-        <div class={"w-full grid #{items_grid_cols} gap-2 pb-2 pt-2 border-b-[1px] border-b-white"}>
+        <div class={"w-full grid #{items_grid_cols} subgap-2 pb-2 pt-2 border-b-[1px] border-b-white"}>
           <div class="text-center">No.</div>
           <div class="ps-1">Code</div>
           <div class="ps-1">Name</div>
@@ -498,42 +508,88 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
         <.inputs_for :let={item_f} field={f[:items]}>
           <div
             id={"item-#{item_f.index}"}
-            class={"w-full grid #{items_grid_cols} gap-2 pb-2 border-b-[1px] border-b-white"}
+            class={"w-full grid #{items_grid_cols} subgap-2 pb-2 border-b-[1px] border-b-white"}
           >
             <.input field={item_f[:number]} type="text"/>
             <.input field={item_f[:code]} type="text"/>
             <.input field={item_f[:name]} type="text"/>
-              <.button
-                type="button"
-                phx-click="remove_item"
-                phx-value-number={item_f[:number].value}
-              >
-                <.icon name="hero-trash" />
-              </.button>
+            <.button
+              type="button"
+              phx-click="remove_item"
+              phx-value-number={item_f[:number].value}
+            >
+              <.icon name="hero-trash" />
+            </.button>
           </div>
         </.inputs_for>
       ```
-    The above is **valid** because the `items_grid_cols` variable repeated usages are part of the same logical layout block.
+
+    **INVALID — independent form rows extracted into a shared variable just because they happen to share a string:**
+      ```elixir
+        <% three_field_grid_cols = "grid grid-cols-[1fr_1fr_1fr]" %>
+
+        <div class={three_field_grid_cols}>
+          <.input field={f[:input_1]} type="text" label="Input 1" />
+          <.input field={f[:input_2]} type="text" label="Input 2" />
+          <.input field={f[:input_3]} type="text" label="Input 3" />
+        </div>
+
+        <div class={three_field_grid_cols}>
+          <.input field={f[:input_4]} type="text" label="Input 4" />
+          <.input field={f[:input_5]} type="text" label="Input 5" />
+          <.input field={f[:input_6]} type="text" label="Input 6" />
+        </div>
+      ```
+    These rows are not a composite unit — they are independent rows in a form section. Inline each:
+      ```elixir
+        <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+          <.input field={f[:input_1]} type="text" label="Input 1" />
+          <.input field={f[:input_2]} type="text" label="Input 2" />
+          <.input field={f[:input_3]} type="text" label="Input 3" />
+        </div>
+
+        <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+          <.input field={f[:input_4]} type="text" label="Input 4" />
+          <.input field={f[:input_5]} type="text" label="Input 5" />
+          <.input field={f[:input_6]} type="text" label="Input 6" />
+        </div>
+      ```
   """
-- Only extract a grid column variable when the repeated usages are part of the same logical layout block. Do not extract unrelated repeated grid definitions into a shared variable just because the string happens to match.
-- Keep the variable local and on top of the file where it is used.
 - When editing an existing file, normalize any touched repeated grid layout in that same section to this pattern.
 
 #### Designing w/ Layout Grids
 
-- Compose each section on a fixed even grid. Think in `1x`, `2x`, and clean half-blocks, not arbitrary widths.
-- Preserve the visual center seam. Rows should feel like balanced left/right bands, not drift into uneven 3-part compositions.
-- Prefer layouts that resolve in multiples of `2`. If the structure starts feeling like `3` uneven groups, the rhythm is probably wrong.
-- Fields may span across neighboring fields, but only in whole grid units. Their left and right edges must land on real grid lines used by the rows around them.
-- A field should not start or stop at the middle of a field above or below unless that midpoint is part of a deliberate, symmetric subdivision in both rows.
-- Cross-row alignment matters more than strict field order. Reorder within the section if needed to keep edges clean.
-- Wide fields are used to absorb space cleanly, not just because they can be wider.
-- Empty space should collect only at the far right edge of the final row. Avoid holes in the middle, bottom-right appendices, or orphan closing rows.
-- Similar-density fields should keep a steady rhythm. Dates, short enums, codes, and numeric fields should usually sit in consistent-width slots.
-- A good span feels anchored to the surrounding grid.
-- Another acceptable case is an internal split that stays self-contained and symmetric.
-- A bad span is one where the upper row cuts awkwardly across the lower row’s field boundaries.
-- If the occupied area forms a staircase, inverted `L`, or dangling last-row hook, the layout is not balanced.
+##### Plan the section before code
+- Before writing any grid markup for a section, plan the structure top-down:
+  1. **Section composition.** Decide whether the section is row-based (full-width rows top to bottom), region-based (outer grid splits into side-by-side sub-stacks), or a mix. Base this on whether the field set has natural side-by-side sub-groupings — if yes, regions; if not, rows. Don't default to one or the other; pick whichever fits.
+  2. **Rows.** Within the section (or within each region if region-based), group fields into rows. Each row holds 1–N fields that belong together visually/semantically.
+  3. **Per-row grid-cols.** For each row, choose `grid-cols-[...]` whose column count equals the row's field count and whose fr ratios match field density (short codes → 1fr, names/descriptions/textareas → 2fr or 3fr).
+- If a row would need `col-span` or an empty trailing `<div></div>` to fit, that means the field count or grid-cols is wrong — adjust.
+
+##### Per-row grid principles
+- The row's `grid-cols-[...]` is the source of truth for that row's field widths. Tune fr ratios per row, not across the whole section.
+- Use `1x` and `2x` clean ratios (e.g. `1fr_1fr`, `1fr_2fr`, `1fr_1fr_2fr`, `1fr_3fr`, `1fr_1fr_1fr_1fr`). Prefer ratios that resolve in halves/quarters over arbitrary fractions.
+- Wide fr columns are for fields that genuinely need the room (names, descriptions, textareas, remark fields, emails, search-style live-selects). Don't make a column wide just to fill space.
+- Adjacent rows of similar field density will naturally share the same grid-cols string. Let that happen, but don't force it — different rows can validly use different grids.
+
+##### Spacing conventions
+- Between rows in a row-based section: `mt-N` (or `subgap-N` if rows live inside a `flex flex-col subgap-N`).
+- Between fields within a row: `subgap-N`.
+- Between regions in a region-based section: `subgap-N` on the outer grid.
+- Between rows inside a region: `subgap-N` on the region's `flex flex-col gap-2`.
+- Adjust spacing only with intent.
+
+##### When to use regions vs rows
+- **Use rows (full-width stacked rows)** when the fields read top-to-bottom as one continuous group and don't divide into parallel sub-groups. Example: a section where each row holds one slice of metadata fields and the next row continues with the next slice.
+- **Use regions (outer grid splitting into side-by-side sub-stacks)** when the field set has clear parallel groupings — e.g. address fields on the left + contact fields on the right. Each region then has its own internal row stack.
+- Don't introduce a region split just for visual variety. The split must be backed by a real grouping in the data.
+
+##### Reference fidelity for grids
+- When a sibling page or existing component in the same domain (e.g. another LiveView under the same feature folder) already solves a similar form/grid layout, default to copying its region structure and per-row `grid-cols-[...]` choices as your starting point. Diverge only when the field set genuinely differs.
+- A grid that "matches the neighbours" is almost always preferable to a clever grid invented from scratch.
+
+##### When `col-span` is actually allowed
+- `col-span-N` is permitted only inside structurally-table-like blocks (e.g. a header row that announces a group covering several body columns of an items table). It is NOT a tool for "make this field wider". For form sections, treat `col-span` as forbidden.
 
 ### Description / Explanation / Analysis Guidelines
 
