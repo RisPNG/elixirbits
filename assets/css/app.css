@@ -8,6 +8,7 @@
 @source "../../lib/elixirbits_web";
 
 @plugin "../vendor/heroicons";
+@plugin "../vendor/subgap";
 
 @theme {
   --color-base-100: oklch(98% 0 0);
