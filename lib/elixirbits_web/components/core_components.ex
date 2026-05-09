@@ -254,13 +254,13 @@ defmodule ElixirbitsWeb.CoreComponents do
       <label
         for={@id}
         class={[
-          "cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20",
-          "has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-base-200",
+          "group cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20",
+          "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-base-200 has-[:disabled]:text-base-200-content",
           @errors != [] &&
             (@error_class || "border-error focus-within:border-error focus-within:ring-error/20")
         ]}
       >
-        <span class="flex items-center gap-2 text-sm font-medium text-base-content">
+        <span class="flex items-center gap-2 text-sm font-medium text-base-content group-has-[:disabled]:text-base-200-content">
           {@label}
         </span>
         <div class="flex items-center gap-2">
@@ -279,7 +279,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "appearance-none h-5 w-5 shrink-0 rounded border border-base-300 bg-base-200 checked:bg-primary checked:border-primary focus:ring-0 focus:outline-none disabled:cursor-not-allowed checked:bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:100%_100%]"
+                "appearance-none h-5 w-5 shrink-0 rounded border border-base-300 bg-base-200 checked:bg-primary checked:border-primary focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:bg-base-200 disabled:border-base-300 disabled:checked:bg-neutral disabled:checked:border-base-300 checked:bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:100%_100%]"
             }
             {@rest}
           />
@@ -301,13 +301,13 @@ defmodule ElixirbitsWeb.CoreComponents do
       <label
         for={@id}
         class={[
-          "cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20",
-          "has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-base-200",
+          "group cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20",
+          "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-base-200 has-[:disabled]:text-base-200-content",
           @errors != [] &&
             (@error_class || "border-error focus-within:border-error focus-within:ring-error/20")
         ]}
       >
-        <span class="flex items-center gap-2 text-sm font-medium text-base-content">
+        <span class="flex items-center gap-2 text-sm font-medium text-base-content group-has-[:disabled]:text-base-200-content">
           {@label}
         </span>
         <div class="flex items-center gap-2">
@@ -536,7 +536,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               options={@options}
               text_input_class={[
                 @class ||
-                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
                 @errors != [] &&
                   (@error_class || "border-error focus:border-error focus:ring-error/20")
               ]}
@@ -579,7 +579,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               options={@options}
               text_input_class={[
                 @class ||
-                  "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                  "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
                 @errors != [] &&
                   (@error_class || "border-error focus:border-error focus:ring-error/20")
               ]}
@@ -626,7 +626,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             placeholder={@placeholder}
             class={[
               @class ||
-                "input-floating-control input-floating-textarea block w-full px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                "input-floating-control input-floating-textarea block w-full px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
             ]}
             {@rest}
@@ -651,7 +651,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             name={@name}
             class={[
               @class ||
-                "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
             ]}
             {@rest}
@@ -692,7 +692,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             placeholder={@placeholder}
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
             ]}
             {@rest}
@@ -720,7 +720,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             value={Phoenix.HTML.Form.normalize_value(@type, @value)}
             class={[
               @class ||
-                "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
             ]}
             {@rest}
@@ -759,7 +759,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             readonly
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
             ]}
             {@rest}
@@ -947,7 +947,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           readonly
           class={[
             @class ||
-              "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-base-200",
+              "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
             @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
           ]}
           {@rest}
