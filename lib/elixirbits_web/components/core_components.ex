@@ -546,7 +546,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
               active_option_class="bg-base-200"
               container_class={@container_class}
-              clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
+              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error/80"
               tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
               clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
               tags_container_extra_class="order-last flex flex-wrap"
@@ -589,7 +589,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
               active_option_class="bg-base-200"
               container_class="relative flex flex-col w-full"
-              clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
+              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error/80"
               tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
               clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
               tags_container_extra_class="order-last flex flex-wrap"
