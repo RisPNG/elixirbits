@@ -800,8 +800,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             const dow = simple.getUTCDay()
             const monday = new Date(simple)
             monday.setUTCDate(simple.getUTCDate() - ((dow + 6) % 7))
-            const iso = `${monday.getUTCFullYear()}-${pad(monday.getUTCMonth() + 1)}-${pad(monday.getUTCDate())}`
-            return {dates: [iso], time: ""}
+            return {dates: [], time: "", year: monday.getUTCFullYear(), month: monday.getUTCMonth(), week}
           }
           if (mode === "month") {
             const m = value.match(/^(\d{4})-(\d{2})$/)
@@ -833,6 +832,23 @@ defmodule ElixirbitsWeb.CoreComponents do
             const mode = input.dataset.vcMode
             const initial = parseInitial(mode, input.value)
 
+            let selectedWeek = initial.week ?? null
+
+            const markWeek = (main) => {
+              if (!main) return
+              main.querySelectorAll("[data-vc-week-number]").forEach(el => {
+                el.removeAttribute("data-vc-week-selected")
+              })
+              if (selectedWeek == null) return
+              main.querySelectorAll("[data-vc-week-number]").forEach(el => {
+                if (parseInt(el.textContent.trim(), 10) === selectedWeek) {
+                  el.setAttribute("data-vc-week-selected", "")
+                }
+              })
+            }
+
+            let weekObserver = null
+
             const markMode = (self) => {
               const main = self?.context?.mainElement
               if (main && main instanceof HTMLElement) {
@@ -842,6 +858,11 @@ defmodule ElixirbitsWeb.CoreComponents do
                 if (w > 0) {
                   main.style.minWidth = `${w}px`
                   main.style.width = `${w}px`
+                }
+                markWeek(main)
+                if (mode === "week" && !weekObserver) {
+                  weekObserver = new MutationObserver(() => markWeek(main))
+                  weekObserver.observe(main, {childList: true, subtree: true})
                 }
               }
             }
@@ -902,8 +923,11 @@ defmodule ElixirbitsWeb.CoreComponents do
                 type: "default",
                 selectionDatesMode: false,
                 enableWeekNumbers: true,
-                selectedDates: initial.dates,
+                selectedYear: initial.year,
+                selectedMonth: initial.month,
                 onClickWeekNumber: (self, weekNumber, year) => {
+                  selectedWeek = weekNumber
+                  markWeek(self?.context?.mainElement)
                   setValue(input, `${year}-W${pad(weekNumber)}`)
                   self.hide()
                 },
@@ -927,6 +951,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             this.calendar.init()
           },
           destroyed() {
+            weekObserver?.disconnect()
             this.calendar?.destroy()
           },
         }
