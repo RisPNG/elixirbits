@@ -382,15 +382,29 @@ body {
   color: var(--color-primary-content);
 }
 
+[data-vc=calendar][data-vc-theme] [data-vc-week-numbers=content] {
+  row-gap: 0;
+}
 [data-vc=calendar][data-vc-theme] [data-vc-week-numbers=title],
 [data-vc=calendar][data-vc-theme] [data-vc-week-number] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-base-200-content);
   border-radius: var(--radius-field);
+}
+[data-vc=calendar][data-vc-theme] [data-vc-week-number] {
+  min-height: 2.125rem;
+  min-width: 2.125rem;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-week-number]:hover {
   background-color: var(--color-primary);
   color: var(--color-primary-content);
   cursor: pointer;
+}
+[data-vc=calendar][data-vc-theme] [data-vc-week-number][data-vc-week-selected] {
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
 }
 
 [data-vc=calendar][data-vc-theme] .vc-months__month,
