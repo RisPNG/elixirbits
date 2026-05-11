@@ -541,3 +541,16 @@ body {
   background-size: 1.5em 1.5em;
   padding-right: 2.5rem;
 }
+
+input[type="file"] {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12m4.5-4.5v13.5'/%3e%3c/svg%3e");
+  background-position: left 0.75rem center;
+  background-position-y: calc(50% - 0.15rem);
+  background-repeat: no-repeat;
+  background-size: 1.25rem 1.25rem;
+  background-origin: border-box;
+  padding-left: 2.5rem;
+}
+input[type="file"]::file-selector-button {
+  display: none;
+}
