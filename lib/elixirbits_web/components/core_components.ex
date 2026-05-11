@@ -671,7 +671,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
-    if assigns[:label] && assigns.type in ~w(email number password search tel text url) do
+    if assigns[:label] && assigns.type in ~w(email file number password search tel text url) do
       placeholder = assigns.rest[:placeholder]
       label_as_placeholder = placeholder in [nil, ""]
 
