@@ -183,7 +183,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
             String.contains?(String.downcase(label), text)
           end)
 
-        String.ends_with?(id, "_country_code") ->
+        String.ends_with?(id, "_country_select") ->
           Elixirbits.CoreUtils.Phones.filter_options(raw_text)
 
         true ->

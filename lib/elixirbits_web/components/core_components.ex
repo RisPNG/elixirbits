@@ -727,15 +727,15 @@ defmodule ElixirbitsWeb.CoreComponents do
         class="relative"
       >
         <input type="hidden" name={@name} value={@composite_value} data-tel-composite />
-        <div class="grid grid-cols-[7rem_1fr] subgap-2">
+        <div class="grid grid-cols-[4rem_auto] subgap-2">
           <LiveSelect.live_select
             field={@country_field}
-            id={"#{@country_id}_select"}
+            id={"#{@country_id}_country_select"}
             mode={:single}
             options={@country_options}
             value={@country_field.value}
             text_input_class={[
-              "block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+              "block w-full min-h-11 px-3 rounded-l-md border border-r-0 border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:border-r-1 focus:ring-2 focus:ring-accent/20 !bg-none !p-2"
             ]}
             text_input_selected_class=""
             dropdown_class="absolute top-full left-0 mt-1 w-72 rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
@@ -747,7 +747,6 @@ defmodule ElixirbitsWeb.CoreComponents do
             placeholder="Country"
             keep_label_on_select
             keep_options_on_select
-            allow_clear
           />
           <label for={@id} class="relative block">
             <input
@@ -759,7 +758,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               autocomplete="tel-national"
               class={[
                 @class ||
-                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
+                  "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
                 @errors != [] &&
                   (@error_class || "border-error focus:border-error focus:ring-error/20")
               ]}
@@ -780,38 +779,76 @@ defmodule ElixirbitsWeb.CoreComponents do
     <script :type={Phoenix.LiveView.ColocatedHook} name=".TelInput">
       export default {
         mounted() {
-          const wrapper = this.el
-          const countries = JSON.parse(wrapper.dataset.countries || "{}")
-          const countryName = wrapper.dataset.countryName
-          const composite = wrapper.querySelector("[data-tel-composite]")
-          const numberInput = wrapper.querySelector("[data-tel-number]")
+          this.wrapper = this.el
+          this.countries = JSON.parse(this.wrapper.dataset.countries || "{}")
+          this.countryName = this.wrapper.dataset.countryName
+          this.composite = this.wrapper.querySelector("[data-tel-composite]")
+          this.numberInput = this.wrapper.querySelector("[data-tel-number]")
+          this.isoInput = () => this.wrapper.querySelector(`input[name='${this.countryName}']`)
 
-          const isoInput = () => wrapper.querySelector(`input[name='${countryName}']`)
-
-          const setDisplay = () => {
-            const ti = wrapper.querySelector('div[phx-hook="LiveSelect"] input[type="text"]')
-            const iso = (isoInput()?.value || "").toUpperCase()
-            if (ti) ti.value = countries[iso] || ""
+          this.expectedDisplay = () => {
+            const iso = (this.isoInput()?.value || "").toUpperCase()
+            return this.countries[iso] || ""
           }
 
-          const recompose = () => {
-            const iso = (isoInput()?.value || "").toUpperCase()
-            const dial = countries[iso] || ""
-            const number = (numberInput.value || "").trim()
-            composite.value = number || dial ? `${dial}${number}` : ""
+          this.overrideTextInput = () => {
+            const ti = this.wrapper.querySelector('div[phx-hook="LiveSelect"] input[type="text"]')
+            if (!ti || ti.__telOverridden) return
+
+            const expectedDisplay = this.expectedDisplay.bind(this)
+            const orig = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")
+            Object.defineProperty(ti, "value", {
+              configurable: true,
+              get() { return orig.get.call(this) },
+              set(v) {
+                const expected = expectedDisplay()
+                if (expected && v !== expected) {
+                  orig.set.call(this, expected)
+                } else {
+                  orig.set.call(this, v)
+                }
+              }
+            })
+            ti.addEventListener("blur", () => {
+              const expected = expectedDisplay()
+              if (orig.get.call(ti) !== expected) {
+                orig.set.call(ti, expected)
+              }
+            })
+            ti.__telOverridden = true
           }
 
-          numberInput.addEventListener("input", recompose)
-          numberInput.addEventListener("change", recompose)
+          this.recompose = () => {
+            const iso = (this.isoInput()?.value || "").toUpperCase()
+            const dial = this.countries[iso] || ""
+            const number = (this.numberInput.value || "").trim()
+            this.composite.value = number || dial ? `${dial}${number}` : ""
+          }
 
-          wrapper.addEventListener("input", (e) => {
-            if (e.target.name === countryName || e.target.hasAttribute("data-live-select-empty")) {
-              recompose()
-              setDisplay()
+          this.numberInput.addEventListener("input", this.recompose)
+          this.numberInput.addEventListener("change", this.recompose)
+
+          this.wrapper.addEventListener("input", (e) => {
+            if (e.target.name === this.countryName || e.target.hasAttribute("data-live-select-empty")) {
+              this.recompose()
             }
           }, true)
 
-          setDisplay()
+          this.overrideTextInput()
+          const ti = this.wrapper.querySelector('div[phx-hook="LiveSelect"] input[type="text"]')
+          if (ti) {
+            const expected = this.expectedDisplay()
+            if (expected && ti.value !== expected) ti.value = expected
+          }
+        },
+
+        updated() {
+          this.overrideTextInput()
+          const ti = this.wrapper.querySelector('div[phx-hook="LiveSelect"] input[type="text"]')
+          if (ti && document.activeElement !== ti) {
+            const expected = this.expectedDisplay()
+            if (expected && ti.value !== expected) ti.value = expected
+          }
         }
       }
     </script>
