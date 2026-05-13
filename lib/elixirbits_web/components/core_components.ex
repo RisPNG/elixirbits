@@ -669,9 +669,158 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{type: "week"} = assigns), do: vcalendar_input(assigns)
   def input(%{type: "month"} = assigns), do: vcalendar_input(assigns)
 
+  def input(%{type: "tel"} = assigns) do
+    {dial_code, number, iso} = Elixirbits.CoreUtils.Phones.parse(assigns[:value] || "")
+
+    parent_form =
+      case assigns[:form_field] do
+        %Phoenix.HTML.FormField{form: form} -> form
+        _ -> to_form(%{}, as: "_tel_#{assigns[:id] || assigns[:name]}")
+      end
+
+    base_field_key =
+      case assigns[:form_field] do
+        %Phoenix.HTML.FormField{field: field} -> field
+        _ -> :phone
+      end
+
+    country_field_key = String.to_atom("#{base_field_key}_country_code")
+    country_field = %{parent_form[country_field_key] | value: iso || ""}
+    wrapper_id = "#{assigns[:id] || assigns[:name]}_tel_wrapper"
+
+    countries_json =
+      Elixirbits.CoreUtils.Phones.list_countries()
+      |> Enum.into(%{}, fn c -> {c.iso, c.dial_code} end)
+      |> Jason.encode!()
+
+    composite_value =
+      cond do
+        dial_code && number != "" -> "#{dial_code}#{number}"
+        dial_code -> dial_code
+        true -> assigns[:value] || ""
+      end
+
+    placeholder = assigns.rest[:placeholder]
+    label_as_placeholder = placeholder in [nil, ""]
+
+    assigns =
+      assigns
+      |> assign(:rest, Map.delete(assigns.rest, :placeholder))
+      |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
+      |> assign(:label_as_placeholder, label_as_placeholder)
+      |> assign(:country_field, country_field)
+      |> assign(:country_id, country_field.id)
+      |> assign(:country_name, country_field.name)
+      |> assign(:wrapper_id, wrapper_id)
+      |> assign(:countries_json, countries_json)
+      |> assign(:country_options, Elixirbits.CoreUtils.Phones.options())
+      |> assign(:number_value, number)
+      |> assign(:composite_value, composite_value)
+
+    ~H"""
+    <div class="mb-2">
+      <div
+        id={@wrapper_id}
+        phx-hook=".TelInput"
+        data-countries={@countries_json}
+        data-country-name={@country_name}
+        class="relative"
+      >
+        <input type="hidden" name={@name} value={@composite_value} data-tel-composite />
+        <div class="grid grid-cols-[7rem_1fr] subgap-2">
+          <LiveSelect.live_select
+            field={@country_field}
+            id={"#{@country_id}_select"}
+            mode={:single}
+            options={@country_options}
+            value={@country_field.value}
+            text_input_class={[
+              "block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            ]}
+            text_input_selected_class=""
+            dropdown_class="absolute top-full left-0 mt-1 w-72 rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
+            option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
+            selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
+            active_option_class="bg-base-200"
+            container_class="relative flex flex-col w-full"
+            clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error/80"
+            placeholder="Country"
+            keep_label_on_select
+            keep_options_on_select
+            allow_clear
+          />
+          <label for={@id} class="relative block">
+            <input
+              type="tel"
+              id={@id}
+              value={@number_value}
+              placeholder={@placeholder}
+              data-tel-number
+              autocomplete="tel-national"
+              class={[
+                @class ||
+                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
+                @errors != [] &&
+                  (@error_class || "border-error focus:border-error focus:ring-error/20")
+              ]}
+              {@rest}
+            />
+            <span class={[
+              "input-floating-label",
+              !@label_as_placeholder && "input-floating-label-hidden",
+              @errors != [] && "input-floating-label-error"
+            ]}>
+              {@label}
+            </span>
+          </label>
+        </div>
+      </div>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".TelInput">
+      export default {
+        mounted() {
+          const wrapper = this.el
+          const countries = JSON.parse(wrapper.dataset.countries || "{}")
+          const countryName = wrapper.dataset.countryName
+          const composite = wrapper.querySelector("[data-tel-composite]")
+          const numberInput = wrapper.querySelector("[data-tel-number]")
+
+          const isoInput = () => wrapper.querySelector(`input[name='${countryName}']`)
+
+          const setDisplay = () => {
+            const ti = wrapper.querySelector('div[phx-hook="LiveSelect"] input[type="text"]')
+            const iso = (isoInput()?.value || "").toUpperCase()
+            if (ti) ti.value = countries[iso] || ""
+          }
+
+          const recompose = () => {
+            const iso = (isoInput()?.value || "").toUpperCase()
+            const dial = countries[iso] || ""
+            const number = (numberInput.value || "").trim()
+            composite.value = number || dial ? `${dial}${number}` : ""
+          }
+
+          numberInput.addEventListener("input", recompose)
+          numberInput.addEventListener("change", recompose)
+
+          wrapper.addEventListener("input", (e) => {
+            if (e.target.name === countryName || e.target.hasAttribute("data-live-select-empty")) {
+              recompose()
+              setDisplay()
+            }
+          }, true)
+
+          setDisplay()
+        }
+      }
+    </script>
+    """
+  end
+
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
-    if assigns[:label] && assigns.type in ~w(email file number password search tel text url) do
+    if assigns[:label] && assigns.type in ~w(email file number password search text url) do
       placeholder = assigns.rest[:placeholder]
       label_as_placeholder = placeholder in [nil, ""]
 

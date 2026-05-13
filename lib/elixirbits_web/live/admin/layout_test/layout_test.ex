@@ -168,7 +168,8 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   @impl true
   def handle_event("live_select_change", %{"id" => id} = params, socket) do
-    text = Map.get(params, "text", "") |> String.downcase()
+    raw_text = Map.get(params, "text", "")
+    text = String.downcase(raw_text)
 
     options =
       cond do
@@ -181,6 +182,9 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
           Enum.filter(@tag_options, fn {label, _} ->
             String.contains?(String.downcase(label), text)
           end)
+
+        String.ends_with?(id, "_country_code") ->
+          Elixirbits.CoreUtils.Phones.filter_options(raw_text)
 
         true ->
           if text == "" do
