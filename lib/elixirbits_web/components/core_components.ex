@@ -724,10 +724,15 @@ defmodule ElixirbitsWeb.CoreComponents do
         phx-hook=".TelInput"
         data-countries={@countries_json}
         data-country-name={@country_name}
-        class="relative"
+        class={[
+          "relative",
+          "[&>.input-floating-label]:!left-[4.75rem]",
+          "[&:has(.input-floating-control:focus)>.input-floating-label]:!left-3",
+          "[&:has(.input-floating-control:not(:placeholder-shown))>.input-floating-label]:!left-3"
+        ]}
       >
         <input type="hidden" name={@name} value={@composite_value} data-tel-composite />
-        <div class="grid grid-cols-[4rem_auto] subgap-2">
+        <div class="input-floating-wrapper grid grid-cols-[4rem_auto] subgap-2">
           <LiveSelect.live_select
             field={@country_field}
             id={"#{@country_id}_country_select"}
@@ -744,35 +749,36 @@ defmodule ElixirbitsWeb.CoreComponents do
             active_option_class="bg-base-200"
             container_class="relative flex flex-col w-full"
             clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error/80"
-            placeholder="Country"
+            placeholder="+60"
             keep_label_on_select
             keep_options_on_select
           />
-          <label for={@id} class="relative block">
-            <input
-              type="tel"
-              id={@id}
-              value={@number_value}
-              placeholder={@placeholder}
-              data-tel-number
-              autocomplete="tel-national"
-              class={[
-                @class ||
-                  "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
-                @errors != [] &&
-                  (@error_class || "border-error focus:border-error focus:ring-error/20")
-              ]}
-              {@rest}
-            />
-            <span class={[
-              "input-floating-label",
-              !@label_as_placeholder && "input-floating-label-hidden",
-              @errors != [] && "input-floating-label-error"
-            ]}>
-              {@label}
-            </span>
-          </label>
+          <input
+            type="tel"
+            id={@id}
+            value={@number_value}
+            placeholder={@placeholder}
+            data-tel-number
+            autocomplete="tel-national"
+            class={[
+              @class ||
+                "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
+              @errors != [] &&
+                (@error_class || "border-error focus:border-error focus:ring-error/20")
+            ]}
+            {@rest}
+          />
         </div>
+        <label
+          for={@id}
+          class={[
+            "input-floating-label",
+            !@label_as_placeholder && "input-floating-label-hidden",
+            @errors != [] && "input-floating-label-error"
+          ]}
+        >
+          {@label}
+        </label>
       </div>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
