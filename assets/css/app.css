@@ -147,6 +147,7 @@
   opacity: 1;
   transition:
     top 150ms ease,
+    left 150ms ease,
     color 150ms ease,
     font-size 150ms ease,
     line-height 150ms ease,
