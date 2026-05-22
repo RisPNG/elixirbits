@@ -379,6 +379,7 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
 - Always separate the frontend from the backend file-wise in the same folder (e.g. .ex and .html.heex files).
 - Always use centrally defined project colours from the global CSS/theme layer. Do not introduce page-local, color-mixes, opacity, or ad hoc colours. Colours should come from a centralized source so updates stay global and consistent.
 - Do not use responsive utility variant classes like `grid-cols-[1fr] md:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1fr_1fr]`, and `w-16 md:w-32 lg:w-48`.
+- When creating migrations, always use `mix ecto.gen.migration` and keep a single migration file per branch (you are allowed to use git for this purpose only).
 - Adhere to `#### Detailed Specifications for Abstraction / Helper / Function Creation Rules`.
 - Adhere to `#### Detailed Specifications for Layout Grids`.
 - Adhere to `#### Designing w/ Layout Grids`.
