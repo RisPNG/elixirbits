@@ -167,58 +167,59 @@ The default is inline. A new named function is the exception and must earn its p
 
 - Before writing any grid markup for a section, plan the structure top-down:
   1. **Section composition.** Decide whether the section is row-based (full-width rows top to bottom), region-based (outer grid splits into side-by-side sub-stacks), or a mix. Base this on whether the field set has natural side-by-side sub-groupings -- if yes, regions; if not, rows. Don't default to one or the other; pick whichever fits.
-  2. **Rows.** Within the section (or within each region if region-based), group fields into rows. Each row holds 1–N fields that belong together visually/semantically.
-  3. **Per-row grid-cols.** For each row, choose `grid-cols-[...]` whose column count equals the row's field count and whose fr ratios match field density.
-- If a row would need `col-span` or an empty trailing `<div></div>` to fit, the field count or grid-cols is wrong -- adjust the row instead. (A genuine final-row remainder is handled under **Visual balance**.)
+  2. **Section grid.** Pick one fixed unit count that the whole section (or each region, for region-based sections) resolves on. Think in `1x`, `2x`, and clean half-blocks, not arbitrary widths -- prefer unit counts that resolve in multiples of `2` (4 or 6 cover most sections). If the structure starts feeling like `3` uneven groups, the rhythm is probably wrong.
+  3. **Rows.** Group fields into rows on that grid. Each row holds 1–N fields that belong together visually/semantically. Cross-row alignment matters more than strict field order -- reorder fields between rows when that keeps edges clean and rows resolving on the grid.
+  4. **Per-row grid-cols.** For each row, choose `grid-cols-[...]` whose column count equals the row's field count and whose `fr` values are whole units of the section grid summing to the section total. On a 4-unit grid: `[1fr_1fr_1fr_1fr]`, `[1fr_1fr_2fr]`, `[2fr_2fr]`, `[1fr_3fr]` all resolve; `[1fr_1fr_1fr]` does not -- its thirds cut across the 4-unit lines.
+- If a row would need `col-span` or an empty mid-row placeholder `<div></div>` to fit, the field count or grid-cols is wrong -- adjust the row instead.
+- **Final-row exception (trailing space).** When the last row's fields don't fill the section grid and none of them should be widened, declare the full section grid (e.g. `grid-cols-[1fr_1fr_1fr_1fr]` with only two children) and let grid auto-placement leave the trailing columns empty. Never insert empty filler `<div>`s and never leave mid-row holes -- empty space may collect only at the far right edge of the final row.
 
 ##### Syntax rules
 
 - Always use Tailwind `grid-cols-[...]` with explicit `fr`/fixed-width values, such as `grid-cols-[1fr_1fr]` or `grid-cols-[2.75rem_1fr_1fr_2.75rem]`.
 - Do not use Tailwind preset grid column counts like `grid-cols-2`, `grid-cols-3`, `grid-cols-4`, etc., unless I explicitly ask for it.
-- Use `rem` for fixed elements like action/button/sequence columns.
+- Use `rem` for fixed elements like action/button/sequence columns. Rows mixing `rem` columns with `fr` rows that lack them almost always belong to a logical layout block sharing one grid string (see variable extraction below) -- don't freely interleave them with plain form rows.
 
 ##### Encoding field width
 
-- A field's visual width is determined by the `fr` units of its column in the row's `grid-cols-[...]` definition. To make a field wider, give that column a larger `fr` value (e.g. `grid-cols-[1fr_3fr]` makes the second column three times as wide; `[1fr_1fr_2fr]` makes the third column twice as wide as the first two).
-- The row's `grid-cols-[...]` is the single source of truth for that row's field widths. Tune fr ratios per row, not across the whole section: short codes/numbers → `1fr`; fields that genuinely need the room (names, descriptions, textareas, remark fields, emails, search-style live-selects) → `2fr` or `3fr`. Don't make a column wide just to fill space.
-- Use clean ratios that resolve in halves/quarters (`1fr_1fr`, `1fr_2fr`, `1fr_1fr_2fr`, `1fr_3fr`, `1fr_1fr_1fr_1fr`) over arbitrary fractions. (Half-unit columns like `0.5fr` are permitted only as part of a symmetric internal split -- see **Visual balance**.)
+- A field's visual width is the number of section-grid units its column takes in the row's `grid-cols-[...]`. To make a field wider, give its column more units (e.g. `grid-cols-[1fr_3fr]` makes the second field three units wide; `[1fr_1fr_2fr]` makes the third twice the first two), keeping the row's total equal to the section grid.
+- The row's `grid-cols-[...]` is the single source of truth for that row's field widths, but unit choices are made section-wide, not per row: short codes/numbers/dates/enums → `1` unit wherever they appear; fields that genuinely need the room (names, descriptions, textareas, remark fields, emails, search-style live-selects) → `2`–`3` units. Similar-density fields keep a steady rhythm -- a date in row 1 and a date in row 4 sit in same-width slots.
+- Wide fields are used to absorb leftover row space cleanly so the row resolves on the grid -- not just because they can be wider. If widening would be gratuitous, prefer regrouping fields between rows, or trailing space in the final row.
+- A multi-unit column **is** the spanning mechanism: `2fr` on a 4-unit grid is a field spanning two grid units. A span's left and right edges must land on real grid lines used by the rows around it.
+- A field edge may sit at the midpoint of a field above or below **only** as a deliberate, self-contained, symmetric subdivision: the sub-fields are equal and their combined outer edges match the parent column's edges exactly. E.g. on a 4-unit grid, `grid-cols-[2fr_0.5fr_0.5fr_1fr]` under `grid-cols-[1fr_1fr_1fr_1fr]` is valid -- the two `0.5fr` halves split the third unit symmetrically and stay inside it. An asymmetric split (`0.7fr_0.3fr`) or one whose edges bleed past the parent column is not.
+- Use clean ratios that resolve in whole or half units (`1fr_1fr`, `1fr_2fr`, `1fr_1fr_2fr`, `1fr_3fr`, `2fr_0.5fr_0.5fr_1fr`) over arbitrary fractions.
 - **Do not use `col-span-N` to widen fields.** `col-span-N` is permitted only inside structurally-table-like blocks where a single cell must literally cross multiple discrete columns that exist as separately-sized columns for other rows -- e.g. a header cell that announces a group covering several body columns of an items table. For ordinary form sections, treat `col-span` as forbidden: the answer is always to size the row's columns directly, never to span.
 
 ##### Composition: rows vs regions
 
 - There is no fixed shape for a form section. The two common compositions (neither is a default -- pick whichever fits the data):
   - **Row-based section.** The whole section is a vertical stack of full-width rows. Each row is its own `grid grid-cols-[...]` spanning the full width of the section. Use this when the fields read top-to-bottom as one continuous group and don't divide into parallel sub-groups.
-  - **Region-based section.** An outer grid (commonly `grid-cols-[1fr_1fr]` for halves, sometimes `[1fr_1fr_1fr]` for thirds) splits the section into side-by-side regions. Inside each region, rows are stacked vertically with `flex flex-col gap-N`, and each stacked row is its own inner `grid grid-cols-[...]`. Use this when the field set has clear parallel groupings -- e.g. address fields on the left + contact fields on the right.
+  - **Region-based section.** An outer grid (commonly `grid-cols-[1fr_1fr]` for halves; `[1fr_1fr_1fr]` only when the data genuinely has three parallel groups -- prefer compositions resolving in multiples of `2`) splits the section into side-by-side regions. Inside each region, rows are stacked vertically with `flex flex-col gap-N`, and each stacked row is its own inner `grid grid-cols-[...]`. Use this when the field set has clear parallel groupings -- e.g. address fields on the left + contact fields on the right.
 - A section can also mix: e.g. a row-based top half followed by a region-based bottom half, or a single full-width row at the top and split regions below it. Use what reads cleanest, but don't introduce a region split just for visual variety -- the split must be backed by a real grouping in the data.
-- Whichever composition you choose, **each individual row picks its own `grid-cols-[...]` based on the fields it holds.** Different rows may use different column counts and different fr ratios -- that is expected and correct.
-  - Row-based section example:
+- Whichever composition you choose, **each row picks its own `grid-cols-[...]` for its own fields -- different rows may and will use different column counts -- but every row must resolve on the same section grid** (per region, for region-based sections). Regions are independent grids: their internal lines don't need to align across the seam; the seam between regions is the section's center seam, and the balance rules apply within each region on its own.
+  - Row-based section example (section grid = 6 units; every row sums to 6):
+    ```elixir
+        <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] gap-2 mt-2">...</div>     <%!-- 5 fields, name spans 2 units --%>
+        <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] gap-2 mt-2">...</div>     <%!-- another 5 --%>
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-2 mt-2">...</div> <%!-- 6 same-density fields; the line at unit 2 symmetrically subdivides the 2-unit name above --%>
     ```
-    <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] gap-2 mt-2">...</div>     <%!-- 5 fields, name wider --%>
-    <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] gap-2 mt-2">...</div>     <%!-- another 5 --%>
-    <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-2 mt-2">...</div> <%!-- 6 same-density fields --%>
+  - Region-based section example (region grid = 4 units, inside one region):
+    ```elixir
+        <div class="flex flex-col gap-2">
+          <div class="grid grid-cols-[1fr_1fr_2fr] gap-2 items-end">...</div>      <%!-- 3 fields, last spans 2 units --%>
+          <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">...</div>            <%!-- 4 same-density --%>
+          <div class="grid grid-cols-[1fr_1fr] gap-2">...</div>                    <%!-- 2 fields, each a 2-unit span; edges land on the region's midline --%>
+        </div>
     ```
-  - Region-based section example (inside one region):
-    ```
-    <div class="flex flex-col gap-2">
-      <div class="grid grid-cols-[1fr_1fr_2fr] gap-2 items-end">...</div>      <%!-- 3 fields, last wider --%>
-      <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">...</div>            <%!-- 4 same-density --%>
-      <div class="grid grid-cols-[1fr_1fr] gap-2">...</div>                    <%!-- 2 fields --%>
-    </div>
-    ```
+- The `<%!-- ... --%>` annotations in the examples above exist to explain this document only; they are not an instruction to add comments in real code.
 - Adjacent rows of similar field density will naturally share the same grid-cols string (e.g. four rows of 4 short fields each sharing `grid-cols-[1fr_1fr_1fr_1fr]`). Let that happen, but don't force it -- the match is a coincidence of the field sets, not a rule.
 
-##### Visual balance
+##### Cross-row balance check
 
-- The mechanics above produce a *valid* grid; these rules produce a *balanced* one. A section can satisfy every syntax and composition rule and still read as lopsided or jagged -- this subsection is the quality bar that catches that. When choosing per-row grid-cols, judge the result against these:
-- **Compose on a fixed even grid.** Think in `1x`, `2x`, and clean half-blocks, not arbitrary widths. Prefer layouts that resolve in multiples of `2`; if a row starts feeling like `3` uneven groups, the rhythm is probably wrong.
-- **Preserve the visual center seam.** Rows should feel like balanced left/right bands, not drift into uneven 3-part compositions. (This is also why region-based sections lean on `[1fr_1fr]` halves.)
-- **Edges must land on real grid lines.** A "span" here means a wider `fr` column (e.g. `2fr` where the row's base unit is `1fr`), never `col-span`. A wide column's left and right edges must coincide with grid lines used by the rows around it. A field should not start or stop at the middle of a field above or below.
-  - **The one exception:** a midpoint is allowed when it is a deliberate, symmetric subdivision -- an internal split that stays self-contained inside one parent column's edges. `grid-cols-[2fr_0.5fr_0.5fr_1fr]` (over a 4-unit base row) is valid: the `2fr` field aligns with two `1fr` columns above, and the `0.5fr_0.5fr` pair splits a single column symmetrically without bleeding into its neighbors. An asymmetric split like `0.7fr_0.3fr`, or one whose midpoint lines up with nothing meaningful in the adjacent rows, is not.
-- **Cross-row alignment beats field order.** If reordering fields within the section keeps edges clean, reorder them. A good wide column feels anchored to the surrounding grid; a bad one cuts awkwardly across the lower row's field boundaries.
-- **Wide columns absorb space cleanly** -- give a column more `fr` because the field needs the room (names, descriptions, remarks, emails), not just because it can be wider.
-- **Similar-density fields keep a steady rhythm.** Dates, short enums, codes, and numeric fields should sit in consistent-width slots across rows, not jump between `1fr` in one row and `3fr` in the next.
-- **Empty space collects at the far right of the final row only.** Avoid holes in the middle, bottom-right appendices, or orphan closing rows. A genuine remainder keeps its normal slot width and lets the trailing grid track sit empty -- this comes from under-filling the row's columns, never from inserting a placeholder `<div></div>`.
-- **Silhouette test.** Picture the occupied area as one solid shape. If it forms a staircase, an inverted `L`, or a dangling last-row hook, the layout is not balanced -- it should read as a clean rectangle with at most one gap at the bottom-right.
+Run this after laying out a section (per region, for region-based sections):
+- Rows read as balanced left/right bands around the visual center seam, not uneven 3-part drift.
+- Overlay any two rows: every edge either matches a shared section-grid line or is a sanctioned self-contained symmetric subdivision. A span where the upper row cuts awkwardly across the lower row's field boundaries is wrong.
+- The occupied area forms a clean rectangle, at most minus its bottom-right corner. If it forms a staircase, inverted `L`, mid-layout hole, bottom-right appendix, or dangling last-row hook, the layout is not balanced -- re-plan the rows: reorder fields, widen a field to absorb space cleanly, or let space trail in the final row.
+- A lone full-density field (remark, description, textarea) on its own row takes the full section width. A lone short field keeps its unit width -- fold it into a neighbouring row, or leave it with trailing space only if it is the final row.
 
 ##### Spacing conventions
 
@@ -226,6 +227,7 @@ The default is inline. A new named function is the exception and must earn its p
 - Between fields within a row: `gap-N`.
 - Between regions in a region-based section: `gap-N` on the outer grid.
 - Between rows inside a region: `gap-N` on the region's `flex flex-col`.
+- Rows that share a section grid must use the same field `gap-N`, otherwise their grid lines drift out of alignment.
 - Adjust spacing only with intent.
 
 ##### Sharing a grid string (variable extraction)
@@ -294,6 +296,11 @@ The default is inline. A new named function is the exception and must earn its p
         </div>
       ```
   """
+
+##### Reference fidelity for grids
+
+- When a sibling page or existing component in the same domain (e.g. another LiveView under the same feature folder) already solves a similar form/grid layout, default to copying its region structure, section grid, and per-row `grid-cols-[...]` choices as your starting point. Diverge only when the field set genuinely differs.
+- A grid that "matches the neighbours" is almost always preferable to a clever grid invented from scratch.
 
 ### Description / Explanation / Analysis Guidelines
 
