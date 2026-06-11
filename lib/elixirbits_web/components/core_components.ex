@@ -732,7 +732,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         ]}
       >
         <input type="hidden" name={@name} value={@composite_value} data-tel-composite />
-        <div class="input-floating-wrapper grid grid-cols-[4rem_auto] subgap-2">
+        <div class="input-floating-wrapper grid grid-cols-[4rem_auto] gap-2">
           <LiveSelect.live_select
             field={@country_field}
             id={"#{@country_id}_country_select"}
