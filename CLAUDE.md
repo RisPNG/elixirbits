@@ -1,21 +1,19 @@
-This is a web application written using the Phoenix web framework. The following is a general rule you have to follow, it may not apply at all times and choose the correct guidelines depending on the instructions.
+This is a web application written using the Phoenix web framework.
+
+How to read this file: everything under `## Strict Guidelines` is binding at all times. The framework guidelines apply whenever you work in that area. When two rules seem to conflict, the more specific rule wins; if it is still ambiguous, ask me before proceeding. Comments inside this file's code examples (e.g. `<%!-- 3 fields, name wider --%>`) annotate the examples for the reader of this file -- they are not an instruction to write comments in generated code.
+
+For Elixir/Phoenix syntax, dependencies, and tooling, always refer to the documentation (hexdocs.pm and others) matching the versions specified in `.tool-versions` and `mix.exs`; for anything not specified there, use the latest documentation.
 
 ## Project guidelines
 
-- This project is heavily inspired by the references in `priv/static/reference`. However, you may take ideas from these references because it's how I like them, but not the code, mostly the logic.
-- Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps.
+- This project is heavily inspired by the references in `../sig-portal/`. However, you may take ideas from these references because it's how I like them, but not the code, mostly the logic.
 
-### Phoenix > v1.8 guidelines
+### Phoenix >= v1.8 guidelines
 
-- **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content.
-- The `MyAppWeb.Layouts` module is aliased in the `my_app_web.ex` file, so you can use it without needing to alias it again.
-- Anytime you run into errors with no `current_scope` assign:
-  - You failed to follow the Authenticated Routes guidelines, or you failed to pass `current_scope` to `<Layouts.app>`.
-  - **Always** fix the `current_scope` error by moving your routes to the proper `live_session` and ensure you pass `current_scope` as needed.
-- Phoenix v1.8 moved the `<.flash_group>` component to the `Layouts` module. You are **forbidden** from calling `<.flash_group>` outside of the `layouts.ex` module.
-- Out of the box, `core_components.ex` imports an `<.icon name="hero-x-mark" class="w-5 h-5"/>` component for hero icons. **Always** use the `<.icon>` component for icons, **never** use `Heroicons` modules or similar.
+- Out of the box, `core_components.ex` imports a component for Heroicons, such as `<.icon name="hero-x-mark" class="w-5 h-5" />`. **Always** use the `<.icon>` component for icons, **never** use `Heroicons` modules or similar.
 - **Always** use the imported `<.input>` component for form inputs from `core_components.ex` when available. `<.input>` is imported and using it will save steps and prevent errors.
-- If you override the default input classes (`<.input class="myclass px-2 py-1 rounded-lg">)`) class with your own values, no default classes are inherited, so your custom classes must fully style the input.
+  - For select inputs, always use `type="live-select"` -- a custom type defined in `core_components.ex`.
+- If you override the default input classes with your own values, no default classes are inherited, so your custom classes must fully style the input.
 
 ### JS and CSS guidelines
 
@@ -23,7 +21,8 @@ This is a web application written using the Phoenix web framework. The following
 - **Always** manually write your own tailwind-based components instead of using daisyUI for design.
 - Out of the box **only the app.js and app.css bundles are supported**.
   - You cannot reference an external vendor'd script `src` or link `href` in the layouts.
-  - You must import the vendor deps into app.js and app.css to use them which means you **never write inline <script>custom js</script> tags** as well as **inline styles**.
+  - You must import the vendor deps into app.js and app.css to use them, which means you **never write inline `<script>custom js</script>` tags** or **inline styles**.
+
 ## Elixir guidelines
 
 - Elixir lists **do not support index based access via the access syntax**:
@@ -55,452 +54,191 @@ This is a web application written using the Phoenix web framework. The following
         socket =
           if connected?(socket) do
             assign(socket, :val, val)
+          else
+            socket
           end
       ```
   """
-- **Never** nest multiple modules in the same file as it can cause cyclic dependencies and compilation errors.
-- **Never** use map access syntax (`changeset[:field]`) on structs as they do not implement the Access behaviour by default. For regular structs, you **must** access the fields directly, such as `my_struct.field` or use higher level APIs that are available on the struct if they exist, `Ecto.Changeset.get_field/2` for changesets.
-- Elixir's standard library has everything necessary for date and time manipulation. Familiarize yourself with the common `Time`, `Date`, `DateTime`, `ex_cldr`, and any other installed dependency interfaces by accessing their documentation as necessary. **Never** install additional dependencies unless asked for or there's no other reasonable choice.
+- Elixir's standard library has everything necessary for date and time manipulation. Familiarize yourself with the common `Time`, `Date`, `DateTime`, and any other installed dependency interfaces by accessing their documentation as necessary. **Never** install additional dependencies unless asked for or there's no other reasonable choice.
 - Don't use `String.to_atom/1` on user input (memory leak risk).
 - Predicate function names should not start with `is_` and should end in a question mark. Names like `is_thing` should be reserved for guards.
-- Elixir's builtin OTP primitives like `DynamicSupervisor` and `Registry`, require names in the child spec, such as `{DynamicSupervisor, name: MyApp.MyDynamicSup}`, then you can use `DynamicSupervisor.start_child(MyApp.MyDynamicSup, child_spec)`.
-- Use `Task.async_stream(collection, callback, options)` for concurrent enumeration with back-pressure. The majority of times you will want to pass `timeout: :infinity` as option.
+- For long-running operations -- `Task` functions (especially `Task.async_stream/3` and `Task.await/2`) and batch `Repo` calls (large inserts, updates, deletes, backfills) -- pass `timeout: :infinity` instead of guessing a larger finite timeout. Do not add it to ordinary request-path queries; if a normal query times out, fix the query first.
 
 ## Mix guidelines
 
-- Read the docs and options before using tasks (by using `mix help task_name`).
-- To debug test failures, run tests in a specific file with `mix test test/my_test.exs` or run all previously failed tests with `mix test --failed`.
 - `mix deps.clean --all` is **almost never needed**. **Avoid** using it unless you have good reason.
-
-## Test guidelines
-
-- **Always use `start_supervised!/1`** to start processes in tests as it guarantees cleanup between tests.
-- **Avoid** `Process.sleep/1` and `Process.alive?/1` in tests:
-  - Instead of sleeping to wait for a process to finish, **always** use `Process.monitor/1` and assert on the DOWN message:
-    ```elixir
-      ref = Process.monitor(pid)
-      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
-    ```
-   - Instead of sleeping to synchronize before the next call, **always** use `_ = :sys.get_state/1` to ensure the process has handled prior messages.
-## Phoenix guidelines
-
-- Remember Phoenix router `scope` blocks include an optional alias which is prefixed for all routes within the scope. **Always** be mindful of this when creating routes within a scope to avoid duplicate module prefixes.
-- You **never** need to create your own `alias` for route definitions! The `scope` provides the alias, e.g.:
-  ```elixir
-    scope "/admin", AppWeb.Admin do
-      pipe_through :browser
-
-      live "/users", UserLive, :index
-    end
-  ```
-  the UserLive route would point to the `AppWeb.Admin.UserLive` module.
-- `Phoenix.View` no longer is needed or included with Phoenix, don't use it
 
 ## Phoenix HTML guidelines
 
 - Phoenix templates **always** use `~H` or .html.heex files (known as HEEx), **never** use `~E`.
-- **Always** use the imported `Phoenix.Component.form/1` and `Phoenix.Component.inputs_for/1` function to build forms. **Never** use `Phoenix.HTML.form_for` or `Phoenix.HTML.inputs_for` as they are outdated.
-- When building forms **always** use the already imported `Phoenix.Component.to_form/2` (`assign(socket, form: to_form(...))` and `<.form for={@form} id="msg-form">`), then access those forms in the template via `@form[:field]`.
-- **Always** add unique DOM IDs to key elements (like forms, buttons, etc) when writing templates, these IDs can later be used in tests (`<.form for={@form} id="product-form">`).
-- For "app wide" template imports, you can import/alias into the `my_app_web.ex`'s `html_helpers` block, so they will be available to all LiveViews, LiveComponent's, and all modules that do `use MyAppWeb, :html` (replace "my_app" by the actual app name).
-- Elixir supports `if/else` but **does NOT support `if/else if` or `if/elsif`**. **Never use `else if` or `elseif` in Elixir**, **always** use `cond` or `case` for multiple conditionals:
-  """
-    **Never do this (invalid)**:
-      ```elixir
-        <%= if condition do %>
-          ...
-        <% else if other_condition %>
-          ...
-        <% end %>
-      ```
-    Instead **always** do this:
-      ```elixir
-        <%= cond do %>
-          <% condition -> %>
-            ...
-          <% condition2 -> %>
-            ...
-          <% true -> %>
-            ...
-        <% end %>
-      ```
-  """
-- HEEx require special tag annotation if you want to insert literal curly's like `{` or `}`. If you want to show a textual code snippet on the page in a `<pre>` or `<code>` block you *must* annotate the parent tag with `phx-no-curly-interpolation`:
-  """
-      ```elixir
-        <code phx-no-curly-interpolation>
-          let obj = {key: "val"}
-        </code>
-      ```
-    Within `phx-no-curly-interpolation` annotated tags, you can use `{` and `}` without escaping them, and dynamic Elixir expressions can still be used with `<%= ... %>` syntax.
-  """
-- HEEx class attrs support lists, but you must **always** use list `[...]` syntax. You can use the class list syntax to conditionally add classes, **always do this for multiple class values**:
-  """
-      ```elixir
-        <a class={[
-          "px-2 text-white",
-          @some_flag && "py-5",
-          if(@other_condition, do: "border-red-500", else: "border-blue-100"),
-          ...
-        ]}>Text</a>
-      ```
-    and **always** wrap `if`'s inside `{...}` expressions with parens, like done above (`if(@other_condition, do: "...", else: "...")`).
 
-    and **never** do this, since it's invalid (note the missing `[` and `]`):
-      ```elixir
-        <a class={
-          "px-2 text-white",
-          @some_flag && "py-5"
-        }> ...
-        => Raises compile syntax error on invalid HEEx attr syntax
-      ```
-  """
-- **Never** use `<% Enum.each %>` or non-for comprehensions for generating template content, instead **always** use `<%= for item <- @collection do %>`.
-- HEEx HTML comments use `<%!-- comment --%>`. **Always** use the HEEx HTML comment syntax for template comments (`<%!-- comment --%>`).
-- HEEx allows interpolation via `{...}` and `<%= ... %>`, but the `<%= %>` **only** works within tag bodies. **Always** use the `{...}` syntax for interpolation within tag attributes, and for interpolation of values within tag bodies. **Always** interpolate block constructs (if, cond, case, for) within tag bodies using `<%= ... %>`:
-  """
-    **Always** do this:
-      ```elixir
-        <div id={@id}>
-          {@my_assign}
-          <%= if @some_block_condition do %>
-            {@another_assign}
-          <% end %>
-        </div>
-      ```
-    and **Never** do this – the program will terminate with a syntax error:
-      ```elixir
-        <%!-- THIS IS INVALID NEVER EVER DO THIS --%>
-        <div id="<%= @invalid_interpolation %>">
-          {if @invalid_block_construct do}
-          {end}
-        </div>
-      ```
-  """
 ## Phoenix LiveView guidelines
 
-- **Never** use the deprecated `live_redirect` and `live_patch` functions, instead **always** use the `<.link navigate={href}>` and  `<.link patch={href}>` in templates, and `push_navigate` and `push_patch` functions LiveViews.
-- **Avoid LiveComponent's** unless you have a strong, specific need for them.
 - LiveViews should be named like `AppWeb.WeatherLive`, with a `Live` suffix. When you go to add LiveView routes to the router, the default `:browser` scope is **already aliased** with the `AppWeb` module, so you can just do `live "/weather", WeatherLive`.
-
-### LiveView streams
-
-- **Always** use LiveView streams for collections for assigning regular lists to avoid memory ballooning and runtime termination with the following operations:
-  - basic append of N items - `stream(socket, :messages, [new_msg])`
-  - resetting stream with new items - `stream(socket, :messages, [new_msg], reset: true)` (e.g. for filtering items)
-  - prepend to stream - `stream(socket, :messages, [new_msg], at: -1)`
-  - deleting items - `stream_delete(socket, :messages, msg)`
-- When using the `stream/3` interfaces in the LiveView, the LiveView template must 1) always set `phx-update="stream"` on the parent element, with a DOM id on the parent element like `id="messages"` and 2) consume the `@streams.stream_name` collection and use the id as the DOM id for each child. For a call like `stream(socket, :messages, [new_msg])` in the LiveView, the template would be:
-  ```elixir
-    <div id="messages" phx-update="stream">
-      <div :for={{id, msg} <- @streams.messages} id={id}>
-        {msg.text}
-      </div>
-    </div>
-  ```
-- LiveView streams are *not* enumerable, so you cannot use `Enum.filter/2` or `Enum.reject/2` on them. Instead, if you want to filter, prune, or refresh a list of items on the UI, you **must refetch the data and re-stream the entire stream collection, passing reset: true**:
-  ```elixir
-    def handle_event("filter", %{"filter" => filter}, socket) do
-      # re-fetch the messages based on the filter
-      messages = list_messages(filter)
-
-      {:noreply,
-        socket
-        |> assign(:messages_empty?, messages == [])
-        # reset the stream with the new messages
-        |> stream(:messages, messages, reset: true)}
-    end
-  ```
-- LiveView streams *do not support counting or empty states*. If you need to display a count, you must track it using a separate assign. For empty states, you can use Tailwind classes:
-  """
-    ```elixir
-      <div id="tasks" phx-update="stream">
-        <div class="hidden only:block">No tasks yet</div>
-        <div :for={{id, task} <- @streams.tasks} id={id}>
-          {task.name}
-        </div>
-      </div>
-    ```
-    The above only works if the empty state is the only HTML block alongside the stream for-comprehension.
-  """
-- When updating an assign that should change content inside any streamed item(s), you MUST re-stream the items along with the updated assign:
-  """
-    ```elixir
-      def handle_event("edit_message", %{"message_id" => message_id}, socket) do
-        message = Chat.get_message!(message_id)
-        edit_form = to_form(Chat.change_message(message, %{content: message.content}))
-
-        # re-insert message so @editing_message_id toggle logic takes effect for that stream item
-        {:noreply,
-          socket
-          |> stream_insert(:messages, message)
-          |> assign(:editing_message_id, String.to_integer(message_id))
-          |> assign(:edit_form, edit_form)}
-      end
-    ```
-
-    And in the template:
-      ```elixir
-        <div id="messages" phx-update="stream">
-          <div :for={{id, message} <- @streams.messages} id={id} class="flex group">
-            {message.username}
-            <%= if @editing_message_id == message.id do %>
-              <%!-- Edit mode --%>
-              <.form for={@edit_form} id="edit-form-#{message.id}" phx-submit="save_edit">
-                ...
-              </.form>
-            <% end %>
-          </div>
-        </div>
-      ```
-  """
-- **Never** use the deprecated `phx-update="append"` or `phx-update="prepend"` for collections.
-
-### LiveView JavaScript interop
-
-- Remember anytime you use `phx-hook="MyHook"` and that JS hook manages its own DOM, you **must** also set the `phx-update="ignore"` attribute.
-- **Always** provide an unique DOM id alongside `phx-hook` otherwise a compiler error will be raised:
-  """
-    LiveView hooks come in two flavors, 1) colocated js hooks for "inline" scripts defined inside HEEx,
-    and 2) external `phx-hook` annotations where JavaScript object literals are defined and passed to the `LiveSocket` constructor.
-  """
-
-#### Inline colocated js hooks
-
-**Never** write raw embedded `<script>` tags in heex as they are incompatible with LiveView. Instead, **always use a colocated js hook script tag (`:type={Phoenix.LiveView.ColocatedHook}`) when writing scripts inside the template**:
-  ```elixir
-    <input type="text" name="user[phone_number]" id="user-phone-number" phx-hook=".PhoneNumber" />
-    <script :type={Phoenix.LiveView.ColocatedHook} name=".PhoneNumber">
-      export default {
-        mounted() {
-          this.el.addEventListener("input", e => {
-            let match = this.el.value.replace(/\D/g, "").match(/^(\d{3})(\d{3})(\d{4})$/)
-            if(match) {
-              this.el.value = `${match[1]}-${match[2]}-${match[3]}`
-            }
-          })
-        }
-      }
-    </script>
-  ```
-- colocated hooks are automatically integrated into the app.js bundle.
-- colocated hooks names **MUST ALWAYS** start with a `.` prefix, i.e. `.PhoneNumber`.
-
-#### External phx-hook
-
-External JS hooks (`<div id="myhook" phx-hook="MyHook">`) must be placed in `assets/js/` and passed to the LiveSocket constructor:
-  ```elixir
-    const MyHook = {
-      mounted() { ... }
-    }
-    let liveSocket = new LiveSocket("/live", Socket, {
-      hooks: { MyHook }
-    });
-  ```
-
-#### Pushing events between client and server
-
-Use LiveView's `push_event/3` when you need to push events/data to the client for a phx-hook to handle. **Always** return or rebind the socket on `push_event/3` when pushing events:
-  """
-    ```elixir
-      # re-bind socket so we maintain event state to be pushed
-      socket = push_event(socket, "my_event", %{...})
-
-      # or return the modified socket directly:
-      def handle_event("some_event", _, socket) do
-        {:noreply, push_event(socket, "my_event", %{...})}
-      end
-    ```
-
-    Pushed events can then be picked up in a JS hook with `this.handleEvent`:
-      ```elixir
-        mounted() {
-          this.handleEvent("my_event", data => console.log("from server:", data));
-        }
-      ```
-
-    Clients can also push an event to the server and receive a reply with `this.pushEvent`:
-      ```elixir
-        mounted() {
-          this.el.addEventListener("click", e => {
-            this.pushEvent("my_event", { one: 1 }, reply => console.log("got reply from server:", reply));
-          })
-        }
-      ```
-
-    Where the server handled it via:
-      ```
-        def handle_event("my_event", %{"one" => 1}, socket) do
-          {:reply, %{two: 2}, socket}
-        end
-      ```
-  """
 
 ### LiveView tests
 
-- `Phoenix.LiveViewTest` module and `LazyHTML` (included) for making your assertions.
-- Form tests are driven by `Phoenix.LiveViewTest`'s `render_submit/2` and `render_change/2` functions.
 - Come up with a step-by-step test plan that splits major test cases into small, isolated files. You may start with simpler tests that verify content exists, gradually add interaction tests.
-- **Always reference the key element IDs you added in the LiveView templates in your tests** for `Phoenix.LiveViewTest` functions like `element/2`, `has_element/2`, selectors, etc..
-- **Never** tests again raw HTML, **always** use `element/2`, `has_element/2`, and similar: `assert has_element?(view, "#my-form")`.
 - Instead of relying on testing text content, which can change, favor testing for the presence of key elements.
 - Focus on testing outcomes rather than implementation details.
-- Be aware that `Phoenix.Component` functions like `<.form>` might produce different HTML than expected. Test against the output HTML structure, not your mental model of what you expect it to be.
-- When facing test failures with element selectors, add debug statements to print the actual HTML, but use `LazyHTML` selectors to limit the output, e.g.:
-  ```elixir
-    html = render(view)
-    document = LazyHTML.from_fragment(html)
-    matches = LazyHTML.filter(document, "your-complex-selector")
-    IO.inspect(matches, label: "Matches")
-  ```
 
 ## Strict Guidelines
 
 ### Implementation Guidelines
 
 - Refer to the codebase, other files, and functions to understand how things are done. Match existing patterns and conventions rather than inventing new ones.
-- Always use the latest applicable documentation and best current knowledge for the versions already in this project, and look for and use the latest for everything else.
-- Do not re-implement functionality that already exists in the codebase or in any existing utility/dependency/plugin/package functions. Check first.
-- Check project existing utilities/dependencies/plugins/packages before writing new functions, a utility/dependency/plugin/package may already provide what you need. Use existing utility/dependency/plugin/package rather than reinventing their functionality.
-- Do not overdo. Avoid adding excessive safeguards for unlikely cases. Raise an error or a terminal output instead. Adhere to `### Detailed Specifications for Abstraction / Helper / Function Creation Rules`.
-- It is not necessary to create a helper function (or any kind of function in general) if it's only referenced once, instead, put it directly inline where it is used. For more detailed explanation, refer to `### Detailed Specifications for Abstraction / Helper / Function Creation Rules`.
+- Always use the documentation matching the versions of the tools and dependencies specified in this project (`.tool-versions`, `mix.exs`) when applicable; for everything else, look for and use the latest documentation.
+- Do not re-implement functionality that already exists in the codebase or in an existing utility/dependency/plugin/package. Check first, and use the existing implementation rather than reinventing it.
+- Do not overdo. Avoid adding excessive safeguards for unlikely cases -- raise an error or print to the terminal instead.
 - Question my method of approaching a problem when necessary, especially if it is not optimal or not sensible to implement.
-- If you want to run any command, consider trying it with `mise exec -- ` appended first since most of my tools are configured under mise for proper version control.
+- If you want to run any command, consider trying it with `mise exec -- ` prepended first since most of my tools are configured under mise for proper version control.
 - New resources should:
-  - always include timestamps() (inserted_at, and updated_at) unless there is a strong reason to not include them.
+  - always include `timestamps()` (`inserted_at` and `updated_at`) unless there is a strong reason not to.
   - default string columns to text, unless a more specific type is needed like citext or an extension-specific type.
   - default to UUIDv7 primary keys, unless the resource or dependency has a stronger reason to use another key strategy.
   - explicitly decide whether it needs AshPaperTrail, AshEvents, AshArchival, and AshStateMachine, especially when user didn't specify. Always recap to the user simply with example what each of the options mean.
 - All database/resource operations are preferably required to go through Ash actions to ensure that Paper Trail, Event Sourcing, and Archival works as expected. However, direct Repo and SQL query calls are always allowed when it is intentional and acceptable.
-- Never ever execute any `git`-related commands, what you see is what you work with.
-- Never ever add new comments (this include docs, or anything alike) unless instructed to. However, you are allowed to modify comments when necessary for example when removing or adding a feature from a function to keep it accurate but follow a similar writing style.
-- Always prefer using Tailwind's grid-cols when positioning elements, and adhere to `#### Detailed Specifications for Layout Grids`.
-- When a reference implementation is provided or a similar implementation already exists within the system, default to reference fidelity over cleverness. Matching the existing structure, flow, processing, relative placement of the logic, layers, UI, and abstraction boundary down to the granular level. This is preferred over producing a different but equivalent implementation unless there is a strong reason not to.
-- Always separate the frontend from the backend file-wise in the same folder (e.g. .ex and .html.heex files).
+- When creating migrations, always use `mix ecto.gen.migration` and keep a single migration file per feature branch, which excludes the master/main and testing branches.
+- Never execute mutating `git` commands (`add`, `commit`, `push`, `checkout`, `restore`, `reset`, `stash`, `rebase`, `merge`, etc.) unless I explicitly instruct it. Read-only `git` commands (`status`, `diff`, `log`, `show`, `blame`) are allowed when useful. What you see is what you work with -- never use `git` to discard or rewrite changes.
+- Never add new comments (this includes docs such as `@doc`/`@moduledoc`, or anything alike) unless instructed to. However, you are allowed to modify existing comments when necessary -- for example, to keep them accurate after adding or removing functionality -- following a similar writing style.
+- Always prefer using Tailwind's grid-cols when positioning elements.
+- When a reference implementation is provided or a similar implementation already exists within the system, default to reference fidelity over cleverness: match the existing structure, flow, processing, relative placement of the logic, layers, UI, and abstraction boundary down to the granular level. This is preferred over producing a different but equivalent implementation unless there is a strong reason not to.
+- Always separate the frontend from the backend file-wise in the same folder (e.g. `.ex` and `.html.heex` files).
 - Always use centrally defined project colours from the global CSS/theme layer. Do not introduce page-local, color-mixes, opacity, or ad hoc colours. Colours should come from a centralized source so updates stay global and consistent.
-- Do not use responsive utility variant classes like `grid-cols-[1fr] md:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1fr_1fr]`, and `w-16 md:w-32 lg:w-48`.
-- When creating migrations, always use `mix ecto.gen.migration` and keep a single migration file per branch (you are allowed to use git for this purpose only).
-- Adhere to `#### Detailed Specifications for Abstraction / Helper / Function Creation Rules`.
-- Adhere to `#### Detailed Specifications for Layout Grids`.
-- Adhere to `#### Designing w/ Layout Grids`.
+- Do not use responsive utility variant classes like `grid-cols-[1fr] md:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1fr_1fr]` or `w-16 md:w-32 lg:w-48`.
+- Adhere to `#### Abstraction / Helper / Function Creation Rules` and `#### Layout Grids` below.
 - You are required to run the following after every implementation:
-    - `mise exec -- mix format`
-    - `mise exec -- mix test`
-    - `MIX_ENV=test mise exec -- mix dialyzer`
-    - If anything fails whether it's related to the user proposed change or not, fix it and continue fixing it until everything passes. Do not move on to the next piece of work until tests pass. New changes must not break existing functionality.
+  - `mise exec -- mix format`
+  - `mise exec -- mix test`
+  - `MIX_ENV=test mise exec -- mix dialyzer`
+  - If anything fails, whether it's related to the requested change or not, fix it and continue fixing it until everything passes. Do not move on to the next piece of work until tests pass. New changes must not break existing functionality. When you fix failures unrelated to the requested change, list those fixes separately in your response.
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues.
 
-#### Detailed Specifications for Abstraction / Helper / Function Creation Rules
+#### Abstraction / Helper / Function Creation Rules
 
-- Anonymous functions are allowed only when written inline as direct callbacks/reference to existing Elixir/Phoenix existing functions and APIs. Other than this reason, you are not allowed to use or create anonymous functions ever. Every rule listed after this is mostly (if not all) for named functions only.
-- A separate function is allowed for framework-required callback entrypoints or for named recursion when anonymous functions are disallowed. Outside of those cases, keep the logic inline.
-- Do not create new functions unless there is a clear need.
-- A new function is allowed, but evaluate extraction at the branch level, not just the module level, only if all of these is true:
-  - If logic is only used inside one event branch, one case branch, one cond branch, or one callback path, keep it inline in that branch.
-  - If different branches only look similar but are tied to different IDs, fields, or business rules, keep them separate and inline.
-  - Before creating any new function, first ask the following questions. If the answer to all 3 is no, keep it inline:
-    - Is this reused or referenced more than once?
-    - Is this a real domain concept?
-    - Does extraction improve clarity more than it increases indirection?
-    - and one of these is true:
-      - the exact logic is used in 2 or more places.
-      - the logic represents a real domain concept with its own meaning.
-      - the framework requires separation.
-      - the inline version would be materially harder to read or maintain.
-- Do not extract branch-specific logic into a helper just because it is a few lines long or looks reusable.
-- Do not extract single-branch logic.
-- Do not extract single-ID logic.
-- Do not extract single-callback logic.
-- Only extract when reuse is real, not speculative.
-- Do not create helpers unless they are reused or they encapsulate genuine domain behavior.
-- If you create a new helper, explicitly justify why inline code was not sufficient.
-- When a function already exists for a concern, prefer expanding that utility into the canonical implementation rather than introducing parallel logic at the call site.
-- When multiple implementations perform the same technical operation, prefer consolidating that operation into one existing shared utility/module rather than duplicating the logic across feature modules:
-  - If the same low-level operation appears in 2 or more places, move it into the most appropriate shared utility that already owns that concern.
-  - Prefer strengthening an existing utility/module over creating a new feature-specific helper/service.
-  - Shared infrastructure concerns should be a one standardized implementation path.
-  - Do not keep multiple equivalent implementations of the same technical operation unless there is a real behavioral difference that must remain separate.
-  - If a shared utility already exists for that concern, extend it there instead of re-implementing the logic locally.
-  - If you choose not to consolidate duplicated logic into the shared utility, explicitly justify the behavioral difference that prevents standardization.
-- Single-use wrappers around existing functions are not allowed.
-- Thin wrappers that's so slight in functionality, or immediately forward to an existing function are not allowed.
-- Small one-off transformations of data should stay inline.
-- Do not extract code into a helper if the helper does not remove meaningful complexity from the caller.
-- A helper must make the call site read at a higher level of abstraction than the code it replaces.
-- If the extracted function only forwards parameters, performs a tiny one-off transformation, or wraps a single obvious expression, keep it inline.
-- If reading the helper body is required to understand the caller immediately, the extraction is not helpful and should not be done.
-- Do not extract a helper whose name merely restates the implementation without adding domain meaning.
-- Prefer inline code when the logic is short, local, and easier to understand in place than by jumping to another function.
-- A valid helper should do at least one of these:
-  - hide multi-step logic
-  - encode a real business/domain concept
-  - remove repeated non-trivial logic
-  - satisfy a framework requirement
-- Helpers that only reduce line count but increase indirection are not allowed.
-- Before extracting, apply this test:
-  - Does the caller become simpler to understand without opening the helper?
-  - Does the helper name communicate domain meaning, not just mechanics?
-  - Is the body more than a trivial pass-through or obvious expression?
-  - If any answer is no, keep it inline.
-- Reuse alone is not enough to justify a helper.
-- Repeated trivial mechanics must still stay inline unless they are an existing shared utility already used across the codebase.
-- Do not create private helpers for primitive normalization.
-- Generic technical cleanup is not a domain concept.
-- Helpers are presumed invalid unless they encode real business meaning or are already established shared utilities in the codebase.
-- If the logic is still understandable only as a low-level operation, keep it inline even when repeated in multiple places.
-- A helper must raise the abstraction level from mechanics to meaning.
-- If the helper only standardizes syntax-level cleanup, it is not a valid helper.
-- The consolidation rules do not apply to primitive local mechanics, syntax cleanup, or inline callback logic.
-- Do not move trivial repeated local mechanics into shared utilities/modules.
-- If you think that the helper functions that you are going to create might be useful throughout the entire project going forward, consider building them inside `core_utils` or expand similar functions that already exists in `core_utils`. However, this requires confirmation from me and has to be consulted before implementation.
+The default is inline. A new named function is the exception and must earn its place under the rules below; when in doubt, keep the logic inline.
 
-#### Detailed Specifications for Layout Grids
+##### Definitions used by these rules
+
+- **Trivial mechanics**: logic readable at a glance as a low-level operation -- a one-to-three-step data transformation, parameter forwarding/reshuffling, primitive normalization, generic technical cleanup, or a single obvious expression. Test: if the best possible name for it would merely restate the code (`trim_and_downcase`, `put_default_status`), it is trivial mechanics.
+- **Meaningful operation**: multi-step logic that carries a genuine domain or infrastructure concept -- it has a name in the business/system vocabulary that says *what* it means, not *how* it works (`calculate_invoice_total`, `authorize_export`).
+
+##### Anonymous functions
+
+- Anonymous functions are allowed only when written inline as direct callbacks/arguments to existing Elixir/Phoenix/dependency APIs (e.g. `Enum.map(list, fn x -> ... end)`).
+- Never assign an anonymous function to a variable or create one for any other purpose. For recursion, use a named function.
+
+##### Named functions
+
+- Framework-required callback entrypoints (`mount/3`, `handle_event/3`, `render/1`, `changeset/2`, etc.) and named functions needed for recursion are always allowed. The conditions below govern every other named function.
+- A new named function may be created only when **all** of the following hold:
+  1. It is a meaningful operation, not trivial mechanics. Trivial mechanics always stay inline -- even when the same mechanics are repeated in multiple places. Reuse alone is never enough.
+  2. At least one of:
+     - the exact logic is genuinely used in 2 or more places (real reuse, not speculative),
+     - it encodes a genuine domain concept with its own meaning,
+     - the inline version would be materially harder to read or maintain.
+  3. The call site reads at a higher level of abstraction and is understandable without opening the helper.
+  4. The function name communicates domain meaning rather than restating the implementation.
+- If any condition fails, keep it inline.
+
+##### Branch-level evaluation
+
+- Evaluate extraction at the branch level, not just the module level: logic used inside only one event branch, one `case`/`cond` branch, or one callback path stays inline in that branch -- do not extract it just because it is a few lines long or looks reusable.
+- Branches that merely look similar but are tied to different IDs, fields, or business rules are not duplication. Keep them separate and inline.
+
+##### Wrappers
+
+- Single-use wrappers, thin wrappers, and pass-throughs around existing functions are not allowed -- call the existing function directly. A helper that only forwards parameters, wraps a single obvious expression, or reduces line count while adding indirection is not a valid helper.
+
+##### Consolidating duplicated meaningful operations
+
+- When the same meaningful operation exists (or would now exist) in 2 or more places, consolidate it into the one shared utility/module that already owns that concern. Prefer strengthening the existing utility into the canonical implementation over creating a new feature-local helper or parallel logic at the call site.
+- Keep multiple implementations of the same operation only when a real behavioral difference forces it.
+- Trivial mechanics are exempt from consolidation: never promote repeated trivial mechanics into a shared utility. Shared utilities already established in the codebase may of course keep being used.
+
+##### Justification -- to me, in your response, never as code comments
+
+- For each new named function: state in one sentence which condition above it satisfies and why inline was not sufficient.
+- For each decision to keep duplicated meaningful logic unconsolidated: state in one sentence the behavioral difference that prevents consolidation.
+
+#### Layout Grids
+
+##### Plan the section before code
+
+- Before writing any grid markup for a section, plan the structure top-down:
+  1. **Section composition.** Decide whether the section is row-based (full-width rows top to bottom), region-based (outer grid splits into side-by-side sub-stacks), or a mix. Base this on whether the field set has natural side-by-side sub-groupings -- if yes, regions; if not, rows. Don't default to one or the other; pick whichever fits.
+  2. **Rows.** Within the section (or within each region if region-based), group fields into rows. Each row holds 1–N fields that belong together visually/semantically.
+  3. **Per-row grid-cols.** For each row, choose `grid-cols-[...]` whose column count equals the row's field count and whose fr ratios match field density.
+- If a row would need `col-span` or an empty trailing `<div></div>` to fit, the field count or grid-cols is wrong -- adjust the row instead. (A genuine final-row remainder is handled under **Visual balance**.)
 
 ##### Syntax rules
-- Always use Tailwind `grid-cols-[...]` with explicit `fr`/fixed-width values instead of preset classes like `grid-cols-2`, `grid-cols-3`, etc.
-- Always use explicit bracketed grid columns such as `grid-cols-[1fr_1fr]` or `grid-cols-[2.75rem_1fr_1fr_2.75rem]`.
+
+- Always use Tailwind `grid-cols-[...]` with explicit `fr`/fixed-width values, such as `grid-cols-[1fr_1fr]` or `grid-cols-[2.75rem_1fr_1fr_2.75rem]`.
 - Do not use Tailwind preset grid column counts like `grid-cols-2`, `grid-cols-3`, `grid-cols-4`, etc., unless I explicitly ask for it.
 - Use `rem` for fixed elements like action/button/sequence columns.
 
 ##### Encoding field width
-- A field's visual width is determined by the `fr` units of its column in the row's `grid-cols-[...]` definition. To make a field wider, give that column a larger `fr` value (e.g. `grid-cols-[1fr_3fr]` makes the second column three times as wide; `[1fr_1fr_2fr]` makes the third column twice as wide as the first two).
-- **Do not use `col-span-N` to widen fields.** `col-span` is reserved for the rare case where a single field must literally cross multiple discrete cells that exist as separately-sized columns for other rows in a sub-component (such as a table-like structure where one header cell genuinely spans two adjacent body columns). For ordinary form layouts, the answer is always to size the row's columns directly, never to span.
-- Use subgap Tailwind plugin I implemented when wanting to implement gap along with grid.
 
-##### Section composition
-- There are no fixed shape for each section of a form. Pick whichever composition fits the field set.
-- The two common compositions (use whichever is right for the data — neither is a default):
-  - **Row-based section.** The whole section is a vertical stack of full-width rows. Each row is its own `grid grid-cols-[...]` and spans the full width of the section. Use this when fields don't naturally split into side-by-side groupings.
-  - **Region-based section.** An outer grid (commonly `grid-cols-[1fr_1fr]` for halves, sometimes `[1fr_1fr_1fr]` for thirds) splits the section into side-by-side regions. Inside each region, rows are stacked vertically with `flex flex-col subgap-N`, and each stacked row is its own inner `grid grid-cols-[...]`. Use this when the field set naturally divides into parallel sub-groups.
-- A section can also mix: e.g. a row-based top half followed by a region-based bottom half, or a single full-width row at the top and split regions below it. Use what reads cleanest.
-- Whichever composition you choose, **each individual row picks its own `grid-cols-[...]` based on the fields it holds.** Different rows may use different column counts and different fr ratios — that is expected and correct.
+- A field's visual width is determined by the `fr` units of its column in the row's `grid-cols-[...]` definition. To make a field wider, give that column a larger `fr` value (e.g. `grid-cols-[1fr_3fr]` makes the second column three times as wide; `[1fr_1fr_2fr]` makes the third column twice as wide as the first two).
+- The row's `grid-cols-[...]` is the single source of truth for that row's field widths. Tune fr ratios per row, not across the whole section: short codes/numbers → `1fr`; fields that genuinely need the room (names, descriptions, textareas, remark fields, emails, search-style live-selects) → `2fr` or `3fr`. Don't make a column wide just to fill space.
+- Use clean ratios that resolve in halves/quarters (`1fr_1fr`, `1fr_2fr`, `1fr_1fr_2fr`, `1fr_3fr`, `1fr_1fr_1fr_1fr`) over arbitrary fractions. (Half-unit columns like `0.5fr` are permitted only as part of a symmetric internal split -- see **Visual balance**.)
+- **Do not use `col-span-N` to widen fields.** `col-span-N` is permitted only inside structurally-table-like blocks where a single cell must literally cross multiple discrete columns that exist as separately-sized columns for other rows -- e.g. a header cell that announces a group covering several body columns of an items table. For ordinary form sections, treat `col-span` as forbidden: the answer is always to size the row's columns directly, never to span.
+
+##### Composition: rows vs regions
+
+- There is no fixed shape for a form section. The two common compositions (neither is a default -- pick whichever fits the data):
+  - **Row-based section.** The whole section is a vertical stack of full-width rows. Each row is its own `grid grid-cols-[...]` spanning the full width of the section. Use this when the fields read top-to-bottom as one continuous group and don't divide into parallel sub-groups.
+  - **Region-based section.** An outer grid (commonly `grid-cols-[1fr_1fr]` for halves, sometimes `[1fr_1fr_1fr]` for thirds) splits the section into side-by-side regions. Inside each region, rows are stacked vertically with `flex flex-col gap-N`, and each stacked row is its own inner `grid grid-cols-[...]`. Use this when the field set has clear parallel groupings -- e.g. address fields on the left + contact fields on the right.
+- A section can also mix: e.g. a row-based top half followed by a region-based bottom half, or a single full-width row at the top and split regions below it. Use what reads cleanest, but don't introduce a region split just for visual variety -- the split must be backed by a real grouping in the data.
+- Whichever composition you choose, **each individual row picks its own `grid-cols-[...]` based on the fields it holds.** Different rows may use different column counts and different fr ratios -- that is expected and correct.
   - Row-based section example:
     ```
-    <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] subgap-2 mt-2">...</div>     <%!-- 5 fields, name wider --%>
-    <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] subgap-2 mt-2">...</div>     <%!-- another 5 --%>
-    <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] subgap-2 mt-2">...</div>         <%!-- 6 same-density fields --%>
+    <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] gap-2 mt-2">...</div>     <%!-- 5 fields, name wider --%>
+    <div class="grid grid-cols-[1fr_2fr_1fr_1fr_1fr] gap-2 mt-2">...</div>     <%!-- another 5 --%>
+    <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-2 mt-2">...</div> <%!-- 6 same-density fields --%>
     ```
   - Region-based section example (inside one region):
     ```
-    <div class="flex flex-col subgap-2">
-      <div class="grid grid-cols-[1fr_1fr_2fr] subgap-2 items-end">...</div>      <%!-- 3 fields, last wider --%>
-      <div class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-2">...</div>             <%!-- 4 same-density --%>
-      <div class="grid grid-cols-[1fr_1fr] subgap-2">...</div>                     <%!-- 2 fields --%>
+    <div class="flex flex-col gap-2">
+      <div class="grid grid-cols-[1fr_1fr_2fr] gap-2 items-end">...</div>      <%!-- 3 fields, last wider --%>
+      <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">...</div>            <%!-- 4 same-density --%>
+      <div class="grid grid-cols-[1fr_1fr] gap-2">...</div>                    <%!-- 2 fields --%>
     </div>
     ```
-- The row's grid-cols is the single source of truth for that row's field widths. Pick fr ratios that match the natural density of the fields on that row (short codes/numbers → 1fr, names/descriptions → 2fr or 3fr).
-- When several adjacent rows hold same-density fields (e.g. four rows of 4 short fields each), they will naturally share the same `grid-cols-[1fr_1fr_1fr_1fr]` string. That is a coincidence of the field sets, not a rule — keep each row's grid-cols inline.
+- Adjacent rows of similar field density will naturally share the same grid-cols string (e.g. four rows of 4 short fields each sharing `grid-cols-[1fr_1fr_1fr_1fr]`). Let that happen, but don't force it -- the match is a coincidence of the field sets, not a rule.
 
-##### Variable extraction
+##### Visual balance
+
+- The mechanics above produce a *valid* grid; these rules produce a *balanced* one. A section can satisfy every syntax and composition rule and still read as lopsided or jagged -- this subsection is the quality bar that catches that. When choosing per-row grid-cols, judge the result against these:
+- **Compose on a fixed even grid.** Think in `1x`, `2x`, and clean half-blocks, not arbitrary widths. Prefer layouts that resolve in multiples of `2`; if a row starts feeling like `3` uneven groups, the rhythm is probably wrong.
+- **Preserve the visual center seam.** Rows should feel like balanced left/right bands, not drift into uneven 3-part compositions. (This is also why region-based sections lean on `[1fr_1fr]` halves.)
+- **Edges must land on real grid lines.** A "span" here means a wider `fr` column (e.g. `2fr` where the row's base unit is `1fr`), never `col-span`. A wide column's left and right edges must coincide with grid lines used by the rows around it. A field should not start or stop at the middle of a field above or below.
+  - **The one exception:** a midpoint is allowed when it is a deliberate, symmetric subdivision -- an internal split that stays self-contained inside one parent column's edges. `grid-cols-[2fr_0.5fr_0.5fr_1fr]` (over a 4-unit base row) is valid: the `2fr` field aligns with two `1fr` columns above, and the `0.5fr_0.5fr` pair splits a single column symmetrically without bleeding into its neighbors. An asymmetric split like `0.7fr_0.3fr`, or one whose midpoint lines up with nothing meaningful in the adjacent rows, is not.
+- **Cross-row alignment beats field order.** If reordering fields within the section keeps edges clean, reorder them. A good wide column feels anchored to the surrounding grid; a bad one cuts awkwardly across the lower row's field boundaries.
+- **Wide columns absorb space cleanly** -- give a column more `fr` because the field needs the room (names, descriptions, remarks, emails), not just because it can be wider.
+- **Similar-density fields keep a steady rhythm.** Dates, short enums, codes, and numeric fields should sit in consistent-width slots across rows, not jump between `1fr` in one row and `3fr` in the next.
+- **Empty space collects at the far right of the final row only.** Avoid holes in the middle, bottom-right appendices, or orphan closing rows. A genuine remainder keeps its normal slot width and lets the trailing grid track sit empty -- this comes from under-filling the row's columns, never from inserting a placeholder `<div></div>`.
+- **Silhouette test.** Picture the occupied area as one solid shape. If it forms a staircase, an inverted `L`, or a dangling last-row hook, the layout is not balanced -- it should read as a clean rectangle with at most one gap at the bottom-right.
+
+##### Spacing conventions
+
+- Between rows in a row-based section: `mt-N` (or `gap-N` if rows live inside a `flex flex-col gap-N`).
+- Between fields within a row: `gap-N`.
+- Between regions in a region-based section: `gap-N` on the outer grid.
+- Between rows inside a region: `gap-N` on the region's `flex flex-col`.
+- Adjust spacing only with intent.
+
+##### Sharing a grid string (variable extraction)
+
 - Inline the `grid-cols-[...]` string in each row by default.
-- Only extract the grid-cols string into a variable (e.g. `items_grid_cols`) when the repeated rows form a single logical layout block — meaning the rows are structurally bound to each other as parts of one composite unit (e.g. a list header row plus its `<.inputs_for>` item rows; or a table header row plus its body rows). In that case the variable lives at the top of the file/component scope where it is used.
-- Form-section rows that happen to share the same grid-cols string are NOT a logical layout block. The fact that the strings match is coincidence — these rows are independent visually-aligned rows, not a single composite unit. Inline each.
+- Only extract the grid-cols string into a variable (e.g. `items_grid_cols`) when the repeated rows form a single logical layout block -- meaning the rows are structurally bound to each other as parts of one composite unit (e.g. a list header row plus its `<.inputs_for>` item rows; or a table header row plus its body rows). In that case the variable lives at the top of the file/component scope where it is used.
+- Form-section rows that happen to share the same grid-cols string are NOT a logical layout block. The fact that the strings match is coincidence -- these rows are independent visually-aligned rows, not a single composite unit. Inline each.
   """
-    **VALID — single logical layout block (header + items list share one grid):**
+    **VALID -- single logical layout block (header + items list share one grid):**
       ```elixir
         <% items_grid_cols = "grid-cols-[2.75rem_1fr_1fr_2.75rem]" %>
         ...
-        <div class={"w-full grid #{items_grid_cols} subgap-2 pb-2 pt-2 border-b-[1px] border-b-white"}>
+        <div class={"w-full grid #{items_grid_cols} gap-2 pb-2 pt-2 border-b-[1px] border-b-white"}>
           <div class="text-center">No.</div>
           <div class="ps-1">Code</div>
           <div class="ps-1">Name</div>
@@ -509,7 +247,7 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
         <.inputs_for :let={item_f} field={f[:items]}>
           <div
             id={"item-#{item_f.index}"}
-            class={"w-full grid #{items_grid_cols} subgap-2 pb-2 border-b-[1px] border-b-white"}
+            class={"w-full grid #{items_grid_cols} gap-2 pb-2 border-b-[1px] border-b-white"}
           >
             <.input field={item_f[:number]} type="text"/>
             <.input field={item_f[:code]} type="text"/>
@@ -525,7 +263,7 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
         </.inputs_for>
       ```
 
-    **INVALID — independent form rows extracted into a shared variable just because they happen to share a string:**
+    **INVALID -- independent form rows extracted into a shared variable just because they happen to share a string:**
       ```elixir
         <% three_field_grid_cols = "grid grid-cols-[1fr_1fr_1fr]" %>
 
@@ -541,7 +279,7 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
           <.input field={f[:input_6]} type="text" label="Input 6" />
         </div>
       ```
-    These rows are not a composite unit — they are independent rows in a form section. Inline each:
+    These rows are not a composite unit -- they are independent rows in a form section. Inline each:
       ```elixir
         <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
           <.input field={f[:input_1]} type="text" label="Input 1" />
@@ -556,45 +294,10 @@ Use LiveView's `push_event/3` when you need to push events/data to the client fo
         </div>
       ```
   """
-- When editing an existing file, normalize any touched repeated grid layout in that same section to this pattern.
-
-#### Designing w/ Layout Grids
-
-##### Plan the section before code
-- Before writing any grid markup for a section, plan the structure top-down:
-  1. **Section composition.** Decide whether the section is row-based (full-width rows top to bottom), region-based (outer grid splits into side-by-side sub-stacks), or a mix. Base this on whether the field set has natural side-by-side sub-groupings — if yes, regions; if not, rows. Don't default to one or the other; pick whichever fits.
-  2. **Rows.** Within the section (or within each region if region-based), group fields into rows. Each row holds 1–N fields that belong together visually/semantically.
-  3. **Per-row grid-cols.** For each row, choose `grid-cols-[...]` whose column count equals the row's field count and whose fr ratios match field density (short codes → 1fr, names/descriptions/textareas → 2fr or 3fr).
-- If a row would need `col-span` or an empty trailing `<div></div>` to fit, that means the field count or grid-cols is wrong — adjust.
-
-##### Per-row grid principles
-- The row's `grid-cols-[...]` is the source of truth for that row's field widths. Tune fr ratios per row, not across the whole section.
-- Use `1x` and `2x` clean ratios (e.g. `1fr_1fr`, `1fr_2fr`, `1fr_1fr_2fr`, `1fr_3fr`, `1fr_1fr_1fr_1fr`). Prefer ratios that resolve in halves/quarters over arbitrary fractions.
-- Wide fr columns are for fields that genuinely need the room (names, descriptions, textareas, remark fields, emails, search-style live-selects). Don't make a column wide just to fill space.
-- Adjacent rows of similar field density will naturally share the same grid-cols string. Let that happen, but don't force it — different rows can validly use different grids.
-
-##### Spacing conventions
-- Between rows in a row-based section: `mt-N` (or `subgap-N` if rows live inside a `flex flex-col subgap-N`).
-- Between fields within a row: `subgap-N`.
-- Between regions in a region-based section: `subgap-N` on the outer grid.
-- Between rows inside a region: `subgap-N` on the region's `flex flex-col gap-2`.
-- Adjust spacing only with intent.
-
-##### When to use regions vs rows
-- **Use rows (full-width stacked rows)** when the fields read top-to-bottom as one continuous group and don't divide into parallel sub-groups. Example: a section where each row holds one slice of metadata fields and the next row continues with the next slice.
-- **Use regions (outer grid splitting into side-by-side sub-stacks)** when the field set has clear parallel groupings — e.g. address fields on the left + contact fields on the right. Each region then has its own internal row stack.
-- Don't introduce a region split just for visual variety. The split must be backed by a real grouping in the data.
-
-##### Reference fidelity for grids
-- When a sibling page or existing component in the same domain (e.g. another LiveView under the same feature folder) already solves a similar form/grid layout, default to copying its region structure and per-row `grid-cols-[...]` choices as your starting point. Diverge only when the field set genuinely differs.
-- A grid that "matches the neighbours" is almost always preferable to a clever grid invented from scratch.
-
-##### When `col-span` is actually allowed
-- `col-span-N` is permitted only inside structurally-table-like blocks (e.g. a header row that announces a group covering several body columns of an items table). It is NOT a tool for "make this field wider". For form sections, treat `col-span` as forbidden.
 
 ### Description / Explanation / Analysis Guidelines
 
-- When asked to describe, explain, or analyze, do it fully and completely in its entirety, every line, every function, every module, and everything that interacts with it or has any relation to it.
-- Always look and use for the latest documentation for everything.
-- Never ever execute any `git`-related commands, what you see is what you work with.
-- Always provide a simpler explanation along with real world examples at the end of every explanation when applicable.
+- When asked to describe, explain, or analyze, be complete within the scope of the request: cover every line, every function, and every module the request targets. For anything outside that scope that interacts with the target, summarize the relationship briefly instead of fully expanding it, and ask me before widening the scope.
+- Always use the documentation matching the versions of the tools and dependencies specified in this project (`.tool-versions`, `mix.exs`) when applicable; for everything else, look for and use the latest documentation.
+- Never execute mutating `git` commands (`add`, `commit`, `push`, `checkout`, `restore`, `reset`, `stash`, `rebase`, `merge`, etc.) unless I explicitly instruct it. Read-only `git` commands (`status`, `diff`, `log`, `show`, `blame`) are allowed when useful. What you see is what you work with -- never use `git` to discard or rewrite changes.
+- Always provide a simpler explanation along with real-world examples at the end of every explanation when applicable.
