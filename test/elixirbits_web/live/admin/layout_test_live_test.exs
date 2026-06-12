@@ -58,8 +58,54 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     render_click(element(view, "#layout-test-flash-info"))
     assert has_element?(view, "#flash-info")
 
+    assert has_element?(
+             view,
+             "#flash-info[phx-hook=\"FlashAutoDismiss\"][data-duration=\"5000\"]"
+           )
+
     render_click(element(view, "#layout-test-flash-error"))
     assert has_element?(view, "#flash-error")
+
+    render_click(element(view, "#layout-test-flash-warning"))
+    assert has_element?(view, "#flash-warning")
+
+    assert has_element?(
+             view,
+             "#flash-warning[phx-hook=\"FlashAutoDismiss\"][data-duration=\"8000\"]"
+           )
+  end
+
+  test "flash accepts structured payloads and prefixed group ids" do
+    html =
+      render_component(&ElixirbitsWeb.CoreComponents.flash/1,
+        kind: :warning,
+        flash: %{
+          "warning" => %{
+            title: "Heads up",
+            msg: "Review this state",
+            icon: "hero-bell",
+            duration: 1200,
+            show_spinner: true
+          }
+        }
+      )
+
+    assert html =~ "Heads up"
+    assert html =~ "Review this state"
+    assert html =~ "hero-bell"
+    assert html =~ "hero-arrow-path"
+    assert html =~ ~s(phx-hook="FlashAutoDismiss")
+    assert html =~ ~s(data-duration="1200")
+
+    html =
+      render_component(&ElixirbitsWeb.CoreComponents.flash_group/1,
+        flash: %{},
+        id_prefix: "demo-modal"
+      )
+
+    assert html =~ ~s(id="demo-modal-flash-group")
+    assert html =~ ~s(id="demo-modal-client-error")
+    assert html =~ ~s(id="demo-modal-server-error")
   end
 
   test "dependency LiveSelect refreshes backend options after selection", %{conn: conn} do
