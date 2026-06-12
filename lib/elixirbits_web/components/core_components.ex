@@ -732,7 +732,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         ]}
       >
         <input type="hidden" name={@name} value={@composite_value} data-tel-composite />
-        <div class="input-floating-wrapper grid grid-cols-[4rem_auto] gap-2">
+        <div class="input-floating-wrapper grid grid-cols-[4rem_auto] gap-0">
           <LiveSelect.live_select
             field={@country_field}
             id={"#{@country_id}_country_select"}
@@ -863,7 +863,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
-    if assigns[:label] && assigns.type in ~w(email file number password search text url) do
+    if assigns[:label] && assigns.type in ~w(color email file number password search text url) do
       placeholder = assigns.rest[:placeholder]
       label_as_placeholder = placeholder in [nil, ""]
 

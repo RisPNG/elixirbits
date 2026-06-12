@@ -29,8 +29,16 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     assert has_element?(view, "#layout-test-local-panel")
     assert has_element?(view, "#layout-test-core-table")
     assert has_element?(view, "#local_project_name.input-floating-control[placeholder=\" \"]")
+
+    assert has_element?(
+             view,
+             "#local_accent.input-floating-control[type=\"color\"][placeholder=\" \"]"
+           )
+
     assert has_element?(view, "#local_notes.input-floating-textarea[placeholder=\" \"]")
     assert has_element?(view, "label[for=\"local_project_name\"] .input-floating-label")
+    assert has_element?(view, "label[for=\"local_accent\"] .input-floating-label")
+    assert has_element?(view, "#local_phone_tel_wrapper .input-floating-wrapper.gap-0")
     assert has_element?(view, "label[for=\"local_notes\"] .input-floating-label")
     refute has_element?(view, "#layout-test-ecosystem-panel")
 
