@@ -188,14 +188,16 @@
 
 
 .input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label,
-.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label {
+.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label,
+.input-floating-label-on-disabled {
   isolation: isolate;
   background-color: transparent;
   box-shadow: none;
 }
 
 .input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::before,
-.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label::before {
+.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label::before,
+.input-floating-label-on-disabled::before {
   content: "";
   position: absolute;
   z-index: -2;
@@ -205,7 +207,8 @@
 }
 
 .input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::after,
-.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label::after {
+.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label::after,
+.input-floating-label-on-disabled::after {
   content: "";
   position: absolute;
   z-index: -1;

@@ -142,6 +142,11 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
   end
 
   @impl true
+  def handle_event("show_flash", %{"kind" => "warning"}, socket) do
+    {:noreply, put_flash(socket, :warning, "Layout test warning flash is alive.")}
+  end
+
+  @impl true
   def handle_event("show_flash", _params, socket), do: {:noreply, socket}
 
   @impl true

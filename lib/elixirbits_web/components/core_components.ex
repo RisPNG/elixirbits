@@ -38,33 +38,48 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :id, :string, doc: "the optional id of flash container"
   attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
   attr :title, :string, default: nil
-  attr :kind, :atom, values: [:info, :error], doc: "used for styling and flash lookup"
+  attr :icon, :string, default: nil
+  attr :kind, :atom, values: [:info, :error, :warning], doc: "used for styling and flash lookup"
+  attr :duration, :integer, default: nil
+  attr :show_spinner, :boolean, default: false
   attr :rest, :global, doc: "the arbitrary HTML attributes to add to the flash container"
 
   slot :inner_block, doc: "the optional inner block that renders the flash message"
 
   def flash(assigns) do
-    assigns = assign_new(assigns, :id, fn -> "flash-#{assigns.kind}" end)
+    assigns =
+      assigns
+      |> assign_flash_payload()
+      |> assign_new(:id, fn -> "flash-#{assigns.kind}" end)
 
     ~H"""
     <div
-      :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
+      :if={msg = render_slot(@inner_block) || @msg}
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
+      phx-hook={if @duration, do: "FlashAutoDismiss"}
+      data-duration={@duration}
       role="alert"
       class="fixed top-4 right-4 z-50 flex flex-col gap-2"
       {@rest}
     >
       <div class={[
-        "flex items-start gap-3 p-4 rounded-md border w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap shadow-sm",
-        @kind == :info && "bg-info/10 border-info/30 text-info",
-        @kind == :error && "bg-error/10 border-error/30 text-error"
+        "flex items-start gap-3 p-4 rounded-md border w-80 max-w-80 text-wrap shadow-sm",
+        @kind == :info && "bg-info border-info text-info-content",
+        @kind == :error && "bg-error border-error text-error-content",
+        @kind == :warning && "bg-warning border-warning text-warning-content"
       ]}>
-        <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
-        <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
+        <.icon :if={@icon} name={@icon} class="size-5 shrink-0" />
         <div>
           <p :if={@title} class="font-semibold">{@title}</p>
-          <p>{msg}</p>
+          <p>
+            {msg}
+            <.icon
+              :if={@show_spinner}
+              name="hero-arrow-path"
+              class="ml-1 size-3 motion-safe:animate-spin"
+            />
+          </p>
         </div>
         <div class="flex-1" />
         <button type="button" class="group self-start cursor-pointer" aria-label={gettext("close")}>
@@ -73,6 +88,107 @@ defmodule ElixirbitsWeb.CoreComponents do
       </div>
     </div>
     """
+  end
+
+  attr :flash, :map, required: true
+  attr :id, :string, default: nil
+  attr :id_prefix, :string, default: nil
+
+  def flash_group(assigns) do
+    flash_ids =
+      if is_binary(assigns[:id_prefix]) && String.trim(assigns.id_prefix) != "" do
+        id_prefix =
+          assigns.id_prefix
+          |> String.trim()
+          |> String.trim_trailing("-")
+
+        %{
+          group: "#{id_prefix}-flash-group",
+          client_error: "#{id_prefix}-client-error",
+          server_error: "#{id_prefix}-server-error"
+        }
+      else
+        %{
+          group: assigns[:id] || "flash-group",
+          client_error: "client-error",
+          server_error: "server-error"
+        }
+      end
+
+    assigns = assign(assigns, :flash_ids, flash_ids)
+
+    ~H"""
+    <div id={@flash_ids.group} aria-live="polite">
+      <.flash kind={:info} flash={@flash} title={gettext("Success!")} duration={5000} />
+      <.flash kind={:error} flash={@flash} title={gettext("Error!")} duration={8000} />
+      <.flash kind={:warning} flash={@flash} title={gettext("Warning")} duration={8000} />
+
+      <.flash
+        id={@flash_ids.client_error}
+        kind={:error}
+        title={gettext("We can't find the internet")}
+        show_spinner
+        phx-disconnected={
+          show(".phx-client-error ##{@flash_ids.client_error}") |> JS.remove_attribute("hidden")
+        }
+        phx-connected={hide("##{@flash_ids.client_error}") |> JS.set_attribute({"hidden", ""})}
+        hidden
+      >
+        {gettext("Attempting to reconnect")}
+      </.flash>
+
+      <.flash
+        id={@flash_ids.server_error}
+        kind={:error}
+        title={gettext("Something went wrong!")}
+        show_spinner
+        phx-disconnected={
+          show(".phx-server-error ##{@flash_ids.server_error}") |> JS.remove_attribute("hidden")
+        }
+        phx-connected={hide("##{@flash_ids.server_error}") |> JS.set_attribute({"hidden", ""})}
+        hidden
+      >
+        {gettext("Attempting to reconnect")}
+      </.flash>
+    </div>
+    """
+  end
+
+  defp assign_flash_payload(assigns) do
+    flash_content = Phoenix.Flash.get(assigns.flash, assigns.kind)
+
+    default_icon =
+      case assigns.kind do
+        :info -> "hero-information-circle"
+        :error -> "hero-exclamation-circle"
+        :warning -> "hero-exclamation-triangle"
+      end
+
+    if is_map(flash_content) do
+      assign(assigns, %{
+        title: Map.get(flash_content, :title) || Map.get(flash_content, "title") || assigns.title,
+        msg:
+          Map.get(flash_content, :msg) || Map.get(flash_content, "msg") ||
+            Map.get(flash_content, :message) || Map.get(flash_content, "message"),
+        icon:
+          Map.get(flash_content, :icon) || Map.get(flash_content, "icon") || assigns.icon ||
+            default_icon,
+        duration:
+          Map.get(flash_content, :duration) || Map.get(flash_content, "duration") ||
+            assigns.duration,
+        show_spinner:
+          Map.get(
+            flash_content,
+            :show_spinner,
+            Map.get(flash_content, "show_spinner", assigns.show_spinner)
+          )
+      })
+    else
+      assign(assigns, %{
+        msg: flash_content,
+        icon: assigns.icon || default_icon
+      })
+    end
   end
 
   @doc """
@@ -170,6 +286,17 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   For more information on what kind of data can be passed to `options` see
   [`options_for_select`](https://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html#options_for_select/2).
+
+  ## Render as
+
+  The `render_as` attribute controls how the control is rendered:
+
+    * `"enabled"` - the real input (default)
+    * `"disabled"` - a lookalike span with the disabled input visual; no input is rendered, so the value does not submit
+    * `"like-enabled"` - a lookalike span with the enabled input visual; no input is rendered, so the value does not submit
+    * `"like-disabled"` - a lookalike span with the disabled input visual plus the real input rendered hidden, so native input behaviour (submission) still works
+    * `"hidden"` / `"hidden-enabled"` - the real input rendered hidden, so native input behaviour still works
+    * `"hidden-disabled"` - nothing is rendered
   """
   attr :id, :any, default: nil
   attr :name, :any
@@ -197,6 +324,10 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :class, :any, default: nil, doc: "the input class to use over defaults"
   attr :error_class, :any, default: nil, doc: "the input error class to use over defaults"
 
+  attr :render_as, :string,
+    default: "enabled",
+    values: ~w(enabled disabled like-enabled like-disabled hidden hidden-enabled hidden-disabled)
+
   @live_select_rest_global (if Code.ensure_loaded?(LiveSelect.Component) do
                               LiveSelect.Component.default_opts()
                               |> Keyword.keys()
@@ -219,6 +350,7 @@ defmodule ElixirbitsWeb.CoreComponents do
                             end)
 
   attr :rest, :global,
+    default: %{autocomplete: "off"},
     include:
       ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                  multiple pattern placeholder readonly required rows size step) ++
@@ -235,6 +367,166 @@ defmodule ElixirbitsWeb.CoreComponents do
     end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
+  end
+
+  def input(%{render_as: "hidden-disabled"} = assigns) do
+    ~H""
+  end
+
+  def input(%{render_as: render_as} = assigns) when render_as in ["hidden", "hidden-enabled"] do
+    assigns = assign(assigns, :render_as, "enabled")
+
+    ~H"""
+    <div class="hidden">{input(assigns)}</div>
+    """
+  end
+
+  def input(%{render_as: render_as, type: type} = assigns)
+      when render_as in ["disabled", "like-enabled", "like-disabled"] and
+             type in ["checkbox", "switch"] do
+    assigns =
+      assigns
+      |> assign_new(:value, fn -> nil end)
+      |> assign_new(:checked, fn ->
+        Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
+      end)
+
+    checked = assigns.checked
+    disabled_look = render_as in ["disabled", "like-disabled"]
+
+    box_class =
+      case type do
+        "checkbox" ->
+          [
+            "h-5 w-5 shrink-0 rounded border bg-center bg-no-repeat bg-[length:100%_100%]",
+            disabled_look && "cursor-not-allowed",
+            checked &&
+              "bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')]",
+            case {checked, disabled_look} do
+              {true, true} -> "bg-neutral border-base-300"
+              {true, false} -> "bg-primary border-primary"
+              {false, _} -> "bg-base-200 border-base-300"
+            end
+          ]
+
+        "switch" ->
+          [
+            "relative shrink-0 w-11 h-6 rounded-full border before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full",
+            disabled_look && "cursor-not-allowed",
+            (checked && "bg-primary border-primary before:translate-x-5 before:bg-base-100") ||
+              "bg-base-200 border-base-300 before:bg-base-content/40"
+          ]
+      end
+
+    assigns =
+      assigns
+      |> assign(:disabled_look, disabled_look)
+      |> assign(:box_class, box_class)
+      |> assign(:span_rest, Map.drop(assigns.rest, [:autocomplete, :placeholder]))
+
+    ~H"""
+    <div class="mb-2">
+      <div
+        id={if @render_as != "like-disabled", do: @id}
+        class={[
+          "flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300",
+          (@disabled_look && "cursor-not-allowed bg-base-200") || "bg-base-100",
+          @errors != [] && (@error_class || "border-error")
+        ]}
+        {@span_rest}
+      >
+        <span class={[
+          "flex items-center gap-2 text-sm font-medium",
+          (@disabled_look && "text-base-200-content") || "text-base-content"
+        ]}>
+          {@label}
+        </span>
+        <span class={@class || @box_class} />
+      </div>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <div :if={@render_as == "like-disabled"} class="hidden">
+        {input(assign(assigns, :render_as, "enabled"))}
+      </div>
+    </div>
+    """
+  end
+
+  def input(%{render_as: render_as} = assigns)
+      when render_as in ["disabled", "like-enabled", "like-disabled"] do
+    assigns = assign_new(assigns, :value, fn -> nil end)
+
+    display =
+      case {assigns.type, assigns.value} do
+        {"select", value} when is_list(value) ->
+          value
+          |> Enum.map(&option_display_label(&1, assigns[:options] || []))
+          |> Enum.join(", ")
+
+        {"select", value} ->
+          option_display_label(value, assigns[:options] || [])
+
+        {_type, value} ->
+          value
+      end
+
+    filled = display not in [nil, ""]
+    placeholder = assigns.rest[:placeholder]
+    disabled_look = render_as in ["disabled", "like-disabled"]
+
+    span_class = [
+      if(assigns.type == "textarea",
+        do: "block whitespace-pre-wrap",
+        else: "flex items-center overflow-hidden whitespace-nowrap"
+      ),
+      "w-full min-h-11 px-3 rounded-md border border-base-300",
+      if(filled,
+        do: ["input-floating-control", assigns.type == "textarea" && "input-floating-textarea"],
+        else: "py-2"
+      ),
+      cond do
+        disabled_look -> "cursor-not-allowed bg-base-200 text-base-200-content"
+        not filled and placeholder not in [nil, ""] -> "bg-base-100 text-base-200-content"
+        true -> "bg-base-100 text-base-content"
+      end,
+      assigns.errors != [] && (assigns.error_class || "border-error")
+    ]
+
+    assigns =
+      assigns
+      |> assign(:display, if(filled, do: display, else: placeholder))
+      |> assign(:filled, filled)
+      |> assign(:disabled_look, disabled_look)
+      |> assign(:label_as_placeholder, placeholder in [nil, ""])
+      |> assign(:span_class, span_class)
+      |> assign(:span_rest, Map.drop(assigns.rest, [:autocomplete, :placeholder]))
+
+    ~H"""
+    <div class="mb-2">
+      <div class="relative block">
+        <span
+          id={if @render_as != "like-disabled", do: @id}
+          class={@class || @span_class}
+          {@span_rest}
+          phx-no-format
+        >{@display}</span>
+        <span
+          :if={@label}
+          class={[
+            "input-floating-label",
+            !@label_as_placeholder && "input-floating-label-hidden",
+            @errors != [] && "input-floating-label-error",
+            @filled && @disabled_look && "input-floating-label-on-disabled"
+          ]}
+        >
+          {@label}
+        </span>
+      </div>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <div :if={@render_as == "like-disabled"} class="hidden">
+        {input(assign(assigns, :render_as, "enabled"))}
+      </div>
+    </div>
+    """
   end
 
   def input(%{type: "hidden"} = assigns) do
@@ -607,6 +899,8 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   def input(%{type: "textarea"} = assigns) do
+    assigns = assign(assigns, :rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+
     if assigns[:label] do
       placeholder = assigns.rest[:placeholder]
       label_as_placeholder = placeholder in [nil, ""]
@@ -705,7 +999,10 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     assigns =
       assigns
-      |> assign(:rest, Map.delete(assigns.rest, :placeholder))
+      |> assign(
+        :rest,
+        assigns.rest |> Map.delete(:placeholder) |> Map.put_new(:"phx-debounce", "blur")
+      )
       |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
       |> assign(:label_as_placeholder, label_as_placeholder)
       |> assign(:country_field, country_field)
@@ -759,7 +1056,6 @@ defmodule ElixirbitsWeb.CoreComponents do
             value={@number_value}
             placeholder={@placeholder}
             data-tel-number
-            autocomplete="tel-national"
             class={[
               @class ||
                 "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
@@ -863,6 +1159,8 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
+    assigns = assign(assigns, :rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+
     if assigns[:label] && assigns.type in ~w(color email file number password search text url) do
       placeholder = assigns.rest[:placeholder]
       label_as_placeholder = placeholder in [nil, ""]
@@ -947,7 +1245,6 @@ defmodule ElixirbitsWeb.CoreComponents do
             data-vc-mode={@type}
             phx-hook=".VCalendar"
             phx-update="ignore"
-            autocomplete="off"
             readonly
             class={[
               @class ||
@@ -1160,7 +1457,6 @@ defmodule ElixirbitsWeb.CoreComponents do
           data-vc-mode={@type}
           phx-hook=".VCalendar"
           phx-update="ignore"
-          autocomplete="off"
           readonly
           class={[
             @class ||
