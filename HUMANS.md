@@ -9,8 +9,9 @@ For Elixir/Phoenix syntax, dependencies, and tooling, always refer to the docume
 ### Phoenix >= v1.8 guidelines
 
 - Out of the box, `core_components.ex` imports a component for Heroicons, such as `<.icon name="hero-x-mark" class="w-5 h-5" />`. **Always** use the `<.icon>` component for icons, **never** use `Heroicons` modules or similar.
-- **Always** use the imported `<.input>` component for form inputs from `core_components.ex` when available. `<.input>` is imported and using it will save steps and prevent errors.
+- **Always** use the imported `<.input>` component from `core_components.ex` for every form input. Only hand-roll an input when no `<.input>` type fits, and in that case propose extending `core_components.ex` with a new type (like the existing `live-select`) instead of writing one-off markup in a page.
   - For select inputs, always use `type="live-select"` -- a custom type defined in `core_components.ex`.
+- Before hand-writing markup for any common control (button, icon, input, table, modal, flash, ...), check `core_components.ex` and the project's existing components first and use what exists. When something is missing, extend the central component rather than duplicating a local variant.
 - If you override the default input classes with your own values, no default classes are inherited, so your custom classes must fully style the input.
 
 ### JS and CSS guidelines
@@ -19,7 +20,12 @@ For Elixir/Phoenix syntax, dependencies, and tooling, always refer to the docume
 - **Always** manually write your own tailwind-based components instead of using daisyUI for design.
 - Out of the box **only the app.js and app.css bundles are supported**.
   - You cannot reference an external vendor'd script `src` or link `href` in the layouts.
-  - You must import the vendor deps into app.js and app.css to use them, which means you **never write inline `<script>custom js</script>` tags** or **inline styles**.
+  - You must import the vendor deps into app.js and app.css to use them, which means you **never write inline `<script>custom js</script>` tags** (this includes colocated LiveView hooks) or **inline styles**.
+- Client-side behaviour follows this ladder. Each step down is allowed only when the step above genuinely cannot do the job:
+  1. Server-driven LiveView updates (events, assigns, patches/navigation).
+  2. `Phoenix.LiveView.JS` commands for purely client-side DOM changes (toggle, show/hide, transitions, focus, dispatch).
+  3. A JS hook defined in a file under `assets/js/` and registered through `app.js`.
+  Never write ad hoc JavaScript for behaviour the framework already provides natively.
 
 ## Elixir guidelines
 
@@ -57,10 +63,14 @@ For Elixir/Phoenix syntax, dependencies, and tooling, always refer to the docume
           end
       ```
   """
-- Elixir's standard library has everything necessary for date and time manipulation. Familiarize yourself with the common `Time`, `Date`, `DateTime`, and any other installed dependency interfaces by accessing their documentation as necessary. **Never** install additional dependencies unless asked for or there's no other reasonable choice.
-- Don't use `String.to_atom/1` on user input (memory leak risk).
+- Elixir's standard library has everything necessary for date and time manipulation. Familiarize yourself with the common `Time`, `Date`, `DateTime`, and any other installed dependency interfaces by accessing their documentation as necessary.
+- **Never** add, remove, or upgrade a dependency on your own. If a task appears to require one, explain why, and what existing stdlib/dependency option falls short in your commit message and/or the pull request description.
+- Don't use `String.to_atom/1` on user input (memory leak risk). If a conversion is genuinely required, use `String.to_existing_atom/1`.
 - Predicate function names should not start with `is_` and should end in a question mark. Names like `is_thing` should be reserved for guards.
 - For long-running operations -- `Task` functions (especially `Task.async_stream/3` and `Task.await/2`) and batch `Repo` calls (large inserts, updates, deletes, backfills) -- pass `timeout: :infinity` instead of guessing a larger finite timeout. Do not add it to ordinary request-path queries; if a normal query times out, fix the query first.
+- Never shell out (`System.cmd/3`, ports, `:os.cmd/1`) for work the standard library or an installed dependency already does natively.
+- For HTTP calls, use the HTTP client already present in `mix.exs`.
+- Async or background work goes through the project's existing supervision patterns (e.g. `Task` under the app's `Task.Supervisor`, or whatever job mechanism the codebase already uses); never raw `spawn`, never unsupervised long-lived processes.
 
 ## Mix guidelines
 
@@ -69,10 +79,12 @@ For Elixir/Phoenix syntax, dependencies, and tooling, always refer to the docume
 ## Phoenix HTML guidelines
 
 - Phoenix templates **always** use `~H` or .html.heex files (known as HEEx), **never** use `~E`.
+- In HEEx, interpolate attribute values and simple expressions with `{...}`; use `<%= %>` only for block constructs (`if`, `case`, `for`) in the template body.
 
 ## Phoenix LiveView guidelines
 
 - LiveViews should be named like `AppWeb.WeatherLive`, with a `Live` suffix. When you go to add LiveView routes to the router, the default `:browser` scope is **already aliased** with the `AppWeb` module, so you can just do `live "/weather", WeatherLive`.
+- Forms: build form state with `to_form/2` in the LiveView and pass that to the template; access fields as `@form[:field]` (or `f[:field]` inside `<.form :let={f}>`), and use `<.inputs_for>` for nested collections. Never pass raw changesets or plain maps into form templates.
 
 ### LiveView tests
 
@@ -87,26 +99,37 @@ For Elixir/Phoenix syntax, dependencies, and tooling, always refer to the docume
 - Refer to the codebase, other files, and functions to understand how things are done. Match existing patterns and conventions rather than inventing new ones.
 - Always use the documentation matching the versions of the tools and dependencies specified in this project (`.tool-versions`, `mix.exs`) when applicable; for everything else, look for and use the latest documentation.
 - Do not re-implement functionality that already exists in the codebase or in an existing utility/dependency/plugin/package. Check first, and use the existing implementation rather than reinventing it.
-- Do not overdo. Avoid adding excessive safeguards for unlikely cases -- raise an error or print to the terminal instead.
+- **Native-first.** When Elixir, Phoenix, Ash, Ecto, or an installed dependency provides a first-class construct for something, use that construct. Escape hatches -- raw SQL strings, `execute` in migrations, `fragment`, `System.cmd`, hand-rolled JavaScript, hand-rolled markup for controls that already exist as components, unsupervised processes, reimplementing stdlib or dependency behaviour -- are permitted only when the native construct genuinely cannot express the need. Every escape-hatch use must be justified in one sentence in your response (never as a code comment), naming the native option you rejected and why it was insufficient. The ladders in this file (database access, migrations, client-side behaviour) refine this rule for their areas.
+- Do not overdo. Avoid adding excessive safeguards, defensive `try`/`rescue`, fallback values, or re-validation for cases that cannot happen -- let it crash or `raise` with a clear message instead, and use `Logger` (not `IO.puts`/`IO.inspect`) when a message is genuinely needed.
 - New resources should:
   - always include `timestamps()` (`inserted_at` and `updated_at`) unless there is a strong reason not to.
-  - default string columns to text, unless a more specific type is needed like citext or an extension-specific type.
+  - default text-holding columns to the `text` column type unless a more specific type is needed like citext or an extension-specific type.
   - default to UUIDv7 primary keys, unless the resource or dependency has a stronger reason to use another key strategy.
-  - explicitly decide whether it needs AshPaperTrail, AshEvents, AshArchival, and AshStateMachine.
-- All database/resource operations are preferably required to go through Ash actions to ensure that Paper Trail, Event Sourcing, and Archival works as expected. However, direct Repo and SQL query calls are always allowed when it is intentional and acceptable.
-- When creating migrations, always use `mix ecto.gen.migration` and keep a single migration file per feature branch, which excludes the master/main and testing branches
-- Always add comments (this includes docs such as `@doc`/`@moduledoc`, or anything alike) on global/shared functions. You are also required to modify existing comments when necessary -- for example, to keep them accurate after adding or removing functionality.
-- Always prefer using Tailwind's grid-cols when positioning elements.
+  - explicitly decide whether each of AshPaperTrail, AshEvents, AshArchival, and AshStateMachine applies, especially when I didn't specify. State your decision on all four in your response, each with a one-sentence plain-language example of what it means for this resource (e.g. "AshArchival: deleting a customer hides it instead of erasing it, so its old invoices keep working"), and proceed with your choices unless I object.
+- Database and resource access follows this ladder. Each step down is allowed only when the step above genuinely cannot do the job, and every use of steps 2-4 must be justified in one sentence in your response (never as a code comment). "It is intentional" is not a justification by itself -- name the concrete reason (e.g. "reporting aggregate with window functions that no Ash action covers").
+  1. **Ash actions on the resource** -- the default for all reads and writes, so AshPaperTrail, AshEvents, and AshArchival behave as expected. Invoke them the way the codebase already does (through code interfaces where defined).
+  2. **Ecto query DSL through `Repo`** -- for reads or bulk operations no Ash action covers. Writes made here bypass Paper Trail/Events/Archival; call that out explicitly whenever you propose one.
+  3. **`fragment/1` inside an Ecto query** -- for a single SQL feature the query DSL lacks; keep the fragment minimal.
+  4. **Raw SQL strings** (`Repo.query/2,3`, `Ecto.Adapters.SQL.query/4`) -- last resort only.
+- Migrations:
+  - Schema changes for Ash-managed resources are made on the resource (attributes, relationships, identities, ...) and generated with `mix ash.codegen` -- never hand-write DDL for tables Ash manages, and never hand-edit the generated resource snapshots. While iterating, use `mix ash.codegen --dev`; before finishing the branch, squash the dev migrations into the branch's single named migration with `mix ash.codegen <feature_name>`.
+  - Hand-written migrations (`mix ecto.gen.migration <name>`) are only for schema that Ash does not manage (extensions, triggers, standalone tables, and similar).
+  - Inside hand-written migrations, all DDL uses Ecto's migration DSL -- `create table(...)`, `alter table(...) do add ... end`, `create index(...)`, `drop ...`, `constraint(...)` -- **never** `execute("ALTER TABLE ...")` or any other raw-SQL string for anything the DSL can express. `execute` is reserved for (a) DDL the DSL truly cannot express (extensions, trigger/function bodies, custom types) and (b) data backfills (DML). In both cases use the two-argument `execute(up, down)` (or paired `up/0` and `down/0` functions) so the migration stays reversible, and justify the `execute` in one sentence in your response.
+  - Keep a single migration per feature branch: amend/regenerate the branch's migration rather than stacking new files. If a branch genuinely needs both Ash-generated and hand-written DDL, it may carry one migration of each.
+  - The single-file rule applies to feature branches only. **Never** modify a migration that exists on master/main or a testing branch, or that has already run against any shared database. If you amend the branch's migration after it has run locally, roll back past it first before re-running.
+- Never execute mutating `git` commands (`add`, `commit`, `push`, `checkout`, `restore`, `reset`, `stash`, `rebase`, `merge`, etc.) unless I explicitly instruct it. Read-only `git` commands (`status`, `diff`, `log`, `show`, `blame`) are allowed when useful. What you see is what you work with -- never use `git` to discard or rewrite changes.
+- Add comments when necessary and always add documentations (`@doc`/`@moduledoc`) to public/shared function. You are required to modify existing comments when necessary -- for example, to keep them accurate after adding or removing functionality. Typespecs (`@spec`) are code, not comments: add or omit them by matching what the surrounding modules already do.
+- For placing elements side by side, default to CSS grid with explicit tracks (`grid grid-cols-[...]`) rather than flexbox, floats, or absolute positioning; vertical stacking inside a region uses `flex flex-col gap-N` as described in `#### Layout Grids`.
 - When a reference implementation is provided or a similar implementation already exists within the system, default to reference fidelity over cleverness: match the existing structure, flow, processing, relative placement of the logic, layers, UI, and abstraction boundary down to the granular level. This is preferred over producing a different but equivalent implementation unless there is a strong reason not to.
-- Always separate the frontend from the backend file-wise in the same folder (e.g. `.ex` and `.html.heex` files).
-- Always use centrally defined project colours from the global CSS/theme layer. Do not introduce page-local, color-mixes, opacity, or ad hoc colours. Colours should come from a centralized source so updates stay global and consistent.
-- Do not use responsive utility variant classes like `grid-cols-[1fr] md:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1fr_1fr]` or `w-16 md:w-32 lg:w-48`.
+- Always separate the frontend from the backend file-wise in the same folder: a LiveView (or controller view) lives in its `.ex` file with its template in a sibling `.html.heex` file -- do not embed page templates as `~H` `render/1` bodies inside the module. (Function components defined with `attr`/`slot` keep their `~H` blocks inline as usual.)
+- All colours come from the centralized theme layer (the project's global CSS variables / Tailwind theme tokens). Never introduce page-local colour definitions, raw hex/rgb/hsl/oklch literals, arbitrary-value colour classes (e.g. `text-[#ff0000]`), `color-mix()`, or opacity-modified variants of theme colours (e.g. `bg-primary/50`). If a needed shade does not exist, add it to the central theme first, flag the addition in your response, and use it through the theme so updates stay global and consistent.
+- Never use responsive breakpoint variant classes (`sm:`, `md:`, `lg:`, `xl:`, `2xl:`, `max-*:`) -- e.g. no `grid-cols-[1fr] md:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1fr_1fr]`, no `w-16 md:w-32 lg:w-48`. Layouts are a single fixed design.
 - Adhere to `#### Abstraction / Helper / Function Creation Rules` and `#### Layout Grids` below.
-- You are required to run the following after every implementation:
+- You are required to run the following after each completed unit of work, and always before reporting work as done:
   - `mise exec -- mix format`
   - `mise exec -- mix test`
   - `MIX_ENV=test mise exec -- mix dialyzer`
-  - If anything fails, whether it's related to your change or not, fix it and continue fixing it until everything passes. Do not move on to the next piece of work until tests pass. New changes must not break existing functionality. When you fix failures unrelated to your change, describe it in your commit or pull request on how it was fixed and why it happened.
+  - If anything fails, whether it's related to your change or not, fix it and continue fixing it until everything passes. Do not move on to the next piece of work until tests pass. New changes must not break existing functionality. When you fix failures unrelated to your change, describe it in your commit message or pull request description on how it was fixed and why it happened.
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues.
 
 #### Abstraction / Helper / Function Creation Rules
@@ -126,6 +149,7 @@ The default is inline. A new named function is the exception and must earn its p
 ##### Named functions
 
 - Framework-required callback entrypoints (`mount/3`, `handle_event/3`, `render/1`, `changeset/2`, etc.) and named functions needed for recursion are always allowed. The conditions below govern every other named function.
+- These rules also govern private function components: extracting template markup into a new `defp some_component(assigns)` returning `~H` is creating a named function and must satisfy the same conditions.
 - A new named function may be created only when **all** of the following hold:
   1. It is a meaningful operation, not trivial mechanics. Trivial mechanics always stay inline -- even when the same mechanics are repeated in multiple places. Reuse alone is never enough.
   2. At least one of:
