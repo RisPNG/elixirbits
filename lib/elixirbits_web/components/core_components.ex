@@ -1336,7 +1336,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               })
             }
 
-            let weekObserver = null
+            this.weekObserver = null
 
             const markMode = (self) => {
               const main = self?.context?.mainElement
@@ -1349,9 +1349,9 @@ defmodule ElixirbitsWeb.CoreComponents do
                   main.style.width = `${w}px`
                 }
                 markWeek(main)
-                if (mode === "week" && !weekObserver) {
-                  weekObserver = new MutationObserver(() => markWeek(main))
-                  weekObserver.observe(main, {childList: true, subtree: true})
+                if (mode === "week" && !this.weekObserver) {
+                  this.weekObserver = new MutationObserver(() => markWeek(main))
+                  this.weekObserver.observe(main, {childList: true, subtree: true})
                 }
               }
             }
@@ -1440,7 +1440,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             this.calendar.init()
           },
           destroyed() {
-            weekObserver?.disconnect()
+            this.weekObserver?.disconnect()
             this.calendar?.destroy()
           },
         }
