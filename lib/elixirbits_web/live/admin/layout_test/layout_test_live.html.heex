@@ -355,64 +355,8 @@
 
         <article class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm">
           <div class="flex flex-col p-6 gap-2">
-            <p class="text-sm text-base-content/70">Ash Components</p>
-            <p class="text-3xl font-semibold">2</p>
-          </div>
-        </article>
-
-        <article class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm">
-          <div class="flex flex-col p-6 gap-2">
             <p class="text-sm text-base-content/70">Cinder Surfaces</p>
             <p class="text-3xl font-semibold">2</p>
-          </div>
-        </article>
-      </section>
-
-      <section class="grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-4">
-        <article
-          id="layout-test-ash-banner-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Ash Banner
-              <:subtitle>Standalone auth banner component with dependency overrides.</:subtitle>
-            </.header>
-
-            <div class="rounded-lg border border-base-300 bg-base-200 p-4">
-              <.live_component
-                module={AshAuthentication.Phoenix.Components.Banner}
-                id="layout-test-ash-banner"
-                overrides={@ash_auth_overrides}
-              />
-            </div>
-          </div>
-        </article>
-
-        <article
-          id="layout-test-ash-sign-in-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Ash Sign In
-              <:subtitle>
-                Embedded dependency auth component, not just linked route pages.
-              </:subtitle>
-            </.header>
-
-            <div class="rounded-lg border border-base-300 bg-base-200 p-4">
-              <.live_component
-                module={AshAuthentication.Phoenix.Components.SignIn}
-                id="layout-test-ash-sign-in"
-                resources={[Elixirbits.Accounts.User]}
-                auth_routes_prefix="/auth"
-                path={~p"/sign-in"}
-                reset_path={~p"/reset"}
-                register_path={~p"/register"}
-                overrides={@ash_auth_overrides}
-              />
-            </div>
           </div>
         </article>
       </section>

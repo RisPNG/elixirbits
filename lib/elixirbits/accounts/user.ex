@@ -34,6 +34,7 @@ defmodule Elixirbits.Accounts.User do
       signing_secret Elixirbits.Secrets
       store_all_tokens? true
       require_token_presence_for_authentication? true
+      token_lifetime {365, :days}
     end
 
     strategies do
@@ -49,7 +50,9 @@ defmodule Elixirbits.Accounts.User do
         end
       end
 
-      remember_me :remember_me
+      remember_me :remember_me do
+        token_lifetime {365, :days}
+      end
 
       magic_link do
         identity_field :email
@@ -139,8 +142,15 @@ defmodule Elixirbits.Accounts.User do
         sensitive? true
       end
 
+      argument :remember_me, :boolean do
+        description "Whether to generate a remember me token."
+        allow_nil? true
+      end
+
       # validates the provided email and password and generates a token
       prepare AshAuthentication.Strategy.Password.SignInPreparation
+
+      prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
 
       metadata :token, :string do
         description "A JWT that can be used to authenticate the user."
@@ -166,8 +176,15 @@ defmodule Elixirbits.Accounts.User do
         sensitive? true
       end
 
+      argument :remember_me, :boolean do
+        description "Whether to generate a remember me token."
+        allow_nil? true
+      end
+
       # validates the provided sign in token and generates a token
       prepare AshAuthentication.Strategy.Password.SignInWithTokenPreparation
+
+      prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
 
       metadata :token, :string do
         description "A JWT that can be used to authenticate the user."
