@@ -12,6 +12,7 @@ defmodule Elixirbits.Application do
       Elixirbits.Repo,
       {DNSCluster, query: Application.get_env(:elixirbits, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Elixirbits.PubSub},
+      Elixirbits.Accounts.LoginGuard,
       # Start a worker by calling: Elixirbits.Worker.start_link(arg)
       # {Elixirbits.Worker, arg},
       # Start to serve requests, typically the last entry

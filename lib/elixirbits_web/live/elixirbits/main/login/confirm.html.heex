@@ -1,0 +1,20 @@
+<Layouts.app flash={@flash} content_class="mx-auto w-full max-w-md">
+  <section class="rounded-lg border border-base-300 bg-base-100 shadow-sm">
+    <div class="flex flex-col p-6 gap-6">
+      <.header>
+        Confirm Email
+        <:subtitle>Click the button below to confirm your email address.</:subtitle>
+      </.header>
+
+      <.form for={%{}} id="confirm-form" action={~p"/auth/user/confirm_new_user"} method="post">
+        <.input name="confirm" type="hidden" value={@token} />
+
+        <div class="flex flex-col">
+          <.button type="submit" variant="primary" phx-disable-with="Confirming...">
+            Confirm my email
+          </.button>
+        </div>
+      </.form>
+    </div>
+  </section>
+</Layouts.app>

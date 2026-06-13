@@ -8,6 +8,8 @@ defmodule ElixirbitsWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug ElixirbitsWeb.SessionTimeout
+    plug :sign_in_with_remember_me
     plug :fetch_live_flash
     plug :put_root_layout, html: {ElixirbitsWeb.Layouts, :root}
     plug :protect_from_forgery
@@ -42,7 +44,6 @@ defmodule ElixirbitsWeb.Router do
       #
       # If an authenticated user must *not* be present:
       # on_mount {ElixirbitsWeb.LiveUserAuth, :live_no_user}
-
       scope "/dev_panel", Admin do
         # live "/", DevPanelLive, :index
         live "/layout_test", LayoutTestLive, :index
@@ -69,35 +70,21 @@ defmodule ElixirbitsWeb.Router do
 
     get "/", PageController, :home
     auth_routes AuthController, Elixirbits.Accounts.User, path: "/auth"
-    sign_out_route AuthController
+    get "/sign-out", AuthController, :sign_out
 
-    # Remove these if you'd like to use your own authentication views
-    sign_in_route register_path: "/register",
-                  reset_path: "/reset",
-                  auth_routes_prefix: "/auth",
-                  on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_no_user}],
-                  overrides: [
-                    ElixirbitsWeb.AuthOverrides,
-                    Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI
-                  ]
+    ash_authentication_live_session :login_routes,
+      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_no_user}] do
+      live "/sign-in", LoginLive.Index, :sign_in
+      live "/register", LoginLive.Register, :register
+      live "/reset", LoginLive.ForgotPassword, :forgot_password
+      live "/password-reset/:token", LoginLive.ResetPassword, :reset_password
+      live "/magic_link/:token", LoginLive.MagicLink, :sign_in
+    end
 
-    # Remove this if you do not want to use the reset password feature
-    reset_route auth_routes_prefix: "/auth",
-                overrides: [
-                  ElixirbitsWeb.AuthOverrides,
-                  Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI
-                ]
-
-    # Remove this if you do not use the confirmation strategy
-    confirm_route Elixirbits.Accounts.User, :confirm_new_user,
-      auth_routes_prefix: "/auth",
-      overrides: [ElixirbitsWeb.AuthOverrides, Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI]
-
-    # Remove this if you do not use the magic link strategy.
-    magic_sign_in_route(Elixirbits.Accounts.User, :magic_link,
-      auth_routes_prefix: "/auth",
-      overrides: [ElixirbitsWeb.AuthOverrides, Elixir.AshAuthentication.Phoenix.Overrides.DaisyUI]
-    )
+    ash_authentication_live_session :confirmation_routes,
+      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
+      live "/confirm_new_user/:token", LoginLive.Confirm, :confirm
+    end
   end
 
   # Other scopes may use custom stacks.
