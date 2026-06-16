@@ -282,6 +282,10 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :label, :string, default: nil
   attr :value, :any
 
+  attr :tooltip, :string,
+    default: nil,
+    doc: "when set, hovering anywhere over the input reveals this text following the cursor"
+
   attr :type, :string,
     default: "text",
     values: ~w(checkbox color date datetime-local email file month number password
@@ -306,6 +310,12 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :render_as, :string,
     default: "enabled",
     values: ~w(enabled disabled like-enabled like-disabled hidden hidden-enabled hidden-disabled)
+
+  attr :variant, :string,
+    default: "default",
+    values: ~w(default classic),
+    doc:
+      "the checkbox layout: \"default\" boxes it in a field with the label, \"classic\" is an inline box on the left with the label right after it"
 
   @live_select_rest_global (if Code.ensure_loaded?(LiveSelect.Component) do
                               LiveSelect.Component.default_opts()
@@ -346,6 +356,19 @@ defmodule ElixirbitsWeb.CoreComponents do
     end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
+  end
+
+  def input(%{tooltip: tooltip} = assigns) when is_binary(tooltip) and tooltip != "" do
+    ~H"""
+    <div
+      id={"#{@id}-tooltip"}
+      phx-hook="Tooltip"
+      data-tooltip={@tooltip}
+      class={@type == "checkbox" and @variant == "classic" and "w-fit"}
+    >
+      {input(assign(assigns, :tooltip, nil))}
+    </div>
+    """
   end
 
   def input(%{render_as: "hidden-disabled"} = assigns) do
@@ -511,6 +534,48 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{type: "hidden"} = assigns) do
     ~H"""
     <input type="hidden" id={@id} name={@name} value={@value} {@rest} />
+    """
+  end
+
+  def input(%{type: "checkbox", variant: "classic"} = assigns) do
+    assigns =
+      assign_new(assigns, :checked, fn ->
+        Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
+      end)
+
+    ~H"""
+    <div class="mb-2">
+      <label
+        for={@id}
+        class={[
+          "inline-flex items-center gap-2 text-sm font-medium text-content",
+          "has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
+          @errors != [] && (@error_class || "text-error")
+        ]}
+      >
+        <input
+          type="hidden"
+          name={@name}
+          value="false"
+          disabled={@rest[:disabled]}
+          form={@rest[:form]}
+        />
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@checked}
+          class={
+            @class ||
+              "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded border border-primary-alt bg-primary-alt checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed disabled:bg-primary-alt disabled:border-primary-alt disabled:checked:bg-tertiary disabled:checked:border-tertiary-alt checked:bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:100%_100%]"
+          }
+          {@rest}
+        />
+        <span>{@label}</span>
+      </label>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
     """
   end
 
