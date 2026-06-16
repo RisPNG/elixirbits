@@ -48,6 +48,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     assert has_element?(view, "#layout-test-ecosystem-panel")
     assert has_element?(view, "#layout-test-dependency-form")
     assert has_element?(view, "#layout-test-cinder-table")
+    assert has_element?(view, "#layout-test-cinder-grid")
     refute has_element?(view, "#layout-test-local-panel")
   end
 

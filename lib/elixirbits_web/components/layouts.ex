@@ -39,7 +39,7 @@ defmodule ElixirbitsWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="flex items-center w-full min-h-16 px-4 sm:px-6 lg:px-8">
+    <header class="flex items-center w-full min-h-16 px-8">
       <div class="flex-1">
         <a href="/" class="flex-1 flex w-fit items-center gap-2">
           <img src={~p"/images/logo.svg"} width="36" />
@@ -55,7 +55,7 @@ defmodule ElixirbitsWeb.Layouts do
       </div>
     </header>
 
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
+    <main class="px-8 py-20">
       <div class={@content_class}>
         {render_slot(@inner_block)}
       </div>
@@ -72,8 +72,8 @@ defmodule ElixirbitsWeb.Layouts do
   """
   def theme_toggle(assigns) do
     ~H"""
-    <div class="relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full">
-      <div class="absolute w-1/3 h-full rounded-full border border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
+    <div class="relative flex flex-row items-center border-2 border-secondary bg-primary-alt rounded-full">
+      <div class="absolute w-1/3 h-full rounded-full border border-secondary bg-primary brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
 
       <button
         class="flex p-2 cursor-pointer w-1/3"

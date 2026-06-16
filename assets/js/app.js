@@ -25,13 +25,15 @@ import {LiveSocket} from "phoenix_live_view"
 import live_select from "live_select"
 import {hooks as colocatedHooks} from "phoenix-colocated/elixirbits"
 import FlashAutoDismiss from "./flash_auto_dismiss"
+import VCalendar from "./vcalendar"
+import TelInput from "./tel_input"
 import topbar from "topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss},
+  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput},
 })
 
 // Show progress bar on live navigation and form submits

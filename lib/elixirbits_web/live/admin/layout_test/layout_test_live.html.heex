@@ -3,7 +3,7 @@
   current_scope={@current_scope}
   content_class="mx-auto w-full max-w-[110rem] space-y-6"
 >
-  <section class="rounded-lg border border-base-300 bg-base-100 shadow-sm">
+  <section class="rounded-lg border border-primary-alt bg-primary shadow-sm">
     <div class="space-y-5 p-6">
       <.header>
         Layout Test
@@ -23,7 +23,13 @@
           type="button"
           role="tab"
           aria-selected={if(@current_tab == "local", do: "true", else: "false")}
-          variant={if(@current_tab == "local", do: "primary", else: "soft")}
+          class={[
+            "px-4 py-2 text-sm",
+            if(@current_tab == "local",
+              do: "bg-brand text-content-alt hover:bg-brand-alt",
+              else: "bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+            )
+          ]}
           phx-click="change_tab"
           phx-value-tab="local"
         >
@@ -35,7 +41,13 @@
           type="button"
           role="tab"
           aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
-          variant={if(@current_tab == "ecosystem", do: "primary", else: "soft")}
+          class={[
+            "px-4 py-2 text-sm",
+            if(@current_tab == "ecosystem",
+              do: "bg-brand text-content-alt hover:bg-brand-alt",
+              else: "bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+            )
+          ]}
           phx-click="change_tab"
           phx-value-tab="ecosystem"
         >
@@ -50,32 +62,43 @@
       <section class="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
         <article
           id="layout-test-header-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
               Core Header
               <:subtitle>Title, subtitle, action slot, button variants.</:subtitle>
               <:actions>
-                <.button type="button" id="layout-test-inline-action" variant="soft" size="sm">
+                <.button
+                  type="button"
+                  id="layout-test-inline-action"
+                  class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+                >
                   Action
                 </.button>
               </:actions>
             </.header>
 
             <div class="flex flex-wrap items-center gap-2">
-              <.button type="button" id="layout-test-soft-button" variant="soft" size="sm">
+              <.button
+                type="button"
+                id="layout-test-soft-button"
+                class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+              >
                 Soft
               </.button>
               <.button
                 type="button"
                 id="layout-test-primary-button"
-                variant="primary"
-                size="sm"
+                class="px-3 py-1.5 text-sm bg-brand text-content-alt hover:bg-brand-alt"
               >
                 Primary
               </.button>
-              <.button navigate={~p"/"} id="layout-test-home-link" variant="ghost" size="sm">
+              <.button
+                navigate={~p"/"}
+                id="layout-test-home-link"
+                class="px-3 py-1.5 text-sm bg-transparent text-content hover:bg-primary-alt"
+              >
                 Home
               </.button>
             </div>
@@ -84,7 +107,7 @@
 
         <article
           id="layout-test-flash-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
@@ -98,8 +121,7 @@
                 id="layout-test-flash-info"
                 phx-click="show_flash"
                 phx-value-kind="info"
-                variant="soft"
-                size="sm"
+                class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
               >
                 Info Flash
               </.button>
@@ -108,8 +130,7 @@
                 id="layout-test-flash-error"
                 phx-click="show_flash"
                 phx-value-kind="error"
-                variant="error"
-                size="sm"
+                class="px-3 py-1.5 text-sm bg-error text-content-alt hover:bg-error-alt"
               >
                 Error Flash
               </.button>
@@ -118,8 +139,7 @@
                 id="layout-test-flash-warning"
                 phx-click="show_flash"
                 phx-value-kind="warning"
-                variant="soft"
-                size="sm"
+                class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
               >
                 Warning Flash
               </.button>
@@ -129,7 +149,7 @@
 
         <article
           id="layout-test-theme-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
@@ -137,10 +157,10 @@
               <:subtitle>Light, dark, system from shared site layout.</:subtitle>
             </.header>
 
-            <div class="flex items-center justify-between gap-4 rounded-lg border border-base-300 bg-base-200 p-4">
+            <div class="flex items-center justify-between gap-4 rounded-lg border border-primary-alt bg-primary-alt p-4">
               <div class="space-y-1">
                 <p class="font-medium">Site Theme</p>
-                <p class="text-sm text-base-content/70">
+                <p class="text-sm text-subcontent">
                   Uses shared `Layouts.theme_toggle`.
                 </p>
               </div>
@@ -152,7 +172,7 @@
 
       <section
         id="layout-test-form-section"
-        class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+        class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
       >
         <div class="flex flex-col p-6 gap-6">
           <.header>
@@ -256,7 +276,7 @@
       <section class="grid grid-cols-[repeat(auto-fit,minmax(22rem,1fr))] gap-4">
         <article
           id="layout-test-table-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
@@ -276,12 +296,17 @@
                 <:col :let={row} label="Section">{row.section}</:col>
                 <:col :let={row} label="Scope">{row.scope}</:col>
                 <:col :let={row} label="Status">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success/15 text-success">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success text-content-alt">
                     {row.status}
                   </span>
                 </:col>
                 <:action>
-                  <.button type="button" variant="soft" size="xs">Inspect</.button>
+                  <.button
+                    type="button"
+                    class="px-2 py-1 text-xs bg-secondary text-brand hover:bg-brand hover:text-content-alt"
+                  >
+                    Inspect
+                  </.button>
                 </:action>
               </.table>
             </div>
@@ -290,7 +315,7 @@
 
         <article
           id="layout-test-list-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
@@ -310,7 +335,7 @@
 
       <section
         id="layout-test-icons-card"
-        class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+        class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
       >
         <div class="flex flex-col p-6 gap-6">
           <.header>
@@ -330,7 +355,7 @@
                   {"hero-swatch", "Swatch"}
                 ]
               }
-              class="rounded-lg border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-primary-alt bg-primary-alt p-4"
             >
               <div class="flex items-center gap-3">
                 <.icon name={elem(icon, 0)} class="size-5" />
@@ -346,17 +371,17 @@
   <%= if @current_tab == "ecosystem" do %>
     <div id="layout-test-ecosystem-panel" role="tabpanel" class="space-y-6">
       <section class="grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4">
-        <article class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm">
+        <article class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm">
           <div class="flex flex-col p-6 gap-2">
-            <p class="text-sm text-base-content/70">Dependency Pages</p>
+            <p class="text-sm text-subcontent">Dependency Pages</p>
             <p class="text-3xl font-semibold">{length(@dependency_pages)}</p>
           </div>
         </article>
 
-        <article class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm">
+        <article class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm">
           <div class="flex flex-col p-6 gap-2">
-            <p class="text-sm text-base-content/70">Cinder Surfaces</p>
-            <p class="text-3xl font-semibold">2</p>
+            <p class="text-sm text-subcontent">Cinder Surfaces</p>
+            <p class="text-3xl font-semibold">3</p>
           </div>
         </article>
       </section>
@@ -364,7 +389,7 @@
       <section class="grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-4">
         <article
           id="layout-test-cinder-collection-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
@@ -374,7 +399,7 @@
 
             <div
               id="layout-test-cinder-collection"
-              class="rounded-lg border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-primary-alt bg-primary-alt p-4"
             >
               <Cinder.collection
                 id="layout-test-cinder-collection-component"
@@ -396,20 +421,18 @@
                   {entry.state}
                 </:col>
                 <:item :let={entry}>
-                  <div class="rounded-lg border border-base-300 bg-base-100 p-4">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
-                        {entry.code}
-                      </span>
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-200 text-base-content">
-                        {entry.state}
-                      </span>
-                    </div>
-                    <div class="mt-3 space-y-1">
-                      <p class="font-semibold">{entry.name}</p>
-                      <p class="text-sm text-base-content/70">{entry.description}</p>
-                      <p class="text-xs text-base-content/60">{entry.url}</p>
-                    </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
+                      {entry.code}
+                    </span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-content">
+                      {entry.state}
+                    </span>
+                  </div>
+                  <div class="mt-3 space-y-1">
+                    <p class="font-semibold">{entry.name}</p>
+                    <p class="text-sm text-subcontent">{entry.description}</p>
+                    <p class="text-xs text-subcontent">{entry.url}</p>
                   </div>
                 </:item>
               </Cinder.collection>
@@ -419,7 +442,7 @@
 
         <article
           id="layout-test-cinder-table-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
@@ -431,7 +454,7 @@
 
             <div
               id="layout-test-cinder-table"
-              class="rounded-lg border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-primary-alt bg-primary-alt p-4"
             >
               <Cinder.Table.table
                 id="layout-test-cinder-table-component"
@@ -463,10 +486,66 @@
         </article>
       </section>
 
+      <section
+        id="layout-test-cinder-grid-card"
+        class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
+      >
+        <div class="flex flex-col p-6 gap-4">
+          <.header>
+            Cinder Grid
+            <:subtitle>
+              Grid layout over the same Ash data source, with search, filters, sorting, and pagination.
+            </:subtitle>
+          </.header>
+
+          <div
+            id="layout-test-cinder-grid"
+            class="rounded-lg border border-primary-alt bg-primary-alt p-4"
+          >
+            <Cinder.collection
+              id="layout-test-cinder-grid-component"
+              query={@sitenav_query}
+              actor={nil}
+              layout={:grid}
+              container_class="grid grid-cols-[1fr_1fr_1fr] gap-4"
+              page_size={6}
+              show_filters={true}
+              search={[label: "Search grid", placeholder: "Code, name, description"]}
+              query_opts={[authorize?: false]}
+            >
+              <:col :let={entry} field="code" label="Code" sort filter search>
+                {entry.code}
+              </:col>
+              <:col :let={entry} field="name" label="Name" sort filter search>
+                {entry.name}
+              </:col>
+              <:col :let={entry} field="state" label="State" filter sort>
+                {entry.state}
+              </:col>
+              <:item :let={entry}>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
+                    {entry.code}
+                  </span>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-content">
+                    {entry.state}
+                  </span>
+                </div>
+                <div class="mt-3 space-y-1">
+                  <p class="font-semibold">{entry.name}</p>
+                  <p class="text-sm text-subcontent">{entry.description}</p>
+                  <p class="text-xs text-subcontent">{entry.url}</p>
+                </div>
+              </:item>
+            </Cinder.collection>
+          </div>
+        </div>
+      </section>
+
       <section class="grid grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] gap-4">
         <article
           id="layout-test-live-select-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
@@ -488,14 +567,14 @@
                 keep_options_on_select
                 keep_label_on_select
                 allow_clear
-                text_input_class="block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200"
+                text_input_class="block w-full min-h-11 px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt"
                 text_input_selected_class=""
-                dropdown_class="absolute top-full mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto"
-                option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
-                selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
-                active_option_class="bg-base-200"
+                dropdown_class="absolute top-full mt-1 w-full rounded-md border border-primary-alt bg-primary shadow-lg z-50 max-h-60 overflow-y-auto"
+                option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
+                selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
+                active_option_class="bg-primary-alt"
                 container_class="relative flex flex-col w-full"
-                clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error/80"
+                clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error-alt"
               >
                 <:clear_button>
                   <.icon name="hero-x-mark" class="size-4" />
@@ -505,29 +584,34 @@
 
             <div
               id="layout-test-selected-dependency"
-              class="rounded-lg border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-primary-alt bg-primary p-4"
             >
               <%= if @selected_dependency do %>
                 <div class="space-y-3">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
                       {@selected_dependency.source}
                     </span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-200 text-base-content">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-content">
                       {@selected_dependency.availability}
                     </span>
                   </div>
                   <div class="space-y-1">
                     <p class="font-semibold">{@selected_dependency.name}</p>
-                    <p class="text-sm text-base-content/70">{@selected_dependency.description}</p>
-                    <p class="text-xs text-base-content/60">{@selected_dependency.path}</p>
+                    <p class="text-sm text-subcontent">
+                      {@selected_dependency.description}
+                    </p>
+                    <p class="text-xs text-subcontent">{@selected_dependency.path}</p>
                   </div>
-                  <.button href={@selected_dependency.path} variant="primary" size="sm">
+                  <.button
+                    href={@selected_dependency.path}
+                    class="px-3 py-1.5 text-sm bg-brand text-content-alt hover:bg-brand-alt"
+                  >
                     Open Selected Page
                   </.button>
                 </div>
               <% else %>
-                <p class="text-sm text-base-content/70">
+                <p class="text-sm text-subcontent">
                   Pick one dependency page above to preview target route and source package.
                 </p>
               <% end %>
@@ -537,7 +621,7 @@
 
         <article
           id="layout-test-ui-kit-card"
-          class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
         >
           <div class="flex flex-col p-6 gap-4">
             <.header>
@@ -548,58 +632,58 @@
             </.header>
 
             <div class="space-y-3">
-              <div class="flex items-center gap-2 p-4 rounded-md border bg-info/10 border-info/30 text-info">
+              <div class="flex items-center gap-2 p-4 rounded-md border bg-primary-alt border-info text-info">
                 <.icon name="hero-information-circle" class="size-5" />
                 <span>Info alert surface</span>
               </div>
-              <div class="flex items-center gap-2 p-4 rounded-md border bg-success/10 border-success/30 text-success">
+              <div class="flex items-center gap-2 p-4 rounded-md border bg-success border-primary-alt text-content-alt">
                 <.icon name="hero-check-circle" class="size-5" />
                 <span>Success alert surface</span>
               </div>
               <div class="flex flex-wrap gap-2">
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand text-content-alt">
                   Primary
                 </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-base-content/30 text-base-content">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-subcontent text-content">
                   Outline
                 </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success text-success-content">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success text-content-alt">
                   Success
                 </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning text-warning-content">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning text-content-alt">
                   Warning
                 </span>
               </div>
-              <div class="w-full h-2 rounded-full bg-base-200 overflow-hidden">
-                <div class="h-full bg-primary" style="width: 72%"></div>
+              <div class="w-full h-2 rounded-full bg-primary-alt overflow-hidden">
+                <div class="h-full w-[72%] bg-brand"></div>
               </div>
               <ol class="flex items-center gap-2 w-full">
-                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-primary text-primary">
+                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-brand text-brand">
                   Tokens
                 </li>
-                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-primary text-primary">
+                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-brand text-brand">
                   Hooks
                 </li>
-                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-base-300 text-base-content/60">
+                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-primary-alt text-subcontent">
                   Route Scan
                 </li>
               </ol>
-              <ul class="rounded-lg bg-base-200 p-2 flex flex-col">
+              <ul class="rounded-lg bg-primary-alt p-2 flex flex-col">
                 <li>
-                  <a href="/sign-in" class="block px-3 py-2 rounded-md hover:bg-base-300">
+                  <a href="/sign-in" class="block px-3 py-2 rounded-md hover:bg-primary-alt">
                     Auth Flow
                   </a>
                 </li>
                 <li>
                   <a
                     href="/api/json/swaggerui"
-                    class="block px-3 py-2 rounded-md hover:bg-base-300"
+                    class="block px-3 py-2 rounded-md hover:bg-primary-alt"
                   >
                     API Browser
                   </a>
                 </li>
                 <li>
-                  <a href="/admin" class="block px-3 py-2 rounded-md hover:bg-base-300">
+                  <a href="/admin" class="block px-3 py-2 rounded-md hover:bg-primary-alt">
                     Admin Surface
                   </a>
                 </li>
@@ -611,7 +695,7 @@
 
       <section
         id="layout-test-dependency-pages"
-        class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm"
+        class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
       >
         <div class="flex flex-col p-6 gap-6">
           <.header>
@@ -625,26 +709,29 @@
             <article
               :for={page <- @dependency_pages}
               id={"dependency-page-#{page.id}"}
-              class="rounded-lg border border-base-300 bg-base-200 p-4"
+              class="rounded-lg border border-primary-alt bg-primary p-4"
             >
               <div class="space-y-4">
                 <div class="space-y-2">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
                       {page.source}
                     </span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-200 text-base-content">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-content">
                       {page.availability}
                     </span>
                   </div>
                   <div class="space-y-1">
                     <h3 class="font-semibold">{page.name}</h3>
-                    <p class="text-sm text-base-content/70">{page.description}</p>
-                    <p class="text-xs text-base-content/60">{page.path}</p>
+                    <p class="text-sm text-subcontent">{page.description}</p>
+                    <p class="text-xs text-subcontent">{page.path}</p>
                   </div>
                 </div>
 
-                <.button href={page.path} variant="soft" size="sm" class="w-full">
+                <.button
+                  href={page.path}
+                  class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt w-full"
+                >
                   Open Page
                 </.button>
               </div>

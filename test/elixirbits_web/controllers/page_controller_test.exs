@@ -4,6 +4,6 @@ defmodule ElixirbitsWeb.PageControllerTest do
   test "home renders inside the app layout", %{conn: conn} do
     conn = get(conn, ~p"/")
 
-    assert html_response(conn, 200) =~ ~s(<main class="px-4 py-20)
+    assert html_response(conn, 200) =~ ~s(<main class="px-8 py-20")
   end
 end

@@ -65,9 +65,9 @@ defmodule ElixirbitsWeb.CoreComponents do
     >
       <div class={[
         "flex items-start gap-3 p-4 rounded-md border w-80 max-w-80 text-wrap shadow-sm",
-        @kind == :info && "bg-info border-info text-info-content",
-        @kind == :error && "bg-error border-error text-error-content",
-        @kind == :warning && "bg-warning border-warning text-warning-content"
+        @kind == :info && "bg-info border-info text-content-alt",
+        @kind == :error && "bg-error border-error text-content-alt",
+        @kind == :warning && "bg-warning border-warning text-content-alt"
       ]}>
         <.icon :if={@icon} name={@icon} class="size-5 shrink-0" />
         <div>
@@ -196,39 +196,18 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   ## Examples
 
-      <.button>Send!</.button>
-      <.button phx-click="go" variant="primary">Send!</.button>
-      <.button navigate={~p"/"}>Home</.button>
+      <.button class="px-4 py-2 text-sm bg-brand text-content-alt">Send!</.button>
+      <.button phx-click="go" class="px-3 py-1.5 text-sm bg-primary-alt text-brand">Send!</.button>
+      <.button navigate={~p"/"} class="px-4 py-2 text-sm bg-transparent text-content">Home</.button>
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
   attr :class, :any, default: nil
-  attr :variant, :string, default: nil
-  attr :size, :string, default: nil
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    base =
-      "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50 disabled:pointer-events-none"
-
-    sizes = %{
-      nil => "px-4 py-2 text-sm",
-      "sm" => "px-3 py-1.5 text-sm",
-      "xs" => "px-2 py-1 text-xs"
-    }
-
-    variants = %{
-      nil => "bg-primary/15 text-primary hover:bg-primary/25",
-      "primary" => "bg-primary text-primary-content hover:bg-primary/90",
-      "soft" => "bg-primary/15 text-primary hover:bg-primary/25",
-      "ghost" => "bg-transparent text-base-content hover:bg-base-200",
-      "error" => "bg-error text-error-content hover:bg-error/90"
-    }
-
     assigns =
       assign(assigns, :class, [
-        base,
-        Map.fetch!(sizes, assigns[:size]),
-        Map.fetch!(variants, assigns[:variant]),
+        "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none",
         assigns[:class]
       ])
 
@@ -403,9 +382,9 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked &&
               "bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')]",
             case {checked, disabled_look} do
-              {true, true} -> "bg-neutral border-base-300"
-              {true, false} -> "bg-primary border-primary"
-              {false, _} -> "bg-base-200 border-base-300"
+              {true, true} -> "bg-tertiary border-tertiary-alt"
+              {true, false} -> "bg-brand border-brand"
+              {false, _} -> "bg-primary-alt border-primary-alt"
             end
           ]
 
@@ -413,8 +392,8 @@ defmodule ElixirbitsWeb.CoreComponents do
           [
             "relative shrink-0 w-11 h-6 rounded-full border before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full",
             disabled_look && "cursor-not-allowed",
-            (checked && "bg-primary border-primary before:translate-x-5 before:bg-base-100") ||
-              "bg-base-200 border-base-300 before:bg-base-content/40"
+            (checked && "bg-brand border-brand before:translate-x-5 before:bg-content-alt") ||
+              "bg-primary-alt border-primary-alt before:bg-subcontent"
           ]
       end
 
@@ -429,15 +408,15 @@ defmodule ElixirbitsWeb.CoreComponents do
       <div
         id={if @render_as != "like-disabled", do: @id}
         class={[
-          "flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300",
-          (@disabled_look && "cursor-not-allowed bg-base-200") || "bg-base-100",
+          "flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-primary-alt",
+          (@disabled_look && "cursor-not-allowed bg-primary-alt") || "bg-primary",
           @errors != [] && (@error_class || "border-error")
         ]}
         {@span_rest}
       >
         <span class={[
           "flex items-center gap-2 text-sm font-medium",
-          (@disabled_look && "text-base-200-content") || "text-base-content"
+          (@disabled_look && "text-subcontent") || "text-content"
         ]}>
           {@label}
         </span>
@@ -478,15 +457,15 @@ defmodule ElixirbitsWeb.CoreComponents do
         do: "block whitespace-pre-wrap",
         else: "flex items-center overflow-hidden whitespace-nowrap"
       ),
-      "w-full min-h-11 px-3 rounded-md border border-base-300",
+      "w-full min-h-11 px-3 rounded-md border border-primary-alt",
       if(filled,
         do: ["input-floating-control", assigns.type == "textarea" && "input-floating-textarea"],
         else: "py-2"
       ),
       cond do
-        disabled_look -> "cursor-not-allowed bg-base-200 text-base-200-content"
-        not filled and placeholder not in [nil, ""] -> "bg-base-100 text-base-200-content"
-        true -> "bg-base-100 text-base-content"
+        disabled_look -> "cursor-not-allowed bg-primary-alt text-subcontent"
+        not filled and placeholder not in [nil, ""] -> "bg-primary text-subcontent"
+        true -> "bg-primary text-content"
       end,
       assigns.errors != [] && (assigns.error_class || "border-error")
     ]
@@ -546,13 +525,13 @@ defmodule ElixirbitsWeb.CoreComponents do
       <label
         for={@id}
         class={[
-          "group cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20",
-          "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-base-200 has-[:disabled]:text-base-200-content",
+          "group cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+          "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-primary-alt has-[:disabled]:text-subcontent",
           @errors != [] &&
-            (@error_class || "border-error focus-within:border-error focus-within:ring-error/20")
+            (@error_class || "border-error focus-within:border-error focus-within:ring-error")
         ]}
       >
-        <span class="flex items-center gap-2 text-sm font-medium text-base-content group-has-[:disabled]:text-base-200-content">
+        <span class="flex items-center gap-2 text-sm font-medium text-content group-has-[:disabled]:text-subcontent">
           {@label}
         </span>
         <div class="flex items-center gap-2">
@@ -571,7 +550,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "appearance-none h-5 w-5 shrink-0 rounded border border-base-300 bg-base-200 checked:bg-primary checked:border-primary focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:bg-base-200 disabled:border-base-300 disabled:checked:bg-neutral disabled:checked:border-base-300 checked:bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:100%_100%]"
+                "appearance-none h-5 w-5 shrink-0 rounded border border-primary-alt bg-primary-alt checked:bg-brand checked:border-brand focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:bg-primary-alt disabled:border-primary-alt disabled:checked:bg-tertiary disabled:checked:border-tertiary-alt checked:bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:100%_100%]"
             }
             {@rest}
           />
@@ -593,13 +572,13 @@ defmodule ElixirbitsWeb.CoreComponents do
       <label
         for={@id}
         class={[
-          "group cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20",
-          "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-base-200 has-[:disabled]:text-base-200-content",
+          "group cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+          "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-primary-alt has-[:disabled]:text-subcontent",
           @errors != [] &&
-            (@error_class || "border-error focus-within:border-error focus-within:ring-error/20")
+            (@error_class || "border-error focus-within:border-error focus-within:ring-error")
         ]}
       >
-        <span class="flex items-center gap-2 text-sm font-medium text-base-content group-has-[:disabled]:text-base-200-content">
+        <span class="flex items-center gap-2 text-sm font-medium text-content group-has-[:disabled]:text-subcontent">
           {@label}
         </span>
         <div class="flex items-center gap-2">
@@ -618,7 +597,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-base-300 bg-base-200 checked:bg-primary checked:border-primary focus:outline-none focus:ring-0 disabled:cursor-not-allowed transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-base-content/40 checked:before:translate-x-5 checked:before:bg-base-100 before:transition-transform before:duration-200 before:ease-in-out"
+                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-primary-alt bg-primary-alt checked:bg-brand checked:border-brand focus:outline-none focus:ring-0 disabled:cursor-not-allowed transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content-alt before:transition-transform before:duration-200 before:ease-in-out"
             }
             {@rest}
           />
@@ -763,9 +742,9 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     dropdown_class =
       if mode == :single do
-        "absolute top-full mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
+        "absolute top-full mt-1 w-full rounded-md border border-primary-alt bg-primary shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
       else
-        "absolute top-11 mt-1 w-full rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
+        "absolute top-11 mt-1 w-full rounded-md border border-primary-alt bg-primary shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
       end
 
     live_select_attrs =
@@ -828,19 +807,19 @@ defmodule ElixirbitsWeb.CoreComponents do
               options={@options}
               text_input_class={[
                 @class ||
-                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
+                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
                 @errors != [] &&
-                  (@error_class || "border-error focus:border-error focus:ring-error/20")
+                  (@error_class || "border-error focus:border-error focus:ring-error")
               ]}
               text_input_selected_class=""
               dropdown_class={@dropdown_class}
-              option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
-              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
-              active_option_class="bg-base-200"
+              option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
+              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
+              active_option_class="bg-primary-alt"
               container_class={@container_class}
-              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error/80"
-              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
-              clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
+              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
+              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-primary-alt bg-primary-alt flex items-center gap-1"
+              clear_tag_button_extra_class="text-error hover:text-error-alt cursor-pointer"
               tags_container_extra_class="order-last flex flex-wrap"
               placeholder={@placeholder}
               keep_label_on_select
@@ -871,19 +850,19 @@ defmodule ElixirbitsWeb.CoreComponents do
               options={@options}
               text_input_class={[
                 @class ||
-                  "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
+                  "block w-full min-h-11 px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
                 @errors != [] &&
-                  (@error_class || "border-error focus:border-error focus:ring-error/20")
+                  (@error_class || "border-error focus:border-error focus:ring-error")
               ]}
               text_input_selected_class=""
               dropdown_class={@dropdown_class}
-              option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
-              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
-              active_option_class="bg-base-200"
+              option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
+              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
+              active_option_class="bg-primary-alt"
               container_class="relative flex flex-col w-full"
-              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error/80"
-              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-base-300 bg-base-200 flex items-center gap-1"
-              clear_tag_button_extra_class="text-error hover:text-error/80 cursor-pointer"
+              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
+              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-primary-alt bg-primary-alt flex items-center gap-1"
+              clear_tag_button_extra_class="text-error hover:text-error-alt cursor-pointer"
               tags_container_extra_class="order-last flex flex-wrap"
               placeholder={@prompt}
               keep_label_on_select
@@ -920,8 +899,8 @@ defmodule ElixirbitsWeb.CoreComponents do
             placeholder={@placeholder}
             class={[
               @class ||
-                "input-floating-control input-floating-textarea block w-full px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+                "input-floating-control input-floating-textarea block w-full px-3 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
           >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -945,8 +924,8 @@ defmodule ElixirbitsWeb.CoreComponents do
             name={@name}
             class={[
               @class ||
-                "block w-full px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+                "block w-full px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
           >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -1018,7 +997,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     <div class="mb-2">
       <div
         id={@wrapper_id}
-        phx-hook=".TelInput"
+        phx-hook="TelInput"
         data-countries={@countries_json}
         data-country-name={@country_name}
         class={[
@@ -1037,15 +1016,15 @@ defmodule ElixirbitsWeb.CoreComponents do
             options={@country_options}
             value={@country_field.value}
             text_input_class={[
-              "block w-full min-h-11 px-3 rounded-l-md border border-r-0 border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:border-r-1 focus:ring-2 focus:ring-accent/20 !bg-none !p-2"
+              "block w-full min-h-11 px-3 rounded-l-md border border-r-0 border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:border-r-1 focus:ring-2 focus:ring-brand !bg-none !p-2"
             ]}
             text_input_selected_class=""
-            dropdown_class="absolute top-full left-0 mt-1 w-72 rounded-md border border-base-300 bg-base-100 shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
-            option_class="cursor-pointer select-none relative py-2 px-3 text-base-content hover:bg-base-200"
-            selected_option_class="cursor-pointer select-none relative py-2 px-3 text-base-content bg-base-200 font-semibold hover:bg-base-300 order-first"
-            active_option_class="bg-base-200"
+            dropdown_class="absolute top-full left-0 mt-1 w-72 rounded-md border border-primary-alt bg-primary shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
+            option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
+            selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
+            active_option_class="bg-primary-alt"
             container_class="relative flex flex-col w-full"
-            clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error/80"
+            clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
             placeholder="+60"
             keep_label_on_select
             keep_options_on_select
@@ -1058,9 +1037,9 @@ defmodule ElixirbitsWeb.CoreComponents do
             data-tel-number
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
+                "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
               @errors != [] &&
-                (@error_class || "border-error focus:border-error focus:ring-error/20")
+                (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
           />
@@ -1078,82 +1057,6 @@ defmodule ElixirbitsWeb.CoreComponents do
       </div>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
-    <script :type={Phoenix.LiveView.ColocatedHook} name=".TelInput">
-      export default {
-        mounted() {
-          this.wrapper = this.el
-          this.countries = JSON.parse(this.wrapper.dataset.countries || "{}")
-          this.countryName = this.wrapper.dataset.countryName
-          this.composite = this.wrapper.querySelector("[data-tel-composite]")
-          this.numberInput = this.wrapper.querySelector("[data-tel-number]")
-          this.isoInput = () => this.wrapper.querySelector(`input[name='${this.countryName}']`)
-
-          this.expectedDisplay = () => {
-            const iso = (this.isoInput()?.value || "").toUpperCase()
-            return this.countries[iso] || ""
-          }
-
-          this.overrideTextInput = () => {
-            const ti = this.wrapper.querySelector('div[phx-hook="LiveSelect"] input[type="text"]')
-            if (!ti || ti.__telOverridden) return
-
-            const expectedDisplay = this.expectedDisplay.bind(this)
-            const orig = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")
-            Object.defineProperty(ti, "value", {
-              configurable: true,
-              get() { return orig.get.call(this) },
-              set(v) {
-                const expected = expectedDisplay()
-                if (expected && v !== expected) {
-                  orig.set.call(this, expected)
-                } else {
-                  orig.set.call(this, v)
-                }
-              }
-            })
-            ti.addEventListener("blur", () => {
-              const expected = expectedDisplay()
-              if (orig.get.call(ti) !== expected) {
-                orig.set.call(ti, expected)
-              }
-            })
-            ti.__telOverridden = true
-          }
-
-          this.recompose = () => {
-            const iso = (this.isoInput()?.value || "").toUpperCase()
-            const dial = this.countries[iso] || ""
-            const number = (this.numberInput.value || "").trim()
-            this.composite.value = number || dial ? `${dial}${number}` : ""
-          }
-
-          this.numberInput.addEventListener("input", this.recompose)
-          this.numberInput.addEventListener("change", this.recompose)
-
-          this.wrapper.addEventListener("input", (e) => {
-            if (e.target.name === this.countryName || e.target.hasAttribute("data-live-select-empty")) {
-              this.recompose()
-            }
-          }, true)
-
-          this.overrideTextInput()
-          const ti = this.wrapper.querySelector('div[phx-hook="LiveSelect"] input[type="text"]')
-          if (ti) {
-            const expected = this.expectedDisplay()
-            if (expected && ti.value !== expected) ti.value = expected
-          }
-        },
-
-        updated() {
-          this.overrideTextInput()
-          const ti = this.wrapper.querySelector('div[phx-hook="LiveSelect"] input[type="text"]')
-          if (ti && document.activeElement !== ti) {
-            const expected = this.expectedDisplay()
-            if (expected && ti.value !== expected) ti.value = expected
-          }
-        }
-      }
-    </script>
     """
   end
 
@@ -1182,8 +1085,8 @@ defmodule ElixirbitsWeb.CoreComponents do
             placeholder={@placeholder}
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
           />
@@ -1202,7 +1105,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       ~H"""
       <div class="mb-2">
         <label for={@id} class="block">
-          <span :if={@label} class="block text-sm font-medium text-base-content mb-1">{@label}</span>
+          <span :if={@label} class="block text-sm font-medium text-content mb-1">{@label}</span>
           <input
             type={@type}
             name={@name}
@@ -1210,8 +1113,8 @@ defmodule ElixirbitsWeb.CoreComponents do
             value={Phoenix.HTML.Form.normalize_value(@type, @value)}
             class={[
               @class ||
-                "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+                "block w-full min-h-11 px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
           />
@@ -1243,13 +1146,13 @@ defmodule ElixirbitsWeb.CoreComponents do
             value={Phoenix.HTML.Form.normalize_value("text", @value)}
             placeholder={@placeholder}
             data-vc-mode={@type}
-            phx-hook=".VCalendar"
+            phx-hook="VCalendar"
             phx-update="ignore"
             readonly
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
           />
@@ -1263,188 +1166,6 @@ defmodule ElixirbitsWeb.CoreComponents do
         </div>
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>
-      <script :type={Phoenix.LiveView.ColocatedHook} name=".VCalendar">
-        import {Calendar} from "vanilla-calendar-pro"
-
-        const pad = (n) => String(n).padStart(2, "0")
-
-        const parseInitial = (mode, value) => {
-          if (!value) return {dates: [], time: ""}
-          if (mode === "date") {
-            return /^\d{4}-\d{2}-\d{2}$/.test(value) ? {dates: [value], time: ""} : {dates: [], time: ""}
-          }
-          if (mode === "datetime-local") {
-            const m = value.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/)
-            return m ? {dates: [m[1]], time: m[2]} : {dates: [], time: ""}
-          }
-          if (mode === "time") {
-            return /^\d{2}:\d{2}$/.test(value) ? {dates: [], time: value} : {dates: [], time: ""}
-          }
-          if (mode === "week") {
-            const m = value.match(/^(\d{4})-W(\d{2})$/)
-            if (!m) return {dates: [], time: ""}
-            const year = parseInt(m[1], 10)
-            const week = parseInt(m[2], 10)
-            const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7))
-            const dow = simple.getUTCDay()
-            const monday = new Date(simple)
-            monday.setUTCDate(simple.getUTCDate() - ((dow + 6) % 7))
-            return {dates: [], time: "", year: monday.getUTCFullYear(), month: monday.getUTCMonth(), week}
-          }
-          if (mode === "month") {
-            const m = value.match(/^(\d{4})-(\d{2})$/)
-            return m ? {year: parseInt(m[1], 10), month: parseInt(m[2], 10) - 1} : {}
-          }
-          return {dates: [], time: ""}
-        }
-
-        const setValue = (input, value) => {
-          input.value = value
-          input.dispatchEvent(new Event("input", {bubbles: true}))
-          input.dispatchEvent(new Event("change", {bubbles: true}))
-        }
-
-        if (typeof HTMLElement !== "undefined" && !HTMLElement.prototype._vcFocusPatched) {
-          HTMLElement.prototype._vcFocusPatched = true
-          const origFocus = HTMLElement.prototype.focus
-          HTMLElement.prototype.focus = function(opts) {
-            if (this.closest && this.closest("[data-vc=calendar]")) {
-              return origFocus.call(this, { ...(opts || {}), preventScroll: true })
-            }
-            return origFocus.call(this, opts)
-          }
-        }
-
-        export default {
-          mounted() {
-            const input = this.el
-            const mode = input.dataset.vcMode
-            const initial = parseInitial(mode, input.value)
-
-            let selectedWeek = initial.week ?? null
-
-            const markWeek = (main) => {
-              if (!main) return
-              main.querySelectorAll("[data-vc-week-number]").forEach(el => {
-                el.removeAttribute("data-vc-week-selected")
-              })
-              if (selectedWeek == null) return
-              main.querySelectorAll("[data-vc-week-number]").forEach(el => {
-                if (parseInt(el.textContent.trim(), 10) === selectedWeek) {
-                  el.setAttribute("data-vc-week-selected", "")
-                }
-              })
-            }
-
-            this.weekObserver = null
-
-            const markMode = (self) => {
-              const main = self?.context?.mainElement
-              if (main && main instanceof HTMLElement) {
-                main.setAttribute("data-vc-mode", mode)
-                main.classList.add(`vc-mode-${mode}`)
-                const w = input.offsetWidth
-                if (w > 0) {
-                  main.style.minWidth = `${w}px`
-                  main.style.width = `${w}px`
-                }
-                markWeek(main)
-                if (mode === "week" && !this.weekObserver) {
-                  this.weekObserver = new MutationObserver(() => markWeek(main))
-                  this.weekObserver.observe(main, {childList: true, subtree: true})
-                }
-              }
-            }
-
-            const base = {
-              inputMode: true,
-              openOnFocus: false,
-              positionToInput: ["bottom", "left"],
-              onInit: markMode,
-              onShow: markMode,
-              onUpdate: markMode,
-            }
-
-            const opts =
-              mode === "date" ? {
-                ...base,
-                type: "default",
-                selectionDatesMode: "single",
-                selectedDates: initial.dates,
-                onClickDate: (self) => {
-                  const [d] = self.context.selectedDates
-                  if (d) setValue(input, d)
-                  self.hide()
-                },
-              }
-              : mode === "datetime-local" ? {
-                ...base,
-                type: "default",
-                selectionDatesMode: "single",
-                selectionTimeMode: 24,
-                selectedDates: initial.dates,
-                selectedTime: initial.time || "00:00",
-                onClickDate: (self) => {
-                  const [d] = self.context.selectedDates
-                  const t = self.context.selectedTime || "00:00"
-                  if (d) setValue(input, `${d}T${t}`)
-                },
-                onChangeTime: (self) => {
-                  const [d] = self.context.selectedDates
-                  const t = self.context.selectedTime || "00:00"
-                  if (d) setValue(input, `${d}T${t}`)
-                },
-              }
-              : mode === "time" ? {
-                ...base,
-                type: "default",
-                selectionDatesMode: false,
-                selectionMonthsMode: false,
-                selectionYearsMode: false,
-                selectionTimeMode: 24,
-                selectedTime: initial.time || "00:00",
-                onChangeTime: (self) => {
-                  setValue(input, self.context.selectedTime || "00:00")
-                },
-              }
-              : mode === "week" ? {
-                ...base,
-                type: "default",
-                selectionDatesMode: false,
-                enableWeekNumbers: true,
-                selectedYear: initial.year,
-                selectedMonth: initial.month,
-                onClickWeekNumber: (self, weekNumber, year) => {
-                  selectedWeek = weekNumber
-                  markWeek(self?.context?.mainElement)
-                  setValue(input, `${year}-W${pad(weekNumber)}`)
-                  self.hide()
-                },
-              }
-              : {
-                ...base,
-                type: "month",
-                selectionDatesMode: false,
-                selectionMonthsMode: true,
-                selectedYear: initial.year,
-                selectedMonth: initial.month,
-                onClickMonth: (self) => {
-                  const y = self.context.selectedYear
-                  const m = self.context.selectedMonth
-                  if (y != null && m != null) setValue(input, `${y}-${pad(m + 1)}`)
-                  self.hide()
-                },
-              }
-
-            this.calendar = new Calendar(input, opts)
-            this.calendar.init()
-          },
-          destroyed() {
-            this.weekObserver?.disconnect()
-            this.calendar?.destroy()
-          },
-        }
-      </script>
       """
     else
       ~H"""
@@ -1455,13 +1176,13 @@ defmodule ElixirbitsWeb.CoreComponents do
           id={@id}
           value={Phoenix.HTML.Form.normalize_value("text", @value)}
           data-vc-mode={@type}
-          phx-hook=".VCalendar"
+          phx-hook="VCalendar"
           phx-update="ignore"
           readonly
           class={[
             @class ||
-              "block w-full min-h-11 px-3 py-2 rounded-md border border-base-300 bg-base-100 text-base-content focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:text-base-200-content disabled:cursor-not-allowed disabled:bg-base-200",
-            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error/20")
+              "block w-full min-h-11 px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
           ]}
           {@rest}
         />
@@ -1512,7 +1233,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         <h1 class="text-lg font-semibold leading-8">
           {render_slot(@inner_block)}
         </h1>
-        <p :if={@subtitle != []} class="text-sm text-base-content/70">
+        <p :if={@subtitle != []} class="text-sm text-subcontent">
           {render_slot(@subtitle)}
         </p>
       </div>
@@ -1553,7 +1274,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       end
 
     ~H"""
-    <table class="w-full text-left [&_tbody_tr:nth-child(even)]:bg-base-200">
+    <table class="w-full text-left [&_tbody_tr:nth-child(even)]:bg-primary-alt">
       <thead>
         <tr>
           <th :for={col <- @col} class="px-3 py-2 font-semibold">{col[:label]}</th>
@@ -1600,7 +1321,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def list(assigns) do
     ~H"""
-    <ul class="flex flex-col divide-y divide-base-300">
+    <ul class="flex flex-col divide-y divide-primary-alt">
       <li :for={item <- @item} class="flex gap-4 p-3 items-center">
         <div class="flex-1">
           <div class="font-bold">{item.title}</div>
@@ -1645,9 +1366,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       to: selector,
       time: 300,
       transition:
-        {"transition-all ease-out duration-300",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
-         "opacity-100 translate-y-0 sm:scale-100"}
+        {"transition-all ease-out duration-300", "opacity-0 scale-95", "opacity-100 scale-100"}
     )
   end
 
@@ -1656,8 +1375,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       to: selector,
       time: 200,
       transition:
-        {"transition-all ease-in duration-200", "opacity-100 translate-y-0 sm:scale-100",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+        {"transition-all ease-in duration-200", "opacity-100 scale-100", "opacity-0 scale-95"}
     )
   end
 
