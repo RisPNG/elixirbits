@@ -38,7 +38,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       refute html =~ "<input"
       assert html =~ ~s(id="city")
       assert html =~ "Ipoh"
-      assert html =~ "bg-base-200"
+      assert html =~ "bg-primary-alt"
       assert html =~ "cursor-not-allowed"
       assert html =~ "input-floating-label-on-disabled"
     end
@@ -53,7 +53,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
       refute html =~ "<input"
       assert html =~ "Ipoh"
-      assert html =~ "bg-base-100"
+      assert html =~ "bg-primary text-content"
       refute html =~ "cursor-not-allowed"
       refute html =~ "input-floating-label-on-disabled"
     end
@@ -161,7 +161,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         """)
 
       refute html =~ "<input"
-      assert html =~ "bg-neutral"
+      assert html =~ "bg-primary-alt"
       assert html =~ "cursor-not-allowed"
     end
 

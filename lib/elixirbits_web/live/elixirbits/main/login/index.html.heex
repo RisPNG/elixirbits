@@ -1,5 +1,5 @@
 <Layouts.app flash={@flash} content_class="mx-auto w-full max-w-md">
-  <section class="rounded-lg border border-base-300 bg-base-100 shadow-sm">
+  <section class="rounded-lg border border-secondary bg-primary shadow-sm">
     <div class="flex flex-col p-6 gap-6">
       <.header>
         Sign In
@@ -12,20 +12,28 @@
         <.input field={@form[:remember_me]} type="checkbox" label="Remember me" />
 
         <div class="flex flex-col gap-2 mt-4">
-          <.button type="submit" variant="primary" phx-disable-with="Signing in...">
+          <.button
+            type="submit"
+            class="px-4 py-2 text-sm bg-brand text-content-alt hover:bg-brand-alt"
+            phx-disable-with="Signing in..."
+          >
             Sign in
           </.button>
-          <.button type="button" variant="soft" phx-click="request_magic_link">
+          <.button
+            type="button"
+            class="px-4 py-2 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+            phx-click="request_magic_link"
+          >
             Email me a magic link
           </.button>
         </div>
       </.form>
 
       <div class="grid grid-cols-[1fr_1fr] gap-2 text-sm">
-        <.link navigate={~p"/reset"} class="text-primary hover:underline">
+        <.link navigate={~p"/reset"} class="text-brand hover:underline">
           Forgot password?
         </.link>
-        <.link navigate={~p"/register"} class="text-primary hover:underline justify-self-end">
+        <.link navigate={~p"/register"} class="text-brand hover:underline justify-self-end">
           Create an account
         </.link>
       </div>
