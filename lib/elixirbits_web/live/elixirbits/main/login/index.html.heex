@@ -7,9 +7,21 @@
       </.header>
 
       <.form for={@form} id="login-form" phx-change="validate" phx-submit="submit">
-        <.input field={@form[:email]} type="email" label="Email" required />
+        <.input
+          field={@form[:email]}
+          type="email"
+          label="Email"
+          tooltip="Enter the email address you registered with."
+          required
+        />
         <.input field={@form[:password]} type="password" label="Password" required />
-        <.input field={@form[:remember_me]} type="checkbox" label="Remember me" />
+        <.input
+          field={@form[:remember_me]}
+          type="checkbox"
+          variant="classic"
+          label="Remember me"
+          tooltip="Keeps you signed in for a year."
+        />
 
         <div class="flex flex-col gap-2 mt-4">
           <.button
