@@ -15,6 +15,7 @@ defmodule ElixirbitsWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :load_from_session
+    plug :set_actor, :user
   end
 
   pipeline :api do
@@ -68,7 +69,29 @@ defmodule ElixirbitsWeb.Router do
   scope "/", ElixirbitsWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    ash_authentication_live_session :public_routes,
+      on_mount: [
+        {ElixirbitsWeb.LiveUserAuth, :live_user_optional},
+        {ElixirbitsWeb.LiveUserAuth, :app_nav}
+      ] do
+      live "/", HomeLive, :index
+    end
+
+    ash_authentication_live_session :app_routes,
+      on_mount: [
+        {ElixirbitsWeb.LiveUserAuth, :live_user_optional},
+        {ElixirbitsWeb.LiveUserAuth, :app_nav}
+      ] do
+      scope "/admin", Admin do
+        live "/users", UserLive.Index, :index
+        live "/users/:id/update", UserLive.Entry, :update
+        live "/roles", RoleLive.Index, :index
+        live "/roles/create", RoleLive.Entry, :create
+        live "/roles/:id/update", RoleLive.Entry, :update
+        live "/organisation", OrganisationLive.Settings, :update
+      end
+    end
+
     auth_routes AuthController, Elixirbits.Accounts.User, path: "/auth"
     get "/sign-out", AuthController, :sign_out
 
@@ -94,11 +117,7 @@ defmodule ElixirbitsWeb.Router do
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:elixirbits, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
+    # If you want to use the LiveDashboard in production, you should put it behind authentication and allow only admins to access it. If your application does not have an admins-only section yet, you can use Plug.BasicAuth to set up some basic authentication as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do

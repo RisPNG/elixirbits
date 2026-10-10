@@ -1,7 +1,10 @@
 defmodule Elixirbits.AccessControl.Role do
+  require Ash.Query
+
   use Ash.Resource,
     domain: Elixirbits.AccessControl,
     data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events, AshPaperTrail.Resource]
 
   postgres do
@@ -15,19 +18,74 @@ defmodule Elixirbits.AccessControl.Role do
 
   paper_trail do
     primary_key_type :uuid_v7
+    reference_source? false
     change_tracking_mode :changes_only
     store_action_name? true
   end
 
+  use Elixirbits.AccessControl.ResourcePolicies,
+    path: "/admin/roles",
+    read_paths: ["/admin/roles", "/admin/users"]
+
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+
+      change before_action(fn changeset, _context ->
+               Ash.get!(__MODULE__, changeset.data.id, lock: :for_update, authorize?: false)
+               code = changeset.data.code
+
+               assigned? =
+                 Elixirbits.Accounts.User
+                 |> Ash.Query.filter(^code in roles)
+                 |> Ash.exists?(authorize?: false)
+
+               if assigned? do
+                 Ash.Changeset.add_error(changeset,
+                   field: :code,
+                   message: "cannot delete a role assigned to an account"
+                 )
+               else
+                 changeset
+               end
+             end)
+    end
 
     create :create do
+      primary? true
       accept [:code, :name, :description]
+
+      argument :permissions, {:array, :map}
+
+      change manage_relationship(:permissions, :role_perms,
+               type: :direct_control,
+               use_identities: [:unique_role_sitenav],
+               on_missing: :ignore
+             )
     end
 
     update :update do
-      accept [:code, :name, :description]
+      primary? true
+      require_atomic? false
+      accept [:name, :description]
+
+      argument :permissions, {:array, :map}
+
+      change manage_relationship(:permissions, :role_perms,
+               type: :direct_control,
+               use_identities: [:unique_role_sitenav],
+               on_missing: :ignore
+             )
+    end
+  end
+
+  policies do
+    policy changing_relationship(:role_perms) do
+      authorize_if {Elixirbits.AccessControl.ResourcePolicy,
+                    paths: ["/admin/roles"], capability: :su}
     end
   end
 

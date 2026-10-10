@@ -276,7 +276,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
       assert Enum.any?(result_before_equal.entries, &(&1.id == equal.id))
     end
 
-    test "supports temporal keywords on utc datetime fields and adjusts range end" do
+    test "supports temporal keywords on UTC datetime fields and adjusts range end" do
       inside = record_fixture(%{shipped_at: ~U[2023-01-10 05:30:00Z]})
       later = record_fixture(%{shipped_at: ~U[2023-01-11 00:00:01Z]})
 
@@ -332,7 +332,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
       assert Enum.map(result.entries, & &1.id) == [survivor.id]
     end
 
-    test "supports or and exact_or keywords" do
+    test "supports \"or\" and \"exact_or\" keywords" do
       alpha = record_fixture(%{name: "Alpha"})
       beta = record_fixture(%{name: "Beta"})
 
@@ -389,7 +389,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
       assert Enum.map(result_exact_and.entries, & &1.id) == [duplicated.id]
     end
 
-    test "supports and and exact_and keywords" do
+    test "supports \"and\" and \"exact_and\" keywords" do
       match = record_fixture(%{description: "alpha beta"})
       record_fixture(%{description: "alpha only"})
 
@@ -527,7 +527,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
                Enum.sort([record1.id, record2.id])
     end
 
-    test "honors use_or for field operations" do
+    test "honours use_or for field operations" do
       record = record_fixture(%{active: true, count: 20, secondary_count: 10})
 
       result =
@@ -715,6 +715,25 @@ defmodule Elixirbits.CoreUtils.SearchTest do
     end
   end
 
+  test "pagination requires positive integers or complete integer strings" do
+    record_fixture(%{name: "One"})
+    record_fixture(%{name: "Two"})
+    record_fixture(%{name: "Three"})
+
+    for value <- ["2oops", "1.5", 1.5, true] do
+      assert length(
+               Search.search(module: Record, pagination: %{page: value, per_page: 1}).entries
+             ) == 3
+
+      assert length(
+               Search.search(module: Record, pagination: %{page: 1, per_page: value}).entries
+             ) == 3
+    end
+
+    assert length(Search.search(module: Record, pagination: %{page: "2", per_page: "1"}).entries) ==
+             1
+  end
+
   describe "search/1 preload handling" do
     test "supports explicit preload lists" do
       record_fixture(%{category: category_fixture()})
@@ -760,6 +779,38 @@ defmodule Elixirbits.CoreUtils.SearchTest do
   end
 
   describe "utility helpers" do
+    test "shared metadata reflects relationship paths and Ash types" do
+      assert CoreResource.normalize_type(Ash.Type.String) == :string
+      assert CoreResource.normalize_type({:array, Ash.Type.String}) == {:array, :string}
+      assert CoreResource.normalize_relationship_load(Record, :category) == :category
+      assert CoreResource.normalize_relationship_load(Record, :missing) == nil
+
+      assert CoreResource.normalize_relationship_loads(Record, [:category, :missing]) == [
+               :category
+             ]
+
+      assert CoreResource.normalize_relationship_loads(Record, category: [:records, :missing]) ==
+               [category: [:records]]
+    end
+
+    test "option filtering controls whitespace, exact matching, and case sensitivity" do
+      options = [{"Picture Frame", 1}, {"pic ture", 2}, {"Pitcher", 3}]
+
+      assert Search.filter(options, "") == options
+      assert Search.filter(options, nil) == options
+      assert Search.filter(options, "pic ture") == [{"Picture Frame", 1}, {"pic ture", 2}]
+      assert Search.filter(options, "FRAME") == [{"Picture Frame", 1}]
+      assert Search.filter(options, "FRAME", case_sensitive: true) == []
+      assert Search.filter(options, "picture frame", exact: true) == [{"Picture Frame", 1}]
+      assert Search.filter(options, "pictureframe", exact: true) == []
+
+      options =
+        Elixirbits.CoreUtils.EnumTypes.AddressLabel.values()
+        |> Enum.map(&{Phoenix.Naming.humanize(&1), to_string(&1)})
+
+      assert Search.filter(options, "oth") == [{"Other", "OTHER"}]
+    end
+
     test "detect_schema_field? reflects resource metadata" do
       assert CoreResource.detect_schema_field?(Record, :name) == :string
       assert CoreResource.detect_schema_field?(Record, :amount) == :decimal

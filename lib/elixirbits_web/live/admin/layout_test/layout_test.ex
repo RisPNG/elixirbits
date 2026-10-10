@@ -2,6 +2,8 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
   use ElixirbitsWeb, :live_view
 
   alias LiveSelect.Component
+  alias Elixirbits.CoreUtils.Calendar, as: CalendarUtils
+  alias Elixirbits.CoreUtils.Parse
 
   @dependency_pages [
     %{
@@ -26,7 +28,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
       source: "Swoosh",
       path: "/dev/mailbox",
       availability: "dev only",
-      description: "Inspect local and test emails from browser."
+      description: "Inspect local and test emails in the browser."
     },
     %{
       id: "ash-admin",
@@ -56,8 +58,55 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    now = DateTime.utc_now()
+    timezone = socket.assigns.user_timezone
+    today = now |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+
+    morning =
+      case DateTime.new(today, ~T[09:00:00], timezone) do
+        {:ok, local} -> local
+        {:ambiguous, first, _second} -> first
+        {:gap, _before, following} -> following
+      end
+      |> DateTime.shift_zone!("Etc/UTC")
+
     {:ok,
      socket
+     |> allow_upload(:demo_files,
+       accept: ~w(.png .jpg .txt),
+       max_entries: 3,
+       max_file_size: 1_000_000
+     )
+     |> assign(:show_modal, false)
+     |> assign(:upload_form, to_form(%{}, as: :upload))
+     |> assign(:upload_mode, "enabled")
+     |> assign(:stored_files, ["/images/logo.svg"])
+     |> assign(:uploaded_names, [])
+     |> assign(:timer_start, now)
+     |> assign(:timer_finish, DateTime.add(now, 60, :second))
+     |> assign(:submitted_at, nil)
+     |> assign(:calendar_view, :week)
+     |> assign(:calendar_cursor, today)
+     |> assign(:calendar_selected, nil)
+     |> assign(:calendar_resources, [%{id: "room-a", label: "Room A", sublabel: "Meeting room"}])
+     |> assign(:calendar_events, [
+       %{
+         id: "planning",
+         title: "Planning",
+         start: morning,
+         finish: DateTime.add(morning, 90, :minute),
+         color: :brand,
+         resource_id: "room-a"
+       },
+       %{
+         id: "review",
+         title: "Review",
+         start: DateTime.add(morning, 30, :minute),
+         finish: DateTime.add(morning, 120, :minute),
+         color: :info,
+         resource_id: "room-a"
+       }
+     ])
      |> assign(:current_scope, nil)
      |> assign(:current_tab, "local")
      |> assign(:dependency_form, to_form(%{}, as: :dependency))
@@ -91,6 +140,89 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
      |> assign(:page_title, "Layout Test")
      |> assign(:sitenav_query, Ash.Query.sort(Elixirbits.AccessControl.Sitenav, sequence: :asc))
      |> assign(:selected_dependency, nil)}
+  end
+
+  @impl true
+  def handle_event("local_change", %{"local" => params}, socket) do
+    {:noreply, assign(socket, :local_form, to_form(params, as: :local))}
+  end
+
+  def handle_event("local_save", %{"local" => params}, socket) do
+    params = Map.put_new(params, "launch_at", "")
+
+    case Parse.to_datetime(params["launch_at"],
+           source_timezone: socket.assigns.user_timezone,
+           on_invalid: :error
+         ) do
+      %DateTime{} = instant ->
+        {:noreply,
+         socket
+         |> assign(:local_form, to_form(params, as: :local))
+         |> assign(:submitted_at, instant)
+         |> put_flash(:info, "Example form submitted.")}
+
+      invalid ->
+        message =
+          case invalid do
+            {:error, :ambiguous_datetime} ->
+              "This local time occurs twice. Choose another time."
+
+            {:error, :nonexistent_datetime} ->
+              "This local time does not exist. Choose another time."
+
+            _ ->
+              "Enter a valid date and time."
+          end
+
+        {:noreply,
+         assign(
+           socket,
+           :local_form,
+           to_form(params, as: :local, errors: [launch_at: {message, []}])
+         )}
+    end
+  end
+
+  def handle_event("show_modal", _params, socket),
+    do: {:noreply, assign(socket, :show_modal, true)}
+
+  def handle_event("hide_modal", _params, socket),
+    do: {:noreply, assign(socket, :show_modal, false)}
+
+  def handle_event("toggle_upload_mode", _params, socket) do
+    mode = if socket.assigns.upload_mode == "enabled", do: "text-disabled", else: "enabled"
+    {:noreply, assign(socket, :upload_mode, mode)}
+  end
+
+  def handle_event("upload_change", _params, socket), do: {:noreply, socket}
+
+  def handle_event("upload_save", _params, socket) do
+    names =
+      consume_uploaded_entries(socket, :demo_files, fn _meta, entry ->
+        {:ok, entry.client_name}
+      end)
+
+    {:noreply, assign(socket, :uploaded_names, names)}
+  end
+
+  def handle_event("remove_upload", %{"url" => url}, socket) do
+    {:noreply, update(socket, :stored_files, &List.delete(&1, url))}
+  end
+
+  def handle_event("cancel_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :demo_files, ref)}
+  end
+
+  def handle_event("calendar_change", %{"event" => id}, socket) do
+    {:noreply, assign(socket, :calendar_selected, id)}
+  end
+
+  def handle_event("calendar_change", %{"view" => view, "date" => date}, socket) do
+    {:noreply,
+     assign(socket,
+       calendar_view: CalendarUtils.parse_view(view),
+       calendar_cursor: Date.from_iso8601!(date)
+     )}
   end
 
   @impl true

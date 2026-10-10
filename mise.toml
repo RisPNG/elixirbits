@@ -1,7 +1,7 @@
 [tools]
 age = "latest"
-bun = "latest"
 elixir = "latest"
 erlang = "latest"
+node = "latest"
 postgres = "latest"
 sops = "latest"

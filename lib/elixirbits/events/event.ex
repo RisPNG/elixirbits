@@ -14,15 +14,16 @@ defmodule Elixirbits.Events.Event do
   event_log do
     clear_records_for_replay Elixirbits.Events.ClearAllRecords
     primary_key_type Ash.Type.UUIDv7
+    record_id_type :string
     persist_actor_primary_key :user_id, Elixirbits.Accounts.User
+  end
+
+  actions do
+    defaults [:read]
   end
 
   policies do
     bypass actor_attribute_equals(:system, true) do
-      authorize_if always()
-    end
-
-    policy action_type(:read) do
       authorize_if always()
     end
   end

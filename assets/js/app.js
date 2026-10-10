@@ -1,21 +1,17 @@
-// If you want to use Phoenix channels, run `mix help phx.gen.channel`
-// to get started and then uncomment the line below.
+// If you want to use Phoenix channels, run `mix help phx.gen.channel` to get started and then uncomment the line below.
 // import "./user_socket.js"
 
 // You can include dependencies in two ways.
 //
-// The simplest option is to put them in assets/vendor and
-// import them using relative paths:
+// The simplest option is to put them in assets/vendor and import them using relative paths:
 //
 //     import "../vendor/some-package.js"
 //
-// Alternatively, you can `npm install some-package --prefix assets` and import
-// them using a path starting with the package name:
+// Alternatively, you can `npm install some-package --prefix assets` and import them using a path starting with the package name:
 //
 //     import "some-package"
 //
-// If you have dependencies that try to import CSS, esbuild will generate a separate `app.css` file.
-// To load it, simply add a second `<link>` to your `root.html.heex` file.
+// If you have dependencies that try to import CSS, esbuild will generate a separate `app.css` file. To load it, simply add a second `<link>` to your `root.html.heex` file.
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
 import "phoenix_html"
@@ -27,14 +23,20 @@ import {hooks as colocatedHooks} from "phoenix-colocated/elixirbits"
 import FlashAutoDismiss from "./flash_auto_dismiss"
 import VCalendar from "./vcalendar"
 import TelInput from "./tel_input"
-import Tooltip from "./tooltip"
+import initTooltips from "./tooltip"
+import PasswordVisibility from "./password_visibility"
+import LiveTimer from "./live_timer"
+import SelectDropdown from "./select_dropdown"
 import topbar from "topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken},
-  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, Tooltip},
+  params: () => ({
+    _csrf_token: csrfToken,
+    user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  }),
+  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, SelectDropdown},
 })
 
 // Show progress bar on live navigation and form submits
@@ -49,22 +51,22 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 
+initTooltips()
+
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
-// The lines below enable quality of life phoenix_live_reload
-// development features:
+// The lines below enable quality of life phoenix_live_reload development features:
 //
 //     1. stream server logs to the browser console
 //     2. click on elements to jump to their definitions in your code editor
 //
 if (process.env.NODE_ENV === "development") {
   window.addEventListener("phx:live_reload:attached", ({detail: reloader}) => {
-    // Enable server log streaming to client.
-    // Disable with reloader.disableServerLogs()
+    // Enable server log streaming to client. Disable with reloader.disableServerLogs()
     reloader.enableServerLogs()
 
     // Open configured PLUG_EDITOR at file:line of the clicked element's HEEx component

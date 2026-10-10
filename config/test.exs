@@ -5,19 +5,21 @@ config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 
 # Configure your database
 #
-# The MIX_TEST_PARTITION environment variable can be used
-# to provide built-in test partitioning in CI environment.
-# Run `mix help test` for more information.
+# The MIX_TEST_PARTITION environment variable can be used to provide built-in test partitioning in CI environment. Run `mix help test` for more information.
 config :elixirbits, Elixirbits.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "elixirbits_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database:
+    System.get_env("TEST_DATABASE_NAME", "elixirbits_template_test") <>
+      to_string(System.get_env("MIX_TEST_PARTITION")),
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
-# We don't run a server during test. If one is required,
-# you can enable the server option below.
+config :elixirbits,
+  upload_directory: Path.expand("../tmp/uploads/public", __DIR__)
+
+# We don't run a server during test. If one is required, you can enable the server option below.
 config :elixirbits, ElixirbitsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "t8B2Ei/Jnzit7VX0zhEDkzPVHb3gCEBNbw6PHL0T1Nt1XKiGwFPrkWUR0KOkCL6t",

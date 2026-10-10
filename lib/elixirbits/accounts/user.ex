@@ -1,4 +1,6 @@
 defmodule Elixirbits.Accounts.User do
+  require Ash.Query
+
   use Ash.Resource,
     otp_app: :elixirbits,
     domain: Elixirbits.Accounts,
@@ -10,6 +12,8 @@ defmodule Elixirbits.Accounts.User do
       AshPaperTrail.Resource,
       AshArchival.Resource
     ]
+
+  @email_format ~r/\A[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\z/
 
   authentication do
     add_ons do
@@ -23,7 +27,13 @@ defmodule Elixirbits.Accounts.User do
         confirm_on_update? false
         require_interaction? true
         confirmed_at_field :confirmed_at
-        auto_confirm_actions [:sign_in_with_magic_link, :reset_password_with_token]
+
+        auto_confirm_actions [
+          :seed_with_password,
+          :sign_in_with_magic_link,
+          :reset_password_with_token
+        ]
+
         sender Elixirbits.Accounts.User.Senders.SendNewUserConfirmationEmail
       end
     end
@@ -97,6 +107,62 @@ defmodule Elixirbits.Accounts.User do
   actions do
     defaults [:read]
 
+    update :update do
+      primary? true
+      require_atomic? false
+
+      accept [
+        :username,
+        :display_name,
+        :display_pic_url,
+        :display_pic_name,
+        :first_name,
+        :middle_name,
+        :last_name,
+        :tel_no,
+        :weight_kg,
+        :height_cm,
+        :dob,
+        :sex,
+        :locale,
+        :timezone
+      ]
+
+      argument :addresses, {:array, :map}
+      change manage_relationship(:addresses, type: :direct_control)
+    end
+
+    update :update_timezone do
+      require_atomic? false
+      accept [:timezone]
+    end
+
+    update :assign_roles do
+      require_atomic? false
+      accept [:roles]
+
+      change before_action(fn changeset, _context ->
+               roles = Ash.Changeset.get_attribute(changeset, :roles)
+
+               assigned_roles =
+                 Elixirbits.AccessControl.Role
+                 |> Ash.Query.filter(code in ^roles)
+                 |> Ash.Query.sort(code: :asc)
+                 |> Ash.Query.lock("FOR KEY SHARE")
+                 |> Ash.read!(authorize?: false)
+                 |> Enum.map(& &1.code)
+
+               if Enum.all?(roles, &(&1 in assigned_roles)) do
+                 changeset
+               else
+                 Ash.Changeset.add_error(changeset,
+                   field: :roles,
+                   message: "must contain existing role codes"
+                 )
+               end
+             end)
+    end
+
     read :get_by_subject do
       description "Get a user by the subject claim in a JWT"
       argument :subject, :string, allow_nil?: false
@@ -105,8 +171,7 @@ defmodule Elixirbits.Accounts.User do
     end
 
     update :change_password do
-      # Use this action to allow users to change their password by providing
-      # their current password and a new password.
+      # Use this action to allow users to change their password by providing their current password and a new password.
 
       require_atomic? false
       accept []
@@ -147,6 +212,8 @@ defmodule Elixirbits.Accounts.User do
         allow_nil? true
       end
 
+      validate match(:email, @email_format), message: "must be a valid email address"
+
       # validates the provided email and password and generates a token
       prepare AshAuthentication.Strategy.Password.SignInPreparation
 
@@ -159,13 +226,7 @@ defmodule Elixirbits.Accounts.User do
     end
 
     read :sign_in_with_token do
-      # In the generated sign in components, we validate the
-      # email and password directly in the LiveView
-      # and generate a short-lived token that can be used to sign in over
-      # a standard controller action, exchanging it for a standard token.
-      # This action performs that exchange. If you do not use the generated
-      # liveviews, you may remove this action, and set
-      # `sign_in_tokens_enabled? false` in the password strategy.
+      # In the generated sign in components, we validate the email and password directly in the LiveView and generate a short-lived token that can be used to sign in over a standard controller action, exchanging it for a standard token. This action performs that exchange. If you do not use the generated liveviews, you may remove this action, and set `sign_in_tokens_enabled? false` in the password strategy.
 
       description "Attempt to sign in using a short-lived sign in token."
       get? true
@@ -190,6 +251,22 @@ defmodule Elixirbits.Accounts.User do
         description "A JWT that can be used to authenticate the user."
         allow_nil? false
       end
+    end
+
+    create :seed_with_password do
+      description "Provision a confirmed account through the trusted seed process."
+      public? false
+      accept []
+
+      argument :email, :ci_string, allow_nil?: false
+      argument :password, :string, sensitive?: true, allow_nil?: false
+      argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
+
+      change set_attribute(:email, arg(:email))
+      change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+
+      validate {AshAuthentication.Strategy.Password.PasswordConfirmationValidation,
+                strategy_name: :password}
     end
 
     create :register_with_password do
@@ -237,6 +314,8 @@ defmodule Elixirbits.Accounts.User do
         allow_nil? false
       end
 
+      validate match(:email, @email_format), message: "must be a valid email address"
+
       # creates a reset token and invokes the relevant senders
       run {AshAuthentication.Strategy.Password.RequestPasswordReset, action: :get_by_email}
     end
@@ -244,6 +323,7 @@ defmodule Elixirbits.Accounts.User do
     read :get_by_email do
       description "Looks up a user by their email"
       get_by :email
+      validate match(:email, @email_format), message: "must be a valid email address"
     end
 
     update :reset_password_with_token do
@@ -311,6 +391,8 @@ defmodule Elixirbits.Accounts.User do
         allow_nil? false
       end
 
+      validate match(:email, @email_format), message: "must be a valid email address"
+
       run AshAuthentication.Strategy.MagicLink.Request
     end
 
@@ -321,9 +403,55 @@ defmodule Elixirbits.Accounts.User do
   end
 
   policies do
+    policy action(:seed_with_password) do
+      authorize_if actor_attribute_equals(:system, true)
+    end
+
     bypass AshAuthentication.Checks.AshAuthenticationInteraction do
       authorize_if always()
     end
+
+    bypass action(:update_timezone) do
+      access_type :filter
+      authorize_if expr(id == ^actor(:id) and is_nil(archived_at))
+    end
+
+    policy action(:update_timezone) do
+      access_type :filter
+      authorize_if actor_attribute_equals(:system, true)
+      authorize_if expr(id == ^actor(:id) and is_nil(archived_at))
+    end
+
+    policy action(:assign_roles) do
+      authorize_if {Elixirbits.AccessControl.ResourcePolicy,
+                    paths: ["/admin/roles"], capability: :su}
+    end
+  end
+
+  use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/users"
+
+  validations do
+    validate match(:email, @email_format),
+      where: changing(:email),
+      message: "must be a valid email address"
+
+    validate fn changeset, _context ->
+               case Ash.Changeset.get_attribute(changeset, :timezone) do
+                 nil ->
+                   :ok
+
+                 timezone ->
+                   case DateTime.now(timezone) do
+                     {:ok, _datetime} ->
+                       :ok
+
+                     {:error, _reason} ->
+                       {:error, field: :timezone, message: "is not a known timezone"}
+                   end
+               end
+             end,
+             where: changing(:timezone),
+             only_when_valid?: true
   end
 
   attributes do
@@ -355,9 +483,10 @@ defmodule Elixirbits.Accounts.User do
     attribute :tel_no, :string
     attribute :weight_kg, :decimal
     attribute :height_cm, :decimal
-    attribute :dob, :utc_datetime
+    attribute :dob, :date
     attribute :sex, Elixirbits.CoreUtils.EnumTypes.UserSex
     attribute :locale, :string
+    attribute :timezone, :string
 
     timestamps()
   end

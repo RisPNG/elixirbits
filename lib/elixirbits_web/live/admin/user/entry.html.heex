@@ -1,0 +1,206 @@
+<Layouts.app flash={@flash} nav={@nav} user_timezone={@user_timezone}>
+  <.form
+    for={@form}
+    id="user-form"
+    phx-change="validate"
+    phx-submit="save"
+    class="space-y-6"
+  >
+    <.card>
+      <.header>
+        {@page_title}
+        <:subtitle>Account identity, personal details, and addresses.</:subtitle>
+        <:actions>
+          <div class="grid grid-cols-[auto_auto] items-center gap-2">
+            <.action_button action={:back} navigate={~p"/admin/users"} />
+            <.action_button
+              :if={can?(@permissions, @current_path, :update)}
+              action={:save}
+              type="submit"
+            />
+          </div>
+        </:actions>
+      </.header>
+    </.card>
+
+    <fieldset disabled={!can?(@permissions, @current_path, :update)} class="space-y-6">
+      <.card>
+        <.header>
+          Account
+          <:subtitle>How the account signs in and what it may do.</:subtitle>
+        </.header>
+
+        <div class="grid grid-cols-[2fr_1fr_1fr] subgap-2">
+          <.input type="text" name="email" value={to_string(@user.email)} label="Email" disabled />
+          <.input field={@form[:username]} type="text" label="Username" />
+          <.input field={@form[:display_name]} type="text" label="Display Name" />
+        </div>
+
+        <div class="grid grid-cols-[2fr_2fr] subgap-2">
+          <.input
+            type="file"
+            name="display_pic"
+            label="Display Picture"
+            upload={@uploads.display_pic}
+            stored={List.wrap(@existing_display_pic)}
+            preview_as="thumbnail"
+            disabled={!can?(@permissions, @current_path, :update)}
+          >
+            <:preview :let={url}>
+              <img
+                src={url}
+                alt="Account display picture"
+                class="size-20 rounded-md object-cover border border-outline"
+              />
+            </:preview>
+            <:pending :let={entry}>
+              <.live_img_preview
+                entry={entry}
+                class="size-20 rounded-md object-cover border border-outline"
+              />
+            </:pending>
+          </.input>
+        </div>
+      </.card>
+
+      <.card>
+        <.header>
+          Personal Details
+          <:subtitle>Name and contact information for this person.</:subtitle>
+        </.header>
+
+        <div class="grid grid-cols-[1fr_1fr_2fr] subgap-2">
+          <.input field={@form[:first_name]} type="text" label="First Name" />
+          <.input field={@form[:middle_name]} type="text" label="Middle Name" />
+          <.input field={@form[:last_name]} type="text" label="Last Name" />
+        </div>
+
+        <div class="grid grid-cols-[2fr_1fr_1fr] subgap-2">
+          <.input field={@form[:tel_no]} type="text" label="Phone" />
+          <.input
+            field={@form[:sex]}
+            type="select"
+            label="Sex"
+            options={@sex_options}
+            prompt="None"
+          />
+          <.input field={@form[:dob]} type="date" label="Date of Birth" />
+        </div>
+
+        <div class="grid grid-cols-[1fr_3fr] subgap-2">
+          <.input field={@form[:locale]} type="text" label="Locale" />
+          <.input
+            field={@form[:timezone]}
+            type="text"
+            label="Timezone"
+            placeholder="Automatic (browser)"
+            tooltip="Leave blank to use your browser's timezone."
+          />
+        </div>
+      </.card>
+
+      <.card>
+        <.header>
+          Addresses
+          <:subtitle>Delivery and correspondence addresses for this account.</:subtitle>
+          <:actions>
+            <.action_button
+              :if={
+                can?(@permissions, @current_path, :update) and
+                  can?(@permissions, @current_path, :create)
+              }
+              type="button"
+              phx-click="add_form"
+              phx-value-field="addresses"
+              action={:create}
+              tooltip="Add"
+            />
+          </:actions>
+        </.header>
+
+        <div class="grid grid-cols-[1fr_1fr] gap-y-4">
+          <.inputs_for :let={af} field={@form[:addresses]}>
+            <.entry_panel label="Address" index={af.index} columns={2}>
+              <:actions>
+                <.action_button
+                  :if={
+                    can?(@permissions, @current_path, :update) and
+                      (af.source.type == :create or can?(@permissions, @current_path, :delete))
+                  }
+                  type="button"
+                  phx-click="remove_form"
+                  phx-value-path={af.name}
+                  action={:delete}
+                />
+              </:actions>
+
+              <div class="grid grid-cols-[1fr_3fr] subgap-2">
+                <.input
+                  id={"#{af.id}_label_select"}
+                  field={af[:label]}
+                  type="select"
+                  label="Label"
+                  options={@label_options}
+                  prompt="None"
+                />
+                <.input field={af[:other_label]} type="text" label="Nickname" />
+              </div>
+
+              <div class="grid grid-cols-[2fr_2fr] subgap-2">
+                <.input field={af[:contact_name]} type="text" label="Contact Name" />
+                <.input field={af[:contact_tel_no]} type="text" label="Contact" />
+              </div>
+
+              <div class="grid grid-cols-[4fr] subgap-2">
+                <.input field={af[:line_1]} type="text" label="Line 1" />
+              </div>
+
+              <div class="grid grid-cols-[4fr] subgap-2">
+                <.input field={af[:line_2]} type="text" label="Line 2" />
+              </div>
+
+              <div class="grid grid-cols-[4fr] subgap-2">
+                <.input field={af[:line_3]} type="text" label="Line 3" />
+              </div>
+
+              <div class="grid grid-cols-[1fr_3fr] subgap-2">
+                <.input field={af[:postal_code]} type="text" label="Postal Code" />
+                <.input field={af[:city]} type="text" label="City" />
+              </div>
+
+              <div class="grid grid-cols-[2fr_2fr] subgap-2">
+                <.input field={af[:state]} type="text" label="State" />
+                <.input field={af[:country]} type="text" label="Country" />
+              </div>
+            </.entry_panel>
+          </.inputs_for>
+        </div>
+      </.card>
+    </fieldset>
+  </.form>
+
+  <.card :if={@roles_form}>
+    <.header>
+      Roles
+      <:subtitle>Role assignments require permission to administer access.</:subtitle>
+    </.header>
+
+    <.form
+      for={@roles_form}
+      id="roles-form"
+      phx-submit="assign_roles"
+      class="space-y-4"
+    >
+      <div class="grid grid-cols-[1fr] subgap-2">
+        <.input
+          field={@roles_form[:roles]}
+          type="select"
+          mode={:quick_tags}
+          label="Roles"
+          options={@role_options}
+        />
+      </div>
+      <.action_button action={:save} type="submit" />
+    </.form>
+  </.card>
+</Layouts.app>

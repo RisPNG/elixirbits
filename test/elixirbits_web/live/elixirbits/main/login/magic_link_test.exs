@@ -3,10 +3,10 @@ defmodule ElixirbitsWeb.LoginLive.MagicLinkTest do
 
   import Phoenix.LiveViewTest
 
-  test "renders the magic link form bound to the token from the url", %{conn: conn} do
+  test "renders the magic link form bound to the token from the URL", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/magic_link/some-token")
 
-    assert has_element?(view, "#magic-link-form[action=\"/auth/user/magic_link\"]")
+    assert has_element?(view, "#magic-link-form[action=\"/auth/user/magic_link\"][novalidate]")
 
     assert has_element?(
              view,

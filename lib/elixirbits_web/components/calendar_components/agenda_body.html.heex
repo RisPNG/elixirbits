@@ -1,0 +1,39 @@
+<div class="divide-y divide-outline rounded-box border border-outline bg-primary">
+  <p :if={@groups == []} class="p-4 text-sm text-subcontent">No events in this range.</p>
+  <div :for={{day, day_events} <- @groups} class="grid grid-cols-[8rem_1fr]">
+    <button
+      type="button"
+      phx-click="calendar_change"
+      phx-value-view="day"
+      phx-value-date={Date.to_iso8601(day)}
+      class="p-3 text-left hover:bg-primary-alt"
+    >
+      <p class="text-sm font-semibold text-content">{Calendar.strftime(day, "%a")}</p>
+      <p class="text-xs text-subcontent">{Calendar.strftime(day, "%-d %b")}</p>
+    </button>
+    <div class="flex flex-col divide-y divide-outline">
+      <button
+        :for={event <- Enum.sort_by(day_events, & &1.start, DateTime)}
+        type="button"
+        phx-click="calendar_change"
+        phx-value-event={event.id}
+        aria-label={event.label}
+        aria-pressed={event.id == @active}
+        class={[
+          "grid grid-cols-[0.75rem_9rem_1fr_auto] items-center gap-2 p-3 text-left",
+          (event.id == @active && "bg-primary-alt") || "hover:bg-primary-alt"
+        ]}
+      >
+        <span class={["size-2.5 rounded-full", event.dot_class]}></span>
+        <span class="text-xs text-subcontent">
+          {Calendar.strftime(event.start, "%-I:%M %p")} to {Calendar.strftime(
+            event.finish,
+            "%-I:%M %p"
+          )}
+        </span>
+        <span class="truncate text-sm text-content">{event.title}</span>
+        <span :if={event.subtitle} class="text-xs text-subcontent">{event.subtitle}</span>
+      </button>
+    </div>
+  </div>
+</div>

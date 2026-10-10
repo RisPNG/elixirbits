@@ -1,0 +1,38 @@
+<div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
+  <div :for={month <- 1..12} class="rounded-box border border-outline bg-primary p-2">
+    <p class="mb-1 text-center text-sm font-semibold text-content">
+      {Calendar.strftime(Date.new!(2000, month, 1), "%B")}
+    </p>
+    <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr]">
+      <div
+        :for={label <- ~w(M T W T F S S)}
+        class="pb-0.5 text-center text-[0.6rem] text-subcontent"
+      >
+        {label}
+      </div>
+    </div>
+    <div
+      :for={week <- Cal.month_grid(Date.new!(@cursor.year, month, 1))}
+      class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr]"
+    >
+      <button
+        :for={day <- week}
+        type="button"
+        phx-click="calendar_change"
+        phx-value-view="day"
+        phx-value-date={Date.to_iso8601(day)}
+        class={[
+          "rounded py-0.5 text-center text-[0.65rem]",
+          cond do
+            day == @today -> "bg-brand font-semibold text-content-alt"
+            day.month != month -> "text-subcontent"
+            MapSet.member?(@event_days, day) -> "font-bold text-brand hover:bg-primary-alt"
+            true -> "text-content hover:bg-primary-alt"
+          end
+        ]}
+      >
+        {day.day}
+      </button>
+    </div>
+  </div>
+</div>

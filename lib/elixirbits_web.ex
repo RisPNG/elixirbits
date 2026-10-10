@@ -1,20 +1,15 @@
 defmodule ElixirbitsWeb do
   @moduledoc """
-  The entrypoint for defining your web interface, such
-  as controllers, components, channels, and so on.
+  The entrypoint for defining your web interface, such as controllers, components, channels, and so on.
 
   This can be used in your application as:
 
       use ElixirbitsWeb, :controller
       use ElixirbitsWeb, :html
 
-  The definitions below will be executed for every controller,
-  component, etc, so keep them short and clean, focused
-  on imports, uses and aliases.
+  The definitions below will be executed for every controller, component, etc, so keep them short and clean, focused on imports, uses and aliases.
 
-  Do NOT define functions inside the quoted expressions
-  below. Instead, define additional modules and import
-  those modules here.
+  Do NOT define functions inside the quoted expressions below. Instead, define additional modules and import those modules here.
   """
 
   def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
@@ -52,6 +47,10 @@ defmodule ElixirbitsWeb do
     quote do
       use Phoenix.LiveView
 
+      on_mount {ElixirbitsWeb.LiveUserAuth, :timezone}
+
+      import ElixirbitsWeb.CalendarComponents
+
       unquote(html_helpers())
     end
   end
@@ -85,7 +84,9 @@ defmodule ElixirbitsWeb do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components
+      import Phoenix.Component, except: [form: 1]
       import ElixirbitsWeb.CoreComponents
+      import Elixirbits.AccessControl.Permissions, only: [can?: 3]
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

@@ -1,0 +1,32 @@
+<Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <section class="space-y-4 pt-6">
+    <.header>
+      Users
+      <:subtitle>Registered accounts and their roles.</:subtitle>
+    </.header>
+
+    <Cinder.Collection.collection
+      id="users-table"
+      query={@query}
+      actor={@current_user}
+      query_opts={[authorize?: true]}
+      page_size={20}
+      show_filters={true}
+      search={[placeholder: "Email, Name"]}
+    >
+      <:col :let={user} field="email" label="Email" sort filter search>{user.email}</:col>
+      <:col :let={user} field="display_name" label="Name" sort filter search>
+        {user.display_name ||
+          Enum.join(Enum.reject([user.first_name, user.last_name], &is_nil/1), " ")}
+      </:col>
+      <:col :let={user} label="Roles">{Enum.join(user.roles, ", ")}</:col>
+      <:col :let={user} label="Actions">
+        <.action_button
+          :if={can?(@permissions, @current_path, :update)}
+          action={:update}
+          navigate={~p"/admin/users/#{user.id}/update"}
+        />
+      </:col>
+    </Cinder.Collection.collection>
+  </section>
+</Layouts.app>

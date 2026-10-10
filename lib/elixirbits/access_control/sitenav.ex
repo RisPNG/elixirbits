@@ -2,6 +2,7 @@ defmodule Elixirbits.AccessControl.Sitenav do
   use Ash.Resource,
     domain: Elixirbits.AccessControl,
     data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events, AshPaperTrail.Resource]
 
   postgres do
@@ -15,14 +16,19 @@ defmodule Elixirbits.AccessControl.Sitenav do
 
   paper_trail do
     primary_key_type :uuid_v7
+    reference_source? false
     change_tracking_mode :changes_only
     store_action_name? true
   end
+
+  use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/roles"
 
   actions do
     defaults [:read, :destroy]
 
     create :create do
+      primary? true
+
       accept [
         :code,
         :name,
@@ -38,6 +44,8 @@ defmodule Elixirbits.AccessControl.Sitenav do
     end
 
     update :update do
+      primary? true
+
       accept [
         :code,
         :name,
@@ -62,6 +70,13 @@ defmodule Elixirbits.AccessControl.Sitenav do
     end
   end
 
+  policies do
+    policy action_type([:create, :update, :destroy]) do
+      authorize_if {Elixirbits.AccessControl.ResourcePolicy,
+                    paths: ["/admin/roles"], capability: :su}
+    end
+  end
+
   attributes do
     uuid_v7_primary_key :id
 
@@ -80,7 +95,11 @@ defmodule Elixirbits.AccessControl.Sitenav do
     end
 
     attribute :parent, :string
-    attribute :url, :string
+
+    attribute :url, :string do
+      constraints allow_empty?: true
+    end
+
     attribute :sequence, :integer
 
     attribute :state, Elixirbits.CoreUtils.EnumTypes.SitenavState do

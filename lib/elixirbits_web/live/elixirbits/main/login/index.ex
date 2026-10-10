@@ -5,6 +5,7 @@ defmodule ElixirbitsWeb.LoginLive.Index do
   alias AshAuthentication.Strategy
   alias Elixirbits.Accounts.LoginGuard
   alias Elixirbits.Accounts.User
+  alias Elixirbits.CoreUtils.Resource
 
   @impl true
   def mount(_params, _session, socket) do
@@ -15,7 +16,10 @@ defmodule ElixirbitsWeb.LoginLive.Index do
       |> AshPhoenix.Form.for_action(strategy.sign_in_action_name,
         as: "user",
         id: "login-form",
+        transform_params: &Resource.convert_form_datetimes/3,
+        post_process_errors: &Resource.local_datetime_errors/3,
         context: %{
+          shared: %{user_timezone: socket.assigns.user_timezone},
           strategy: strategy,
           token_type: :sign_in,
           private: %{ash_authentication?: true, skip_remember_me_token_generation: true}
@@ -92,10 +96,21 @@ defmodule ElixirbitsWeb.LoginLive.Index do
       {:noreply, put_flash(socket, :error, "Enter your email first.")}
     else
       strategy = Info.strategy!(User, :magic_link)
-      :ok = Strategy.action(strategy, :request, %{"email" => to_string(email)})
 
-      {:noreply,
-       put_flash(socket, :info, "If your email is valid, a sign-in link has been sent.")}
+      case Strategy.action(strategy, :request, %{"email" => to_string(email)}) do
+        :ok ->
+          {:noreply,
+           put_flash(socket, :info, "If your email is valid, a sign-in link has been sent.")}
+
+        {:error, error} ->
+          form =
+            socket.assigns.form.source
+            |> AshPhoenix.Form.add_error(error)
+            |> Map.put(:errors, true)
+            |> to_form()
+
+          {:noreply, assign(socket, :form, %{form | errors: Keyword.take(form.errors, [:email])})}
+      end
     end
   end
 end

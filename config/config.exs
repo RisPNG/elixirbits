@@ -1,17 +1,23 @@
-# This file is responsible for configuring your application
-# and its dependencies with the aid of the Config module.
+# This file is responsible for configuring your application and its dependencies with the aid of the Config module.
 #
-# This configuration file is loaded before any dependency and
-# is restricted to this project.
+# This configuration file is loaded before any dependency and is restricted to this project.
 
 # General application configuration
 import Config
 
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
+config :elixirbits, Elixirbits.Repo, parameters: [timezone: "UTC"]
+
+config :elixirbits,
+  upload_directory: Path.expand("../var/uploads/public", __DIR__)
+
+config :elixirbits, Elixirbits.Scheduler, jobs: []
+
 config :cinder, default_theme: ElixirbitsWeb.CinderTheme
 
 config :ash_typescript,
+  manifest: Elixirbits.AshTypescriptManifest,
   output_file: "assets/js/ash_rpc.ts",
   run_endpoint: "/rpc/run",
   validate_endpoint: "/rpc/validate",
@@ -27,6 +33,8 @@ config :ash_typescript,
 
 config :ex_cldr, default_backend: Elixirbits.Cldr
 
+config :ex_money, auto_start_exchange_rate_service: false
+
 config :mime,
   extensions: %{"json" => "application/vnd.api+json"},
   types: %{"application/vnd.api+json" => ["json"]}
@@ -36,6 +44,7 @@ config :ash_json_api,
   authorize_update_destroy_with_error?: true
 
 config :ash,
+  default_string_length_count: :codepoints,
   allow_forbidden_field_for_relationships_by_default?: true,
   include_embedded_source_by_default?: false,
   show_keysets_for_all_actions?: false,
@@ -100,7 +109,9 @@ config :elixirbits,
     Elixirbits.Ledger,
     Elixirbits.Accounts,
     Elixirbits.Events,
-    Elixirbits.AccessControl
+    Elixirbits.AccessControl,
+    Elixirbits.Organisations,
+    Elixirbits.Numbering
   ],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
@@ -117,16 +128,14 @@ config :elixirbits, ElixirbitsWeb.Endpoint,
 
 # Configure the mailer
 #
-# By default it uses the "Local" adapter which stores the emails
-# locally. You can see the emails in your browser, at "/dev/mailbox".
+# By default it uses the "Local" adapter which stores the emails locally. You can see the emails in your browser, at "/dev/mailbox".
 #
-# For production it's recommended to configure a different adapter
-# at the `config/runtime.exs`.
+# For production it's recommended to configure a different adapter at the `config/runtime.exs`.
 config :elixirbits, Elixirbits.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.25.4",
+  version: "0.28.2",
   elixirbits: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --alias:@=.),
@@ -146,7 +155,7 @@ config :esbuild,
 
 # Configure tailwind (the version is required)
 config :tailwind,
-  version: "4.1.12",
+  version: "4.3.3",
   elixirbits: [
     args: ~w(
       --input=assets/css/app.css
@@ -163,6 +172,5 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-# Import environment specific config. This must remain at the bottom
-# of this file so it overrides the configuration defined above.
+# Import environment specific config. This must remain at the bottom of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

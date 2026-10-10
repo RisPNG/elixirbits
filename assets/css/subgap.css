@@ -1,0 +1,13 @@
+@utility subgap-* {
+  --subgap: --spacing(--value(integer));
+  margin-inline: calc(var(--subgap) / -2);
+  row-gap: var(--subgap);
+
+  &:is(&) {
+    column-gap: 0;
+  }
+
+  & > * {
+    padding-inline: calc(var(--subgap) / 2);
+  }
+}

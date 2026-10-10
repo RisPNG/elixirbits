@@ -2,6 +2,7 @@ defmodule Elixirbits.AccessControl.RolePerm do
   use Ash.Resource,
     domain: Elixirbits.AccessControl,
     data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events, AshPaperTrail.Resource]
 
   postgres do
@@ -20,20 +21,36 @@ defmodule Elixirbits.AccessControl.RolePerm do
 
   paper_trail do
     primary_key_type :uuid_v7
+    reference_source? false
     change_tracking_mode :changes_only
     store_action_name? true
   end
+
+  use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/roles"
 
   actions do
     defaults [:read, :destroy]
 
     create :create do
+      primary? true
       accept [:sitenav_code, :roles_code, :level]
     end
 
     update :update do
+      primary? true
       accept [:sitenav_code, :roles_code, :level]
     end
+  end
+
+  policies do
+    policy action_type([:create, :update, :destroy]) do
+      authorize_if {Elixirbits.AccessControl.ResourcePolicy,
+                    paths: ["/admin/roles"], capability: :su}
+    end
+  end
+
+  validations do
+    validate one_of(:level, [0, 4, 5, 6, 7, 12, 13, 14, 15, 16])
   end
 
   attributes do

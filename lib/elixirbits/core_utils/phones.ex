@@ -1,8 +1,6 @@
 defmodule Elixirbits.CoreUtils.Phones do
   @moduledoc """
-  ISO 3166-1 alpha-2 country codes paired with E.164 dialing codes.
-  Used by the `<.input type="tel">` component to render a searchable
-  country-code selector alongside a phone-number text input.
+  ISO 3166-1 alpha-2 country codes paired with E.164 dialling codes. Used by the `<.input type="tel">` component to render a searchable country-code selector alongside a phone-number text input.
   """
 
   @raw [
@@ -263,16 +261,14 @@ defmodule Elixirbits.CoreUtils.Phones do
   def list_countries, do: @countries
 
   @doc """
-  Returns LiveSelect-shaped options. Each option is `{label, iso}` where
-  the label is `"+60 Malaysia (MY)"`.
+  Returns LiveSelect-shaped options. Each option is `{label, iso}` where the label is `"+60 Malaysia (MY)"`.
   """
   def options do
     Enum.map(@countries, fn c -> {label_for(c), c.iso} end)
   end
 
   @doc """
-  Filters options by `text`, matching against ISO code, country name, or
-  dial code. Empty text returns the full list.
+  Filters options by `text`, matching against ISO code, country name, or dial code. Empty text returns the full list.
   """
   def filter_options(text) when is_binary(text) do
     needle = text |> String.trim() |> String.downcase() |> String.trim_leading("+")
@@ -300,9 +296,7 @@ defmodule Elixirbits.CoreUtils.Phones do
   def by_iso(_), do: nil
 
   @doc """
-  Splits a composite phone string like `"+60 123456789"` or `"+60123456789"`
-  into `{dial_code, number, iso}`. The longest matching dial-code prefix wins.
-  Returns `{nil, raw, nil}` if no dial-code prefix is detected.
+  Splits a composite phone string like `"+60 123456789"` or `"+60123456789"` into `{dial_code, number, iso}`. The longest matching dial-code prefix wins. Returns `{nil, raw, nil}` if no dial-code prefix is detected.
   """
   def parse(value) when is_binary(value) do
     trimmed = String.trim(value)

@@ -3,6 +3,7 @@ defmodule ElixirbitsWeb.LoginLive.Register do
 
   alias AshAuthentication.Info
   alias Elixirbits.Accounts.User
+  alias Elixirbits.CoreUtils.Resource
 
   @impl true
   def mount(_params, _session, socket) do
@@ -13,7 +14,13 @@ defmodule ElixirbitsWeb.LoginLive.Register do
       |> AshPhoenix.Form.for_action(strategy.register_action_name,
         as: "user",
         id: "register-form",
-        context: %{strategy: strategy, private: %{ash_authentication?: true}}
+        transform_params: &Resource.convert_form_datetimes/3,
+        post_process_errors: &Resource.local_datetime_errors/3,
+        context: %{
+          shared: %{user_timezone: socket.assigns.user_timezone},
+          strategy: strategy,
+          private: %{ash_authentication?: true}
+        }
       )
       |> to_form()
 

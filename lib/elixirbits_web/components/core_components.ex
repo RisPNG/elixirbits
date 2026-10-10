@@ -2,30 +2,51 @@ defmodule ElixirbitsWeb.CoreComponents do
   @moduledoc """
   Provides core UI components.
 
-  At first glance, this module may seem daunting, but its goal is to provide
-  core building blocks for your application, such as tables, forms, and
-  inputs. The components consist mostly of markup and are well-documented
-  with doc strings and declarative assigns. You may customize and style
-  them in any way you want, based on your application growth and needs.
+  At first glance, this module may seem daunting, but its goal is to provide core building blocks for your application, such as tables, forms, and inputs. The components consist mostly of markup and are well-documented with doc strings and declarative assigns. You may customize and style them in any way you want, based on your application growth and needs.
 
-  The foundation for styling is Tailwind CSS, a utility-first CSS framework.
-  Here are useful references:
+  The foundation for styling is Tailwind CSS, a utility-first CSS framework. Here are useful references:
 
-    * [Tailwind CSS](https://tailwindcss.com) - the foundational framework
-      we build on. You will use it for layout, sizing, flexbox, grid, and
-      spacing.
+    * [Tailwind CSS](https://tailwindcss.com) - the foundational framework we build on. You will use it for layout, sizing, flexbox, grid, and spacing.
 
     * [Heroicons](https://heroicons.com) - see `icon/1` for usage.
 
-    * [Phoenix.Component](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html) -
-      the component system used by Phoenix. Some components, such as `<.link>`
-      and `<.form>`, are defined there.
+    * [Phoenix.Component](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html) - the component system used by Phoenix. Components such as `<.link>` are defined there. The shared `<.form>` below applies the application's validation default and uses Phoenix's form renderer.
 
   """
   use Phoenix.Component
+  import Phoenix.Component, except: [form: 1]
   use Gettext, backend: ElixirbitsWeb.Gettext
 
   alias Phoenix.LiveView.JS
+
+  @doc """
+  Renders a Phoenix form with browser constraint validation disabled by default.
+
+  Server validation and Phoenix form data, slots, CSRF protection, HTTP methods, and multipart uploads retain their native behaviour. Pass `novalidate={false}` to enable browser constraint validation for a particular form.
+
+  ## Examples
+
+      <.form for={@form} phx-change="validate" phx-submit="save">
+        <.input field={@form[:email]} type="email" label="Email" required />
+      </.form>
+  """
+  attr :for, :any, required: true
+  attr :action, :string
+  attr :as, :atom
+  attr :csrf_token, :any
+  attr :errors, :list
+  attr :method, :string
+  attr :multipart, :boolean, default: false
+
+  attr :rest, :global,
+    include: ~w(autocomplete name rel enctype novalidate target),
+    default: %{novalidate: true}
+
+  slot :inner_block, required: true
+
+  def form(assigns) do
+    Phoenix.Component.form(assigns)
+  end
 
   @doc """
   Renders flash notices.
@@ -196,56 +217,166 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   ## Examples
 
-      <.button class="px-4 py-2 text-sm bg-brand text-content-alt">Send!</.button>
-      <.button phx-click="go" class="px-3 py-1.5 text-sm bg-primary-alt text-brand">Send!</.button>
-      <.button navigate={~p"/"} class="px-4 py-2 text-sm bg-transparent text-content">Home</.button>
+      <.button variant={:primary}>Send!</.button>
+      <.button variant={:neutral} phx-click="go">Send!</.button>
+      <.button variant={:neutral} navigate={~p"/"}>Home</.button>
+
+  ## Variant
+
+  A labelled button that stands alongside `action_button/1` takes a `variant` instead of hand-rolled classes, so it matches the icon buttons in height and tone: `:primary` for the action a page exists to perform, `:neutral` for everything else, `:danger` for destructive confirmations.
+
+      <.button variant={:primary} phx-click="complete">Complete &amp; post variances</.button>
+      <.button variant={:neutral} phx-click="cancel_delete">Cancel</.button>
+
+  Leaving `variant` unset keeps the bare button, for tiles, tabs, and other controls that are not part of the action family.
   """
-  attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
+  attr :rest, :global,
+    include: ~w(href navigate patch method download name value disabled type target rel)
+
+  attr :variant, :atom, values: [nil, :primary, :neutral, :danger], default: nil
+
+  attr :tooltip, :string,
+    default: nil,
+    doc: "when set, hovering the button reveals this text following the cursor"
+
   attr :class, :any, default: nil
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
+    variant =
+      case assigns.variant do
+        :primary -> "min-h-11 px-4 py-2 text-sm whitespace-nowrap button-primary"
+        :neutral -> "min-h-11 px-4 py-2 text-sm whitespace-nowrap button-neutral"
+        :danger -> "min-h-11 px-4 py-2 text-sm whitespace-nowrap button-danger"
+        nil -> nil
+      end
+
     assigns =
       assign(assigns, :class, [
-        "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none",
+        "inline-grid place-items-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none",
+        variant,
         assigns[:class]
       ])
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
-      <.link class={@class} {@rest}>
+      <.link class={@class} data-tooltip={@tooltip} {@rest}>
         {render_slot(@inner_block)}
       </.link>
       """
     else
       ~H"""
-      <button class={@class} {@rest}>
+      <button class={@class} data-tooltip={@tooltip} {@rest}>
         {render_slot(@inner_block)}
       </button>
       """
     end
   end
 
+  attr :label, :string, required: true
+  attr :index, :integer, required: true
+  attr :columns, :integer, default: 1, values: [1, 2]
+  attr :class, :any, default: nil
+  slot :actions
+  slot :inner_block, required: true
+
+  def entry_panel(assigns) do
+    ~H"""
+    <div class={[
+      "flex flex-col gap-4 border-b border-outline pb-4",
+      @columns == 2 && ((rem(@index, 2) == 1 && "border-l pl-6") || "pr-6"),
+      @class
+    ]}>
+      <div class="grid grid-cols-[1fr_2.75rem] items-center gap-2 border-b border-outline pb-2">
+        <p class="text-sm font-semibold text-content">{"#{@label} ##{@index + 1}"}</p>
+        {render_slot(@actions)}
+      </div>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a record action as a bordered icon button.
+
+  Creating a record, adding a row, viewing, updating, saving, archiving, deleting, and leaving the page all use the same square bordered icon, so these controls look consistent in page headers, table rows, and repeated sub-forms.
+
+  Destructive actions use the error colours. Other actions use neutral colours and the brand colour on hover. For a domain-specific action without its own entry, pass `icon` to override the icon while keeping the button's shape and colours, and pass a `tooltip` that describes the action.
+
+  ## Examples
+
+      <.action_button action={:read} navigate={~p"/inventory/categories"} />
+      <.action_button action={:archive} phx-click="request_delete" phx-value-id={c.id} />
+      <.action_button action={:save} type="submit" />
+      <.action_button action={:create} icon="tabler-calendar-plus" tooltip="Add" />
+  """
+  attr :action, :atom,
+    required: true,
+    values: [:create, :read, :update, :save, :send, :archive, :delete, :back]
+
+  attr :icon, :string, default: nil, doc: "overrides the action's default icon"
+
+  attr :tooltip, :string,
+    default: nil,
+    doc: "overrides the action's default label, used as both tooltip and aria-label"
+
+  attr :class, :any, default: nil
+  attr :rest, :global, include: ~w(href navigate patch method download name value disabled type)
+
+  def action_button(assigns) do
+    {icon, tooltip} =
+      case assigns.action do
+        :create -> {"hero-plus", "Add new"}
+        :read -> {"hero-eye", "View"}
+        :update -> {"hero-pencil-square", "Update"}
+        :save -> {"tabler-device-floppy", "Save"}
+        :send -> {"tabler-send", "Send"}
+        :archive -> {"hero-archive-box", "Archive"}
+        :delete -> {"hero-trash", "Delete"}
+        :back -> {"hero-arrow-left", "Back"}
+      end
+
+    tone =
+      if assigns.action in [:archive, :delete],
+        do: "button-danger",
+        else: "button-neutral"
+
+    assigns =
+      assign(assigns,
+        icon: assigns.icon || icon,
+        tooltip: assigns.tooltip || tooltip,
+        tone: tone,
+        rest: Map.put_new(assigns.rest, :type, "button")
+      )
+
+    ~H"""
+    <.button
+      class={["size-11", @tone, @class]}
+      tooltip={@tooltip}
+      aria-label={@tooltip}
+      {@rest}
+    >
+      <.icon name={@icon} class="size-6" />
+    </.button>
+    """
+  end
+
   @doc """
   Renders an input with label and error messages.
 
-  A `Phoenix.HTML.FormField` may be passed as argument,
-  which is used to retrieve the input name, id, and values.
-  Otherwise all attributes may be passed explicitly.
+  A `Phoenix.HTML.FormField` may be passed as argument, which is used to retrieve the input name, id, and values. Otherwise all attributes may be passed explicitly.
 
   ## Types
 
   This function accepts all HTML input types, considering that:
 
-    * You may also set `type="select"` to render a `<select>` tag
+    * The `type="select"` renders the project's LiveSelect-backed selector.
 
-    * `type="checkbox"` is used exclusively to render boolean values
+    * `type="checkbox"` is used exclusively to render boolean values.
 
-    * For live file uploads, see `Phoenix.Component.live_file_input/1`
+    * `upload={@uploads.thing}` turns the field into a live file field.
 
-  See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
-  for more information. Unsupported types, such as radio, are best
-  written directly in your templates.
+  See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input for more information.
 
   ## Examples
 
@@ -256,31 +387,57 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   ## Select type
 
-  When using `type="select"`, you must pass the `options` and optionally
-  a `value` to mark which option should be preselected.
+  When using `type="select"`, you must pass the `options` and optionally a `value` to mark which option should be preselected.
 
   ```heex
   <.input field={@form[:user_type]} type="select" options={["Admin": "admin", "User": "user"]} />
   ```
 
-  For more information on what kind of data can be passed to `options` see
-  [`options_for_select`](https://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html#options_for_select/2).
+  For more information on what kind of data can be passed to `options` see [`options_for_select`](https://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html#options_for_select/2).
+
+  ## File type
+
+  Passing `upload` puts a strip of previews under the control, the way a `:quick_tags` select puts its tags under the input: the files already stored on the record, followed by the ones picked but not yet saved. Give `stored` the URLs held on the record, wrapping a single-file value in a list. Describe each preview with the `preview` slot (given a stored URL) and the `pending` slot (given an upload entry).
+
+  `preview_as` controls the layout of each preview and its clear button. The default `"tag"` wraps the slot in the same chip a LiveSelect tag uses, with the clear button inline after the label. This suits previews that show only a name, such as a document. `"thumbnail"` lets the slot render the file content and places a round clear button in its top-right corner, which suits previews that show an image.
+
+  Either way a LiveView rendering a file field handles exactly two events: `"remove_upload"` with `phx-value-url` for a stored file, and `"cancel_upload"` with `phx-value-ref` for a picked one. Any `render_as` other than `"enabled"` keeps the previews but drops those buttons and the file control, leaving the field read-only. Hidden modes apply to the entire field, including its previews.
+
+  ```heex
+  <.input
+    type="file"
+    name="images"
+    label="Images"
+    upload={@uploads.images}
+    stored={@images}
+    preview_as="thumbnail"
+  >
+    <:preview :let={url}><img src={url} class="size-20 rounded-md object-cover" /></:preview>
+    <:pending :let={entry}><.live_img_preview entry={entry} class="size-20" /></:pending>
+  </.input>
+  ```
 
   ## Render as
 
   The `render_as` attribute controls how the control is rendered:
 
-    * `"enabled"` - the real input (default)
-    * `"disabled"` - a lookalike span with the disabled input visual; no input is rendered, so the value does not submit
-    * `"like-enabled"` - a lookalike span with the enabled input visual; no input is rendered, so the value does not submit
-    * `"like-disabled"` - a lookalike span with the disabled input visual plus the real input rendered hidden, so native input behaviour (submission) still works
-    * `"hidden"` / `"hidden-enabled"` - the real input rendered hidden, so native input behaviour still works
-    * `"hidden-disabled"` - nothing is rendered
+    * `"enabled"`: the real input (default)
+    * `"disabled"`: a lookalike span with the disabled input visual. No input is rendered, so the value does not submit
+    * `"like-enabled"`: a lookalike span with the enabled input visual. No input is rendered, so the value does not submit
+    * `"like-disabled"`: a lookalike span with the disabled input visual plus the real input rendered hidden, so native input behaviour (submission) still works
+    * `"hidden"` / `"hidden-enabled"`: the real input rendered hidden, so native input behaviour still works
+    * `"hidden-disabled"`: nothing is rendered
+    * `"text"` / `"text-enabled"`: the real editable input with a plain text visual
+    * `"text-disabled"`: plain text plus the real input rendered hidden, so native input behaviour (submission) still works
   """
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
   attr :value, :any
+
+  attr :timezone, :string,
+    default: nil,
+    doc: "the display timezone, which defaults to the Ash form's user timezone, then UTC"
 
   attr :tooltip, :string,
     default: nil,
@@ -288,11 +445,17 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   attr :type, :string,
     default: "text",
-    values: ~w(checkbox color date datetime-local email file month number password
+    values: ~w(checkbox color date datetime-local email file month number password radio
                search select switch tel text textarea time url week hidden)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
+
+  attr :select_id, :string, default: nil, doc: "internal: the LiveSelect component ID"
+
+  attr :form_field, :any,
+    default: nil,
+    doc: "internal: the original form field, preserved across the input/1 recursion"
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
@@ -309,13 +472,31 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   attr :render_as, :string,
     default: "enabled",
-    values: ~w(enabled disabled like-enabled like-disabled hidden hidden-enabled hidden-disabled)
+    values:
+      ~w(enabled disabled like-enabled like-disabled hidden hidden-enabled hidden-disabled text text-enabled text-disabled)
 
   attr :variant, :string,
     default: "default",
-    values: ~w(default classic),
+    values: ~w(default alt),
     doc:
-      "the checkbox layout: \"default\" boxes it in a field with the label, \"classic\" is an inline box on the left with the label right after it"
+      "the checkbox and switch layout: \"default\" boxes the control in a field with the label, \"alt\" drops the field outline and puts the label inline beside the control"
+
+  attr :upload, :any,
+    default: nil,
+    doc: "a `Phoenix.LiveView.UploadConfig` to render as a file field"
+
+  attr :stored, :list,
+    default: [],
+    doc: "for a file field, the URLs of the files already held on the record"
+
+  attr :preview_as, :string,
+    default: "tag",
+    values: ~w(tag thumbnail),
+    doc:
+      "how a file field draws each preview: \"tag\" for a chip that clears like a LiveSelect tag, \"thumbnail\" for an image tile with a corner clear button"
+
+  slot :preview, doc: "for a file field, renders one stored file, given its URL"
+  slot :pending, doc: "for a file field, renders one picked file, given its upload entry"
 
   @live_select_rest_global (if Code.ensure_loaded?(LiveSelect.Component) do
                               LiveSelect.Component.default_opts()
@@ -348,23 +529,41 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
+    form_timezone =
+      case field.form.source do
+        %AshPhoenix.Form{opts: opts} -> get_in(opts[:context] || %{}, [:shared, :user_timezone])
+        _ -> nil
+      end
+
     assigns
-    |> assign(field: nil, form_field: field, id: assigns.id || field.id)
+    |> assign(
+      field: nil,
+      form_field: field,
+      timezone: assigns.timezone || form_timezone || "Etc/UTC",
+      id: assigns.id || field.id,
+      select_id: assigns.id || "#{field.id}-ls"
+    )
     |> assign(:errors, Enum.map(errors, &translate_error(&1)))
     |> assign_new(:name, fn ->
       if assigns.mode in [:tags, :quick_tags], do: field.name <> "[]", else: field.name
     end)
-    |> assign_new(:value, fn -> field.value end)
+    |> assign_new(:value, fn ->
+      case {field.value, field.form.source} do
+        {{:error, _reason}, %AshPhoenix.Form{raw_params: params}} ->
+          Map.get(params, to_string(field.field))
+
+        _ ->
+          field.value
+      end
+    end)
     |> input()
   end
 
   def input(%{tooltip: tooltip} = assigns) when is_binary(tooltip) and tooltip != "" do
     ~H"""
     <div
-      id={"#{@id}-tooltip"}
-      phx-hook="Tooltip"
       data-tooltip={@tooltip}
-      class={@type == "checkbox" and @variant == "classic" and "w-fit"}
+      class={@type in ["checkbox", "switch"] and @variant == "alt" and "w-fit"}
     >
       {input(assign(assigns, :tooltip, nil))}
     </div>
@@ -383,8 +582,192 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
+  def input(%{upload: upload} = assigns) when not is_nil(upload) do
+    messages =
+      upload.entries
+      |> Enum.flat_map(&upload_errors(upload, &1))
+      |> Enum.concat(upload_errors(upload))
+      |> Enum.uniq()
+      |> Enum.map(fn
+        :too_large -> "File is too large (max #{div(upload.max_file_size, 1_000_000)}MB)."
+        :too_many_files -> "Too many files (max #{upload.max_entries})."
+        :not_accepted -> "Unsupported file type."
+        _other -> "Upload failed."
+      end)
+
+    # A thumbnail shows the file, so its remove button sits at the corner of the image. A tag shows only a label, so its clear button works like a LiveSelect tag's.
+    {previews_class, preview_class, clear_class, clear_icon_class} =
+      if assigns.preview_as == "thumbnail" do
+        {"grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 mt-3", "relative",
+         "absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-error text-content-alt hover:bg-error-alt",
+         "size-3"}
+      else
+        {"grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 mt-3",
+         "p-1.5 text-sm rounded-lg border border-outline bg-primary-alt grid grid-cols-[1fr_1rem] items-center gap-1",
+         "text-error hover:text-error-alt cursor-pointer", "size-4"}
+      end
+
+    assigns =
+      assigns
+      |> assign(:errors, assigns.errors ++ messages)
+      |> assign(:previews_class, previews_class)
+      |> assign(:preview_class, preview_class)
+      |> assign(:clear_class, clear_class)
+      |> assign(:clear_icon_class, clear_icon_class)
+
+    ~H"""
+    <div>
+      <label :if={@render_as == "enabled"} for={@upload.ref} class="relative block">
+        <.live_file_input
+          upload={@upload}
+          {@rest}
+          class={[
+            @class ||
+              "input-floating-control block w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+            @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
+          ]}
+        />
+        <span class={["input-floating-label", @errors != [] && "input-floating-label-error"]}>
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
+        </span>
+      </label>
+
+      <span
+        :if={@render_as != "enabled" and @label not in [nil, ""]}
+        class="block text-sm font-medium text-subcontent"
+      >
+        {@label}<span
+          :if={@rest[:required] && @label not in [nil, ""]}
+          aria-hidden="true"
+          class="ml-1 text-error"
+        >*</span>
+      </span>
+
+      <div :if={@stored != [] or @upload.entries != []} class={@previews_class}>
+        <div :for={url <- @stored} class={@preview_class}>
+          {render_slot(@preview, url)}
+          <.button
+            :if={@render_as == "enabled"}
+            type="button"
+            phx-click="remove_upload"
+            aria-label="Remove file"
+            phx-value-url={url}
+            class={@clear_class}
+          >
+            <.icon name="hero-x-mark" class={@clear_icon_class} />
+          </.button>
+        </div>
+        <div :for={entry <- @upload.entries} class={@preview_class}>
+          {render_slot(@pending, entry)}
+          <.button
+            :if={@render_as == "enabled"}
+            aria-label={"Cancel #{entry.client_name}"}
+            type="button"
+            phx-click="cancel_upload"
+            phx-value-ref={entry.ref}
+            class={@clear_class}
+          >
+            <.icon name="hero-x-mark" class={@clear_icon_class} />
+          </.button>
+        </div>
+      </div>
+
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
   def input(%{render_as: render_as, type: type} = assigns)
-      when render_as in ["disabled", "like-enabled", "like-disabled"] and
+      when render_as in ["text", "text-enabled"] and
+             type in ["email", "number", "search", "text", "url"] do
+    assigns =
+      assigns
+      |> assign(:render_as, "enabled")
+      |> assign(:rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+      |> assign(
+        :text_input_class,
+        assigns.class ||
+          [
+            "block w-full appearance-none bg-transparent border-0 rounded-none text-sm text-content overflow-hidden text-ellipsis whitespace-nowrap focus:outline-none focus:ring-0 focus-visible:underline disabled:cursor-not-allowed disabled:text-subcontent",
+            if(assigns[:label], do: "min-h-6 py-1", else: "min-h-11 text-center"),
+            assigns.errors != [] && (assigns.error_class || "text-error")
+          ]
+      )
+
+    ~H"""
+    <div>
+      <label for={@id} class="flex flex-col gap-1">
+        <span
+          :if={@label}
+          class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
+        >
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
+        </span>
+        <input
+          type={@type}
+          name={@name}
+          id={@id}
+          value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+          class={@text_input_class}
+          {@rest}
+        />
+      </label>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  def input(%{render_as: render_as, type: "textarea"} = assigns)
+      when render_as in ["text", "text-enabled"] do
+    assigns =
+      assigns
+      |> assign(:render_as, "enabled")
+      |> assign(:rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+      |> assign(
+        :text_input_class,
+        assigns.class ||
+          [
+            "block w-full min-h-6 bg-transparent border-0 rounded-none py-1 text-sm text-content whitespace-pre-wrap focus:outline-none focus:ring-0 focus-visible:underline disabled:cursor-not-allowed disabled:text-subcontent",
+            assigns.errors != [] && (assigns.error_class || "text-error")
+          ]
+      )
+
+    ~H"""
+    <div>
+      <label for={@id} class="flex flex-col gap-1">
+        <span
+          :if={@label}
+          class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
+        >
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
+        </span>
+        <textarea id={@id} name={@name} class={@text_input_class} {@rest}>{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
+      </label>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  def input(%{render_as: render_as} = assigns) when render_as in ["text", "text-enabled"] do
+    assigns
+    |> assign(:render_as, "enabled")
+    |> input()
+  end
+
+  def input(%{render_as: render_as, type: type} = assigns)
+      when render_as in ["disabled", "like-enabled", "like-disabled", "text-disabled"] and
              type in ["checkbox", "switch"] do
     assigns =
       assigns
@@ -403,11 +786,11 @@ defmodule ElixirbitsWeb.CoreComponents do
             "h-5 w-5 shrink-0 rounded border bg-center bg-no-repeat bg-[length:100%_100%]",
             disabled_look && "cursor-not-allowed",
             checked &&
-              "bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')]",
+              "bg-control-check",
             case {checked, disabled_look} do
               {true, true} -> "bg-tertiary border-tertiary-alt"
               {true, false} -> "bg-brand border-brand"
-              {false, _} -> "bg-primary-alt border-primary-alt"
+              {false, _} -> "bg-primary-alt border-outline"
             end
           ]
 
@@ -416,7 +799,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             "relative shrink-0 w-11 h-6 rounded-full border before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full",
             disabled_look && "cursor-not-allowed",
             (checked && "bg-brand border-brand before:translate-x-5 before:bg-content-alt") ||
-              "bg-primary-alt border-primary-alt before:bg-subcontent"
+              "bg-primary-alt border-outline before:bg-subcontent"
           ]
       end
 
@@ -427,34 +810,44 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:span_rest, Map.drop(assigns.rest, [:autocomplete, :placeholder]))
 
     ~H"""
-    <div class="mb-2">
+    <div>
       <div
-        id={if @render_as != "like-disabled", do: @id}
+        id={if @render_as not in ["like-disabled", "text-disabled"], do: @id}
         class={[
-          "flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-primary-alt",
+          "grid items-center gap-2 w-full min-h-11 px-3 rounded-md border border-outline",
+          (@type == "switch" && "grid-cols-[1fr_2.75rem]") || "grid-cols-[1fr_1.25rem]",
           (@disabled_look && "cursor-not-allowed bg-primary-alt") || "bg-primary",
           @errors != [] && (@error_class || "border-error")
         ]}
         {@span_rest}
       >
         <span class={[
-          "flex items-center gap-2 text-sm font-medium",
+          "text-sm font-medium",
           (@disabled_look && "text-subcontent") || "text-content"
         ]}>
-          {@label}
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
         </span>
         <span class={@class || @box_class} />
       </div>
       <.error :for={msg <- @errors}>{msg}</.error>
-      <div :if={@render_as == "like-disabled"} class="hidden">
-        {input(assign(assigns, :render_as, "enabled"))}
+      <div :if={@render_as in ["like-disabled", "text-disabled"]} class="hidden">
+        {input(assign(assigns, render_as: "enabled", label: nil))}
       </div>
     </div>
     """
   end
 
   def input(%{render_as: render_as} = assigns)
-      when render_as in ["disabled", "like-enabled", "like-disabled"] do
+      when render_as in [
+             "disabled",
+             "like-enabled",
+             "like-disabled",
+             "text-disabled"
+           ] do
     assigns = assign_new(assigns, :value, fn -> nil end)
 
     display =
@@ -471,42 +864,129 @@ defmodule ElixirbitsWeb.CoreComponents do
           value
       end
 
+    display =
+      case display do
+        %DateTime{} = instant ->
+          instant
+
+        value when is_binary(value) and assigns.type in ~w(date datetime-local time week month) ->
+          case DateTime.from_iso8601(value) do
+            {:ok, instant, _offset} -> instant
+            _ -> value
+          end
+
+        value ->
+          value
+      end
+
+    display =
+      case display do
+        %DateTime{} = instant ->
+          local = DateTime.shift_zone!(instant, assigns.timezone || "Etc/UTC")
+
+          case assigns.type do
+            "date" ->
+              Calendar.strftime(local, "%Y-%m-%d")
+
+            "time" ->
+              Calendar.strftime(local, "%H:%M")
+
+            "month" ->
+              Calendar.strftime(local, "%Y-%m")
+
+            "week" ->
+              {year, week} = :calendar.iso_week_number(Date.to_erl(DateTime.to_date(local)))
+              "#{year}-W#{String.pad_leading(Integer.to_string(week), 2, "0")}"
+
+            _ ->
+              Calendar.strftime(local, "%-d %b %Y, %H:%M %Z")
+          end
+
+        value ->
+          value
+      end
+
     filled = display not in [nil, ""]
     placeholder = assigns.rest[:placeholder]
     disabled_look = render_as in ["disabled", "like-disabled"]
+    text_look = render_as == "text-disabled"
+    include_hidden_input = render_as in ["like-disabled", "text-disabled"]
 
-    span_class = [
-      if(assigns.type == "textarea",
-        do: "block whitespace-pre-wrap",
-        else: "flex items-center overflow-hidden whitespace-nowrap"
-      ),
-      "w-full min-h-11 px-3 rounded-md border border-primary-alt",
-      if(filled,
-        do: ["input-floating-control", assigns.type == "textarea" && "input-floating-textarea"],
-        else: "py-2"
-      ),
-      cond do
-        disabled_look -> "cursor-not-allowed bg-primary-alt text-subcontent"
-        not filled and placeholder not in [nil, ""] -> "bg-primary text-subcontent"
-        true -> "bg-primary text-content"
-      end,
-      assigns.errors != [] && (assigns.error_class || "border-error")
-    ]
+    span_class =
+      if text_look do
+        # A label means the value is stacked under it and keeps its compact height. Without one, it sits in a row beside real fields, so it takes the field height and centres on it.
+        stacked = assigns.type == "textarea" or assigns[:label] not in [nil, ""]
+
+        [
+          if(assigns.type == "textarea",
+            do: "block whitespace-pre-wrap",
+            else: "overflow-hidden text-ellipsis whitespace-nowrap"
+          ),
+          if(stacked,
+            do: "block w-full min-h-6 py-1",
+            else: "flex w-full min-h-11 items-center justify-center text-center"
+          ),
+          "text-sm",
+          (filled && "text-content") || "text-subcontent",
+          assigns.errors != [] && (assigns.error_class || "text-error")
+        ]
+      else
+        [
+          if(assigns.type == "textarea",
+            do: "block whitespace-pre-wrap",
+            else: "flex items-center overflow-hidden whitespace-nowrap"
+          ),
+          "w-full min-h-11 px-3 rounded-md border border-outline",
+          if(filled,
+            do: [
+              "input-floating-control",
+              assigns.type == "textarea" && "input-floating-textarea"
+            ],
+            else: "py-2"
+          ),
+          cond do
+            disabled_look -> "cursor-not-allowed bg-primary-alt text-subcontent"
+            not filled and placeholder not in [nil, ""] -> "bg-primary text-subcontent"
+            true -> "bg-primary text-content"
+          end,
+          assigns.errors != [] && (assigns.error_class || "border-error")
+        ]
+      end
 
     assigns =
       assigns
       |> assign(:display, if(filled, do: display, else: placeholder))
       |> assign(:filled, filled)
       |> assign(:disabled_look, disabled_look)
+      |> assign(:text_look, text_look)
+      |> assign(:include_hidden_input, include_hidden_input)
       |> assign(:label_as_placeholder, placeholder in [nil, ""])
       |> assign(:span_class, span_class)
       |> assign(:span_rest, Map.drop(assigns.rest, [:autocomplete, :placeholder]))
 
     ~H"""
-    <div class="mb-2">
-      <div class="relative block">
+    <div>
+      <div :if={@text_look} class="flex flex-col gap-1">
         <span
-          id={if @render_as != "like-disabled", do: @id}
+          :if={@label}
+          class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
+        >
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
+        </span>
+        <span
+          id={if !@include_hidden_input, do: @id}
+          class={@class || @span_class}
+          {@span_rest}
+          phx-no-format
+        >{@display}</span>
+      </div>
+      <div :if={!@text_look} class="relative block">
+        <span
+          id={if !@include_hidden_input, do: @id}
           class={@class || @span_class}
           {@span_rest}
           phx-no-format
@@ -517,15 +997,20 @@ defmodule ElixirbitsWeb.CoreComponents do
             "input-floating-label",
             !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error",
+            @disabled_look && "input-floating-label-disabled-look",
             @filled && @disabled_look && "input-floating-label-on-disabled"
           ]}
         >
-          {@label}
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
         </span>
       </div>
       <.error :for={msg <- @errors}>{msg}</.error>
-      <div :if={@render_as == "like-disabled"} class="hidden">
-        {input(assign(assigns, :render_as, "enabled"))}
+      <div :if={@include_hidden_input} class="hidden">
+        {input(assign(assigns, render_as: "enabled", label: nil))}
       </div>
     </div>
     """
@@ -537,18 +1022,18 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "checkbox", variant: "classic"} = assigns) do
+  def input(%{type: "checkbox", variant: "alt"} = assigns) do
     assigns =
       assign_new(assigns, :checked, fn ->
         Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
       end)
 
     ~H"""
-    <div class="mb-2">
+    <div>
       <label
         for={@id}
         class={[
-          "inline-flex items-center gap-2 text-sm font-medium text-content",
+          "inline-grid grid-cols-[1.25rem_1fr] items-center gap-2 text-sm font-medium text-content",
           "has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
           @errors != [] && (@error_class || "text-error")
         ]}
@@ -568,11 +1053,15 @@ defmodule ElixirbitsWeb.CoreComponents do
           checked={@checked}
           class={
             @class ||
-              "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded border border-primary-alt bg-primary-alt checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed disabled:bg-primary-alt disabled:border-primary-alt disabled:checked:bg-tertiary disabled:checked:border-tertiary-alt checked:bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:100%_100%]"
+              "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded border border-outline bg-primary-alt checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed disabled:bg-primary-alt disabled:border-outline disabled:checked:bg-tertiary disabled:checked:border-tertiary-alt checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
           }
           {@rest}
         />
-        <span>{@label}</span>
+        <span>{@label}<span
+          :if={@rest[:required] && @label not in [nil, ""]}
+          aria-hidden="true"
+          class="ml-1 text-error"
+        >*</span></span>
       </label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
@@ -586,18 +1075,22 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     ~H"""
-    <div class="mb-2">
+    <div>
       <label
         for={@id}
         class={[
-          "group cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+          "group cursor-pointer grid grid-cols-[1fr_1.25rem] items-center gap-2 w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
           "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-primary-alt has-[:disabled]:text-subcontent",
           @errors != [] &&
             (@error_class || "border-error focus-within:border-error focus-within:ring-error")
         ]}
       >
-        <span class="flex items-center gap-2 text-sm font-medium text-content group-has-[:disabled]:text-subcontent">
-          {@label}
+        <span class="text-sm font-medium text-content group-has-[:disabled]:text-subcontent">
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
         </span>
         <div class="flex items-center gap-2">
           <input
@@ -615,11 +1108,99 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "appearance-none h-5 w-5 shrink-0 rounded border border-primary-alt bg-primary-alt checked:bg-brand checked:border-brand focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:bg-primary-alt disabled:border-primary-alt disabled:checked:bg-tertiary disabled:checked:border-tertiary-alt checked:bg-[url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:100%_100%]"
+                "appearance-none h-5 w-5 shrink-0 rounded border border-outline bg-primary-alt checked:bg-brand checked:border-brand focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:bg-primary-alt disabled:border-outline disabled:checked:bg-tertiary disabled:checked:border-tertiary-alt checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
             }
             {@rest}
           />
         </div>
+      </label>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  def input(%{type: "radio"} = assigns) do
+    ~H"""
+    <fieldset id={@id}>
+      <legend :if={@label} class="mb-1 text-sm font-medium text-content">
+        {@label}<span
+          :if={@rest[:required] && @label not in [nil, ""]}
+          aria-hidden="true"
+          class="ml-1 text-error"
+        >*</span>
+      </legend>
+      <div class="flex flex-col gap-3">
+        <label
+          :for={{option_label, option_value} <- @options}
+          class={[
+            "grid grid-cols-[1.25rem_1fr] items-center gap-2 text-sm text-content",
+            "has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
+            @errors != [] && (@error_class || "text-error")
+          ]}
+        >
+          <input
+            type="radio"
+            name={@name}
+            value={to_string(option_value)}
+            checked={to_string(@value) == to_string(option_value)}
+            class={
+              @class ||
+                "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded-full border border-outline bg-primary-alt checked:border-brand checked:bg-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed checked:bg-control-radio"
+            }
+            {@rest}
+          />
+          <span>{option_label}</span>
+        </label>
+      </div>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </fieldset>
+    """
+  end
+
+  def input(%{type: "switch", variant: "alt"} = assigns) do
+    assigns =
+      assign_new(assigns, :checked, fn ->
+        Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
+      end)
+
+    ~H"""
+    <div>
+      <label
+        for={@id}
+        class={
+          [
+            "inline-grid grid-cols-[2.75rem_1fr] items-center gap-2 text-sm font-medium text-content",
+            "has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
+            # Unlabelled means it sits in a row under its column heading, so it centres on the column and takes the field height.
+            (@label in [nil, ""] && "min-h-11 w-full justify-center") || "",
+            @errors != [] && (@error_class || "text-error")
+          ]
+        }
+      >
+        <input
+          type="hidden"
+          name={@name}
+          value="false"
+          disabled={@rest[:disabled]}
+          form={@rest[:form]}
+        />
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@checked}
+          class={
+            @class ||
+              "peer appearance-none shrink-0 cursor-pointer w-11 h-6 rounded-full border border-outline bg-secondary checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content-alt before:transition-transform before:duration-200 before:ease-in-out"
+          }
+          {@rest}
+        />
+        <span :if={@label not in [nil, ""]}>{@label}<span
+          :if={@rest[:required] && @label not in [nil, ""]}
+          aria-hidden="true"
+          class="ml-1 text-error"
+        >*</span></span>
       </label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
@@ -633,18 +1214,22 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     ~H"""
-    <div class="mb-2">
+    <div>
       <label
         for={@id}
         class={[
-          "group cursor-pointer flex items-center justify-between w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+          "group cursor-pointer grid grid-cols-[1fr_2.75rem] items-center gap-2 w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
           "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-primary-alt has-[:disabled]:text-subcontent",
           @errors != [] &&
             (@error_class || "border-error focus-within:border-error focus-within:ring-error")
         ]}
       >
-        <span class="flex items-center gap-2 text-sm font-medium text-content group-has-[:disabled]:text-subcontent">
-          {@label}
+        <span class="text-sm font-medium text-content group-has-[:disabled]:text-subcontent">
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
         </span>
         <div class="flex items-center gap-2">
           <input
@@ -662,7 +1247,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-primary-alt bg-primary-alt checked:bg-brand checked:border-brand focus:outline-none focus:ring-0 disabled:cursor-not-allowed transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content-alt before:transition-transform before:duration-200 before:ease-in-out"
+                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-outline bg-primary-alt checked:bg-brand checked:border-brand focus:outline-none focus:ring-0 disabled:cursor-not-allowed transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content-alt before:transition-transform before:duration-200 before:ease-in-out"
             }
             {@rest}
           />
@@ -679,13 +1264,16 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     assigns =
       assign_new(assigns, :safe_field, fn ->
-        assigns.form_field ||
+        if assigns.form_field do
+          %{assigns.form_field | value: assigns[:value]}
+        else
           %{
             to_form(%{assigns.name => assigns.value}, as: "dummy")[assigns.name]
             | id: assigns.id || assigns.name,
               name: assigns.name,
               errors: assigns[:errors] || []
           }
+        end
       end)
 
     field = assigns.safe_field
@@ -714,20 +1302,31 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:display, display)
       |> assign(:hidden_name, hidden_name)
       |> assign(:hidden_values, hidden_values)
+      |> assign(
+        :div_attrs,
+        assigns.rest
+        |> Map.take([:role, :"aria-label", :"aria-labelledby", :"aria-describedby"])
+        |> then(fn attrs ->
+          if map_size(attrs) > 0, do: Map.put_new(attrs, :role, "group"), else: attrs
+        end)
+      )
 
     ~H"""
-    <.input
-      id={@id || @safe_field.id}
-      name={@safe_field.name}
-      type="text"
-      label={assigns[:label]}
-      value={@display}
-      disabled
-      class={@class}
-      error_class={@error_class}
-      errors={@errors}
-    />
-    <input :for={v <- @hidden_values} type="hidden" name={@hidden_name} value={v} />
+    <div {@div_attrs}>
+      <.input
+        id={@id || @safe_field.id}
+        name={@safe_field.name}
+        type="text"
+        label={assigns[:label]}
+        value={@display}
+        disabled
+        required={@rest[:required]}
+        class={@class}
+        error_class={@error_class}
+        errors={@errors}
+      />
+      <input :for={v <- @hidden_values} type="hidden" name={@hidden_name} value={v} />
+    </div>
     """
   end
 
@@ -736,13 +1335,16 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     assigns =
       assign_new(assigns, :safe_field, fn ->
-        assigns.form_field ||
+        if assigns.form_field do
+          %{assigns.form_field | value: assigns[:value]}
+        else
           %{
             to_form(%{assigns.name => assigns.value}, as: "dummy")[assigns.name]
             | id: assigns.id || assigns.name,
               name: assigns.name,
               errors: assigns[:errors] || []
           }
+        end
       end)
 
     field = assigns.safe_field
@@ -755,6 +1357,8 @@ defmodule ElixirbitsWeb.CoreComponents do
           k == "class" -> true
           k == "phx-click" -> true
           k == "phx-hook" -> true
+          k == "role" -> true
+          String.starts_with?(k, "aria-") -> true
           String.starts_with?(k, "phx-value-") -> true
           true -> false
         end
@@ -766,6 +1370,15 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     div_attrs = Enum.reject(div_attrs, fn {k, _v} -> to_string(k) == "class" end)
+
+    div_attrs =
+      if Enum.any?(div_attrs, fn {key, _value} ->
+           key in [:"aria-label", :"aria-labelledby", :"aria-describedby"]
+         end) do
+        Keyword.put_new(div_attrs, :role, "group")
+      else
+        div_attrs
+      end
 
     hook_wrapper_id =
       if Enum.any?(div_attrs, fn {k, _v} -> to_string(k) == "phx-hook" end) do
@@ -804,34 +1417,61 @@ defmodule ElixirbitsWeb.CoreComponents do
         :tags_container_extra_class,
         :keep_label_on_select
       ])
-
-    dropdown_class =
-      if mode == :single do
-        "absolute top-full mt-1 w-full rounded-md border border-primary-alt bg-primary shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
-      else
-        "absolute top-11 mt-1 w-full rounded-md border border-primary-alt bg-primary shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
-      end
+      |> Keyword.put_new(:allow_clear, true)
+      |> Keyword.put_new(:"phx-focus", "live_select_change")
+      |> Keyword.put_new(:dropdown_selectable_priority, true)
 
     live_select_attrs =
       if Keyword.has_key?(live_select_attrs, :value_mapper) do
         live_select_attrs
       else
-        case field.form.source do
-          %Ecto.Changeset{types: types} ->
-            case Map.get(types, field.field) do
-              :integer ->
-                Keyword.put(
-                  live_select_attrs,
-                  :value_mapper,
-                  &Elixirbits.CoreUtils.Parse.to_integer/1
-                )
+        atom_values =
+          assigns[:value]
+          |> List.wrap()
+          |> Enum.filter(&is_atom/1)
+
+        matching_string_option? =
+          atom_values != [] &&
+            Enum.any?(assigns[:options] || [], fn
+              {_label, value} when is_binary(value) ->
+                Enum.any?(atom_values, &(value == to_string(&1)))
+
+              %{value: value} when is_binary(value) ->
+                Enum.any?(atom_values, &(value == to_string(&1)))
+
+              %{"value" => value} when is_binary(value) ->
+                Enum.any?(atom_values, &(value == to_string(&1)))
+
+              value when is_binary(value) ->
+                Enum.any?(atom_values, &(value == to_string(&1)))
 
               _ ->
-                live_select_attrs
-            end
+                false
+            end)
 
-          _ ->
-            live_select_attrs
+        if matching_string_option? do
+          Keyword.put(live_select_attrs, :value_mapper, fn
+            value when is_atom(value) -> to_string(value)
+            value -> value
+          end)
+        else
+          case field.form.source do
+            %Ecto.Changeset{types: types} ->
+              case Map.get(types, field.field) do
+                :integer ->
+                  Keyword.put(
+                    live_select_attrs,
+                    :value_mapper,
+                    &Elixirbits.CoreUtils.Parse.to_integer/1
+                  )
+
+                _ ->
+                  live_select_attrs
+              end
+
+            _ ->
+              live_select_attrs
+          end
         end
       end
 
@@ -847,8 +1487,10 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:live_select_opts, live_select_attrs)
       |> assign(:div_attrs, div_attrs)
       |> assign(:custom_class, custom_class)
-      |> assign(:hook_wrapper_id, hook_wrapper_id)
-      |> assign(:dropdown_class, dropdown_class)
+      |> assign(
+        :hook_wrapper_id,
+        hook_wrapper_id || "#{assigns.select_id || assigns.id || "#{field.id}-ls"}-dropdown"
+      )
       |> assign(:mode, mode)
       |> assign(:container_class, container_class)
 
@@ -862,33 +1504,32 @@ defmodule ElixirbitsWeb.CoreComponents do
         |> assign(:label_as_placeholder, label_as_placeholder)
 
       ~H"""
-      <div class={["mb-2", @custom_class]} {@div_attrs}>
-        <label for={@id || @safe_field.id} class="relative block">
-          <div id={@hook_wrapper_id}>
+      <div class={@custom_class} {@div_attrs}>
+        <label for={"#{@safe_field.id}_text_input"} class="relative block">
+          <div id={@hook_wrapper_id} phx-hook="SelectDropdown">
             <LiveSelect.live_select
               field={@safe_field}
-              id={@safe_field.id}
+              id={@select_id || @id || "#{@safe_field.id}-ls"}
               mode={@mode}
               options={@options}
               text_input_class={[
                 @class ||
-                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
                 @errors != [] &&
                   (@error_class || "border-error focus:border-error focus:ring-error")
               ]}
               text_input_selected_class=""
-              dropdown_class={@dropdown_class}
+              dropdown_class="select-dropdown rounded-md border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
               option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
               selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
               active_option_class="bg-primary-alt"
               container_class={@container_class}
               clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
-              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-primary-alt bg-primary-alt flex items-center gap-1"
+              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-outline bg-primary-alt flex items-center gap-1"
               clear_tag_button_extra_class="text-error hover:text-error-alt cursor-pointer"
               tags_container_extra_class="order-last flex flex-wrap"
               placeholder={@placeholder}
               keep_label_on_select
-              allow_clear
               {@live_select_opts}
             />
           </div>
@@ -897,7 +1538,11 @@ defmodule ElixirbitsWeb.CoreComponents do
             !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error"
           ]}>
-            {@label}
+            {@label}<span
+              :if={@rest[:required] && @label not in [nil, ""]}
+              aria-hidden="true"
+              class="ml-1 text-error"
+            >*</span>
           </span>
         </label>
         <.error :for={msg <- @errors}>{msg}</.error>
@@ -905,33 +1550,32 @@ defmodule ElixirbitsWeb.CoreComponents do
       """
     else
       ~H"""
-      <div class={["mb-2", @custom_class]} {@div_attrs}>
-        <label for={@id || @safe_field.id} class="block">
-          <div id={@hook_wrapper_id}>
+      <div class={@custom_class} {@div_attrs}>
+        <label for={"#{@safe_field.id}_text_input"} class="block">
+          <div id={@hook_wrapper_id} phx-hook="SelectDropdown">
             <LiveSelect.live_select
               field={@safe_field}
-              id={@safe_field.id}
+              id={@select_id || @id || "#{@safe_field.id}-ls"}
               mode={@mode}
               options={@options}
               text_input_class={[
                 @class ||
-                  "block w-full min-h-11 px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                  "block w-full min-h-11 px-3 py-2 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
                 @errors != [] &&
                   (@error_class || "border-error focus:border-error focus:ring-error")
               ]}
               text_input_selected_class=""
-              dropdown_class={@dropdown_class}
+              dropdown_class="select-dropdown rounded-md border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
               option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
               selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
               active_option_class="bg-primary-alt"
               container_class="relative flex flex-col w-full"
               clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
-              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-primary-alt bg-primary-alt flex items-center gap-1"
+              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-outline bg-primary-alt flex items-center gap-1"
               clear_tag_button_extra_class="text-error hover:text-error-alt cursor-pointer"
               tags_container_extra_class="order-last flex flex-wrap"
               placeholder={@prompt}
               keep_label_on_select
-              allow_clear
               {@live_select_opts}
             />
           </div>
@@ -956,7 +1600,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         |> assign(:label_as_placeholder, label_as_placeholder)
 
       ~H"""
-      <div class="mb-2">
+      <div>
         <label for={@id} class="relative block">
           <textarea
             id={@id}
@@ -964,7 +1608,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             placeholder={@placeholder}
             class={[
               @class ||
-                "input-floating-control input-floating-textarea block w-full px-3 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                "input-floating-control input-floating-textarea block w-full px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
@@ -974,7 +1618,11 @@ defmodule ElixirbitsWeb.CoreComponents do
             !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error"
           ]}>
-            {@label}
+            {@label}<span
+              :if={@rest[:required] && @label not in [nil, ""]}
+              aria-hidden="true"
+              class="ml-1 text-error"
+            >*</span>
           </span>
         </label>
         <.error :for={msg <- @errors}>{msg}</.error>
@@ -982,14 +1630,14 @@ defmodule ElixirbitsWeb.CoreComponents do
       """
     else
       ~H"""
-      <div class="mb-2">
+      <div>
         <label for={@id} class="block">
           <textarea
             id={@id}
             name={@name}
             class={[
               @class ||
-                "block w-full px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                "block w-full px-3 py-2 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
@@ -1059,7 +1707,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:composite_value, composite_value)
 
     ~H"""
-    <div class="mb-2">
+    <div>
       <div
         id={@wrapper_id}
         phx-hook="TelInput"
@@ -1074,26 +1722,33 @@ defmodule ElixirbitsWeb.CoreComponents do
       >
         <input type="hidden" name={@name} value={@composite_value} data-tel-composite />
         <div class="input-floating-wrapper grid grid-cols-[4rem_auto] gap-0">
-          <LiveSelect.live_select
-            field={@country_field}
-            id={"#{@country_id}_country_select"}
-            mode={:single}
-            options={@country_options}
-            value={@country_field.value}
-            text_input_class={[
-              "block w-full min-h-11 px-3 rounded-l-md border border-r-0 border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:border-r-1 focus:ring-2 focus:ring-brand !bg-none !p-2"
-            ]}
-            text_input_selected_class=""
-            dropdown_class="absolute top-full left-0 mt-1 w-72 rounded-md border border-primary-alt bg-primary shadow-lg z-50 max-h-60 overflow-y-auto flex flex-col"
-            option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
-            selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
-            active_option_class="bg-primary-alt"
-            container_class="relative flex flex-col w-full"
-            clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
-            placeholder="+60"
-            keep_label_on_select
-            keep_options_on_select
-          />
+          <div
+            id={"#{@country_id}_country_dropdown"}
+            phx-hook="SelectDropdown"
+            data-dropdown-min-width="18"
+          >
+            <LiveSelect.live_select
+              field={@country_field}
+              id={"#{@country_id}_country_select"}
+              mode={:single}
+              options={@country_options}
+              value={@country_field.value}
+              text_input_class={[
+                "block w-full min-h-11 px-3 rounded-l-md border border-r-0 border-outline bg-primary text-content focus:outline-none focus:border-brand focus:border-r-1 focus:ring-2 focus:ring-brand !bg-none !p-2"
+              ]}
+              text_input_selected_class=""
+              dropdown_class="select-dropdown rounded-md border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
+              option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
+              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
+              active_option_class="bg-primary-alt"
+              container_class="relative flex flex-col w-full"
+              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
+              placeholder="+60"
+              keep_label_on_select
+              keep_options_on_select
+              dropdown_selectable_priority
+            />
+          </div>
           <input
             type="tel"
             id={@id}
@@ -1102,7 +1757,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             data-tel-number
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
               @errors != [] &&
                 (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
@@ -1117,7 +1772,11 @@ defmodule ElixirbitsWeb.CoreComponents do
             @errors != [] && "input-floating-label-error"
           ]}
         >
-          {@label}
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
         </label>
       </div>
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -1127,7 +1786,9 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
-    assigns = assign(assigns, :rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+    assigns =
+      assigns
+      |> assign(:rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
 
     if assigns[:label] && assigns.type in ~w(color email file number password search text url) do
       placeholder = assigns.rest[:placeholder]
@@ -1140,57 +1801,165 @@ defmodule ElixirbitsWeb.CoreComponents do
         |> assign(:label_as_placeholder, label_as_placeholder)
 
       ~H"""
-      <div class="mb-2">
-        <label for={@id} class="relative block">
-          <input
-            type={@type}
-            name={@name}
-            id={@id}
-            value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-            placeholder={@placeholder}
-            class={[
-              @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
-            ]}
-            {@rest}
-          />
-          <span class={[
-            "input-floating-label",
-            !@label_as_placeholder && "input-floating-label-hidden",
-            @errors != [] && "input-floating-label-error"
-          ]}>
-            {@label}
-          </span>
-        </label>
+      <div>
+        <div
+          id={@type == "password" && @id not in [nil, ""] && "#{@id}-password-wrapper"}
+          phx-hook={@type == "password" && @id not in [nil, ""] && "PasswordVisibility"}
+          class="relative block"
+        >
+          <label for={@id} class="block">
+            <input
+              type={@type}
+              name={@name}
+              id={@id}
+              value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+              placeholder={@placeholder}
+              class={[
+                @class ||
+                  [
+                    "input-floating-control block w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                    @type == "password" && "pr-12"
+                  ],
+                @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
+              ]}
+              {@rest}
+            />
+            <span class={[
+              "input-floating-label",
+              !@label_as_placeholder && "input-floating-label-hidden",
+              @errors != [] && "input-floating-label-error"
+            ]}>
+              {@label}<span
+                :if={@rest[:required] && @label not in [nil, ""]}
+                aria-hidden="true"
+                class="ml-1 text-error"
+              >*</span>
+            </span>
+          </label>
+          <.password_visibility_toggle :if={@type == "password" && @id not in [nil, ""]} id={@id} />
+        </div>
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>
       """
     else
       ~H"""
-      <div class="mb-2">
-        <label for={@id} class="block">
-          <span :if={@label} class="block text-sm font-medium text-content mb-1">{@label}</span>
-          <input
-            type={@type}
-            name={@name}
-            id={@id}
-            value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-            class={[
-              @class ||
-                "block w-full min-h-11 px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
-              @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
-            ]}
-            {@rest}
-          />
-        </label>
+      <div>
+        <div
+          id={@type == "password" && @id not in [nil, ""] && "#{@id}-password-wrapper"}
+          phx-hook={@type == "password" && @id not in [nil, ""] && "PasswordVisibility"}
+          class="relative block"
+        >
+          <label for={@id} class="block">
+            <span :if={@label} class="block text-sm font-medium text-content mb-1">{@label}<span
+              :if={@rest[:required] && @label not in [nil, ""]}
+              aria-hidden="true"
+              class="ml-1 text-error"
+            >*</span></span>
+            <input
+              type={@type}
+              name={@name}
+              id={@id}
+              value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+              class={[
+                @class ||
+                  [
+                    "block w-full min-h-11 px-3 py-2 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                    @type == "password" && "pr-12"
+                  ],
+                @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
+              ]}
+              {@rest}
+            />
+          </label>
+          <.password_visibility_toggle :if={@type == "password" && @id not in [nil, ""]} id={@id} />
+        </div>
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>
       """
     end
   end
 
+  attr :id, :any, required: true
+
+  defp password_visibility_toggle(assigns) do
+    ~H"""
+    <button
+      id={"#{@id}-password-toggle"}
+      type="button"
+      aria-label="Show password"
+      aria-pressed="false"
+      aria-controls={@id}
+      data-password-toggle
+      class="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-md text-subcontent hover:text-content focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed disabled:text-subcontent"
+    >
+      <span id={"#{@id}-password-eye"} data-password-show-icon>
+        <.icon name="hero-eye" class="h-5 w-5" />
+      </span>
+      <span id={"#{@id}-password-eye-slash"} data-password-hide-icon hidden>
+        <.icon name="hero-eye-slash" class="h-5 w-5" />
+      </span>
+    </button>
+    """
+  end
+
   defp vcalendar_input(assigns) do
+    timezone = assigns.timezone || "Etc/UTC"
+
+    value =
+      case assigns[:value] do
+        %DateTime{} = instant ->
+          instant
+
+        value when is_binary(value) ->
+          case DateTime.from_iso8601(value) do
+            {:ok, instant, _offset} -> instant
+            _ -> value
+          end
+
+        value ->
+          value
+      end
+
+    value =
+      case value do
+        %DateTime{} = instant ->
+          local = DateTime.shift_zone!(instant, timezone)
+
+          case assigns.type do
+            "datetime-local" ->
+              local |> DateTime.to_naive() |> NaiveDateTime.to_iso8601()
+
+            "date" ->
+              local |> DateTime.to_date() |> Date.to_iso8601()
+
+            "time" ->
+              Calendar.strftime(local, "%H:%M")
+
+            "month" ->
+              Calendar.strftime(local, "%Y-%m")
+
+            "week" ->
+              {year, week} = :calendar.iso_week_number(Date.to_erl(DateTime.to_date(local)))
+              "#{year}-W#{String.pad_leading(Integer.to_string(week), 2, "0")}"
+          end
+
+        %Date{} = date ->
+          Date.to_iso8601(date)
+
+        %Time{} = time ->
+          Time.to_iso8601(time)
+
+        value ->
+          Phoenix.HTML.Form.normalize_value("text", value)
+      end
+
+    assigns =
+      assign(assigns,
+        value: value,
+        timezone: timezone,
+        today: timezone |> DateTime.now!() |> DateTime.to_date() |> Date.to_iso8601()
+      )
+
     if assigns[:label] do
       placeholder = assigns.rest[:placeholder]
       label_as_placeholder = placeholder in [nil, ""]
@@ -1202,21 +1971,24 @@ defmodule ElixirbitsWeb.CoreComponents do
         |> assign(:label_as_placeholder, label_as_placeholder)
 
       ~H"""
-      <div class="mb-2">
+      <div>
         <div class="relative block">
           <input
             type="text"
             name={@name}
             id={@id}
-            value={Phoenix.HTML.Form.normalize_value("text", @value)}
+            value={@value}
             placeholder={@placeholder}
             data-vc-mode={@type}
+            data-vc-value={@value || ""}
+            data-vc-timezone={@timezone}
+            data-vc-today={@today}
             phx-hook="VCalendar"
             phx-update="ignore"
             readonly
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
@@ -1226,7 +1998,11 @@ defmodule ElixirbitsWeb.CoreComponents do
             !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error"
           ]}>
-            {@label}
+            {@label}<span
+              :if={@rest[:required] && @label not in [nil, ""]}
+              aria-hidden="true"
+              class="ml-1 text-error"
+            >*</span>
           </span>
         </div>
         <.error :for={msg <- @errors}>{msg}</.error>
@@ -1234,19 +2010,22 @@ defmodule ElixirbitsWeb.CoreComponents do
       """
     else
       ~H"""
-      <div class="mb-2">
+      <div>
         <input
           type="text"
           name={@name}
           id={@id}
-          value={Phoenix.HTML.Form.normalize_value("text", @value)}
+          value={@value}
           data-vc-mode={@type}
+          data-vc-value={@value || ""}
+          data-vc-timezone={@timezone}
+          data-vc-today={@today}
           phx-hook="VCalendar"
           phx-update="ignore"
           readonly
           class={[
             @class ||
-              "block w-full min-h-11 px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+              "block w-full min-h-11 px-3 py-2 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
             @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
           ]}
           {@rest}
@@ -1257,9 +2036,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     end
   end
 
-  defp option_display_label(value, _options) when value in [nil, ""], do: ""
-
-  defp option_display_label(value, options) do
+  defp option_display_label(value, options) when value not in [nil, ""] do
     Enum.find_value(options, to_string(value), fn opt ->
       {opt_value, opt_label} =
         case opt do
@@ -1274,6 +2051,8 @@ defmodule ElixirbitsWeb.CoreComponents do
     end)
   end
 
+  defp option_display_label(value, _options) when value in [nil, ""], do: ""
+
   # Helper used by inputs to generate form errors
   defp error(assigns) do
     ~H"""
@@ -1281,6 +2060,65 @@ defmodule ElixirbitsWeb.CoreComponents do
       <.icon name="hero-exclamation-circle" class="size-5" />
       {render_slot(@inner_block)}
     </p>
+    """
+  end
+
+  @doc """
+  Renders a page section on a raised card surface.
+
+  Form sections, listings, and detail groups share this surface, with their own `<.header>` inside.
+
+  ## Examples
+
+      <.card>
+        <.header>
+          Identity
+          <:subtitle>Venue name and registration numbers.</:subtitle>
+        </.header>
+        ...
+      </.card>
+  """
+  attr :id, :string, default: nil
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def card(assigns) do
+    ~H"""
+    <section
+      id={@id}
+      class={[
+        "flex flex-col rounded-lg border border-outline bg-primary shadow-sm",
+        @class
+      ]}
+      {@rest}
+    >
+      <div class="flex flex-col gap-4 p-6">
+        {render_slot(@inner_block)}
+      </div>
+    </section>
+    """
+  end
+
+  @doc """
+  Renders a recessed panel inside a `<.card>` for nested detail.
+
+  ## Examples
+
+      <.card_inset>
+        <p>Changes to permission grants require superuser authority.</p>
+      </.card_inset>
+  """
+  attr :id, :string, default: nil
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def card_inset(assigns) do
+    ~H"""
+    <div id={@id} class={["rounded-lg border border-outline bg-primary-alt p-4", @class]} {@rest}>
+      {render_slot(@inner_block)}
+    </div>
     """
   end
 
@@ -1293,7 +2131,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def header(assigns) do
     ~H"""
-    <header class={[@actions != [] && "flex items-center justify-between gap-6", "pb-4"]}>
+    <header class={[@actions != [] && "grid grid-cols-[1fr_max-content] items-center gap-6", "pb-4"]}>
       <div>
         <h1 class="text-lg font-semibold leading-8">
           {render_slot(@inner_block)}
@@ -1302,7 +2140,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           {render_slot(@subtitle)}
         </p>
       </div>
-      <div class="flex-none">{render_slot(@actions)}</div>
+      <div>{render_slot(@actions)}</div>
     </header>
     """
   end
@@ -1339,34 +2177,39 @@ defmodule ElixirbitsWeb.CoreComponents do
       end
 
     ~H"""
-    <table class="w-full text-left [&_tbody_tr:nth-child(even)]:bg-primary-alt">
-      <thead>
-        <tr>
-          <th :for={col <- @col} class="px-3 py-2 font-semibold">{col[:label]}</th>
-          <th :if={@action != []} class="px-3 py-2">
-            <span class="sr-only">{gettext("Actions")}</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody id={@id} phx-update={is_struct(@rows, Phoenix.LiveView.LiveStream) && "stream"}>
-        <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
-          <td
-            :for={col <- @col}
-            phx-click={@row_click && @row_click.(row)}
-            class={["px-3 py-2", @row_click && "hover:cursor-pointer"]}
-          >
-            {render_slot(col, @row_item.(row))}
-          </td>
-          <td :if={@action != []} class="px-3 py-2 w-0 font-semibold">
-            <div class="flex gap-4">
-              <%= for action <- @action do %>
-                {render_slot(action, @row_item.(row))}
-              <% end %>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="listing-surface overflow-x-auto">
+      <table class="listing-table">
+        <thead>
+          <tr>
+            <th :for={col <- @col} class="listing-heading">{col[:label]}</th>
+            <th :if={@action != []} class="listing-heading">
+              <span class="sr-only">{gettext("Actions")}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id={@id} phx-update={is_struct(@rows, Phoenix.LiveView.LiveStream) && "stream"}>
+          <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
+            <td
+              :for={col <- @col}
+              phx-click={@row_click && @row_click.(row)}
+              class={["listing-cell", @row_click && "hover:cursor-pointer"]}
+            >
+              {render_slot(col, @row_item.(row))}
+            </td>
+            <td :if={@action != []} class={["listing-cell", "w-0"]}>
+              <div
+                class="grid grid-cols-[repeat(var(--action-count),max-content)] items-center gap-4"
+                style={"--action-count: #{length(@action)}"}
+              >
+                <%= for action <- @action do %>
+                  {render_slot(action, @row_item.(row))}
+                <% end %>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     """
   end
 
@@ -1386,7 +2229,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def list(assigns) do
     ~H"""
-    <ul class="flex flex-col divide-y divide-primary-alt">
+    <ul class="flex flex-col divide-y divide-outline">
       <li :for={item <- @item} class="flex gap-4 p-3 items-center">
         <div class="flex-1">
           <div class="font-bold">{item.title}</div>
@@ -1398,27 +2241,83 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   @doc """
-  Renders a [Heroicon](https://heroicons.com).
+  Renders a server-driven modal, shown only while `show` is true.
 
-  Heroicons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid and mini may
-  be applied by using the `-solid` and `-mini` suffix.
+  ## Examples
 
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
+      <.modal :if={@to_delete} id="confirm-delete" on_cancel={JS.push("cancel_delete")}>
+        <:title>Confirm deletion</:title>
+        <p>This cannot be undone.</p>
+      </.modal>
+  """
+  attr :id, :string, required: true
+  attr :show, :boolean, default: true
+  attr :label, :string, default: "Dialog"
+  attr :on_cancel, JS, default: %JS{}
+  slot :title
+  slot :inner_block, required: true
 
-  Icons are extracted from the `deps/heroicons` directory and bundled within
-  your compiled app.css by the plugin in `assets/vendor/heroicons.js`.
+  def modal(assigns) do
+    ~H"""
+    <div
+      :if={@show}
+      id={@id}
+      class="fixed inset-0 z-50 grid place-items-center p-4"
+      phx-mounted={JS.push_focus() |> JS.focus_first(to: "##{@id}-content")}
+      phx-remove={JS.pop_focus()}
+      phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
+      phx-key="Escape"
+      data-cancel={@on_cancel}
+    >
+      <div
+        class="absolute inset-0 bg-overlay"
+        phx-click={JS.exec("data-cancel", to: "##{@id}")}
+        aria-hidden="true"
+      />
+      <.focus_wrap
+        id={"#{@id}-content"}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={@title != [] && "#{@id}-title"}
+        aria-label={@title == [] && @label}
+        class="relative z-10 w-full max-w-lg rounded-box border border-outline bg-primary p-6 shadow-lg"
+      >
+        <h2 :if={@title != []} id={"#{@id}-title"} class="mb-4 text-lg font-semibold text-content">
+          {render_slot(@title)}
+        </h2>
+        {render_slot(@inner_block)}
+      </.focus_wrap>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a [Heroicon](https://heroicons.com) or a [Tabler icon](https://tabler.io/icons).
+
+  Heroicons come in three styles – outline, solid, and mini. By default, the outline style is used, but solid and mini may be applied by using the `-solid` and `-mini` suffix.
+
+  Tabler icons use a `tabler-` prefix and include icons that Heroicons does not provide, such as a floppy disk. They come in outline and filled styles. Outline is the default, and `-filled` selects the filled style.
+
+  You can customise the size and colours of the icons by setting width, height, and theme colour classes.
+
+  Icons are extracted from the `deps/heroicons` and `deps/tabler_icons` directories and bundled within your compiled app.css by the plugins in `assets/vendor/heroicons.js` and `assets/vendor/tabler.js`.
 
   ## Examples
 
       <.icon name="hero-x-mark" />
       <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
+      <.icon name="tabler-device-floppy" />
   """
   attr :name, :string, required: true
   attr :class, :any, default: "size-4"
 
   def icon(%{name: "hero-" <> _} = assigns) do
+    ~H"""
+    <span class={[@name, @class]} />
+    """
+  end
+
+  def icon(%{name: "tabler-" <> _} = assigns) do
     ~H"""
     <span class={[@name, @class]} />
     """
@@ -1448,16 +2347,12 @@ defmodule ElixirbitsWeb.CoreComponents do
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do
-    # When using gettext, we typically pass the strings we want
-    # to translate as a static argument:
+    # When using gettext, we typically pass the strings we want to translate as a static argument:
     #
     #     # Translate the number of files with plural rules
     #     dngettext("errors", "1 file", "%{count} files", count)
     #
-    # However the error messages in our forms and APIs are generated
-    # dynamically, so we need to translate them by calling Gettext
-    # with our gettext backend as first argument. Translations are
-    # available in the errors.po file (as we use the "errors" domain).
+    # However the error messages in our forms and APIs are generated dynamically, so we need to translate them by calling Gettext with our gettext backend as first argument. Translations are available in the errors.po file (as we use the "errors" domain).
     if count = opts[:count] do
       Gettext.dngettext(ElixirbitsWeb.Gettext, "errors", msg, msg, count, opts)
     else

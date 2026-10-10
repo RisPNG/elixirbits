@@ -94,6 +94,31 @@ defmodule Elixirbits.CoreUtils.Search do
     end
   end
 
+  def filter(options, text, opts \\ []) do
+    if text in ["", nil] or String.trim(to_string(text)) == "" do
+      options
+    else
+      exact = Keyword.get(opts, :exact, false)
+      case_sensitive = Keyword.get(opts, :case_sensitive, false)
+
+      needle =
+        text
+        |> to_string()
+        |> then(fn value -> if case_sensitive, do: value, else: String.downcase(value) end)
+        |> then(fn value -> if exact, do: value, else: String.replace(value, ~r/\s+/, "") end)
+
+      Enum.filter(options, fn {label, _value} ->
+        haystack =
+          label
+          |> to_string()
+          |> then(fn value -> if case_sensitive, do: value, else: String.downcase(value) end)
+          |> then(fn value -> if exact, do: value, else: String.replace(value, ~r/\s+/, "") end)
+
+        if exact, do: haystack == needle, else: String.contains?(haystack, needle)
+      end)
+    end
+  end
+
   def construct_date_list(from_date, to_date) do
     cond do
       from_date not in ["", nil] and to_date not in ["", nil] ->
@@ -195,7 +220,7 @@ defmodule Elixirbits.CoreUtils.Search do
   end
 
   defp apply_load(query, resource, preload) do
-    loads = normalize_relationship_loads(resource, preload)
+    loads = Resource.normalize_relationship_loads(resource, preload)
 
     if loads == [] do
       query
@@ -544,7 +569,7 @@ defmodule Elixirbits.CoreUtils.Search do
           end
 
         converted_value =
-          if keyword in ["before", "before_equal"] do
+          if keyword in ["after", "before_equal"] and date_only?(value) do
             range_end_value(resource, path, field, value, user_timezone)
           else
             convert_path_value_to_field(resource, path, field, value, user_timezone)
@@ -820,53 +845,6 @@ defmodule Elixirbits.CoreUtils.Search do
     end
   end
 
-  defp normalize_relationship_loads(resource, true) do
-    Enum.map(Ash.Resource.Info.relationships(resource), & &1.name)
-  end
-
-  defp normalize_relationship_loads(_resource, preload) when preload in [false, nil, []], do: []
-
-  defp normalize_relationship_loads(resource, preload) when is_list(preload) do
-    preload
-    |> Enum.reduce([], fn load, loads ->
-      case normalize_relationship_load(resource, load) do
-        nil -> loads
-        normalized -> [normalized | loads]
-      end
-    end)
-    |> Enum.reverse()
-  end
-
-  defp normalize_relationship_loads(resource, preload) do
-    case normalize_relationship_load(resource, preload) do
-      nil -> []
-      normalized -> [normalized]
-    end
-  end
-
-  defp normalize_relationship_load(resource, {relationship, nested}) do
-    case Ash.Resource.Info.relationship(resource, relationship) do
-      nil ->
-        nil
-
-      relationship_info ->
-        normalized_nested = normalize_relationship_loads(relationship_info.destination, nested)
-
-        if normalized_nested == [] do
-          relationship_info.name
-        else
-          {relationship_info.name, normalized_nested}
-        end
-    end
-  end
-
-  defp normalize_relationship_load(resource, relationship) do
-    case Ash.Resource.Info.relationship(resource, relationship) do
-      nil -> nil
-      relationship_info -> relationship_info.name
-    end
-  end
-
   defp normalize_relationship_path!(resource, path) do
     normalize_relationship_path(resource, path, [])
   end
@@ -917,43 +895,68 @@ defmodule Elixirbits.CoreUtils.Search do
 
   defp convert_path_value_to_field(resource, path, field, value, user_timezone) do
     target_resource = related_resource!(resource, path)
-    Resource.convert_value_to_field(target_resource, field, value, user_timezone)
+    field_info = field_info!(resource, path, field)
+    type = Resource.normalize_type(field_info.type)
+
+    if type in [:datetime, :utc_datetime, :utc_datetime_usec] and date_only?(value) do
+      date = if is_binary(value), do: Date.from_iso8601(value), else: {:ok, value}
+
+      with {:ok, date} <- date do
+        datetime =
+          case DateTime.new(date, ~T[00:00:00], user_timezone) do
+            {:ok, datetime} -> datetime
+            {:ambiguous, first, _second} -> first
+            {:gap, _before, following} -> following
+          end
+
+        datetime
+        |> DateTime.shift_zone!("Etc/UTC")
+        |> DateTime.truncate(
+          if(type == :utc_datetime_usec,
+            do: :microsecond,
+            else: Keyword.get(field_info.constraints, :precision, :second)
+          )
+        )
+      else
+        _ -> nil
+      end
+    else
+      Resource.convert_value_to_field(target_resource, field, value, user_timezone)
+    end
   end
 
   defp range_end_value(resource, path, field, value, user_timezone) do
     field_info = field_info!(resource, path, field)
 
     converted_value = convert_path_value_to_field(resource, path, field, value, user_timezone)
-    normalized_type = normalize_type(field_info.type)
+    normalized_type = Resource.normalize_type(field_info.type)
 
     cond do
-      normalized_type in [:utc_datetime, :utc_datetime_usec] and date_only?(value) and
+      normalized_type in [:datetime, :utc_datetime, :utc_datetime_usec] and date_only?(value) and
+          not is_nil(converted_value) ->
+        date = if is_binary(value), do: Date.from_iso8601!(value), else: value
+
+        next_day =
+          case DateTime.new(Date.add(date, 1), ~T[00:00:00], user_timezone) do
+            {:ok, datetime} -> datetime
+            {:ambiguous, first, _second} -> first
+            {:gap, _before, following} -> following
+          end
+
+        next_day
+        |> DateTime.shift_zone!("Etc/UTC")
+        |> DateTime.add(-1, :microsecond)
+
+      normalized_type == :naive_datetime and date_only?(value) and
           not is_nil(converted_value) ->
         converted_value
-        |> DateTime.add(86_399, :second)
-        |> normalize_datetime_precision(normalized_type)
-
-      normalized_type in [:naive_datetime, :naive_datetime_usec] and date_only?(value) and
-          not is_nil(converted_value) ->
-        NaiveDateTime.add(converted_value, 86_399, :second)
+        |> NaiveDateTime.to_date()
+        |> Date.add(1)
+        |> NaiveDateTime.new!(~T[00:00:00])
+        |> NaiveDateTime.add(-1, :microsecond)
 
       true ->
         converted_value
-    end
-  end
-
-  defp normalize_datetime_precision(%DateTime{} = value, :utc_datetime_usec), do: value
-
-  defp normalize_datetime_precision(%DateTime{} = value, _type) do
-    %{value | microsecond: {0, 0}}
-  end
-
-  defp normalize_type({:array, type}), do: {:array, normalize_type(type)}
-
-  defp normalize_type(type) do
-    case Enum.find(Ash.Type.short_names(), &(elem(&1, 1) == type)) do
-      {short_name, _module} -> short_name
-      nil -> type
     end
   end
 
@@ -1048,7 +1051,7 @@ defmodule Elixirbits.CoreUtils.Search do
   defp array_type?({:array, _type}), do: true
   defp array_type?(_type), do: false
 
-  defp text_type?(type), do: normalize_type(type) in @text_types
+  defp text_type?(type), do: Resource.normalize_type(type) in @text_types
 
   defp field_match_mode(type) do
     if text_type?(type), do: :fuzzy, else: :exact

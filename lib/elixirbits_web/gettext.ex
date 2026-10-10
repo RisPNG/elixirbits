@@ -2,9 +2,7 @@ defmodule ElixirbitsWeb.Gettext do
   @moduledoc """
   A module providing Internationalization with a gettext-based API.
 
-  By using [Gettext](https://hexdocs.pm/gettext), your module compiles translations
-  that you can use in your application. To use this Gettext backend module,
-  call `use Gettext` and pass it as an option:
+  By using [Gettext](https://hexdocs.pm/gettext), your module compiles translations that you can use in your application. To use this Gettext backend module, call `use Gettext` and pass it as an option:
 
       use Gettext, backend: ElixirbitsWeb.Gettext
 

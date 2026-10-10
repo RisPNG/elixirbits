@@ -1,0 +1,130 @@
+<div class="rounded-box border border-outline bg-primary">
+  <svg
+    viewBox={"0 0 #{@width} #{@header}"}
+    class="block w-full"
+    preserveAspectRatio="xMidYMid meet"
+  >
+    <g :for={{col, i} <- Enum.with_index(@columns)}>
+      <text
+        x={@gutter + i * @col_w + @col_w / 2}
+        y={@header / 2 - 3}
+        text-anchor="middle"
+        font-size="11"
+        class="fill-subcontent"
+      >
+        {col.sublabel}
+      </text>
+      <text
+        x={@gutter + i * @col_w + @col_w / 2}
+        y={@header / 2 + 12}
+        text-anchor="middle"
+        font-size="14"
+        class={["font-semibold", (col[:today?] && "fill-brand") || "fill-content"]}
+      >
+        {col.label}
+      </text>
+    </g>
+  </svg>
+
+  <div class="max-h-[42rem] overflow-auto border-t border-outline">
+    <svg
+      viewBox={"0 0 #{@width} #{@day}"}
+      class="block w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <g :for={h <- 0..23}>
+        <line
+          x1={@gutter}
+          y1={h * @hour}
+          x2={@width}
+          y2={h * @hour}
+          class="stroke-outline"
+          stroke-width="0.5"
+        />
+        <text
+          x={@gutter - 6}
+          y={h * @hour + 4}
+          text-anchor="end"
+          font-size="11"
+          class="fill-subcontent"
+        >
+          {case h do
+            0 -> "12 AM"
+            12 -> "12 PM"
+            h when h < 12 -> "#{h} AM"
+            h -> "#{h - 12} PM"
+          end}
+        </text>
+      </g>
+
+      <line
+        :for={i <- 0..@ncols}
+        x1={@gutter + i * @col_w}
+        y1="0"
+        x2={@gutter + i * @col_w}
+        y2={@day}
+        class="stroke-outline"
+        stroke-width="0.5"
+      />
+
+      <g :for={{col, i} <- Enum.with_index(@columns)}>
+        <g :for={event <- col.events}>
+          <% box = event_box(event, i, @col_w) %>
+          <rect
+            aria-hidden="true"
+            x={box.x}
+            y={box.y}
+            width={box.w}
+            height={box.h}
+            rx="4"
+            stroke-width={(event.id == @active && "3") || "1"}
+            class={event.rect_class}
+          />
+          <text
+            x={box.x + 6}
+            y={box.y + 15}
+            font-size="12"
+            class={["pointer-events-none font-medium", event.text_class]}
+          >
+            {String.slice(event.title, 0, trunc(box.w / 7))}
+          </text>
+          <text
+            :if={box.h > 34}
+            x={box.x + 6}
+            y={box.y + 30}
+            font-size="11"
+            class={["pointer-events-none", event.text_class]}
+          >
+            {Calendar.strftime(event.start, "%-I:%M %p")}
+          </text>
+          <foreignObject x={box.x} y={box.y} width={box.w} height={box.h}>
+            <button
+              id={"#{@id}-event-#{i}-#{event.id}"}
+              type="button"
+              aria-label={event.label}
+              aria-pressed={event.id == @active}
+              data-tooltip={event.label}
+              phx-click="calendar_change"
+              phx-value-event={event.id}
+              class="block h-full w-full cursor-pointer rounded-field focus-visible:outline-2 focus-visible:outline-brand"
+            >
+              <span class="sr-only">{event.title}</span>
+            </button>
+          </foreignObject>
+        </g>
+      </g>
+
+      <g :if={@now_minutes}>
+        <line
+          x1={@now_x1}
+          y1={@now_minutes}
+          x2={@now_x2 || @width}
+          y2={@now_minutes}
+          class="stroke-error"
+          stroke-width="1.5"
+        />
+        <circle cx={@now_x1} cy={@now_minutes} r="4" class="fill-error" />
+      </g>
+    </svg>
+  </div>
+</div>

@@ -1,24 +1,28 @@
-<Layouts.app flash={@flash} content_class="mx-auto w-full max-w-md">
-  <section class="rounded-lg border border-secondary bg-primary shadow-sm">
-    <div class="flex flex-col p-6 gap-6">
-      <.header>
-        Confirm Email
-        <:subtitle>Click the button below to confirm your email address.</:subtitle>
-      </.header>
+<Layouts.app user_timezone={@user_timezone} flash={@flash} content_class="mx-auto w-full max-w-md">
+  <.card>
+    <.header>
+      Confirm Email
+      <:subtitle>Click the button below to confirm your email address.</:subtitle>
+    </.header>
 
-      <.form for={%{}} id="confirm-form" action={~p"/auth/user/confirm_new_user"} method="post">
-        <.input name="confirm" type="hidden" value={@token} />
+    <.form
+      class="flex flex-col gap-4"
+      for={%{}}
+      id="confirm-form"
+      action={~p"/auth/user/confirm_new_user"}
+      method="post"
+    >
+      <.input name="confirm" type="hidden" value={@token} />
 
-        <div class="flex flex-col">
-          <.button
-            type="submit"
-            class="px-4 py-2 text-sm bg-brand text-content-alt hover:bg-brand-alt"
-            phx-disable-with="Confirming..."
-          >
-            Confirm my email
-          </.button>
-        </div>
-      </.form>
-    </div>
-  </section>
+      <div class="flex flex-col">
+        <.button
+          type="submit"
+          variant={:primary}
+          phx-disable-with="Confirming..."
+        >
+          Confirm my email
+        </.button>
+      </div>
+    </.form>
+  </.card>
 </Layouts.app>

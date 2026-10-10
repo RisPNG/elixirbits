@@ -1,0 +1,138 @@
+<Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <.form
+    for={@form}
+    id="role-form"
+    phx-change="validate"
+    phx-submit="save"
+    class="space-y-6"
+  >
+    <.card>
+      <.header>
+        {@page_title}
+        <:subtitle>Name the role and grant it access to each page.</:subtitle>
+        <:actions>
+          <div class="grid grid-cols-[auto_auto] items-center gap-2">
+            <.action_button action={:back} navigate={~p"/admin/roles"} />
+            <.action_button
+              :if={can?(@permissions, @current_path, @live_action)}
+              action={:save}
+              type="submit"
+            />
+          </div>
+        </:actions>
+      </.header>
+    </.card>
+
+    <.card>
+      <.header>
+        Details
+        <:subtitle>How the role is identified across the back office.</:subtitle>
+      </.header>
+
+      <fieldset
+        disabled={!can?(@permissions, @current_path, @live_action)}
+        class="space-y-4"
+      >
+        <div class="grid grid-cols-[1fr_3fr] subgap-2">
+          <.input :if={is_nil(@role)} field={@form[:code]} type="text" label="Code" />
+          <.input
+            :if={@role}
+            name="role_code"
+            value={@role.code}
+            type="text"
+            label="Code"
+            disabled
+          />
+          <.input field={@form[:name]} type="text" label="Name" />
+        </div>
+
+        <div class="grid grid-cols-[1fr] subgap-2">
+          <.input field={@form[:description]} type="textarea" label="Description" />
+        </div>
+      </fieldset>
+    </.card>
+
+    <.card>
+      <.header>
+        Page permissions
+        <:subtitle>
+          Read, create, update, and delete are independent permissions. Public pages remain readable without grants. Changing grants requires superuser access.
+        </:subtitle>
+      </.header>
+
+      <.card_inset>
+        <ul class="text-xs text-subcontent list-disc list-inside space-y-1">
+          <li class="grid grid-cols-[9rem_1fr] gap-2">
+            <span>Read</span>
+            <span>View the page and its records.</span>
+          </li>
+          <li class="grid grid-cols-[9rem_1fr] gap-2">
+            <span>Create</span>
+            <span>Create a record.</span>
+          </li>
+          <li class="grid grid-cols-[9rem_1fr] gap-2">
+            <span>Update</span>
+            <span>Change an existing record.</span>
+          </li>
+          <li class="grid grid-cols-[9rem_1fr] gap-2">
+            <span>Delete</span>
+            <span>Delete an existing record.</span>
+          </li>
+          <li class="grid grid-cols-[9rem_1fr] gap-2">
+            <span>Superuser Access</span>
+            <span>Allow all standard actions and explicitly protected operations.</span>
+          </li>
+        </ul>
+      </.card_inset>
+
+      <div class="listing-surface">
+        <div class="grid grid-cols-[2fr_3fr] gap-2 listing-heading rounded-t-lg">
+          <div class="listing-cell">Page</div>
+          <div class="listing-cell">Access level</div>
+        </div>
+
+        <div
+          :for={page <- @pages}
+          class="grid grid-cols-[2fr_3fr] gap-2 border-t border-outline"
+        >
+          <div class="listing-cell">
+            <p :if={page.group} class="text-xs text-subcontent">{page.group}</p>
+            <label
+              id={"permission-label-#{page.code}"}
+              for={
+                if can?(@permissions, @current_path, :su),
+                  do: "#{@permission_form[page.code].id}_text_input",
+                  else: "permission-level-#{page.code}"
+              }
+              class="block text-content"
+            >
+              {page.name}
+            </label>
+            <p
+              :if={page.public?}
+              id={"permission-hint-#{page.code}"}
+              class="text-xs text-subcontent"
+            >
+              Public read access
+            </p>
+          </div>
+          <div class="listing-cell">
+            <.input
+              field={@permission_form[page.code]}
+              type="select"
+              id={"permission-level-#{page.code}"}
+              options={@levels}
+              role="group"
+              aria-labelledby={"permission-label-#{page.code}"}
+              aria-describedby={if page.public?, do: "permission-hint-#{page.code}"}
+              allow_clear={false}
+              keep_options_on_select
+              update_min_len={0}
+              disabled={!can?(@permissions, @current_path, :su)}
+            />
+          </div>
+        </div>
+      </div>
+    </.card>
+  </.form>
+</Layouts.app>

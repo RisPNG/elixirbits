@@ -13,6 +13,11 @@ defmodule Elixirbits.Events.ClearAllRecords do
       |> Enum.filter(fn resource ->
         match?({:ok, Elixirbits.Events.Event}, AshEvents.Events.Info.events_event_log(resource))
       end)
+      |> Enum.flat_map(fn resource ->
+        if AshPaperTrail.Resource in Spark.extensions(resource),
+          do: [resource, AshPaperTrail.Resource.Info.version_resource(resource)],
+          else: [resource]
+      end)
       |> Enum.map(&AshPostgres.DataLayer.Info.table/1)
       |> Enum.reject(&is_nil/1)
       |> Enum.uniq()

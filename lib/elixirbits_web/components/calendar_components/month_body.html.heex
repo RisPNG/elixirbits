@@ -1,0 +1,56 @@
+<div class="overflow-hidden rounded-box border border-outline">
+  <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr]">
+    <div
+      :for={label <- ~w(Mon Tue Wed Thu Fri Sat Sun)}
+      class="border-b border-r border-outline px-2 py-1.5 text-center text-xs font-medium text-subcontent"
+    >
+      {label}
+    </div>
+    <div
+      :for={day <- @days}
+      class={[
+        "min-h-[6.5rem] border-b border-r border-outline p-1",
+        (day.month != @cursor.month && "bg-primary-alt") || "bg-primary"
+      ]}
+    >
+      <% day_events = @events |> Cal.events_on(day) |> Enum.sort_by(& &1.start, DateTime) %>
+      <div class="mb-1 grid justify-items-end">
+        <span class={[
+          "grid size-6 place-items-center rounded-full text-xs",
+          cond do
+            day == @today -> "bg-brand font-semibold text-content-alt"
+            day.month != @cursor.month -> "text-subcontent"
+            true -> "text-content"
+          end
+        ]}>
+          {day.day}
+        </span>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <button
+          :for={event <- Enum.take(day_events, 3)}
+          type="button"
+          phx-click="calendar_change"
+          phx-value-event={event.id}
+          aria-label={event.label}
+          class={[
+            "truncate rounded px-1 py-0.5 text-left text-xs",
+            event.bar_class
+          ]}
+        >
+          {Calendar.strftime(event.start, "%-I:%M %p")} {event.title}
+        </button>
+        <button
+          :if={length(day_events) > 3}
+          type="button"
+          phx-click="calendar_change"
+          phx-value-view="day"
+          phx-value-date={Date.to_iso8601(day)}
+          class="px-1 text-left text-xs text-subcontent hover:text-content"
+        >
+          {length(day_events) - 3} more
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

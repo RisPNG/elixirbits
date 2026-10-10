@@ -18,6 +18,7 @@ defmodule Elixirbits.MixProject do
       dialyzer: [
         plt_core_path: "priv/plts/core.plt",
         plt_file: {:no_warn, "priv/plts/project.plt"},
+        list_unused_filters: true,
         plt_add_apps: [:ex_unit]
       ],
       releases: releases(),
@@ -61,12 +62,12 @@ defmodule Elixirbits.MixProject do
           ],
           "ash-framework": [
             description:
-              "Use this skill working with Ash Framework or any of its extensions. Always consult this when making any domain changes, features or fixes.",
+              "Use this skill when working with Ash Framework or any of its extensions. Always consult it when making domain changes, adding features, or fixing issues.",
             usage_rules: baseline_skills ++ [:ash, ~r/^ash_/]
           ],
           "phoenix-framework": [
             description:
-              "Use this skill working with Phoenix Framework. Consult this when working with the web layer, controllers, views, liveviews etc.",
+              "Use this skill when working with Phoenix Framework. Consult it when working with the web layer, including controllers, views, and LiveViews.",
             usage_rules: baseline_skills ++ [:phoenix, ~r/^phoenix_/]
           ]
         ]
@@ -99,19 +100,19 @@ defmodule Elixirbits.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:ash, ">= 3.0.0"},
+      {:ash, ">= 3.34.6"},
       {:ash_admin, ">= 1.0.0"},
       {:ash_archival, ">= 2.0.0"},
       {:ash_authentication, ">= 4.0.0"},
       {:ash_authentication_phoenix, ">= 2.0.0"},
       {:ash_cloak, ">= 0.2.0"},
       {:ash_double_entry, ">= 1.0.0"},
-      {:ash_events, ">= 0.7.0"},
+      {:ash_events, ">= 0.8.2"},
       {:ash_json_api, ">= 1.0.0"},
-      {:ash_money, ">= 0.2.0"},
-      {:ash_paper_trail, ">= 0.5.0"},
+      {:ash_money, ">= 0.2.6"},
+      {:ash_paper_trail, ">= 0.8.0"},
       {:ash_phoenix, ">= 2.0.0"},
-      {:ash_postgres, ">= 2.0.0"},
+      {:ash_postgres, ">= 2.14.5"},
       {:ash_state_machine, ">= 0.2.0"},
       {:ash_typescript, ">= 0.17.0"},
       {:bandit, ">= 1.5.0"},
@@ -119,11 +120,10 @@ defmodule Elixirbits.MixProject do
       {:burrito, ">= 1.0.0"},
       {:chromic_pdf, ">= 1.17.0"},
       {:cinder, ">= 0.12.0"},
-      {:cldr_html, ">= 0.6.0"},
       {:cloak, ">= 1.0.0"},
       {:dialyxir, ">= 1.4.0", only: [:dev, :test], runtime: false},
       {:dns_cluster, ">= 0.1.1"},
-      {:ecto_sql, ">= 3.10.0"},
+      {:ecto_sql, ">= 3.14.0"},
       {:esbuild, ">= 0.8.0", runtime: Mix.env() == :dev},
       {:ex_cldr, ">= 2.0.0"},
       {:ex_cldr_calendars, ">= 1.26.0"},
@@ -134,7 +134,6 @@ defmodule Elixirbits.MixProject do
       {:ex_cldr_languages, ">= 0.2.0"},
       {:ex_cldr_lists, ">= 2.0.0"},
       {:ex_cldr_locale_display, ">= 1.1.0"},
-      {:ex_cldr_messages, ">= 2.0.0"},
       {:ex_cldr_numbers, ">= 2.33.0"},
       {:ex_cldr_person_names, ">= 0.1.0"},
       {:ex_cldr_plugs, ">= 1.3.0"},
@@ -143,8 +142,8 @@ defmodule Elixirbits.MixProject do
       {:ex_cldr_territories, ">= 2.10.0"},
       {:ex_cldr_units, ">= 3.0.0"},
       {:ex_doc, ">= 0.37.0"},
-      {:ex_json_schema, ">= 0.5.0"},
-      {:ex_money_sql, ">= 1.0.0"},
+      {:ex_json_schema, ">= 0.11.5"},
+      {:ex_money_sql, ">= 2.1.0"},
       {:faker, ">= 0.18.0", only: [:dev]},
       {:finch, ">= 0.13.0"},
       {:floki, ">= 0.30.0", only: :test},
@@ -180,6 +179,8 @@ defmodule Elixirbits.MixProject do
       {:spreadsheet, ">= 0.4.6"},
       {:styler, ">= 1.4.0", only: [:dev, :test], runtime: false},
       {:swoosh, ">= 1.18.0"},
+      {:tabler_icons,
+       github: "tabler/tabler-icons", sparse: "icons", app: false, compile: false, depth: 1},
       {:tailwind, ">= 0.2.0", runtime: Mix.env() == :dev},
       {:telemetry_metrics, ">= 1.0.0"},
       {:telemetry_poller, ">= 1.0.0"},
@@ -206,7 +207,7 @@ defmodule Elixirbits.MixProject do
       "assets.setup": [
         "tailwind.install --if-missing",
         "esbuild.install --if-missing",
-        "ash_typescript.npm_install --bun"
+        "ash_typescript.npm_install"
       ],
       "assets.build": ["compile", "tailwind elixirbits", "esbuild elixirbits"],
       "assets.deploy": [
@@ -214,7 +215,14 @@ defmodule Elixirbits.MixProject do
         "esbuild elixirbits --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: [
+        "compile --warnings-as-errors",
+        "deps.unlock --unused",
+        "ash.codegen --check",
+        "format",
+        "test",
+        "dialyzer"
+      ]
     ]
   end
 end

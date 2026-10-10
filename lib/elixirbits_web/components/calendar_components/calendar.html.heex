@@ -1,0 +1,23 @@
+<div id={@id} class="mt-4 flex flex-col gap-3">
+  <.cal_nav view={@view} cursor={@cursor} today={@today} />
+
+  <%= case @view do %>
+    <% :month -> %>
+      <.month_body events={@events} cursor={@cursor} today={@today} />
+    <% :year -> %>
+      <.year_body events={@events} cursor={@cursor} today={@today} />
+    <% :schedule -> %>
+      <.agenda_body events={@events} cursor={@cursor} active={@active_event} />
+    <% grid_view -> %>
+      <% grid = time_columns(grid_view, @cursor, @events, @resources, @today, @now_local) %>
+      <p :if={grid.columns == []} class="text-sm text-subcontent">No resources to show.</p>
+      <.time_body
+        :if={grid.columns != []}
+        id={@id}
+        columns={grid.columns}
+        now_col={grid.now_col}
+        now_minutes={grid.now_minutes}
+        active={@active_event}
+      />
+  <% end %>
+</div>

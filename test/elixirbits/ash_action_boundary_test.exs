@@ -6,7 +6,9 @@ defmodule Elixirbits.AshActionBoundaryTest do
 
   @allowed_matches %{
     "lib/elixirbits/events/clear_all_records.ex" => [~r/Repo\.query!/],
-    "test/elixirbits/core_utils/search_test.exs" => [~r/Repo\.query!/]
+    "test/elixirbits/core_utils/search_test.exs" => [~r/Repo\.query!/],
+    "test/elixirbits/numbering_test.exs" => [~r/Repo\.delete_all/],
+    "test/elixirbits/events/event_test.exs" => [~r/Repo\.delete_all/]
   }
 
   test "project uses Ash actions for database access unless bypass is explicit" do

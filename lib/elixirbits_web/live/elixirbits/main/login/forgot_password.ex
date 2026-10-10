@@ -3,6 +3,7 @@ defmodule ElixirbitsWeb.LoginLive.ForgotPassword do
 
   alias AshAuthentication.Info
   alias Elixirbits.Accounts.User
+  alias Elixirbits.CoreUtils.Resource
 
   @impl true
   def mount(_params, _session, socket) do
@@ -13,7 +14,13 @@ defmodule ElixirbitsWeb.LoginLive.ForgotPassword do
       |> AshPhoenix.Form.for_action(strategy.resettable.request_password_reset_action_name,
         as: "user",
         id: "forgot-password-form",
-        context: %{strategy: strategy, private: %{ash_authentication?: true}}
+        transform_params: &Resource.convert_form_datetimes/3,
+        post_process_errors: &Resource.local_datetime_errors/3,
+        context: %{
+          shared: %{user_timezone: socket.assigns.user_timezone},
+          strategy: strategy,
+          private: %{ash_authentication?: true}
+        }
       )
       |> to_form()
 
@@ -35,14 +42,20 @@ defmodule ElixirbitsWeb.LoginLive.ForgotPassword do
 
   @impl true
   def handle_event("submit", %{"user" => params}, socket) do
-    _ = AshPhoenix.Form.submit(socket.assigns.form.source, params: params)
+    form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
 
-    {:noreply,
-     socket
-     |> put_flash(
-       :info,
-       "If an account exists for that email, password reset instructions have been sent."
-     )
-     |> redirect(to: ~p"/sign-in")}
+    if form.valid? do
+      _ = AshPhoenix.Form.submit(form, params: params)
+
+      {:noreply,
+       socket
+       |> put_flash(
+         :info,
+         "If an account exists for that email, password reset instructions have been sent."
+       )
+       |> redirect(to: ~p"/sign-in")}
+    else
+      {:noreply, assign(socket, :form, to_form(form))}
+    end
   end
 end

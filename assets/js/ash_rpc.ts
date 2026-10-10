@@ -11,11 +11,11 @@ export type * from "./ash_types";
  */
 export interface ActionConfig {
   // Request data
-  input?: Record<string, any>;
+  input?: Record<string, any> | undefined;
   identity?: any;
-  fields?: Array<string | Record<string, any>>; // Field selection
-  filter?: Record<string, any>; // Filter options (for reads)
-  sort?: string | string[]; // Sort options
+  fields?: Array<string | Record<string, any>> | undefined; // Field selection
+  filter?: Record<string, any> | undefined; // Filter options (for reads)
+  sort?: string | string[] | undefined; // Sort options
   page?:
     | {
         // Offset-based pagination
@@ -28,24 +28,25 @@ export interface ActionConfig {
         limit?: number;
         after?: string;
         before?: string;
-      };
+      }
+    | undefined;
 
   // Metadata
-  metadataFields?: ReadonlyArray<string>;
+  metadataFields?: ReadonlyArray<string> | undefined;
 
   // HTTP customization
-  headers?: Record<string, string>; // Custom headers
-  fetchOptions?: RequestInit; // Fetch options (signal, cache, etc.)
-  customFetch?: (
+  headers?: Record<string, string> | undefined; // Custom headers
+  fetchOptions?: RequestInit | undefined; // Fetch options (signal, cache, etc.)
+  customFetch?: ((
     input: RequestInfo | URL,
     init?: RequestInit,
-  ) => Promise<Response>;
+  ) => Promise<Response>) | undefined;
 
   // Multitenancy
-  tenant?: string; // Tenant parameter
+  tenant?: string | undefined; // Tenant parameter
 
   // Hook context
-  hookCtx?: Record<string, any>;
+  hookCtx?: Record<string, any> | undefined;
 }
 
 /**
@@ -53,18 +54,18 @@ export interface ActionConfig {
  */
 export interface ValidationConfig {
   // Request data
-  input?: Record<string, any>;
+  input?: Record<string, any> | undefined;
 
   // HTTP customization
-  headers?: Record<string, string>;
-  fetchOptions?: RequestInit;
-  customFetch?: (
+  headers?: Record<string, string> | undefined;
+  fetchOptions?: RequestInit | undefined;
+  customFetch?: ((
     input: RequestInfo | URL,
     init?: RequestInit,
-  ) => Promise<Response>;
+  ) => Promise<Response>) | undefined;
 
   // Hook context
-  hookCtx?: Record<string, any>;
+  hookCtx?: Record<string, any> | undefined;
 }
 
 

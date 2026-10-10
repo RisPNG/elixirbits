@@ -59,42 +59,100 @@ defmodule Elixirbits.CoreUtils.Parse do
     end
   end
 
+  def to_decimal(value, fallback \\ Decimal.new(0))
+
+  def to_decimal(%Decimal{} = value, _fallback), do: value
+
+  def to_decimal(value, fallback) when is_binary(value) do
+    case Decimal.cast(String.trim(value)) do
+      {:ok, decimal} -> decimal
+      :error -> fallback
+    end
+  end
+
+  def to_decimal([value], fallback), do: to_decimal(value, fallback)
+  def to_decimal(true, _fallback), do: Decimal.new(1)
+  def to_decimal(false, _fallback), do: Decimal.new(0)
+
+  def to_decimal(value, fallback) when is_number(value) do
+    case Decimal.cast(value) do
+      {:ok, decimal} -> decimal
+      :error -> fallback
+    end
+  end
+
+  def to_decimal(_value, fallback), do: fallback
+
+  @doc """
+  Interprets local clock values in `:source_timezone` and converts their instant to `:target_timezone`, both defaulting to `Etc/UTC`. Explicit offsets keep their instant. `on_invalid: :error` returns tagged errors for invalid input, ambiguous clocks, and clocks that do not exist. Otherwise, invalid input uses `:fallback`.
+  """
   def to_datetime(input, opts \\ []) do
     fallback = Keyword.get(opts, :fallback)
     source_timezone = Keyword.get(opts, :source_timezone, "Etc/UTC")
     target_timezone = Keyword.get(opts, :target_timezone, "Etc/UTC")
 
-    case input do
-      nil ->
-        fallback
+    datetime =
+      case input do
+        nil ->
+          fallback
 
-      value when is_binary(value) ->
+        value when is_binary(value) ->
+          value
+          |> String.trim()
+          |> parse_datetime_string()
+
+        %DateTime{} = datetime ->
+          datetime
+
+        %NaiveDateTime{} = naive_datetime ->
+          naive_datetime
+
+        %Date{} = date ->
+          NaiveDateTime.new!(date, ~T[00:00:00])
+
+        value when is_integer(value) or is_float(value) ->
+          excel_serial_to_naive_datetime(value)
+
+        _ ->
+          {:error, :invalid_datetime}
+      end
+
+    datetime =
+      case datetime do
+        %NaiveDateTime{} = naive_datetime ->
+          case DateTime.from_naive(naive_datetime, source_timezone) do
+            {:ok, datetime} -> datetime
+            {:ambiguous, _first, _second} -> {:error, :ambiguous_datetime}
+            {:gap, _before, _following} -> {:error, :nonexistent_datetime}
+            {:error, reason} -> {:error, reason}
+          end
+
+        value ->
+          value
+      end
+
+    case datetime do
+      %DateTime{} ->
+        datetime =
+          if target_timezone, do: DateTime.shift_zone!(datetime, target_timezone), else: datetime
+
+        DateTime.truncate(datetime, Keyword.get(opts, :precision, :microsecond))
+
+      {:error, _reason} = error ->
+        if Keyword.get(opts, :on_invalid) == :error do
+          error
+        else
+          case fallback do
+            %DateTime{} ->
+              DateTime.truncate(fallback, Keyword.get(opts, :precision, :microsecond))
+
+            value ->
+              value
+          end
+        end
+
+      value ->
         value
-        |> String.trim()
-        |> to_datetime_from_string(source_timezone, target_timezone, fallback)
-
-      %DateTime{} = datetime ->
-        shift_datetime(datetime, target_timezone)
-
-      %NaiveDateTime{} = naive_datetime ->
-        naive_datetime
-        |> DateTime.from_naive!(source_timezone)
-        |> shift_datetime(target_timezone)
-
-      %Date{} = date ->
-        date
-        |> NaiveDateTime.new!(~T[00:00:00])
-        |> DateTime.from_naive!(source_timezone)
-        |> shift_datetime(target_timezone)
-
-      value when is_integer(value) or is_float(value) ->
-        value
-        |> excel_serial_to_naive_datetime()
-        |> DateTime.from_naive!(source_timezone)
-        |> shift_datetime(target_timezone)
-
-      _ ->
-        fallback
     end
   end
 
@@ -102,65 +160,71 @@ defmodule Elixirbits.CoreUtils.Parse do
     fallback = Keyword.get(opts, :fallback)
     target_timezone = Keyword.get(opts, :target_timezone)
 
-    case input do
-      nil ->
-        fallback
+    datetime =
+      case input do
+        nil ->
+          fallback
 
-      value when is_binary(value) ->
+        value when is_binary(value) ->
+          value
+          |> String.trim()
+          |> to_naive_datetime_from_string(target_timezone, fallback)
+
+        %NaiveDateTime{} = naive_datetime ->
+          naive_datetime
+
+        %DateTime{} = datetime ->
+          datetime =
+            if target_timezone,
+              do: DateTime.shift_zone!(datetime, target_timezone),
+              else: datetime
+
+          DateTime.to_naive(datetime)
+
+        %Date{} = date ->
+          NaiveDateTime.new!(date, ~T[00:00:00])
+
+        value when is_integer(value) or is_float(value) ->
+          excel_serial_to_naive_datetime(value)
+
+        _ ->
+          fallback
+      end
+
+    case datetime do
+      %NaiveDateTime{} ->
+        NaiveDateTime.truncate(datetime, Keyword.get(opts, :precision, :microsecond))
+
+      value ->
         value
-        |> String.trim()
-        |> to_naive_datetime_from_string(target_timezone, fallback)
-
-      %NaiveDateTime{} = naive_datetime ->
-        naive_datetime
-
-      %DateTime{} = datetime ->
-        datetime
-        |> shift_datetime(target_timezone)
-        |> DateTime.to_naive()
-
-      %Date{} = date ->
-        NaiveDateTime.new!(date, ~T[00:00:00])
-
-      value when is_integer(value) or is_float(value) ->
-        excel_serial_to_naive_datetime(value)
-
-      _ ->
-        fallback
     end
   end
 
-  defp to_datetime_from_string("", _source_timezone, _target_timezone, fallback), do: fallback
+  defp parse_datetime_string(""), do: {:error, :invalid_datetime}
 
-  defp to_datetime_from_string(value, source_timezone, target_timezone, fallback) do
+  defp parse_datetime_string(value) do
     cond do
       String.match?(value, @numeric_pattern) ->
         case Float.parse(value) do
           {number, ""} ->
-            to_datetime(number,
-              source_timezone: source_timezone,
-              target_timezone: target_timezone,
-              fallback: fallback
-            )
+            excel_serial_to_naive_datetime(number)
 
           _ ->
-            fallback
+            {:error, :invalid_datetime}
         end
 
       true ->
         case DateTime.from_iso8601(value) do
           {:ok, datetime, _offset} ->
-            shift_datetime(datetime, target_timezone)
+            datetime
 
           _ ->
             case parse_naive_datetime_string(value) do
               {:ok, naive_datetime} ->
                 naive_datetime
-                |> DateTime.from_naive!(source_timezone)
-                |> shift_datetime(target_timezone)
 
               :error ->
-                fallback
+                {:error, :invalid_datetime}
             end
         end
     end
@@ -180,29 +244,23 @@ defmodule Elixirbits.CoreUtils.Parse do
         end
 
       true ->
-        case NaiveDateTime.from_iso8601(value) do
-          {:ok, naive_datetime} ->
-            naive_datetime
+        case DateTime.from_iso8601(value) do
+          {:ok, datetime, _offset} ->
+            datetime =
+              if target_timezone,
+                do: DateTime.shift_zone!(datetime, target_timezone),
+                else: datetime
+
+            DateTime.to_naive(datetime)
 
           _ ->
-            case DateTime.from_iso8601(value) do
-              {:ok, datetime, _offset} ->
-                datetime
-                |> shift_datetime(target_timezone)
-                |> DateTime.to_naive()
-
-              _ ->
-                case parse_naive_datetime_string(value) do
-                  {:ok, naive_datetime} -> naive_datetime
-                  :error -> fallback
-                end
+            case parse_naive_datetime_string(value) do
+              {:ok, naive_datetime} -> naive_datetime
+              :error -> fallback
             end
         end
     end
   end
-
-  defp shift_datetime(datetime, nil), do: datetime
-  defp shift_datetime(datetime, timezone), do: DateTime.shift_zone!(datetime, timezone)
 
   defp excel_serial_to_naive_datetime(value) when is_integer(value) do
     excel_serial_to_naive_datetime(value * 1.0)
@@ -215,9 +273,12 @@ defmodule Elixirbits.CoreUtils.Parse do
   end
 
   defp parse_naive_datetime_string(value) do
-    case NaiveDateTime.from_iso8601(value) do
-      {:ok, naive_datetime} ->
-        {:ok, naive_datetime}
+    case DateTime.from_iso8601(value) do
+      {:error, :missing_offset} ->
+        case NaiveDateTime.from_iso8601(value) do
+          {:ok, naive_datetime} -> {:ok, naive_datetime}
+          _ -> :error
+        end
 
       _ ->
         case Date.from_iso8601(value) do

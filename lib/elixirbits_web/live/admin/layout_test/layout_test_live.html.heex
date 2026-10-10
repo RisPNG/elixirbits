@@ -1,516 +1,547 @@
 <Layouts.app
   flash={@flash}
   current_scope={@current_scope}
-  content_class="mx-auto w-full max-w-[110rem] space-y-6"
+  user_timezone={@user_timezone}
+  content_class="w-full space-y-6"
 >
-  <section class="rounded-lg border border-primary-alt bg-primary shadow-sm">
-    <div class="space-y-5 p-6">
-      <.header>
-        Layout Test
-        <:subtitle>
-          Showcases local core components and dependency-powered frontend pieces.
-        </:subtitle>
-      </.header>
+  <.card>
+    <.header>
+      Layout Test
+      <:subtitle>
+        Showcases local core components and dependency-powered frontend pieces.
+      </:subtitle>
+    </.header>
 
-      <div
-        id="layout-test-tabs"
-        role="tablist"
-        aria-label="Layout test sections"
-        class="flex flex-wrap items-center gap-2"
+    <div
+      id="layout-test-tabs"
+      role="tablist"
+      aria-label="Layout test sections"
+      class="grid grid-cols-[max-content_max-content] items-center gap-2"
+    >
+      <.button
+        id="layout-test-local-tab"
+        type="button"
+        role="tab"
+        aria-selected={if(@current_tab == "local", do: "true", else: "false")}
+        class={[
+          "px-4 py-2 text-sm",
+          if(@current_tab == "local",
+            do: "bg-brand text-content-alt hover:bg-brand-alt",
+            else: "bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+          )
+        ]}
+        phx-click="change_tab"
+        phx-value-tab="local"
       >
-        <.button
-          id="layout-test-local-tab"
-          type="button"
-          role="tab"
-          aria-selected={if(@current_tab == "local", do: "true", else: "false")}
-          class={[
-            "px-4 py-2 text-sm",
-            if(@current_tab == "local",
-              do: "bg-brand text-content-alt hover:bg-brand-alt",
-              else: "bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
-            )
-          ]}
-          phx-click="change_tab"
-          phx-value-tab="local"
-        >
-          Local
-        </.button>
+        Local
+      </.button>
 
-        <.button
-          id="layout-test-ecosystem-tab"
-          type="button"
-          role="tab"
-          aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
-          class={[
-            "px-4 py-2 text-sm",
-            if(@current_tab == "ecosystem",
-              do: "bg-brand text-content-alt hover:bg-brand-alt",
-              else: "bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
-            )
-          ]}
-          phx-click="change_tab"
-          phx-value-tab="ecosystem"
-        >
-          Ecosystem
-        </.button>
-      </div>
+      <.button
+        id="layout-test-ecosystem-tab"
+        type="button"
+        role="tab"
+        aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
+        class={[
+          "px-4 py-2 text-sm",
+          if(@current_tab == "ecosystem",
+            do: "bg-brand text-content-alt hover:bg-brand-alt",
+            else: "bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+          )
+        ]}
+        phx-click="change_tab"
+        phx-value-tab="ecosystem"
+      >
+        Ecosystem
+      </.button>
     </div>
-  </section>
+  </.card>
 
   <%= if @current_tab == "local" do %>
     <div id="layout-test-local-panel" role="tabpanel" class="space-y-6">
-      <section class="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
-        <article
-          id="layout-test-header-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Core Header
-              <:subtitle>Title, subtitle, action slot, button variants.</:subtitle>
-              <:actions>
-                <.button
-                  type="button"
-                  id="layout-test-inline-action"
-                  class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
-                >
-                  Action
-                </.button>
-              </:actions>
-            </.header>
-
-            <div class="flex flex-wrap items-center gap-2">
-              <.button
-                type="button"
-                id="layout-test-soft-button"
-                class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
-              >
-                Soft
-              </.button>
-              <.button
-                type="button"
-                id="layout-test-primary-button"
-                class="px-3 py-1.5 text-sm bg-brand text-content-alt hover:bg-brand-alt"
-              >
-                Primary
-              </.button>
-              <.button
-                navigate={~p"/"}
-                id="layout-test-home-link"
-                class="px-3 py-1.5 text-sm bg-transparent text-content hover:bg-primary-alt"
-              >
-                Home
-              </.button>
-            </div>
-          </div>
-        </article>
-
-        <article
-          id="layout-test-flash-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Flashes
-              <:subtitle>Triggered here, rendered by `Layouts.flash_group`.</:subtitle>
-            </.header>
-
-            <div class="flex flex-wrap items-center gap-2">
-              <.button
-                type="button"
-                id="layout-test-flash-info"
-                phx-click="show_flash"
-                phx-value-kind="info"
-                class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
-              >
-                Info Flash
-              </.button>
-              <.button
-                type="button"
-                id="layout-test-flash-error"
-                phx-click="show_flash"
-                phx-value-kind="error"
-                class="px-3 py-1.5 text-sm bg-error text-content-alt hover:bg-error-alt"
-              >
-                Error Flash
-              </.button>
-              <.button
-                type="button"
-                id="layout-test-flash-warning"
-                phx-click="show_flash"
-                phx-value-kind="warning"
-                class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
-              >
-                Warning Flash
-              </.button>
-            </div>
-          </div>
-        </article>
-
-        <article
-          id="layout-test-theme-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Theme Toggle
-              <:subtitle>Light, dark, system from shared site layout.</:subtitle>
-            </.header>
-
-            <div class="flex items-center justify-between gap-4 rounded-lg border border-primary-alt bg-primary-alt p-4">
-              <div class="space-y-1">
-                <p class="font-medium">Site Theme</p>
-                <p class="text-sm text-subcontent">
-                  Uses shared `Layouts.theme_toggle`.
-                </p>
-              </div>
-              <Layouts.theme_toggle />
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section
-        id="layout-test-form-section"
-        class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-      >
-        <div class="flex flex-col p-6 gap-6">
+      <section class="grid grid-cols-[1fr_1fr] gap-4">
+        <.card id="layout-test-header-card">
           <.header>
-            Core Inputs
-            <:subtitle>Showcases `&lt;.input&gt;` variants from local component layer.</:subtitle>
+            Core Header
+            <:subtitle>Title, subtitle, action slot, button variants.</:subtitle>
+            <:actions>
+              <.button
+                type="button"
+                id="layout-test-inline-action"
+                variant={:neutral}
+              >
+                Action
+              </.button>
+            </:actions>
           </.header>
 
-          <.form for={@local_form} id="layout-test-form" class="space-y-4">
-            <.input field={@local_form[:hidden_token]} type="hidden" />
-
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4">
-              <.input field={@local_form[:project_name]} type="text" label="Text" />
-              <.input field={@local_form[:email]} type="email" label="Email" />
-              <.input field={@local_form[:password]} type="password" label="Password" />
-              <.input field={@local_form[:budget]} type="number" label="Number" />
-              <.input field={@local_form[:launch_date]} type="date" label="Date" />
-              <.input field={@local_form[:launch_time]} type="time" label="Time" />
-              <.input field={@local_form[:launch_week]} type="week" label="Week" />
-              <.input field={@local_form[:launch_month]} type="month" label="Month" />
-              <.input field={@local_form[:launch_at]} type="datetime-local" label="Datetime" />
-              <.input field={@local_form[:accent]} type="color" label="Color" />
-              <.input field={@local_form[:search]} type="search" label="Search" />
-              <.input field={@local_form[:website]} type="url" label="URL" />
-              <.input field={@local_form[:phone]} type="tel" label="Telephone" />
-              <.input
-                id="layout-test-local-role"
-                field={@local_form[:role]}
-                type="select"
-                label="Select"
-                options={[
-                  {"Administrator", "admin"},
-                  {"Designer", "designer"},
-                  {"Viewer", "viewer"}
-                ]}
-                phx-focus="live_select_change"
-              />
-              <.input field={@local_form[:notes]} type="textarea" label="Textarea" rows="4" />
-              <.input field={@local_form[:enabled]} type="checkbox" label="Checkbox" />
-              <.input field={@local_form[:switch]} type="switch" label="Switch" />
-              <.input
-                id="layout-test-local-tags"
-                field={@local_form[:tags]}
-                type="select"
-                label="Tags (Quick Tag)"
-                mode={:quick_tags}
-                options={[
-                  {"Elixir", "elixir"},
-                  {"Phoenix", "phoenix"},
-                  {"LiveView", "liveview"}
-                ]}
-                phx-focus="live_select_change"
-              />
-              <.input field={@local_form[:upload]} type="file" label="File" />
-              <.input
-                name="demo_error"
-                type="text"
-                label="Errored"
-                value="invalid value"
-                errors={["Has an error"]}
-              />
-              <.input
-                name="demo_disabled"
-                type="text"
-                label="Disabled"
-                value="cannot edit"
-                disabled
-              />
-              <.input
-                name="demo_disabled_select"
-                type="select"
-                label="Disabled Select"
-                options={[{"Locked", "locked"}]}
-                value="locked"
-                disabled
-              />
-              <.input
-                name="demo_disabled_tags"
-                type="select"
-                label="Disabled Tags"
-                mode={:quick_tags}
-                options={[
-                  {"Elixir", "elixir"},
-                  {"Phoenix", "phoenix"},
-                  {"LiveView", "liveview"}
-                ]}
-                value={["elixir", "phoenix"]}
-                disabled
-              />
-              <.input
-                name="demo_disabled_checkbox"
-                type="checkbox"
-                label="Disabled Checkbox"
-                checked
-                disabled
-              />
-            </div>
-          </.form>
-        </div>
-      </section>
-
-      <section class="grid grid-cols-[repeat(auto-fit,minmax(22rem,1fr))] gap-4">
-        <article
-          id="layout-test-table-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Core Table
-              <:subtitle>Reusable table component with action slot.</:subtitle>
-            </.header>
-
-            <div class="overflow-x-auto">
-              <.table
-                id="layout-test-core-table"
-                rows={[
-                  %{section: "Header", scope: "Page framing", status: "Ready"},
-                  %{section: "Inputs", scope: "Form states", status: "Ready"},
-                  %{section: "Dependencies", scope: "LiveSelect + pages", status: "Ready"}
-                ]}
-              >
-                <:col :let={row} label="Section">{row.section}</:col>
-                <:col :let={row} label="Scope">{row.scope}</:col>
-                <:col :let={row} label="Status">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success text-content-alt">
-                    {row.status}
-                  </span>
-                </:col>
-                <:action>
-                  <.button
-                    type="button"
-                    class="px-2 py-1 text-xs bg-secondary text-brand hover:bg-brand hover:text-content-alt"
-                  >
-                    Inspect
-                  </.button>
-                </:action>
-              </.table>
-            </div>
-          </div>
-        </article>
-
-        <article
-          id="layout-test-list-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Core List
-              <:subtitle>Simple label/value presentation for compact detail groups.</:subtitle>
-            </.header>
-
-            <.list>
-              <:item title="Surface">Local core components</:item>
-              <:item title="Theme">Shared dark and light tokens</:item>
-              <:item title="Flash">Global toast stack</:item>
-              <:item title="Tabs">Single LiveView state</:item>
-            </.list>
-          </div>
-        </article>
-      </section>
-
-      <section
-        id="layout-test-icons-card"
-        class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-      >
-        <div class="flex flex-col p-6 gap-6">
-          <.header>
-            Core Icons
-            <:subtitle>Heroicons via shared `&lt;.icon&gt;` component.</:subtitle>
-          </.header>
-
-          <div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
-            <div
-              :for={
-                icon <- [
-                  {"hero-sparkles", "Sparkles"},
-                  {"hero-bolt", "Bolt"},
-                  {"hero-cog-6-tooth", "Cog"},
-                  {"hero-command-line", "CLI"},
-                  {"hero-server-stack", "Server"},
-                  {"hero-swatch", "Swatch"}
-                ]
-              }
-              class="rounded-lg border border-primary-alt bg-primary-alt p-4"
+          <div class="grid grid-cols-[max-content_max-content_max-content] items-center gap-2">
+            <.button
+              type="button"
+              id="layout-test-soft-button"
+              variant={:neutral}
             >
-              <div class="flex items-center gap-3">
-                <.icon name={elem(icon, 0)} class="size-5" />
-                <span class="text-sm font-medium">{elem(icon, 1)}</span>
-              </div>
-            </div>
+              Neutral
+            </.button>
+            <.button
+              type="button"
+              id="layout-test-primary-button"
+              variant={:primary}
+            >
+              Primary
+            </.button>
+            <.button
+              navigate={~p"/"}
+              id="layout-test-home-link"
+              variant={:neutral}
+            >
+              Home
+            </.button>
           </div>
-        </div>
+        </.card>
+
+        <.card id="layout-test-flash-card">
+          <.header>
+            Flashes
+            <:subtitle>Triggered here, rendered by `Layouts.flash_group`.</:subtitle>
+          </.header>
+
+          <div class="grid grid-cols-[max-content_max-content_max-content] items-center gap-2">
+            <.button
+              type="button"
+              id="layout-test-flash-info"
+              phx-click="show_flash"
+              phx-value-kind="info"
+              variant={:neutral}
+            >
+              Info Flash
+            </.button>
+            <.button
+              type="button"
+              id="layout-test-flash-error"
+              phx-click="show_flash"
+              phx-value-kind="error"
+              variant={:danger}
+            >
+              Error Flash
+            </.button>
+            <.button
+              type="button"
+              id="layout-test-flash-warning"
+              phx-click="show_flash"
+              phx-value-kind="warning"
+              variant={:neutral}
+            >
+              Warning Flash
+            </.button>
+          </div>
+        </.card>
+
+        <.card id="layout-test-theme-card">
+          <.header>
+            Theme Toggle
+            <:subtitle>Light, dark, system from shared site layout.</:subtitle>
+          </.header>
+
+          <.card_inset class="grid grid-cols-[1fr_auto] items-center gap-4">
+            <div class="space-y-1">
+              <p class="font-medium">Site Theme</p>
+              <p class="text-sm text-subcontent">
+                Uses shared `Layouts.theme_toggle`.
+              </p>
+            </div>
+            <Layouts.theme_toggle />
+          </.card_inset>
+        </.card>
       </section>
+
+      <.card id="layout-test-form-section">
+        <.header>
+          Core Inputs
+          <:subtitle>Showcases `&lt;.input&gt;` variants from local component layer.</:subtitle>
+        </.header>
+
+        <.form
+          for={@local_form}
+          id="layout-test-form"
+          phx-change="local_change"
+          phx-submit="local_save"
+          class="space-y-4"
+        >
+          <.input field={@local_form[:hidden_token]} type="hidden" />
+
+          <div class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-4">
+            <.input field={@local_form[:project_name]} type="text" label="Text" />
+            <.input field={@local_form[:email]} type="email" label="Email" />
+            <.input field={@local_form[:password]} type="password" label="Password" />
+            <.input field={@local_form[:budget]} type="number" label="Number" />
+            <.input
+              field={@local_form[:launch_date]}
+              type="date"
+              label="Date"
+              timezone={@user_timezone}
+            />
+            <.input
+              field={@local_form[:launch_time]}
+              type="time"
+              label="Time"
+              timezone={@user_timezone}
+            />
+            <.input
+              field={@local_form[:launch_week]}
+              type="week"
+              label="Week"
+              timezone={@user_timezone}
+            />
+            <.input
+              field={@local_form[:launch_month]}
+              type="month"
+              label="Month"
+              timezone={@user_timezone}
+            />
+            <.input
+              field={@local_form[:launch_at]}
+              type="datetime-local"
+              label="Datetime"
+              timezone={@user_timezone}
+              required
+            />
+            <.input field={@local_form[:accent]} type="color" label="Colour" />
+            <.input field={@local_form[:search]} type="search" label="Search" />
+            <.input field={@local_form[:website]} type="url" label="URL" />
+            <.input field={@local_form[:phone]} type="tel" label="Telephone" />
+            <.input
+              id="layout-test-local-role"
+              field={@local_form[:role]}
+              type="select"
+              label="Select"
+              options={[
+                {"Administrator", "admin"},
+                {"Designer", "designer"},
+                {"Viewer", "viewer"}
+              ]}
+            />
+            <.input field={@local_form[:notes]} type="textarea" label="Textarea" rows="4" />
+            <.input field={@local_form[:enabled]} type="checkbox" label="Checkbox" />
+            <.input field={@local_form[:switch]} type="switch" label="Switch" />
+            <.input
+              id="layout-test-local-tags"
+              field={@local_form[:tags]}
+              type="select"
+              label="Tags (Quick Tag)"
+              mode={:quick_tags}
+              options={[
+                {"Elixir", "elixir"},
+                {"Phoenix", "phoenix"},
+                {"LiveView", "liveview"}
+              ]}
+            />
+            <.input field={@local_form[:upload]} type="file" label="File" />
+            <.input
+              name="demo_error"
+              type="text"
+              label="Errored"
+              value="invalid value"
+              errors={["Has an error"]}
+            />
+            <.input
+              name="demo_disabled"
+              type="text"
+              label="Disabled"
+              value="cannot edit"
+              disabled
+            />
+            <.input
+              name="demo_disabled_select"
+              type="select"
+              label="Disabled Select"
+              options={[{"Locked", "locked"}]}
+              value="locked"
+              disabled
+            />
+            <.input
+              name="demo_disabled_tags"
+              type="select"
+              label="Disabled Tags"
+              mode={:quick_tags}
+              options={[
+                {"Elixir", "elixir"},
+                {"Phoenix", "phoenix"},
+                {"LiveView", "liveview"}
+              ]}
+              value={["elixir", "phoenix"]}
+              disabled
+            />
+            <.input
+              name="demo_disabled_checkbox"
+              type="checkbox"
+              label="Disabled Checkbox"
+              checked
+              disabled
+            />
+          </div>
+          <div class="grid grid-cols-[2.75rem_max-content] gap-2">
+            <.action_button action={:save} type="submit" />
+            <.button variant={:neutral} phx-click="show_modal" type="button">Open dialog</.button>
+          </div>
+        </.form>
+
+        <p :if={@submitted_at} class="text-sm text-content">
+          Last submitted datetime:
+          <time id="submitted-at" datetime={DateTime.to_iso8601(@submitted_at)}>
+            {Calendar.strftime(
+              DateTime.shift_zone!(@submitted_at, @user_timezone),
+              "%-d %b %Y, %H:%M %Z"
+            )}
+          </time>
+          <span id="submitted-at-utc" class="block text-subcontent">Submitted UTC: {DateTime.to_iso8601(
+            @submitted_at
+          )}</span>
+        </p>
+
+        <section id="layout-test-input-modes" class="space-y-4">
+          <.header>
+            Input display modes
+            <:subtitle>
+              Compact editing, submitted read-only values, radio groups, and inline switches.
+            </:subtitle>
+          </.header>
+          <div class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-4">
+            <.input
+              name="compact"
+              id="demo-compact"
+              type="text"
+              label="Editable text"
+              value="Ipoh"
+              render_as="text"
+            />
+            <.input
+              name="read_only"
+              id="demo-read-only"
+              type="text"
+              label="Read-only text"
+              value="Kuala Lumpur"
+              render_as="text-disabled"
+            />
+            <.input
+              name="radio"
+              type="radio"
+              label="Contact method"
+              value="email"
+              options={[{"Email", "email"}, {"Telephone", "phone"}]}
+            />
+            <.input
+              name="inline_switch"
+              id="demo-inline-switch"
+              type="switch"
+              variant="alt"
+              label="Enabled"
+              value={true}
+            />
+          </div>
+        </section>
+      </.card>
+
+      <.card id="layout-test-uploads">
+        <.header>
+          Live uploads
+          <:subtitle>
+            Stored previews and pending files share cancellation and read-only behaviour.
+          </:subtitle>
+          <:actions>
+            <.button
+              id="toggle-upload-mode"
+              type="button"
+              variant={:neutral}
+              phx-click="toggle_upload_mode"
+            >
+              {if @upload_mode == "enabled", do: "Show read-only", else: "Enable editing"}
+            </.button>
+          </:actions>
+        </.header>
+        <.form
+          for={@upload_form}
+          id="layout-test-upload-form"
+          phx-change="upload_change"
+          phx-submit="upload_save"
+          class="flex flex-col gap-4"
+        >
+          <.input
+            type="file"
+            name="files"
+            label="Files"
+            upload={@uploads.demo_files}
+            stored={@stored_files}
+            render_as={@upload_mode}
+          >
+            <:preview :let={url}>Stored logo: {Path.basename(url)}</:preview>
+            <:pending :let={entry}>{entry.client_name}</:pending>
+          </.input>
+          <.button :if={@upload_mode == "enabled"} type="submit" variant={:primary}>Finish upload</.button>
+        </.form>
+        <p :if={@uploaded_names != []} id="uploaded-names" class="text-sm text-content">
+          {Enum.join(@uploaded_names, ", ")}
+        </p>
+      </.card>
+
+      <.card id="layout-test-actions">
+        <.header>Record actions</.header>
+        <div class="grid grid-cols-[repeat(8,2.75rem)] items-center gap-2">
+          <.action_button
+            :for={action <- [:create, :read, :update, :save, :send, :archive, :delete, :back]}
+            action={action}
+          />
+        </div>
+        <.entry_panel label="Example row" index={0}>
+          <:actions><.action_button action={:delete} /></:actions>
+          <p class="text-sm text-subcontent">
+            Repeated form entries use the same action and surface vocabulary.
+          </p>
+        </.entry_panel>
+      </.card>
+
+      <.card id="layout-test-calendar">
+        <.header>
+          Calendar and timers
+          <:subtitle>
+            Plain event maps, local display time, overlap lanes, and continuous client timers.
+          </:subtitle>
+        </.header>
+        <div class="grid grid-cols-[1fr_1fr] gap-4">
+          <p>
+            Elapsed:
+            <span
+              id="demo-elapsed-timer"
+              phx-hook="LiveTimer"
+              data-mode="elapsed"
+              data-target={DateTime.to_iso8601(@timer_start)}
+            >0:00</span>
+          </p>
+          <p>
+            Countdown:
+            <span
+              id="demo-countdown-timer"
+              phx-hook="LiveTimer"
+              data-mode="countdown"
+              data-target={DateTime.to_iso8601(@timer_finish)}
+            >in 1:00</span>
+          </p>
+        </div>
+        <ElixirbitsWeb.CalendarComponents.calendar
+          id="calendar-showcase"
+          events={@calendar_events}
+          resources={@calendar_resources}
+          timezone={@user_timezone}
+          view={@calendar_view}
+          cursor={@calendar_cursor}
+          active_event={@calendar_selected}
+        />
+        <p :if={@calendar_selected} id="calendar-selection" class="text-sm text-content">
+          Selected event: {@calendar_selected}
+        </p>
+      </.card>
+
+      <section class="grid grid-cols-[1fr_1fr] gap-4">
+        <section id="layout-test-table-card" class="space-y-4 pt-6">
+          <.header>
+            Core Table
+            <:subtitle>Reusable table component with action slot.</:subtitle>
+          </.header>
+
+          <.table
+            id="layout-test-core-table"
+            rows={[
+              %{section: "Header", scope: "Page framing", status: "Ready"},
+              %{section: "Inputs", scope: "Form states", status: "Ready"},
+              %{section: "Dependencies", scope: "LiveSelect + pages", status: "Ready"}
+            ]}
+          >
+            <:col :let={row} label="Section">{row.section}</:col>
+            <:col :let={row} label="Scope">{row.scope}</:col>
+            <:col :let={row} label="Status">
+              <span class="status-pill bg-success text-content-alt">
+                {row.status}
+              </span>
+            </:col>
+            <:action>
+              <.button type="button" variant={:neutral}>Inspect</.button>
+            </:action>
+          </.table>
+        </section>
+
+        <.card id="layout-test-list-card">
+          <.header>
+            Core List
+            <:subtitle>Simple label/value presentation for compact detail groups.</:subtitle>
+          </.header>
+
+          <.list>
+            <:item title="Surface">Local core components</:item>
+            <:item title="Theme">Shared dark and light tokens</:item>
+            <:item title="Flash">Global toast stack</:item>
+            <:item title="Tabs">Single LiveView state</:item>
+          </.list>
+        </.card>
+      </section>
+
+      <.card id="layout-test-icons-card">
+        <.header>
+          Core Icons
+          <:subtitle>
+            Heroicons and Tabler icons through the shared `&lt;.icon&gt;` component.
+          </:subtitle>
+        </.header>
+
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
+          <.card_inset :for={
+            icon <- [
+              {"hero-sparkles", "Sparkles"},
+              {"hero-bolt", "Bolt"},
+              {"hero-cog-6-tooth", "Cog"},
+              {"hero-command-line", "CLI"},
+              {"hero-server-stack", "Server"},
+              {"tabler-device-floppy", "Save"}
+            ]
+          }>
+            <div class="grid grid-cols-[1.25rem_1fr] items-center gap-3">
+              <.icon name={elem(icon, 0)} class="size-5" />
+              <span class="text-sm font-medium">{elem(icon, 1)}</span>
+            </div>
+          </.card_inset>
+        </div>
+      </.card>
     </div>
   <% end %>
 
   <%= if @current_tab == "ecosystem" do %>
     <div id="layout-test-ecosystem-panel" role="tabpanel" class="space-y-6">
-      <section class="grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4">
-        <article class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm">
-          <div class="flex flex-col p-6 gap-2">
-            <p class="text-sm text-subcontent">Dependency Pages</p>
-            <p class="text-3xl font-semibold">{length(@dependency_pages)}</p>
-          </div>
-        </article>
+      <section class="grid grid-cols-[1fr_1fr] gap-4">
+        <.card>
+          <p class="text-sm text-subcontent">Dependency Pages</p>
+          <p class="text-3xl font-semibold">{length(@dependency_pages)}</p>
+        </.card>
 
-        <article class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm">
-          <div class="flex flex-col p-6 gap-2">
-            <p class="text-sm text-subcontent">Cinder Surfaces</p>
-            <p class="text-3xl font-semibold">3</p>
-          </div>
-        </article>
+        <.card>
+          <p class="text-sm text-subcontent">Cinder Surfaces</p>
+          <p class="text-3xl font-semibold">3</p>
+        </.card>
       </section>
 
-      <section class="grid grid-cols-[repeat(auto-fit,minmax(24rem,1fr))] gap-4">
-        <article
-          id="layout-test-cinder-collection-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Cinder Collection
-              <:subtitle>List layout with Ash-backed search, filters, and pagination.</:subtitle>
-            </.header>
-
-            <div
-              id="layout-test-cinder-collection"
-              class="rounded-lg border border-primary-alt bg-primary-alt p-4"
-            >
-              <Cinder.collection
-                id="layout-test-cinder-collection-component"
-                query={@sitenav_query}
-                actor={nil}
-                layout={:list}
-                page_size={5}
-                show_filters={true}
-                search={[label: "Search sitenav", placeholder: "Code, name, description"]}
-                query_opts={[authorize?: false]}
-              >
-                <:col :let={entry} field="code" label="Code" sort filter search>
-                  {entry.code}
-                </:col>
-                <:col :let={entry} field="name" label="Name" sort filter search>
-                  {entry.name}
-                </:col>
-                <:col :let={entry} field="state" label="State" filter sort>
-                  {entry.state}
-                </:col>
-                <:item :let={entry}>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
-                      {entry.code}
-                    </span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-content">
-                      {entry.state}
-                    </span>
-                  </div>
-                  <div class="mt-3 space-y-1">
-                    <p class="font-semibold">{entry.name}</p>
-                    <p class="text-sm text-subcontent">{entry.description}</p>
-                    <p class="text-xs text-subcontent">{entry.url}</p>
-                  </div>
-                </:item>
-              </Cinder.collection>
-            </div>
-          </div>
-        </article>
-
-        <article
-          id="layout-test-cinder-table-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              Cinder Table
-              <:subtitle>
-                Table wrapper over the same Ash data source for sortable rows.
-              </:subtitle>
-            </.header>
-
-            <div
-              id="layout-test-cinder-table"
-              class="rounded-lg border border-primary-alt bg-primary-alt p-4"
-            >
-              <Cinder.Table.table
-                id="layout-test-cinder-table-component"
-                query={@sitenav_query}
-                actor={nil}
-                page_size={5}
-                show_filters={true}
-                search={[label: "Search table", placeholder: "Code, name, URL"]}
-                query_opts={[authorize?: false]}
-              >
-                <:col :let={entry} field="code" label="Code" sort filter search>
-                  {entry.code}
-                </:col>
-                <:col :let={entry} field="name" label="Name" sort filter search>
-                  {entry.name}
-                </:col>
-                <:col :let={entry} field="level" label="Level" sort filter>
-                  {entry.level}
-                </:col>
-                <:col :let={entry} field="url" label="Route" filter search>
-                  <code>{entry.url}</code>
-                </:col>
-                <:col :let={entry} field="sequence" label="Sequence" sort>
-                  {entry.sequence}
-                </:col>
-              </Cinder.Table.table>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section
-        id="layout-test-cinder-grid-card"
-        class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-      >
-        <div class="flex flex-col p-6 gap-4">
+      <section class="grid grid-cols-[1fr_1fr] gap-4">
+        <section id="layout-test-cinder-collection-card" class="space-y-4 pt-6">
           <.header>
-            Cinder Grid
-            <:subtitle>
-              Grid layout over the same Ash data source, with search, filters, sorting, and pagination.
-            </:subtitle>
+            Cinder Collection
+            <:subtitle>List layout with Ash-backed search, filters, and pagination.</:subtitle>
           </.header>
 
-          <div
-            id="layout-test-cinder-grid"
-            class="rounded-lg border border-primary-alt bg-primary-alt p-4"
-          >
-            <Cinder.collection
-              id="layout-test-cinder-grid-component"
+          <div id="layout-test-cinder-collection">
+            <Cinder.Collection.collection
+              id="layout-test-cinder-collection-component"
               query={@sitenav_query}
               actor={nil}
-              layout={:grid}
-              container_class="grid grid-cols-[1fr_1fr_1fr] gap-4"
-              page_size={6}
+              layout={:list}
+              page_size={5}
               show_filters={true}
-              search={[label: "Search grid", placeholder: "Code, name, description"]}
+              search={[label: "Search sitenav", placeholder: "Code, name, description"]}
               query_opts={[authorize?: false]}
             >
               <:col :let={entry} field="code" label="Code" sort filter search>
@@ -523,11 +554,11 @@
                 {entry.state}
               </:col>
               <:item :let={entry}>
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
                     {entry.code}
                   </span>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-content">
+                  <span class="status-pill bg-primary-alt text-content">
                     {entry.state}
                   </span>
                 </div>
@@ -537,208 +568,268 @@
                   <p class="text-xs text-subcontent">{entry.url}</p>
                 </div>
               </:item>
-            </Cinder.collection>
+            </Cinder.Collection.collection>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="grid grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] gap-4">
-        <article
-          id="layout-test-live-select-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              LiveSelect
-              <:subtitle>Dependency component with JS hooks.</:subtitle>
-            </.header>
-
-            <.form
-              for={@dependency_form}
-              id="layout-test-dependency-form"
-              phx-change="dependency_change"
-            >
-              <LiveSelect.live_select
-                field={@dependency_form[:component_search]}
-                id="layout-test-dependency-live-select"
-                options={@dependency_options}
-                placeholder="Search dependency pages"
-                phx-focus="live_select_change"
-                keep_options_on_select
-                keep_label_on_select
-                allow_clear
-                text_input_class="block w-full min-h-11 px-3 py-2 rounded-md border border-primary-alt bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt"
-                text_input_selected_class=""
-                dropdown_class="absolute top-full mt-1 w-full rounded-md border border-primary-alt bg-primary shadow-lg z-50 max-h-60 overflow-y-auto"
-                option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
-                selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
-                active_option_class="bg-primary-alt"
-                container_class="relative flex flex-col w-full"
-                clear_button_extra_class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center cursor-pointer text-error hover:text-error-alt"
-              >
-                <:clear_button>
-                  <.icon name="hero-x-mark" class="size-4" />
-                </:clear_button>
-              </LiveSelect.live_select>
-            </.form>
-
-            <div
-              id="layout-test-selected-dependency"
-              class="rounded-lg border border-primary-alt bg-primary p-4"
-            >
-              <%= if @selected_dependency do %>
-                <div class="space-y-3">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
-                      {@selected_dependency.source}
-                    </span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-content">
-                      {@selected_dependency.availability}
-                    </span>
-                  </div>
-                  <div class="space-y-1">
-                    <p class="font-semibold">{@selected_dependency.name}</p>
-                    <p class="text-sm text-subcontent">
-                      {@selected_dependency.description}
-                    </p>
-                    <p class="text-xs text-subcontent">{@selected_dependency.path}</p>
-                  </div>
-                  <.button
-                    href={@selected_dependency.path}
-                    class="px-3 py-1.5 text-sm bg-brand text-content-alt hover:bg-brand-alt"
-                  >
-                    Open Selected Page
-                  </.button>
-                </div>
-              <% else %>
-                <p class="text-sm text-subcontent">
-                  Pick one dependency page above to preview target route and source package.
-                </p>
-              <% end %>
-            </div>
-          </div>
-        </article>
-
-        <article
-          id="layout-test-ui-kit-card"
-          class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-        >
-          <div class="flex flex-col p-6 gap-4">
-            <.header>
-              UI Kit
-              <:subtitle>
-                Raw Tailwind primitives for alerts, badges, progress, steps, menu.
-              </:subtitle>
-            </.header>
-
-            <div class="space-y-3">
-              <div class="flex items-center gap-2 p-4 rounded-md border bg-primary-alt border-info text-info">
-                <.icon name="hero-information-circle" class="size-5" />
-                <span>Info alert surface</span>
-              </div>
-              <div class="flex items-center gap-2 p-4 rounded-md border bg-success border-primary-alt text-content-alt">
-                <.icon name="hero-check-circle" class="size-5" />
-                <span>Success alert surface</span>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand text-content-alt">
-                  Primary
-                </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-subcontent text-content">
-                  Outline
-                </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success text-content-alt">
-                  Success
-                </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning text-content-alt">
-                  Warning
-                </span>
-              </div>
-              <div class="w-full h-2 rounded-full bg-primary-alt overflow-hidden">
-                <div class="h-full w-[72%] bg-brand"></div>
-              </div>
-              <ol class="flex items-center gap-2 w-full">
-                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-brand text-brand">
-                  Tokens
-                </li>
-                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-brand text-brand">
-                  Hooks
-                </li>
-                <li class="flex-1 text-center text-sm pb-2 border-b-2 border-primary-alt text-subcontent">
-                  Route Scan
-                </li>
-              </ol>
-              <ul class="rounded-lg bg-primary-alt p-2 flex flex-col">
-                <li>
-                  <a href="/sign-in" class="block px-3 py-2 rounded-md hover:bg-primary-alt">
-                    Auth Flow
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/api/json/swaggerui"
-                    class="block px-3 py-2 rounded-md hover:bg-primary-alt"
-                  >
-                    API Browser
-                  </a>
-                </li>
-                <li>
-                  <a href="/admin" class="block px-3 py-2 rounded-md hover:bg-primary-alt">
-                    Admin Surface
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section
-        id="layout-test-dependency-pages"
-        class="flex flex-col rounded-lg border border-primary-alt bg-primary shadow-sm"
-      >
-        <div class="flex flex-col p-6 gap-6">
+        <section id="layout-test-cinder-table-card" class="space-y-4 pt-6">
           <.header>
-            Dependency Pages
+            Cinder Table
             <:subtitle>
-              Live pages and route surfaces supplied by installed dependencies.
+              Default table layout over the same Ash data source, for sortable rows.
             </:subtitle>
           </.header>
 
-          <div class="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
-            <article
-              :for={page <- @dependency_pages}
-              id={"dependency-page-#{page.id}"}
-              class="rounded-lg border border-primary-alt bg-primary p-4"
+          <div id="layout-test-cinder-table">
+            <Cinder.Collection.collection
+              id="layout-test-cinder-table-component"
+              query={@sitenav_query}
+              actor={nil}
+              page_size={5}
+              show_filters={true}
+              search={[label: "Search table", placeholder: "Code, name, URL"]}
+              query_opts={[authorize?: false]}
             >
-              <div class="space-y-4">
-                <div class="space-y-2">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
-                      {page.source}
-                    </span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-content">
-                      {page.availability}
-                    </span>
-                  </div>
-                  <div class="space-y-1">
-                    <h3 class="font-semibold">{page.name}</h3>
-                    <p class="text-sm text-subcontent">{page.description}</p>
-                    <p class="text-xs text-subcontent">{page.path}</p>
-                  </div>
-                </div>
-
-                <.button
-                  href={page.path}
-                  class="px-3 py-1.5 text-sm bg-primary-alt text-brand hover:bg-brand hover:text-content-alt w-full"
-                >
-                  Open Page
-                </.button>
-              </div>
-            </article>
+              <:col :let={entry} field="code" label="Code" sort filter search>
+                {entry.code}
+              </:col>
+              <:col :let={entry} field="name" label="Name" sort filter search>
+                {entry.name}
+              </:col>
+              <:col :let={entry} field="level" label="Level" sort filter>
+                {entry.level}
+              </:col>
+              <:col :let={entry} field="url" label="Route" filter search>
+                <code>{entry.url}</code>
+              </:col>
+              <:col :let={entry} field="sequence" label="#" sort>
+                {entry.sequence}
+              </:col>
+            </Cinder.Collection.collection>
           </div>
+        </section>
+      </section>
+
+      <section id="layout-test-cinder-grid-card" class="space-y-4 pt-6">
+        <.header>
+          Cinder Grid
+          <:subtitle>
+            Grid layout over the same Ash data source, with search, filters, sorting, and pagination.
+          </:subtitle>
+        </.header>
+
+        <div id="layout-test-cinder-grid">
+          <Cinder.Collection.collection
+            id="layout-test-cinder-grid-component"
+            query={@sitenav_query}
+            actor={nil}
+            layout={:grid}
+            container_class="grid grid-cols-[1fr_1fr_1fr] gap-4"
+            page_size={6}
+            show_filters={true}
+            search={[label: "Search grid", placeholder: "Code, name, description"]}
+            query_opts={[authorize?: false]}
+          >
+            <:col :let={entry} field="code" label="Code" sort filter search>
+              {entry.code}
+            </:col>
+            <:col :let={entry} field="name" label="Name" sort filter search>
+              {entry.name}
+            </:col>
+            <:col :let={entry} field="state" label="State" filter sort>
+              {entry.state}
+            </:col>
+            <:item :let={entry}>
+              <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
+                  {entry.code}
+                </span>
+                <span class="status-pill bg-primary-alt text-content">
+                  {entry.state}
+                </span>
+              </div>
+              <div class="mt-3 space-y-1">
+                <p class="font-semibold">{entry.name}</p>
+                <p class="text-sm text-subcontent">{entry.description}</p>
+                <p class="text-xs text-subcontent">{entry.url}</p>
+              </div>
+            </:item>
+          </Cinder.Collection.collection>
         </div>
       </section>
+
+      <section class="grid grid-cols-[1fr_1fr] gap-4">
+        <.card id="layout-test-live-select-card">
+          <.header>
+            LiveSelect
+            <:subtitle>Shared select powered by LiveSelect.</:subtitle>
+          </.header>
+
+          <.form
+            for={@dependency_form}
+            id="layout-test-dependency-form"
+            phx-change="dependency_change"
+          >
+            <.input
+              type="select"
+              field={@dependency_form[:component_search]}
+              id="layout-test-dependency-live-select"
+              options={@dependency_options}
+              prompt="Search dependency pages"
+              keep_options_on_select
+            />
+          </.form>
+
+          <.card_inset id="layout-test-selected-dependency">
+            <%= if @selected_dependency do %>
+              <div class="space-y-3">
+                <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
+                    {@selected_dependency.source}
+                  </span>
+                  <span class="status-pill bg-primary-alt text-content">
+                    {@selected_dependency.availability}
+                  </span>
+                </div>
+                <div class="space-y-1">
+                  <p class="font-semibold">{@selected_dependency.name}</p>
+                  <p class="text-sm text-subcontent">
+                    {@selected_dependency.description}
+                  </p>
+                  <p class="text-xs text-subcontent">{@selected_dependency.path}</p>
+                </div>
+                <.button
+                  href={@selected_dependency.path}
+                  variant={:primary}
+                >
+                  Open Selected Page
+                </.button>
+              </div>
+            <% else %>
+              <p class="text-sm text-subcontent">
+                Pick a dependency page above to preview its target route and source package.
+              </p>
+            <% end %>
+          </.card_inset>
+        </.card>
+
+        <.card id="layout-test-ui-kit-card">
+          <.header>
+            UI Kit
+            <:subtitle>
+              Raw Tailwind primitives for alerts, badges, progress, steps, menu.
+            </:subtitle>
+          </.header>
+
+          <div class="space-y-3">
+            <div class="grid grid-cols-[1.25rem_1fr] items-center gap-2 p-4 rounded-md border bg-primary-alt border-info text-info">
+              <.icon name="hero-information-circle" class="size-5" />
+              <span>Info alert surface</span>
+            </div>
+            <div class="grid grid-cols-[1.25rem_1fr] items-center gap-2 p-4 rounded-md border bg-success border-outline text-content-alt">
+              <.icon name="hero-check-circle" class="size-5" />
+              <span>Success alert surface</span>
+            </div>
+            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+              <span class="status-pill bg-brand text-content-alt">
+                Primary
+              </span>
+              <span class="status-pill border border-outline text-content">
+                Outline
+              </span>
+              <span class="status-pill bg-success text-content-alt">
+                Success
+              </span>
+              <span class="status-pill bg-warning text-content-alt">
+                Warning
+              </span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-primary-alt overflow-hidden">
+              <div class="h-full w-[72%] bg-brand"></div>
+            </div>
+            <ol class="grid grid-cols-[1fr_1fr_1fr] items-center gap-2 w-full">
+              <li class="flex-1 text-center text-sm pb-2 border-b-2 border-brand text-brand">
+                Tokens
+              </li>
+              <li class="flex-1 text-center text-sm pb-2 border-b-2 border-brand text-brand">
+                Hooks
+              </li>
+              <li class="flex-1 text-center text-sm pb-2 border-b-2 border-outline text-subcontent">
+                Route Scan
+              </li>
+            </ol>
+            <ul class="rounded-lg bg-primary-alt p-2 flex flex-col">
+              <li>
+                <a href="/sign-in" class="block px-3 py-2 rounded-md hover:bg-primary-alt">
+                  Auth Flow
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/api/json/swaggerui"
+                  class="block px-3 py-2 rounded-md hover:bg-primary-alt"
+                >
+                  API Browser
+                </a>
+              </li>
+              <li>
+                <a href="/admin" class="block px-3 py-2 rounded-md hover:bg-primary-alt">
+                  Admin Surface
+                </a>
+              </li>
+            </ul>
+          </div>
+        </.card>
+      </section>
+
+      <.card id="layout-test-dependency-pages">
+        <.header>
+          Dependency Pages
+          <:subtitle>
+            Live pages and route surfaces supplied by installed dependencies.
+          </:subtitle>
+        </.header>
+
+        <div class="grid grid-cols-[1fr_1fr] gap-4">
+          <.card_inset :for={page <- @dependency_pages} id={"dependency-page-#{page.id}"}>
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
+                    {page.source}
+                  </span>
+                  <span class="status-pill bg-primary-alt text-content">
+                    {page.availability}
+                  </span>
+                </div>
+                <div class="space-y-1">
+                  <h3 class="font-semibold">{page.name}</h3>
+                  <p class="text-sm text-subcontent">{page.description}</p>
+                  <p class="text-xs text-subcontent">{page.path}</p>
+                </div>
+              </div>
+
+              <.button
+                href={page.path}
+                variant={:neutral}
+                class="w-full"
+              >
+                Open Page
+              </.button>
+            </div>
+          </.card_inset>
+        </div>
+      </.card>
     </div>
   <% end %>
+  <.modal :if={@show_modal} id="layout-test-modal" on_cancel={JS.push("hide_modal")}>
+    <:title>Example dialog</:title>
+    <p class="text-sm text-content">
+      Focus stays in this dialog. Escape closes it and returns focus to the opening control.
+    </p>
+    <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+      <.button id="dialog-cancel" type="button" variant={:neutral} phx-click="hide_modal">Cancel</.button>
+      <.button id="dialog-confirm" type="button" variant={:primary} phx-click="hide_modal">Confirm</.button>
+    </div>
+  </.modal>
 </Layouts.app>

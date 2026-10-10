@@ -1,0 +1,32 @@
+<Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <.card>
+    <.header>
+      {(@nav.organisation && @nav.organisation.name) || "Elixirbits"}
+      <:subtitle>Your application workspace.</:subtitle>
+    </.header>
+
+    <p :if={!@current_user} class="text-subcontent">
+      <.link navigate={~p"/sign-in"} class="text-brand hover:text-brand-alt">Sign in</.link>
+      to open your workspace.
+    </p>
+  </.card>
+
+  <.card :if={@current_user}>
+    <.header>
+      Sections
+      <:subtitle>The pages available to your account.</:subtitle>
+    </.header>
+
+    <div class="grid grid-cols-[1fr_1fr] gap-4">
+      <.link
+        :for={item <- @nav.items}
+        :if={item.url not in [nil, ""]}
+        navigate={"/" <> item.url}
+        class="grid gap-1 rounded-lg border border-outline bg-primary-alt p-4 hover:border-brand transition-colors"
+      >
+        <span class="font-semibold text-content">{item.name}</span>
+        <span :if={item.description} class="text-sm text-subcontent">{item.description}</span>
+      </.link>
+    </div>
+  </.card>
+</Layouts.app>

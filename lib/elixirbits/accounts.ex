@@ -13,7 +13,12 @@ defmodule Elixirbits.Accounts do
 
   resources do
     resource Elixirbits.Accounts.Token
-    resource Elixirbits.Accounts.User
+
+    resource Elixirbits.Accounts.User do
+      define :get_user, action: :read, get_by: :id
+      define :update_user_timezone, action: :update_timezone
+    end
+
     resource Elixirbits.Accounts.ApiKey
     resource Elixirbits.Address
   end
