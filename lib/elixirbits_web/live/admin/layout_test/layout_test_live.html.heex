@@ -805,7 +805,11 @@
                       class="h-36 w-full rounded-default border border-outline bg-primary overlay-dark object-contain"
                     />
                   </div>
-                  <p class="mt-1 truncate text-sm text-subcontent">
+                  <p class={
+                    if @showcase["uploads"]["preview_as"] == "tag",
+                      do: "truncate",
+                      else: "mt-1 truncate text-sm text-subcontent"
+                  }>
                     {Map.get(@preview_names, url, Path.basename(url))}
                   </p>
                 </div>
@@ -840,7 +844,13 @@
                       class="h-36 w-full rounded-default border border-outline bg-primary overlay-dark object-contain"
                     />
                   </div>
-                  <p class="mt-1 truncate text-sm text-subcontent">{entry.client_name}</p>
+                  <p class={
+                    if @showcase["uploads"]["preview_as"] == "tag",
+                      do: "truncate",
+                      else: "mt-1 truncate text-sm text-subcontent"
+                  }>
+                    {entry.client_name}
+                  </p>
                 </div>
               </:pending>
             </.input>

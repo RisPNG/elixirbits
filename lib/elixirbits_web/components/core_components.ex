@@ -594,15 +594,16 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     # A thumbnail shows the file, so its remove button sits at the corner of the image. A tag shows only a label, so its clear button works like a LiveSelect tag's.
-    {previews_class, preview_class, clear_class, clear_icon_class} =
+    {previews_class, preview_class, clear_class, clear_icon_name, clear_icon_class} =
       if assigns.preview_as == "thumbnail" do
         {"grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 mt-3", "relative",
          "absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-error text-content hover:overlay-dark",
-         "size-3"}
+         "hero-x-mark", "size-3"}
       else
-        {"grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 mt-3",
-         "p-1.5 text-sm rounded-default border border-outline bg-primary overlay-dark grid grid-cols-[1fr_1rem] items-center gap-1",
-         "text-error hover:overlay-dark cursor-pointer", "size-4"}
+        {"flex flex-wrap gap-1 p-1",
+         "mr-1 mt-1 p-1.5 text-sm rounded-default border border-outline bg-primary overlay-dark flex items-center gap-1",
+         "min-h-5 min-w-5 text-error hover:overlay-dark cursor-pointer", "hero-x-mark-mini",
+         "size-5"}
       end
 
     assigns =
@@ -611,6 +612,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:previews_class, previews_class)
       |> assign(:preview_class, preview_class)
       |> assign(:clear_class, clear_class)
+      |> assign(:clear_icon_name, clear_icon_name)
       |> assign(:clear_icon_class, clear_icon_class)
       |> assign(:upload_editable, assigns.render_as in ["enabled", "hidden", "hidden-enabled"])
 
@@ -668,7 +670,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             phx-value-url={url}
             class={@clear_class}
           >
-            <.icon name="hero-x-mark" class={@clear_icon_class} />
+            <.icon name={@clear_icon_name} class={@clear_icon_class} />
           </.button>
         </div>
         <div :for={entry <- @upload.entries} class={@preview_class}>
@@ -682,7 +684,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             phx-value-ref={entry.ref}
             class={@clear_class}
           >
-            <.icon name="hero-x-mark" class={@clear_icon_class} />
+            <.icon name={@clear_icon_name} class={@clear_icon_class} />
           </.button>
         </div>
       </div>
