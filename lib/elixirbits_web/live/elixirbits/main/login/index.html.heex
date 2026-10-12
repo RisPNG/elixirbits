@@ -46,10 +46,13 @@
     </.form>
 
     <div class="grid grid-cols-[1fr_1fr] gap-2 text-sm">
-      <.link navigate={~p"/reset"} class="text-brand hover:underline">
+      <.link navigate={~p"/reset"} class="text-brand hover:underline hover:overlay-dark">
         Forgot password?
       </.link>
-      <.link navigate={~p"/register"} class="text-brand hover:underline justify-self-end">
+      <.link
+        navigate={~p"/register"}
+        class="text-brand hover:underline hover:overlay-dark justify-self-end"
+      >
         Create an account
       </.link>
     </div>

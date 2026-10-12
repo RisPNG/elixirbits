@@ -1,3 +1,5 @@
+/* Aligned gutters for fractional grid tracks */
+
 @utility subgap-* {
   --subgap: --spacing(--value(integer));
   margin-inline: calc(var(--subgap) / -2);

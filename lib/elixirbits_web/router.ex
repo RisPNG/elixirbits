@@ -88,7 +88,7 @@ defmodule ElixirbitsWeb.Router do
         live "/roles", RoleLive.Index, :index
         live "/roles/create", RoleLive.Entry, :create
         live "/roles/:id/update", RoleLive.Entry, :update
-        live "/organisation", OrganisationLive.Settings, :update
+        live "/organization", OrganizationLive.Settings, :update
       end
     end
 

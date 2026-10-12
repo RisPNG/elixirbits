@@ -11,13 +11,13 @@ defmodule Elixirbits.Address do
 
     references do
       reference :user, on_delete: :delete, on_update: :update, index?: true
-      reference :organisation, on_delete: :restrict, on_update: :update, index?: true
+      reference :organization, on_delete: :restrict, on_update: :update, index?: true
     end
 
     check_constraints do
-      check_constraint [:user_id, :organisation_id], "addresses_exactly_one_owner",
-        check: "(user_id IS NULL) <> (organisation_id IS NULL)",
-        message: "must belong to a user or the organisation"
+      check_constraint [:user_id, :organization_id], "addresses_exactly_one_owner",
+        check: "(user_id IS NULL) <> (organization_id IS NULL)",
+        message: "must belong to a user or the organization"
     end
   end
 
@@ -105,34 +105,34 @@ defmodule Elixirbits.Address do
 
     policy [
       action_type(:read),
-      accessing_from(Elixirbits.Organisations.Organisation, :addresses)
+      accessing_from(Elixirbits.Organizations.Organization, :addresses)
     ] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/organisation"], capability: :read}
+                    paths: ["/admin/organization"], capability: :read}
     end
 
     policy [
       action_type(:create),
-      accessing_from(Elixirbits.Organisations.Organisation, :addresses)
+      accessing_from(Elixirbits.Organizations.Organization, :addresses)
     ] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/organisation"], capability: :create}
+                    paths: ["/admin/organization"], capability: :create}
     end
 
     policy [
       action_type(:update),
-      accessing_from(Elixirbits.Organisations.Organisation, :addresses)
+      accessing_from(Elixirbits.Organizations.Organization, :addresses)
     ] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/organisation"], capability: :update}
+                    paths: ["/admin/organization"], capability: :update}
     end
 
     policy [
       action_type(:destroy),
-      accessing_from(Elixirbits.Organisations.Organisation, :addresses)
+      accessing_from(Elixirbits.Organizations.Organization, :addresses)
     ] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/organisation"], capability: :delete}
+                    paths: ["/admin/organization"], capability: :delete}
     end
   end
 
@@ -161,7 +161,7 @@ defmodule Elixirbits.Address do
       attribute_writable? true
     end
 
-    belongs_to :organisation, Elixirbits.Organisations.Organisation do
+    belongs_to :organization, Elixirbits.Organizations.Organization do
       attribute_writable? true
     end
   end

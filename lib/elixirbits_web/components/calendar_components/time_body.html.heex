@@ -1,4 +1,4 @@
-<div class="rounded-box border border-outline bg-primary">
+<div class="rounded-default border border-outline bg-primary">
   <svg
     viewBox={"0 0 #{@width} #{@header}"}
     class="block w-full"
@@ -68,7 +68,7 @@
       />
 
       <g :for={{col, i} <- Enum.with_index(@columns)}>
-        <g :for={event <- col.events}>
+        <g :for={event <- col.events} class={event.fill_class}>
           <% box = event_box(event, i, @col_w) %>
           <rect
             aria-hidden="true"
@@ -76,15 +76,14 @@
             y={box.y}
             width={box.w}
             height={box.h}
-            rx="4"
             stroke-width={(event.id == @active && "3") || "1"}
-            class={event.rect_class}
+            class={["rounded-default", event.stroke_class]}
           />
           <text
             x={box.x + 6}
             y={box.y + 15}
             font-size="12"
-            class={["pointer-events-none font-medium", event.text_class]}
+            class="pointer-events-none font-medium fill-content"
           >
             {String.slice(event.title, 0, trunc(box.w / 7))}
           </text>
@@ -93,7 +92,7 @@
             x={box.x + 6}
             y={box.y + 30}
             font-size="11"
-            class={["pointer-events-none", event.text_class]}
+            class="pointer-events-none fill-content"
           >
             {Calendar.strftime(event.start, "%-I:%M %p")}
           </text>
@@ -106,7 +105,7 @@
               data-tooltip={event.label}
               phx-click="calendar_change"
               phx-value-event={event.id}
-              class="block h-full w-full cursor-pointer rounded-field focus-visible:outline-2 focus-visible:outline-brand"
+              class="block h-full w-full cursor-pointer rounded-default hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
             >
               <span class="sr-only">{event.title}</span>
             </button>

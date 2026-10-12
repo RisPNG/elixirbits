@@ -36,7 +36,9 @@ const parseInitial = (mode, value) => {
 }
 
 const setValue = (input, value) => {
+  if (input.disabled) return
   input.value = value
+  input.setAttribute("value", value)
   input.dispatchEvent(new Event("input", {bubbles: true}))
   input.dispatchEvent(new Event("change", {bubbles: true}))
 }
@@ -56,6 +58,7 @@ const VCalendar = {
   mounted() {
     const input = this.el
     input.value = input.dataset.vcValue ?? input.value
+    input.setAttribute("value", input.value)
     const mode = input.dataset.vcMode
     const initial = parseInitial(mode, input.value)
 
@@ -187,6 +190,7 @@ const VCalendar = {
   },
   updated() {
     const input = this.el
+    if (input.disabled) this.calendar.hide()
     const value = input.dataset.vcValue ?? input.value
     const timezone = input.dataset.vcTimezone
     const today = input.dataset.vcToday
@@ -203,6 +207,7 @@ const VCalendar = {
     }
 
     input.value = value
+    input.setAttribute("value", value)
     const initial = parseInitial(input.dataset.vcMode, value)
     this.selectedWeek = initial.selectedWeek ?? null
     this.calendar.set({

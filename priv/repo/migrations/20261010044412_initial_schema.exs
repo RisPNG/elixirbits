@@ -731,7 +731,7 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
         default: fragment("(now() AT TIME ZONE 'utc')")
 
       add :user_id, :uuid
-      add :organisation_id, :uuid
+      add :organization_id, :uuid
     end
 
     create table(:addresses_versions, primary_key: false) do
@@ -968,15 +968,15 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
              name: "number_sequences_unique_doc_period_index"
            )
 
-    create table(:organisations, primary_key: false) do
+    create table(:organizations, primary_key: false) do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
     end
 
     alter table(:addresses) do
-      modify :organisation_id,
-             references(:organisations,
+      modify :organization_id,
+             references(:organizations,
                column: :id,
-               name: "addresses_organisation_id_fkey",
+               name: "addresses_organization_id_fkey",
                type: :uuid,
                prefix: "public",
                on_delete: :restrict,
@@ -984,7 +984,7 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
              )
     end
 
-    alter table(:organisations) do
+    alter table(:organizations) do
       add :key, :text, null: false, default: "application"
       add :name, :text, null: false
       add :registration_no, :text
@@ -1004,23 +1004,23 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
         default: fragment("(now() AT TIME ZONE 'utc')")
     end
 
-    create unique_index(:organisations, [:key], name: "organisations_singleton_index")
+    create unique_index(:organizations, [:key], name: "organizations_singleton_index")
 
-    create constraint(:organisations, :organisations_application_key,
+    create constraint(:organizations, :organizations_application_key,
              check: """
                key = 'application'
              """
            )
 
-    create table(:organisations_versions, primary_key: false) do
+    create table(:organizations_versions, primary_key: false) do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
 
       add :version_source_id,
-          references(:organisations,
+          references(:organizations,
             column: :id,
-            name: "organisations_versions_version_source_id_fkey",
+            name: "organizations_versions_version_source_id_fkey",
             type: :uuid,
             prefix: "public"
           ),
@@ -1208,11 +1208,11 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
 
     create index(:addresses, [:user_id])
 
-    create index(:addresses, [:organisation_id])
+    create index(:addresses, [:organization_id])
 
     create constraint(:addresses, :addresses_exactly_one_owner,
              check: """
-               (user_id IS NULL) <> (organisation_id IS NULL)
+               (user_id IS NULL) <> (organization_id IS NULL)
              """
            )
 
@@ -1327,11 +1327,11 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
 
     drop_if_exists constraint(:addresses, :addresses_exactly_one_owner)
 
-    drop_if_exists index(:addresses, [:organisation_id])
+    drop_if_exists index(:addresses, [:organization_id])
 
     drop_if_exists index(:addresses, [:user_id])
 
-    drop constraint(:addresses, "addresses_organisation_id_fkey")
+    drop constraint(:addresses, "addresses_organization_id_fkey")
 
     drop constraint(:addresses, "addresses_user_id_fkey")
 
@@ -1379,15 +1379,15 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
 
     drop table(:role_perms)
 
-    drop constraint(:organisations_versions, "organisations_versions_version_source_id_fkey")
+    drop constraint(:organizations_versions, "organizations_versions_version_source_id_fkey")
 
-    drop table(:organisations_versions)
+    drop table(:organizations_versions)
 
-    drop_if_exists constraint(:organisations, :organisations_application_key)
+    drop_if_exists constraint(:organizations, :organizations_application_key)
 
-    drop_if_exists unique_index(:organisations, [:key], name: "organisations_singleton_index")
+    drop_if_exists unique_index(:organizations, [:key], name: "organizations_singleton_index")
 
-    alter table(:organisations) do
+    alter table(:organizations) do
       remove :updated_at
       remove :inserted_at
       remove :phone
@@ -1402,10 +1402,10 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
     end
 
     alter table(:addresses) do
-      modify :organisation_id, :uuid
+      modify :organization_id, :uuid
     end
 
-    drop table(:organisations)
+    drop table(:organizations)
 
     drop_if_exists unique_index(:number_sequences, [:doc_type, :period_key],
                      name: "number_sequences_unique_doc_period_index"

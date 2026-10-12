@@ -60,11 +60,11 @@ Ash.create!(
   },
   %{
     code: "ORG",
-    name: "Organisation",
+    name: "Organization",
     description: "Manage application details and contact information.",
     level: 2,
     parent: "ADMIN",
-    url: "admin/organisation",
+    url: "admin/organization",
     sequence: 130,
     state: :ENABLED
   },

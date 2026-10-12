@@ -4,7 +4,7 @@
     phx-click="calendar_change"
     phx-value-view={@view}
     phx-value-date={Date.to_iso8601(@today)}
-    class="rounded-md border border-outline px-3 py-1 text-sm text-content hover:border-brand"
+    class="rounded-default border border-outline px-3 py-1 text-sm text-content hover:overlay-dark"
   >
     Today
   </button>
@@ -14,7 +14,7 @@
     phx-value-view={@view}
     phx-value-date={Date.to_iso8601(Cal.shift(@view, @cursor, -1))}
     aria-label="Previous calendar period"
-    class="rounded-md border border-outline p-1.5 text-content hover:border-brand"
+    class="rounded-default border border-outline p-1.5 text-content hover:overlay-dark"
   >
     <.icon name="hero-chevron-left" class="size-4" />
   </button>
@@ -24,7 +24,7 @@
     phx-value-view={@view}
     phx-value-date={Date.to_iso8601(Cal.shift(@view, @cursor, 1))}
     aria-label="Next calendar period"
-    class="rounded-md border border-outline p-1.5 text-content hover:border-brand"
+    class="rounded-default border border-outline p-1.5 text-content hover:overlay-dark"
   >
     <.icon name="hero-chevron-right" class="size-4" />
   </button>
@@ -36,10 +36,10 @@
       phx-click="calendar_change"
       phx-value-view={value}
       phx-value-date={Date.to_iso8601(@cursor)}
-      aria-pressed={@view == value}
+      aria-pressed={if @view == value, do: "true", else: "false"}
       class={[
-        "rounded-md px-3 py-1 text-sm",
-        if(@view == value, do: "bg-brand text-content-alt", else: "bg-primary-alt text-content")
+        "rounded-default px-3 py-1 text-sm hover:overlay-dark",
+        if(@view == value, do: "bg-brand text-content", else: "bg-primary text-content")
       ]}
     >
       {label}

@@ -1,3 +1,5 @@
+/* Imports, sources, and icon plugins */
+
 @import "tailwindcss" source(none);
 @import "vanilla-calendar-pro/styles/index.css";
 @import "./subgap.css";
@@ -11,95 +13,242 @@
 @plugin "../vendor/heroicons";
 @plugin "../vendor/tabler";
 
+/* Light theme */
+
 @theme static {
-  --color-primary: oklch(98% 0 0);
-  --color-primary-alt: oklch(96% 0.001 286.375);
-  --color-secondary: oklch(92% 0.004 286.32);
-  --color-secondary-alt: oklch(84% 0.004 286.32);
-  --color-tertiary: oklch(44% 0.017 285.786);
-  --color-tertiary-alt: oklch(36% 0.017 285.786);
-  --color-content: oklch(21% 0.006 285.885);
-  --color-content-alt: oklch(98% 0 0);
-  --color-subcontent: oklch(56% 0.003 285.885);
-  --color-subcontent-alt: oklch(48% 0.003 285.885);
-  --color-brand: oklch(70% 0.213 47.604);
-  --color-brand-alt: oklch(62% 0.213 47.604);
-  --color-info: oklch(62% 0.214 259.815);
-  --color-info-alt: oklch(54% 0.214 259.815);
-  --color-success: oklch(70% 0.14 182.503);
-  --color-success-alt: oklch(62% 0.14 182.503);
-  --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-alt: oklch(58% 0.179 58.318);
-  --color-error: oklch(58% 0.253 17.585);
-  --color-error-alt: oklch(50% 0.253 17.585);
+  --color-primary: oklch(98% 0.003 252.42);
+  --color-secondary: oklch(92% 0.012 254.09);
+  --color-tertiary: oklch(44% 0.044 257.287);
+  --color-content: contrast-color(var(--surface));
+  --color-subcontent: color-mix(in srgb, var(--color-content) var(--subcontent-strength), var(--surface));
+  --color-brand: oklch(52% 0.233 277.117);
+  --color-info: oklch(50% 0.158 241.966);
+  --color-success: oklch(48% 0.118 184.704);
+  --color-warning: oklch(52% 0.179 58.318);
+  --color-error: oklch(50% 0.253 17.585);
 
-  --color-outline: oklch(84% 0.004 286.32);
-  --color-overlay: oklch(0% 0 0 / 0.5);
+  --color-outline: oklch(84% 0.012 254.09);
 
-  --radius-box: 0.5rem;
-  --radius-field: 0.25rem;
+  --overlay-opacity: 0.16;
+  --color-dark: oklch(0% 0 0 / var(--overlay-opacity));
+  --color-light: oklch(100% 0 0 / var(--overlay-opacity));
 
-  --color-topbar: var(--color-brand);
-  --color-topbar-shadow: var(--color-overlay);
+  --radius-default: 0.5rem;
+  --radius-full: calc(infinity * 1px);
+
+  /* Opaque fills publish surfaces without referencing adaptive colors. */
+
+  --surface-primary: var(--color-primary);
+  --surface-secondary: var(--color-secondary);
+  --surface-tertiary: var(--color-tertiary);
+  --surface-brand: var(--color-brand);
+  --surface-info: var(--color-info);
+  --surface-success: var(--color-success);
+  --surface-warning: var(--color-warning);
+  --surface-error: var(--color-error);
 }
+
+/* Adaptive background sources */
+
+@theme inline {
+  --bg-content: var(--content-fill);
+  --bg-content--content-fill: inherit;
+  --bg-content--background-color: var(--surface-base);
+  --bg-subcontent: var(--subcontent-fill);
+  --bg-subcontent--subcontent-fill: inherit;
+  --bg-subcontent--background-color: var(--surface-base);
+  --bg-outline: var(--outline-fill);
+  --bg-outline--outline-fill: inherit;
+  --bg-outline--background-color: var(--surface-base);
+}
+
+/* Dark theme */
 
 [data-theme="dark"] {
   --color-primary: oklch(30.33% 0.016 252.42);
-  --color-primary-alt: oklch(25.26% 0.014 253.1);
   --color-secondary: oklch(20.15% 0.012 254.09);
-  --color-secondary-alt: oklch(28% 0.012 254.09);
   --color-tertiary: oklch(37% 0.044 257.287);
-  --color-tertiary-alt: oklch(45% 0.044 257.287);
-  --color-content: oklch(97.807% 0.029 256.847);
-  --color-content-alt: oklch(98% 0 0);
-  --color-subcontent: oklch(67% 0.023 255);
-  --color-subcontent-alt: oklch(75% 0.023 255);
   --color-brand: oklch(58% 0.233 277.117);
-  --color-brand-alt: oklch(66% 0.233 277.117);
   --color-info: oklch(58% 0.158 241.966);
-  --color-info-alt: oklch(66% 0.158 241.966);
   --color-success: oklch(60% 0.118 184.704);
-  --color-success-alt: oklch(68% 0.118 184.704);
   --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-alt: oklch(74% 0.179 58.318);
   --color-error: oklch(58% 0.253 17.585);
-  --color-error-alt: oklch(66% 0.253 17.585);
 
   --color-outline: oklch(25.26% 0.014 253.1);
 }
 
+/* System dark theme */
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --color-primary: oklch(30.33% 0.016 252.42);
-    --color-primary-alt: oklch(25.26% 0.014 253.1);
     --color-secondary: oklch(20.15% 0.012 254.09);
-    --color-secondary-alt: oklch(28% 0.012 254.09);
     --color-tertiary: oklch(37% 0.044 257.287);
-    --color-tertiary-alt: oklch(45% 0.044 257.287);
-    --color-content: oklch(97.807% 0.029 256.847);
-    --color-content-alt: oklch(98% 0 0);
-    --color-subcontent: oklch(67% 0.023 255);
-    --color-subcontent-alt: oklch(75% 0.023 255);
     --color-brand: oklch(58% 0.233 277.117);
-    --color-brand-alt: oklch(66% 0.233 277.117);
     --color-info: oklch(58% 0.158 241.966);
-    --color-info-alt: oklch(66% 0.158 241.966);
     --color-success: oklch(60% 0.118 184.704);
-    --color-success-alt: oklch(68% 0.118 184.704);
     --color-warning: oklch(66% 0.179 58.318);
-    --color-warning-alt: oklch(74% 0.179 58.318);
     --color-error: oklch(58% 0.253 17.585);
-    --color-error-alt: oklch(66% 0.253 17.585);
 
     --color-outline: oklch(25.26% 0.014 253.1);
   }
 }
+
+/* Shared corner rounding for HTML and SVG rectangles */
+
+@utility rounded-default {
+  rx: var(--radius-default);
+}
+
+@utility rounded-full {
+  rx: min(var(--radius-full), calc(min(attr(width px), attr(height px)) / 2));
+  ry: auto;
+}
+
+/* Adaptive surface colors */
+
+@property --surface {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --surface-base {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --surface-modified {
+  syntax: "*";
+  inherits: false;
+}
+
+@layer base {
+  :root {
+    --surface: var(--color-primary);
+    --outline-strength: 35%;
+    --subcontent-strength: 85%;
+    --field-motion: 150ms;
+  }
+}
+
+@utility adaptive-outline {
+  @supports (color: color-mix(in oklab, white, oklch(from black l c h / 1))) {
+    --color-outline: color-mix(in oklab, var(--surface), oklch(from var(--color-dark) l c h / 1) var(--outline-strength));
+  }
+}
+
+:root,
+:root:not([data-theme]),
+*,
+::before,
+::after {
+  @apply adaptive-outline;
+  --color-content: contrast-color(var(--surface));
+  --color-subcontent: color-mix(in srgb, var(--color-content) var(--subcontent-strength), var(--surface));
+}
+
+::-webkit-slider-thumb {
+  @apply adaptive-outline;
+}
+
+::-moz-range-thumb {
+  @apply adaptive-outline;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    --content-fill: var(--color-content);
+    --subcontent-fill: var(--color-subcontent);
+    --outline-fill: var(--color-outline);
+  }
+}
+
+@utility bg-* {
+  --content-fill: --value(--bg-*--content-fill);
+  --subcontent-fill: --value(--bg-*--subcontent-fill);
+  --outline-fill: --value(--bg-*--outline-fill);
+  --surface-base: --value(--surface-*, --bg-*);
+  --surface: var(--surface-modified, var(--surface-base));
+  background-color: --value(--bg-*--background-color) !important;
+}
+
+@utility bg-transparent {
+  --surface-base: initial;
+  --surface: var(--surface-modified, var(--surface-base));
+}
+
+@utility fill-* {
+  --surface-base: --value(--surface-*);
+  --surface: var(--surface-modified, var(--surface-base));
+}
+
+@utility fill-transparent {
+  --surface-base: initial;
+  --surface: var(--surface-modified, var(--surface-base));
+}
+
+/* Overlay modifiers */
+
+@utility overlay-dark {
+  --surface-modified: color-mix(in srgb, var(--surface-base), oklch(from var(--color-dark) l c h / 1) calc(var(--overlay-opacity) * 100%));
+  --surface: var(--surface-modified, var(--surface-base));
+  @apply inset-shadow-[0_0_0_100vmax] inset-shadow-dark;
+}
+
+@utility overlay-light {
+  --surface-modified: color-mix(in srgb, var(--surface-base), oklch(from var(--color-light) l c h / 1) calc(var(--overlay-opacity) * 100%));
+  --surface: var(--surface-modified, var(--surface-base));
+  @apply inset-shadow-[0_0_0_100vmax] inset-shadow-light;
+}
+
+/* LiveView and theme variants */
 
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
 @custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* Theme switching animation */
+
+::view-transition-group(root) {
+  animation: none;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-wipe 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes theme-wipe {
+  from {
+    clip-path: polygon(0 0, 0 0, 0 0);
+  }
+  to {
+    clip-path: polygon(0 0, 200% 0, 0 200%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* LiveView containers and floating surfaces */
 
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
@@ -119,31 +268,33 @@
 }
 
 .tooltip-floating {
+  @apply bg-tertiary;
   position: fixed;
   z-index: 50;
   pointer-events: none;
   max-width: 20rem;
   width: max-content;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-default);
   border: 1px solid var(--color-outline);
-  background-color: var(--color-tertiary);
-  color: var(--color-content-alt);
+  color: var(--color-content);
   font-size: 0.75rem;
   line-height: 1rem;
 }
+
+/* Floating input controls and labels */
 
 .input-floating-control {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
   line-height: 1.25rem;
-  transition: border-color 150ms ease, box-shadow 150ms ease, padding 150ms ease;
+  transition: border-color var(--field-motion) ease, box-shadow var(--field-motion) ease, padding var(--field-motion) ease;
 }
 
 .input-floating-control::placeholder {
   color: var(--color-subcontent);
   opacity: 1;
-  transition: opacity 150ms ease;
+  transition: opacity var(--field-motion) ease;
 }
 
 .input-floating-control:focus,
@@ -175,9 +326,10 @@
   left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  border-radius: var(--radius-field);
-  background-color: var(--color-primary);
-  box-shadow: 0 0 0 0.1875rem var(--color-primary);
+  border-radius: var(--radius-default);
+  background-color: transparent;
+  box-shadow: none;
+  isolation: isolate;
   padding-left: 0.25rem;
   padding-right: 0.25rem;
   color: var(--color-subcontent);
@@ -185,12 +337,25 @@
   line-height: 1.25rem;
   opacity: 1;
   transition:
-    top 150ms ease,
-    left 150ms ease,
-    color 150ms ease,
-    font-size 150ms ease,
-    line-height 150ms ease,
-    opacity 150ms ease;
+    top var(--field-motion) ease,
+    left var(--field-motion) ease,
+    color var(--field-motion) ease,
+    font-size var(--field-motion) ease,
+    line-height var(--field-motion) ease,
+    opacity var(--field-motion) ease;
+}
+
+.input-floating-label::before {
+  content: "";
+  position: absolute;
+  inset-inline: -0.1875rem;
+  top: -0.1875rem;
+  height: calc(50% + 0.1875rem + 1px);
+  z-index: -1;
+  border-radius: inherit;
+  background-color: var(--surface);
+  opacity: 0;
+  transition: opacity 0s;
 }
 
 .input-floating-label-hidden {
@@ -221,54 +386,22 @@
   opacity: 1;
 }
 
+.input-floating-control:focus + .input-floating-label::before,
+.input-floating-control:not(:placeholder-shown) + .input-floating-label::before,
+.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label::before,
+.input-floating-wrapper:has(.input-floating-control:not(:placeholder-shown)) + .input-floating-label::before,
+*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label::before,
+*:has(> .input-floating-wrapper .input-floating-control:not(:placeholder-shown)) + .input-floating-label::before {
+  opacity: 1;
+  transition-delay: var(--field-motion);
+}
+
 .input-floating-textarea:focus + .input-floating-label,
 .input-floating-textarea:not(:placeholder-shown) + .input-floating-label {
   transform: translateY(-50%);
 }
 
-
-.input-floating-control:disabled + .input-floating-label,
-.input-floating-wrapper:has(.input-floating-control:disabled) + .input-floating-label,
-.input-floating-label-disabled-look {
-  background-color: var(--color-primary-alt);
-  box-shadow: 0 0 0 0.1875rem var(--color-primary-alt);
-}
-
-.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label,
-.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label,
-.input-floating-label-on-disabled {
-  isolation: isolate;
-  background-color: transparent;
-  box-shadow: none;
-}
-
-.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::before,
-.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label::before,
-.input-floating-label-on-disabled::before {
-  content: "";
-  position: absolute;
-  z-index: -2;
-  inset: -0.1875rem;
-  background-color: var(--color-primary);
-  border-radius: calc(var(--radius-field) + 0.1875rem);
-}
-
-.input-floating-control:disabled:not(:placeholder-shown) + .input-floating-label::after,
-.input-floating-wrapper:has(.input-floating-control:disabled:not(:placeholder-shown)) + .input-floating-label::after,
-.input-floating-label-on-disabled::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  right: -0.1875rem;
-  bottom: -0.1875rem;
-  left: -0.1875rem;
-  height: 0.69rem;
-  border-right: 1px solid var(--color-outline);
-  border-bottom: 1px solid var(--color-outline);
-  border-left: 1px solid var(--color-outline);
-  border-radius: 0 0 calc(var(--radius-field) + 0.1875rem)
-    calc(var(--radius-field) + 0.1875rem);
-}
+/* Floating label validation */
 
 .input-floating-label-error,
 .input-floating-control:focus + .input-floating-label-error,
@@ -279,6 +412,8 @@
 *:has(> .input-floating-wrapper .input-floating-control:not(:placeholder-shown)) + .input-floating-label-error {
   color: var(--color-error);
 }
+
+/* Cinder filters and pagination */
 
 [data-key="filter_clear_button_class"].invisible { display: none; }
 
@@ -335,18 +470,43 @@
   padding-right: 2rem;
 }
 
+/* Page colors */
+
 body {
-  background-color: var(--color-primary);
+  @apply bg-primary;
   color: var(--color-content);
 }
 
+/* Calendar surfaces and layout */
+
+[data-vc=calendar] {
+  border-radius: var(--radius-default);
+}
+[data-vc=calendar] [tabindex="0"]:focus-visible,
+[data-vc=calendar] button:focus-visible {
+  border-radius: var(--radius-default);
+}
+[data-vc=calendar]:focus-visible {
+  border-radius: var(--radius-default);
+}
+[data-vc=calendar] [data-vc-date-popup],
+[data-vc=calendar] [data-vc-date-range-tooltip] {
+  border-radius: var(--radius-default);
+}
+[data-vc=calendar] [data-vc=collapse]::before {
+  border-radius: var(--radius-full);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-vc=calendar] [data-vc=collapse]::before {
+    border-radius: 0;
+  }
+}
 [data-vc=calendar][data-vc-input] {
+  @apply bg-primary;
   z-index: 50;
-  background-color: var(--color-primary);
   color: var(--color-content);
   border: 1px solid var(--color-outline);
   box-shadow: 0 10px 25px rgb(0 0 0 / 0.25);
-  border-radius: var(--radius-box);
 }
 [data-vc=calendar][data-vc-input][data-vc-calendar-hidden] {
   top: -10000px !important;
@@ -367,25 +527,29 @@ body {
   padding: 0.5rem;
 }
 
+/* Calendar navigation */
+
 [data-vc=calendar][data-vc-theme] [data-vc-arrow] {
   color: var(--color-content);
+  border-radius: var(--radius-default);
 }
 [data-vc=calendar][data-vc-theme] [data-vc-arrow]:hover {
-  color: var(--color-brand);
+  @apply overlay-dark;
 }
 
 [data-vc=calendar][data-vc-theme] [data-vc=month],
 [data-vc=calendar][data-vc-theme] [data-vc=year] {
   color: var(--color-content);
   background-color: transparent;
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-default);
   padding: 0.125rem 0.375rem;
 }
 [data-vc=calendar][data-vc-theme] [data-vc=month]:hover,
 [data-vc=calendar][data-vc-theme] [data-vc=year]:hover {
-  background-color: var(--color-primary-alt);
-  color: var(--color-brand);
+  @apply overlay-dark;
 }
+
+/* Calendar weekdays and dates */
 
 [data-vc=calendar][data-vc-theme] .vc-week__day {
   color: var(--color-content);
@@ -399,19 +563,45 @@ body {
 [data-vc=calendar][data-vc-theme] .vc-date__btn {
   color: var(--color-content);
   background-color: transparent;
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-default);
   transition: background-color 120ms ease, color 120ms ease;
 }
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-hover] [data-vc-date-btn],
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-selected=middle] [data-vc-date-btn] {
+  border-radius: 0;
+}
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-hover=first] [data-vc-date-btn],
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-selected=first] [data-vc-date-btn] {
+  border-radius: var(--radius-default) 0 0 var(--radius-default);
+}
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-hover=last] [data-vc-date-btn],
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-selected=last] [data-vc-date-btn] {
+  border-radius: 0 var(--radius-default) var(--radius-default) 0;
+}
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-hover=first-and-last] [data-vc-date-btn],
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-selected=first-and-last] [data-vc-date-btn] {
+  border-radius: var(--radius-default);
+}
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-hover=first][data-vc-date-selected] [data-vc-date-btn],
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-disabled]+[data-vc-date-hover] [data-vc-date-btn],
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-disabled]+[data-vc-date-selected] [data-vc-date-btn] {
+  border-top-left-radius: var(--radius-default);
+  border-bottom-left-radius: var(--radius-default);
+}
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-hover=last][data-vc-date-selected] [data-vc-date-btn],
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-hover]:has(+[data-vc-date-disabled]) [data-vc-date-btn],
+[data-vc=calendar][data-vc-theme] [data-vc-date][data-vc-date-selected]:has(+[data-vc-date-disabled]) [data-vc-date-btn] {
+  border-top-right-radius: var(--radius-default);
+  border-bottom-right-radius: var(--radius-default);
+}
 [data-vc=calendar][data-vc-theme] .vc-date__btn:hover {
-  background-color: var(--color-primary-alt);
-  color: var(--color-brand);
+  @apply overlay-dark;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-date-weekend] .vc-date__btn {
   color: var(--color-brand);
 }
 [data-vc=calendar][data-vc-theme] [data-vc-date-weekend] .vc-date__btn:hover {
-  background-color: var(--color-primary-alt);
-  color: var(--color-brand);
+  @apply overlay-dark;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-date-month=prev] .vc-date__btn,
 [data-vc=calendar][data-vc-theme] [data-vc-date-month=next] .vc-date__btn,
@@ -430,8 +620,7 @@ body {
 [data-vc=calendar][data-vc-theme] .vc-date[data-vc-date-month=next][data-vc-date-hover] .vc-date__btn,
 [data-vc=calendar][data-vc-theme] .vc-date[data-vc-date-weekend][data-vc-date-month=prev][data-vc-date-hover] .vc-date__btn,
 [data-vc=calendar][data-vc-theme] .vc-date[data-vc-date-weekend][data-vc-date-month=next][data-vc-date-hover] .vc-date__btn {
-  background-color: var(--color-primary-alt) !important;
-  color: var(--color-brand) !important;
+  @apply overlay-dark!;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-date-today] .vc-date__btn {
   background-color: transparent;
@@ -450,7 +639,7 @@ body {
 [data-vc=calendar][data-vc-theme] .vc-date[data-vc-date-today][data-vc-date-hover] .vc-date__btn,
 [data-vc=calendar][data-vc-theme] .vc-date[data-vc-date-weekend][data-vc-date-today] .vc-date__btn:hover,
 [data-vc=calendar][data-vc-theme] .vc-date[data-vc-date-holiday][data-vc-date-today] .vc-date__btn:hover {
-  background-color: var(--color-primary-alt) !important;
+  @apply overlay-dark!;
   color: var(--color-brand) !important;
   outline: 1px solid var(--color-brand);
   outline-offset: -1px;
@@ -463,9 +652,11 @@ body {
 [data-vc=calendar][data-vc-theme] [data-vc-date-weekend][data-vc-date-selected] .vc-date__btn,
 [data-vc=calendar][data-vc-theme] [data-vc-date-selected] .vc-date__btn:hover,
 [data-vc=calendar][data-vc-theme] [data-vc-date-weekend][data-vc-date-selected] .vc-date__btn:hover {
-  background-color: var(--color-brand);
-  color: var(--color-content-alt);
+  @apply bg-brand;
+  color: var(--color-content);
 }
+
+/* Calendar week selection */
 
 [data-vc=calendar][data-vc-theme] [data-vc-week-numbers=content] {
   row-gap: 0;
@@ -476,21 +667,22 @@ body {
   align-items: center;
   justify-content: center;
   color: var(--color-subcontent);
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-default);
 }
 [data-vc=calendar][data-vc-theme] [data-vc-week-number] {
   min-height: 2.125rem;
   min-width: 2.125rem;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-week-number]:hover {
-  background-color: var(--color-brand);
-  color: var(--color-content-alt);
+  @apply overlay-dark;
   cursor: pointer;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-week-number][data-vc-week-selected] {
-  background-color: var(--color-brand);
-  color: var(--color-content-alt);
+  @apply bg-brand;
+  color: var(--color-content);
 }
+
+/* Calendar month and year selection */
 
 [data-vc=calendar][data-vc-theme] .vc-months__month,
 [data-vc=calendar][data-vc-theme] .vc-years__year,
@@ -498,20 +690,21 @@ body {
 [data-vc=calendar][data-vc-theme] [data-vc-years-year] {
   color: var(--color-content);
   background-color: transparent;
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-default);
 }
 [data-vc=calendar][data-vc-theme] .vc-months__month:hover,
 [data-vc=calendar][data-vc-theme] .vc-years__year:hover,
 [data-vc=calendar][data-vc-theme] [data-vc-months-month]:hover,
 [data-vc=calendar][data-vc-theme] [data-vc-years-year]:hover {
-  background-color: var(--color-primary-alt);
-  color: var(--color-brand);
+  @apply overlay-dark;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-months-month-selected],
 [data-vc=calendar][data-vc-theme] [data-vc-years-year-selected] {
-  background-color: var(--color-brand);
-  color: var(--color-content-alt);
+  @apply bg-brand;
+  color: var(--color-content);
 }
+
+/* Calendar time controls */
 
 [data-vc=calendar][data-vc-theme] [data-vc=time],
 [data-vc=calendar][data-vc-theme] .vc-time {
@@ -523,11 +716,11 @@ body {
   background-color: transparent;
   color: var(--color-content);
   border: 1px solid var(--color-outline);
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-default);
 }
 [data-vc=calendar][data-vc-theme] .vc-time__hour input:hover,
 [data-vc=calendar][data-vc-theme] .vc-time__minute input:hover {
-  background-color: transparent;
+  @apply overlay-dark;
 }
 [data-vc=calendar][data-vc-theme] .vc-time__hour input:focus,
 [data-vc=calendar][data-vc-theme] .vc-time__minute input:focus,
@@ -543,12 +736,10 @@ body {
   background-color: transparent;
   color: var(--color-content);
   border: 1px solid var(--color-outline);
-  border-radius: var(--radius-field);
+  border-radius: var(--radius-default);
 }
 [data-vc=calendar][data-vc-theme] .vc-time__keeping:hover {
-  background-color: transparent;
-  border-color: var(--color-brand);
-  color: var(--color-brand);
+  @apply overlay-dark;
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range input {
   background-color: transparent;
@@ -556,53 +747,51 @@ body {
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range:after,
 [data-vc=calendar][data-vc-theme] .vc-time__range:before {
-  background-color: var(--color-subcontent);
+  @apply bg-subcontent;
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range input::-webkit-slider-runnable-track {
-  background-color: var(--color-subcontent);
+  @apply bg-subcontent;
+  border-radius: var(--radius-full);
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range input::-moz-range-track {
-  background-color: var(--color-subcontent);
+  @apply bg-subcontent;
+  border-radius: var(--radius-full);
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range input::-webkit-slider-thumb {
+  @apply bg-primary border! border-outline!;
+  border-radius: var(--radius-default);
   background: var(--color-primary) !important;
-  border: 1px solid var(--color-outline) !important;
   box-shadow: none !important;
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range input::-moz-range-thumb {
+  @apply bg-primary border! border-outline!;
+  border-radius: var(--radius-default);
   background: var(--color-primary) !important;
-  border: 1px solid var(--color-outline) !important;
   box-shadow: none !important;
 }
-[data-vc=calendar][data-vc-theme] .vc-time__range:hover input,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus-visible,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:active {
   accent-color: var(--color-brand);
 }
-[data-vc=calendar][data-vc-theme] .vc-time__range:hover:after,
-[data-vc=calendar][data-vc-theme] .vc-time__range:hover:before,
 [data-vc=calendar][data-vc-theme] .vc-time__range:has(input:focus-visible):after,
 [data-vc=calendar][data-vc-theme] .vc-time__range:has(input:focus-visible):before,
 [data-vc=calendar][data-vc-theme] .vc-time__range:has(input:focus):after,
 [data-vc=calendar][data-vc-theme] .vc-time__range:has(input:focus):before,
 [data-vc=calendar][data-vc-theme] .vc-time__range:has(input:active):after,
 [data-vc=calendar][data-vc-theme] .vc-time__range:has(input:active):before {
-  background-color: var(--color-brand);
+  @apply bg-brand;
 }
-[data-vc=calendar][data-vc-theme] .vc-time__range:hover input::-webkit-slider-runnable-track,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus-visible::-webkit-slider-runnable-track,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus::-webkit-slider-runnable-track,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:active::-webkit-slider-runnable-track {
-  background-color: var(--color-brand);
+  @apply bg-brand;
 }
-[data-vc=calendar][data-vc-theme] .vc-time__range:hover input::-moz-range-track,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus-visible::-moz-range-track,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus::-moz-range-track,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:active::-moz-range-track {
-  background-color: var(--color-brand);
+  @apply bg-brand;
 }
-[data-vc=calendar][data-vc-theme] .vc-time__range:hover input::-webkit-slider-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus-visible::-webkit-slider-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus::-webkit-slider-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:active::-webkit-slider-thumb {
@@ -610,7 +799,6 @@ body {
   border: 1px solid var(--color-brand) !important;
   box-shadow: none !important;
 }
-[data-vc=calendar][data-vc-theme] .vc-time__range:hover input::-moz-range-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus-visible::-moz-range-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus::-moz-range-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:active::-moz-range-thumb {
@@ -618,6 +806,25 @@ body {
   border: 1px solid var(--color-brand) !important;
   box-shadow: none !important;
 }
+
+[data-vc=calendar][data-vc-theme] .vc-time__range:hover:after,
+[data-vc=calendar][data-vc-theme] .vc-time__range:hover:before {
+  @apply overlay-dark;
+}
+[data-vc=calendar][data-vc-theme] .vc-time__range:hover input::-webkit-slider-runnable-track {
+  @apply overlay-dark;
+}
+[data-vc=calendar][data-vc-theme] .vc-time__range:hover input::-moz-range-track {
+  @apply overlay-dark;
+}
+[data-vc=calendar][data-vc-theme] .vc-time__range:hover input::-webkit-slider-thumb {
+  @apply overlay-dark!;
+}
+[data-vc=calendar][data-vc-theme] .vc-time__range:hover input::-moz-range-thumb {
+  @apply overlay-dark!;
+}
+
+/* Input icons and file controls */
 
 [phx-hook="LiveSelect"] input[type="text"] {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
@@ -644,19 +851,21 @@ input[type="file"]::file-selector-button {
   display: none;
 }
 
+/* Shared component utilities */
+
 @utility listing-surface {
-  @apply rounded-lg border border-outline;
+  @apply rounded-default border border-outline;
 }
 
 @utility listing-table {
   @apply w-full text-left;
   & tbody tr:nth-child(even) {
-    background-color: var(--color-primary-alt);
+    @apply bg-primary overlay-dark;
   }
 }
 
 @utility listing-heading {
-  @apply bg-primary-alt px-3 py-2 text-left font-semibold text-content whitespace-nowrap;
+  @apply bg-primary overlay-dark px-3 py-2 text-left font-semibold text-content whitespace-nowrap;
 }
 
 @utility listing-cell {
@@ -664,15 +873,15 @@ input[type="file"]::file-selector-button {
 }
 
 @utility button-primary {
-  @apply border border-outline bg-brand text-content-alt hover:bg-brand-alt focus:border-brand;
+  @apply border border-outline bg-brand text-content hover:overlay-dark focus:border-brand;
 }
 
 @utility button-neutral {
-  @apply border border-outline bg-tertiary text-content-alt hover:bg-brand focus:border-brand;
+  @apply border border-outline bg-tertiary text-content hover:overlay-dark focus:border-brand;
 }
 
 @utility button-danger {
-  @apply border border-outline bg-error text-content-alt hover:bg-error-alt focus:border-brand;
+  @apply border border-outline bg-error text-content hover:overlay-dark focus:border-brand;
 }
 
 @utility status-pill {
@@ -680,9 +889,17 @@ input[type="file"]::file-selector-button {
 }
 
 @utility bg-control-radio {
-  background-image: radial-gradient(circle, var(--color-content-alt) 28%, transparent 32%);
+  background-image: radial-gradient(circle, var(--color-content) 28%, transparent 32%);
 }
 
 @utility bg-control-check {
-  background-image: url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20fill=%22white%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e');
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: var(--color-content);
+    mask: url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e') center / 100% 100% no-repeat;
+  }
 }

@@ -47,7 +47,7 @@ defmodule Elixirbits.Accounts.LoginGuardTest do
     assert {:locked, 300} = LoginGuard.record_failure(email)
   end
 
-  test "normalises case and whitespace on the email key" do
+  test "normalizes case and whitespace on the email key" do
     base = "guard-norm-#{System.unique_integer([:positive])}"
 
     for _ <- 1..5 do

@@ -222,7 +222,7 @@ defmodule ElixirbitsWeb.CoreSelectTest do
     assert has_element?(view, "label[for=account_role_text_input] input#account_role_text_input")
   end
 
-  test "disabled selects retain their labelled group, help, and submitted zero value" do
+  test "disabled selects retain their labeled group, help, and submitted zero value" do
     assigns = %{form: Phoenix.Component.to_form(%{"level" => 0}, as: :permission)}
 
     html =

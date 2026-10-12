@@ -10,7 +10,67 @@
       <:subtitle>
         Showcases local core components and dependency-powered frontend pieces.
       </:subtitle>
+      <:actions>
+        <div id="layout-test-palette-theme-controls">
+          <Layouts.theme_toggle />
+        </div>
+      </:actions>
     </.header>
+
+    <section
+      id="layout-test-colors"
+      aria-labelledby="layout-test-colors-title"
+      class="space-y-3"
+    >
+      <div>
+        <h2 id="layout-test-colors-title" class="text-base font-semibold">System colors</h2>
+        <p class="text-sm text-subcontent">
+          Main and muted text adapt to each background. Switch themes to compare the colors. Dark and light layer over each surface.
+        </p>
+      </div>
+      <ul aria-label="System color tokens" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
+        <li
+          :for={
+            {token, color_class} <- [
+              {"primary", "bg-primary"},
+              {"secondary", "bg-secondary"},
+              {"tertiary", "bg-tertiary"},
+              {"content", "bg-content"},
+              {"subcontent", "bg-subcontent"},
+              {"brand", "bg-brand"},
+              {"info", "bg-info"},
+              {"success", "bg-success"},
+              {"warning", "bg-warning"},
+              {"error", "bg-error"},
+              {"outline", "bg-transparent"},
+              {"dark", "bg-transparent overlay-dark"},
+              {"light", "bg-transparent overlay-light"}
+            ]
+          }
+          id={"layout-test-color-#{token}"}
+          data-color-token={"color-#{token}"}
+          class="rounded-default border border-outline bg-primary overlay-dark p-3"
+        >
+          <div
+            aria-hidden="true"
+            class={[
+              "mx-auto grid size-11 grid-rows-[1fr_1fr] place-items-center rounded-default border border-outline",
+              color_class
+            ]}
+          >
+            <span
+              :if={token not in ["outline", "dark", "light"]}
+              class="text-sm font-semibold text-content"
+            >Aa</span>
+            <span
+              :if={token not in ["outline", "dark", "light"]}
+              class="text-xs text-subcontent"
+            >Aa</span>
+          </div>
+          <code class="mt-2 block text-center text-xs text-content">color-{token}</code>
+        </li>
+      </ul>
+    </section>
 
     <div
       id="layout-test-tabs"
@@ -26,8 +86,8 @@
         class={[
           "px-4 py-2 text-sm",
           if(@current_tab == "local",
-            do: "bg-brand text-content-alt hover:bg-brand-alt",
-            else: "bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+            do: "bg-brand text-content hover:overlay-dark",
+            else: "bg-primary text-brand hover:overlay-dark"
           )
         ]}
         phx-click="change_tab"
@@ -44,8 +104,8 @@
         class={[
           "px-4 py-2 text-sm",
           if(@current_tab == "ecosystem",
-            do: "bg-brand text-content-alt hover:bg-brand-alt",
-            else: "bg-primary-alt text-brand hover:bg-brand hover:text-content-alt"
+            do: "bg-brand text-content hover:overlay-dark",
+            else: "bg-primary text-brand hover:overlay-dark"
           )
         ]}
         phx-click="change_tab"
@@ -56,778 +116,1889 @@
     </div>
   </.card>
 
-  <%= if @current_tab == "local" do %>
-    <div id="layout-test-local-panel" role="tabpanel" class="space-y-6">
-      <section class="grid grid-cols-[1fr_1fr] gap-4">
-        <.card id="layout-test-header-card">
-          <.header>
-            Core Header
-            <:subtitle>Title, subtitle, action slot, button variants.</:subtitle>
-            <:actions>
+  <div
+    id="layout-test-local-panel"
+    role="tabpanel"
+    aria-hidden={to_string(@current_tab != "local")}
+    class={["space-y-6", @current_tab != "local" && "hidden"]}
+  >
+    <section class="grid grid-cols-[1fr_1fr] gap-4">
+      <.card id="layout-test-header-card">
+        <.header>
+          Core Header and Button<:subtitle>
+            Choose a button style and combine the header options.
+          </:subtitle>
+        </.header>
+        <div class="space-y-3">
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          >
+            <summary class="hover:overlay-dark cursor-pointer text-sm">
+              Button style: {@showcase["header"]["variant"]}
+            </summary>
+            <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
+                :for={variant <- ~w(unstyled neutral primary danger)}
                 type="button"
-                id="layout-test-inline-action"
-                variant={:neutral}
-              >
-                Action
-              </.button>
-            </:actions>
-          </.header>
-
-          <div class="grid grid-cols-[max-content_max-content_max-content] items-center gap-2">
-            <.button
-              type="button"
-              id="layout-test-soft-button"
-              variant={:neutral}
-            >
-              Neutral
-            </.button>
-            <.button
-              type="button"
-              id="layout-test-primary-button"
-              variant={:primary}
-            >
-              Primary
-            </.button>
-            <.button
-              navigate={~p"/"}
-              id="layout-test-home-link"
-              variant={:neutral}
-            >
-              Home
-            </.button>
-          </div>
-        </.card>
-
-        <.card id="layout-test-flash-card">
-          <.header>
-            Flashes
-            <:subtitle>Triggered here, rendered by `Layouts.flash_group`.</:subtitle>
-          </.header>
-
-          <div class="grid grid-cols-[max-content_max-content_max-content] items-center gap-2">
-            <.button
-              type="button"
-              id="layout-test-flash-info"
-              phx-click="show_flash"
-              phx-value-kind="info"
-              variant={:neutral}
-            >
-              Info Flash
-            </.button>
-            <.button
-              type="button"
-              id="layout-test-flash-error"
-              phx-click="show_flash"
-              phx-value-kind="error"
-              variant={:danger}
-            >
-              Error Flash
-            </.button>
-            <.button
-              type="button"
-              id="layout-test-flash-warning"
-              phx-click="show_flash"
-              phx-value-kind="warning"
-              variant={:neutral}
-            >
-              Warning Flash
-            </.button>
-          </div>
-        </.card>
-
-        <.card id="layout-test-theme-card">
-          <.header>
-            Theme Toggle
-            <:subtitle>Light, dark, system from shared site layout.</:subtitle>
-          </.header>
-
-          <.card_inset class="grid grid-cols-[1fr_auto] items-center gap-4">
-            <div class="space-y-1">
-              <p class="font-medium">Site Theme</p>
-              <p class="text-sm text-subcontent">
-                Uses shared `Layouts.theme_toggle`.
-              </p>
+                variant={
+                  if @showcase["header"]["variant"] == variant, do: :primary, else: :neutral
+                }
+                aria-pressed={to_string(@showcase["header"]["variant"] == variant)}
+                phx-click="set_showcase_option"
+                phx-value-section="header"
+                phx-value-option="variant"
+                phx-value-choice={variant}
+              >{Phoenix.Naming.humanize(variant)}</.button>
             </div>
-            <Layouts.theme_toggle />
-          </.card_inset>
-        </.card>
-      </section>
-
-      <.card id="layout-test-form-section">
-        <.header>
-          Core Inputs
-          <:subtitle>Showcases `&lt;.input&gt;` variants from local component layer.</:subtitle>
-        </.header>
-
-        <.form
-          for={@local_form}
-          id="layout-test-form"
-          phx-change="local_change"
-          phx-submit="local_save"
-          class="space-y-4"
-        >
-          <.input field={@local_form[:hidden_token]} type="hidden" />
-
-          <div class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-4">
-            <.input field={@local_form[:project_name]} type="text" label="Text" />
-            <.input field={@local_form[:email]} type="email" label="Email" />
-            <.input field={@local_form[:password]} type="password" label="Password" />
-            <.input field={@local_form[:budget]} type="number" label="Number" />
-            <.input
-              field={@local_form[:launch_date]}
-              type="date"
-              label="Date"
-              timezone={@user_timezone}
-            />
-            <.input
-              field={@local_form[:launch_time]}
-              type="time"
-              label="Time"
-              timezone={@user_timezone}
-            />
-            <.input
-              field={@local_form[:launch_week]}
-              type="week"
-              label="Week"
-              timezone={@user_timezone}
-            />
-            <.input
-              field={@local_form[:launch_month]}
-              type="month"
-              label="Month"
-              timezone={@user_timezone}
-            />
-            <.input
-              field={@local_form[:launch_at]}
-              type="datetime-local"
-              label="Datetime"
-              timezone={@user_timezone}
-              required
-            />
-            <.input field={@local_form[:accent]} type="color" label="Colour" />
-            <.input field={@local_form[:search]} type="search" label="Search" />
-            <.input field={@local_form[:website]} type="url" label="URL" />
-            <.input field={@local_form[:phone]} type="tel" label="Telephone" />
-            <.input
-              id="layout-test-local-role"
-              field={@local_form[:role]}
-              type="select"
-              label="Select"
-              options={[
-                {"Administrator", "admin"},
-                {"Designer", "designer"},
-                {"Viewer", "viewer"}
-              ]}
-            />
-            <.input field={@local_form[:notes]} type="textarea" label="Textarea" rows="4" />
-            <.input field={@local_form[:enabled]} type="checkbox" label="Checkbox" />
-            <.input field={@local_form[:switch]} type="switch" label="Switch" />
-            <.input
-              id="layout-test-local-tags"
-              field={@local_form[:tags]}
-              type="select"
-              label="Tags (Quick Tag)"
-              mode={:quick_tags}
-              options={[
-                {"Elixir", "elixir"},
-                {"Phoenix", "phoenix"},
-                {"LiveView", "liveview"}
-              ]}
-            />
-            <.input field={@local_form[:upload]} type="file" label="File" />
-            <.input
-              name="demo_error"
-              type="text"
-              label="Errored"
-              value="invalid value"
-              errors={["Has an error"]}
-            />
-            <.input
-              name="demo_disabled"
-              type="text"
-              label="Disabled"
-              value="cannot edit"
-              disabled
-            />
-            <.input
-              name="demo_disabled_select"
-              type="select"
-              label="Disabled Select"
-              options={[{"Locked", "locked"}]}
-              value="locked"
-              disabled
-            />
-            <.input
-              name="demo_disabled_tags"
-              type="select"
-              label="Disabled Tags"
-              mode={:quick_tags}
-              options={[
-                {"Elixir", "elixir"},
-                {"Phoenix", "phoenix"},
-                {"LiveView", "liveview"}
-              ]}
-              value={["elixir", "phoenix"]}
-              disabled
-            />
-            <.input
-              name="demo_disabled_checkbox"
-              type="checkbox"
-              label="Disabled Checkbox"
-              checked
-              disabled
-            />
-          </div>
-          <div class="grid grid-cols-[2.75rem_max-content] gap-2">
-            <.action_button action={:save} type="submit" />
-            <.button variant={:neutral} phx-click="show_modal" type="button">Open dialog</.button>
-          </div>
-        </.form>
-
-        <p :if={@submitted_at} class="text-sm text-content">
-          Last submitted datetime:
-          <time id="submitted-at" datetime={DateTime.to_iso8601(@submitted_at)}>
-            {Calendar.strftime(
-              DateTime.shift_zone!(@submitted_at, @user_timezone),
-              "%-d %b %Y, %H:%M %Z"
-            )}
-          </time>
-          <span id="submitted-at-utc" class="block text-subcontent">Submitted UTC: {DateTime.to_iso8601(
-            @submitted_at
-          )}</span>
-        </p>
-
-        <section id="layout-test-input-modes" class="space-y-4">
-          <.header>
-            Input display modes
-            <:subtitle>
-              Compact editing, submitted read-only values, radio groups, and inline switches.
-            </:subtitle>
-          </.header>
-          <div class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-4">
-            <.input
-              name="compact"
-              id="demo-compact"
-              type="text"
-              label="Editable text"
-              value="Ipoh"
-              render_as="text"
-            />
-            <.input
-              name="read_only"
-              id="demo-read-only"
-              type="text"
-              label="Read-only text"
-              value="Kuala Lumpur"
-              render_as="text-disabled"
-            />
-            <.input
-              name="radio"
-              type="radio"
-              label="Contact method"
-              value="email"
-              options={[{"Email", "email"}, {"Telephone", "phone"}]}
-            />
-            <.input
-              name="inline_switch"
-              id="demo-inline-switch"
-              type="switch"
-              variant="alt"
-              label="Enabled"
-              value={true}
-            />
-          </div>
-        </section>
-      </.card>
-
-      <.card id="layout-test-uploads">
-        <.header>
-          Live uploads
-          <:subtitle>
-            Stored previews and pending files share cancellation and read-only behaviour.
-          </:subtitle>
-          <:actions>
+          </details>
+          <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
-              id="toggle-upload-mode"
+              :for={
+                {option, label} <- [
+                  {"subtitle", "Subtitle"},
+                  {"actions", "Action slot"},
+                  {"disabled", "Disabled"},
+                  {"tooltip", "Tooltip"},
+                  {"navigation", "Navigation link"}
+                ]
+              }
               type="button"
-              variant={:neutral}
-              phx-click="toggle_upload_mode"
-            >
-              {if @upload_mode == "enabled", do: "Show read-only", else: "Enable editing"}
-            </.button>
-          </:actions>
-        </.header>
-        <.form
-          for={@upload_form}
-          id="layout-test-upload-form"
-          phx-change="upload_change"
-          phx-submit="upload_save"
-          class="flex flex-col gap-4"
-        >
-          <.input
-            type="file"
-            name="files"
-            label="Files"
-            upload={@uploads.demo_files}
-            stored={@stored_files}
-            render_as={@upload_mode}
-          >
-            <:preview :let={url}>Stored logo: {Path.basename(url)}</:preview>
-            <:pending :let={entry}>{entry.client_name}</:pending>
-          </.input>
-          <.button :if={@upload_mode == "enabled"} type="submit" variant={:primary}>Finish upload</.button>
-        </.form>
-        <p :if={@uploaded_names != []} id="uploaded-names" class="text-sm text-content">
-          {Enum.join(@uploaded_names, ", ")}
-        </p>
-      </.card>
-
-      <.card id="layout-test-actions">
-        <.header>Record actions</.header>
-        <div class="grid grid-cols-[repeat(8,2.75rem)] items-center gap-2">
-          <.action_button
-            :for={action <- [:create, :read, :update, :save, :send, :archive, :delete, :back]}
-            action={action}
-          />
-        </div>
-        <.entry_panel label="Example row" index={0}>
-          <:actions><.action_button action={:delete} /></:actions>
-          <p class="text-sm text-subcontent">
-            Repeated form entries use the same action and surface vocabulary.
-          </p>
-        </.entry_panel>
-      </.card>
-
-      <.card id="layout-test-calendar">
-        <.header>
-          Calendar and timers
-          <:subtitle>
-            Plain event maps, local display time, overlap lanes, and continuous client timers.
-          </:subtitle>
-        </.header>
-        <div class="grid grid-cols-[1fr_1fr] gap-4">
-          <p>
-            Elapsed:
-            <span
-              id="demo-elapsed-timer"
-              phx-hook="LiveTimer"
-              data-mode="elapsed"
-              data-target={DateTime.to_iso8601(@timer_start)}
-            >0:00</span>
-          </p>
-          <p>
-            Countdown:
-            <span
-              id="demo-countdown-timer"
-              phx-hook="LiveTimer"
-              data-mode="countdown"
-              data-target={DateTime.to_iso8601(@timer_finish)}
-            >in 1:00</span>
-          </p>
-        </div>
-        <ElixirbitsWeb.CalendarComponents.calendar
-          id="calendar-showcase"
-          events={@calendar_events}
-          resources={@calendar_resources}
-          timezone={@user_timezone}
-          view={@calendar_view}
-          cursor={@calendar_cursor}
-          active_event={@calendar_selected}
-        />
-        <p :if={@calendar_selected} id="calendar-selection" class="text-sm text-content">
-          Selected event: {@calendar_selected}
-        </p>
-      </.card>
-
-      <section class="grid grid-cols-[1fr_1fr] gap-4">
-        <section id="layout-test-table-card" class="space-y-4 pt-6">
-          <.header>
-            Core Table
-            <:subtitle>Reusable table component with action slot.</:subtitle>
-          </.header>
-
-          <.table
-            id="layout-test-core-table"
-            rows={[
-              %{section: "Header", scope: "Page framing", status: "Ready"},
-              %{section: "Inputs", scope: "Form states", status: "Ready"},
-              %{section: "Dependencies", scope: "LiveSelect + pages", status: "Ready"}
-            ]}
-          >
-            <:col :let={row} label="Section">{row.section}</:col>
-            <:col :let={row} label="Scope">{row.scope}</:col>
-            <:col :let={row} label="Status">
-              <span class="status-pill bg-success text-content-alt">
-                {row.status}
-              </span>
-            </:col>
-            <:action>
-              <.button type="button" variant={:neutral}>Inspect</.button>
-            </:action>
-          </.table>
-        </section>
-
-        <.card id="layout-test-list-card">
-          <.header>
-            Core List
-            <:subtitle>Simple label/value presentation for compact detail groups.</:subtitle>
-          </.header>
-
-          <.list>
-            <:item title="Surface">Local core components</:item>
-            <:item title="Theme">Shared dark and light tokens</:item>
-            <:item title="Flash">Global toast stack</:item>
-            <:item title="Tabs">Single LiveView state</:item>
-          </.list>
-        </.card>
-      </section>
-
-      <.card id="layout-test-icons-card">
-        <.header>
-          Core Icons
-          <:subtitle>
-            Heroicons and Tabler icons through the shared `&lt;.icon&gt;` component.
-          </:subtitle>
-        </.header>
-
-        <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
-          <.card_inset :for={
-            icon <- [
-              {"hero-sparkles", "Sparkles"},
-              {"hero-bolt", "Bolt"},
-              {"hero-cog-6-tooth", "Cog"},
-              {"hero-command-line", "CLI"},
-              {"hero-server-stack", "Server"},
-              {"tabler-device-floppy", "Save"}
-            ]
-          }>
-            <div class="grid grid-cols-[1.25rem_1fr] items-center gap-3">
-              <.icon name={elem(icon, 0)} class="size-5" />
-              <span class="text-sm font-medium">{elem(icon, 1)}</span>
-            </div>
-          </.card_inset>
-        </div>
-      </.card>
-    </div>
-  <% end %>
-
-  <%= if @current_tab == "ecosystem" do %>
-    <div id="layout-test-ecosystem-panel" role="tabpanel" class="space-y-6">
-      <section class="grid grid-cols-[1fr_1fr] gap-4">
-        <.card>
-          <p class="text-sm text-subcontent">Dependency Pages</p>
-          <p class="text-3xl font-semibold">{length(@dependency_pages)}</p>
-        </.card>
-
-        <.card>
-          <p class="text-sm text-subcontent">Cinder Surfaces</p>
-          <p class="text-3xl font-semibold">3</p>
-        </.card>
-      </section>
-
-      <section class="grid grid-cols-[1fr_1fr] gap-4">
-        <section id="layout-test-cinder-collection-card" class="space-y-4 pt-6">
-          <.header>
-            Cinder Collection
-            <:subtitle>List layout with Ash-backed search, filters, and pagination.</:subtitle>
-          </.header>
-
-          <div id="layout-test-cinder-collection">
-            <Cinder.Collection.collection
-              id="layout-test-cinder-collection-component"
-              query={@sitenav_query}
-              actor={nil}
-              layout={:list}
-              page_size={5}
-              show_filters={true}
-              search={[label: "Search sitenav", placeholder: "Code, name, description"]}
-              query_opts={[authorize?: false]}
-            >
-              <:col :let={entry} field="code" label="Code" sort filter search>
-                {entry.code}
-              </:col>
-              <:col :let={entry} field="name" label="Name" sort filter search>
-                {entry.name}
-              </:col>
-              <:col :let={entry} field="state" label="State" filter sort>
-                {entry.state}
-              </:col>
-              <:item :let={entry}>
-                <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
-                    {entry.code}
-                  </span>
-                  <span class="status-pill bg-primary-alt text-content">
-                    {entry.state}
-                  </span>
-                </div>
-                <div class="mt-3 space-y-1">
-                  <p class="font-semibold">{entry.name}</p>
-                  <p class="text-sm text-subcontent">{entry.description}</p>
-                  <p class="text-xs text-subcontent">{entry.url}</p>
-                </div>
-              </:item>
-            </Cinder.Collection.collection>
+              variant={if @showcase["header"][option], do: :primary, else: :neutral}
+              aria-pressed={to_string(@showcase["header"][option])}
+              phx-click="toggle_showcase_option"
+              phx-value-section="header"
+              phx-value-option={option}
+            >{label}</.button>
           </div>
-        </section>
-
-        <section id="layout-test-cinder-table-card" class="space-y-4 pt-6">
-          <.header>
-            Cinder Table
-            <:subtitle>
-              Default table layout over the same Ash data source, for sortable rows.
-            </:subtitle>
-          </.header>
-
-          <div id="layout-test-cinder-table">
-            <Cinder.Collection.collection
-              id="layout-test-cinder-table-component"
-              query={@sitenav_query}
-              actor={nil}
-              page_size={5}
-              show_filters={true}
-              search={[label: "Search table", placeholder: "Code, name, URL"]}
-              query_opts={[authorize?: false]}
-            >
-              <:col :let={entry} field="code" label="Code" sort filter search>
-                {entry.code}
-              </:col>
-              <:col :let={entry} field="name" label="Name" sort filter search>
-                {entry.name}
-              </:col>
-              <:col :let={entry} field="level" label="Level" sort filter>
-                {entry.level}
-              </:col>
-              <:col :let={entry} field="url" label="Route" filter search>
-                <code>{entry.url}</code>
-              </:col>
-              <:col :let={entry} field="sequence" label="#" sort>
-                {entry.sequence}
-              </:col>
-            </Cinder.Collection.collection>
-          </div>
-        </section>
-      </section>
-
-      <section id="layout-test-cinder-grid-card" class="space-y-4 pt-6">
-        <.header>
-          Cinder Grid
-          <:subtitle>
-            Grid layout over the same Ash data source, with search, filters, sorting, and pagination.
-          </:subtitle>
-        </.header>
-
-        <div id="layout-test-cinder-grid">
-          <Cinder.Collection.collection
-            id="layout-test-cinder-grid-component"
-            query={@sitenav_query}
-            actor={nil}
-            layout={:grid}
-            container_class="grid grid-cols-[1fr_1fr_1fr] gap-4"
-            page_size={6}
-            show_filters={true}
-            search={[label: "Search grid", placeholder: "Code, name, description"]}
-            query_opts={[authorize?: false]}
-          >
-            <:col :let={entry} field="code" label="Code" sort filter search>
-              {entry.code}
-            </:col>
-            <:col :let={entry} field="name" label="Name" sort filter search>
-              {entry.name}
-            </:col>
-            <:col :let={entry} field="state" label="State" filter sort>
-              {entry.state}
-            </:col>
-            <:item :let={entry}>
-              <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
-                  {entry.code}
-                </span>
-                <span class="status-pill bg-primary-alt text-content">
-                  {entry.state}
-                </span>
-              </div>
-              <div class="mt-3 space-y-1">
-                <p class="font-semibold">{entry.name}</p>
-                <p class="text-sm text-subcontent">{entry.description}</p>
-                <p class="text-xs text-subcontent">{entry.url}</p>
-              </div>
-            </:item>
-          </Cinder.Collection.collection>
-        </div>
-      </section>
-
-      <section class="grid grid-cols-[1fr_1fr] gap-4">
-        <.card id="layout-test-live-select-card">
-          <.header>
-            LiveSelect
-            <:subtitle>Shared select powered by LiveSelect.</:subtitle>
-          </.header>
-
-          <.form
-            for={@dependency_form}
-            id="layout-test-dependency-form"
-            phx-change="dependency_change"
-          >
-            <.input
-              type="select"
-              field={@dependency_form[:component_search]}
-              id="layout-test-dependency-live-select"
-              options={@dependency_options}
-              prompt="Search dependency pages"
-              keep_options_on_select
-            />
-          </.form>
-
-          <.card_inset id="layout-test-selected-dependency">
-            <%= if @selected_dependency do %>
-              <div class="space-y-3">
-                <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
-                    {@selected_dependency.source}
-                  </span>
-                  <span class="status-pill bg-primary-alt text-content">
-                    {@selected_dependency.availability}
-                  </span>
-                </div>
-                <div class="space-y-1">
-                  <p class="font-semibold">{@selected_dependency.name}</p>
-                  <p class="text-sm text-subcontent">
-                    {@selected_dependency.description}
-                  </p>
-                  <p class="text-xs text-subcontent">{@selected_dependency.path}</p>
-                </div>
+          <.card_inset id="layout-test-header-preview">
+            <.header>
+              Example title
+              <:subtitle :if={@showcase["header"]["subtitle"]}>
+                An example subtitle below the title.
+              </:subtitle>
+              <:actions :if={@showcase["header"]["actions"]}>
                 <.button
-                  href={@selected_dependency.path}
-                  variant={:primary}
+                  id="layout-test-inline-action"
+                  type="button"
+                  variant={
+                    if @showcase["header"]["variant"] == "unstyled",
+                      do: nil,
+                      else: String.to_existing_atom(@showcase["header"]["variant"])
+                  }
+                  disabled={@showcase["header"]["disabled"]}
+                  tooltip={if @showcase["header"]["tooltip"], do: "Try this example action"}
+                  navigate={if @showcase["header"]["navigation"], do: ~p"/"}
+                  phx-click={if not @showcase["header"]["navigation"], do: "show_flash"}
+                  phx-value-kind="info"
+                >{if @showcase["header"]["navigation"], do: "Home", else: "Action"}</.button>
+              </:actions>
+            </.header>
+          </.card_inset>
+        </div>
+      </.card>
+
+      <.card id="layout-test-flash-card">
+        <.header>
+          Flashes<:subtitle>
+            Configure one flash, then trigger it in the shared toast area.
+          </:subtitle>
+        </.header>
+        <div class="space-y-3">
+          <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <.button
+              :for={kind <- ~w(info error warning)}
+              id={"layout-test-flash-kind-#{kind}"}
+              type="button"
+              variant={if @showcase["flash"]["kind"] == kind, do: :primary, else: :neutral}
+              aria-pressed={to_string(@showcase["flash"]["kind"] == kind)}
+              phx-click="set_showcase_option"
+              phx-value-section="flash"
+              phx-value-option="kind"
+              phx-value-choice={kind}
+            >{Phoenix.Naming.humanize(kind)}</.button>
+          </div>
+          <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <.button
+              :for={
+                {option, label} <- [
+                  {"title", "Custom title"},
+                  {"icon", "Custom icon"},
+                  {"spinner", "Spinner"}
+                ]
+              }
+              type="button"
+              variant={if @showcase["flash"][option], do: :primary, else: :neutral}
+              aria-pressed={to_string(@showcase["flash"][option])}
+              phx-click="toggle_showcase_option"
+              phx-value-section="flash"
+              phx-value-option={option}
+            >{label}</.button>
+          </div>
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          >
+            <summary class="hover:overlay-dark cursor-pointer text-sm">
+              Duration: {@showcase["flash"]["duration"]}{if @showcase["flash"]["duration"] !=
+                                                              "default",
+                                                            do: "ms"}
+            </summary>
+            <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+              <.button
+                :for={duration <- ~w(default 1000 5000 8000)}
+                type="button"
+                variant={
+                  if @showcase["flash"]["duration"] == duration, do: :primary, else: :neutral
+                }
+                aria-pressed={to_string(@showcase["flash"]["duration"] == duration)}
+                phx-click="set_showcase_option"
+                phx-value-section="flash"
+                phx-value-option="duration"
+                phx-value-choice={duration}
+              >{duration}</.button>
+            </div>
+          </details>
+          <.button
+            id="layout-test-flash-show"
+            type="button"
+            variant={:primary}
+            phx-click="preview_flash"
+          >Show {Phoenix.Naming.humanize(@showcase["flash"]["kind"])} Flash</.button>
+        </div>
+      </.card>
+    </section>
+
+    <.card id="layout-test-theme-card">
+      <.header>
+        Theme Toggle<:subtitle>
+          Switch the shared site theme and watch the same preview change.
+        </:subtitle>
+      </.header>
+      <div class="grid grid-cols-[max-content_max-content] items-center gap-3 mb-4">
+        <Layouts.theme_toggle />
+        <.button
+          type="button"
+          variant={if @showcase["theme"]["inset"], do: :primary, else: :neutral}
+          aria-pressed={to_string(@showcase["theme"]["inset"])}
+          phx-click="toggle_showcase_option"
+          phx-value-section="theme"
+          phx-value-option="inset"
+        >Inset card</.button>
+      </div>
+      <div
+        id="layout-test-theme-preview"
+        class={[
+          "rounded-default p-4 text-content",
+          @showcase["theme"]["inset"] && "border border-outline bg-primary overlay-dark"
+        ]}
+      >
+        <p class="font-medium">Shared theme preview</p>
+        <p class="text-sm text-subcontent">
+          The page, controls, and cards use the same light and dark theme.
+        </p>
+      </div>
+    </.card>
+
+    <.card id="layout-test-form-section">
+      <% checked_state =
+        case Enum.map([:enabled, :switch], fn field ->
+               Phoenix.HTML.Form.normalize_value("checkbox", @local_form[field].value)
+             end) do
+          [true, true] -> "true"
+          [false, false] -> "false"
+          _ -> "mixed"
+        end %>
+      <.header>
+        Core Inputs
+        <:subtitle>
+          One example of each input type. Use the controls to combine display modes, variants, and input attributes.
+        </:subtitle>
+      </.header>
+
+      <div id="layout-test-input-controls" class="space-y-3">
+        <details phx-mounted={JS.ignore_attributes("open")} class="space-y-3">
+          <summary class="hover:overlay-dark cursor-pointer text-sm font-medium text-content">
+            Input options: {@input_config["render_as"]} display, {@input_config["variant"]} controls, {@input_config[
+              "select_mode"
+            ]} select, and {case checked_state do
+              "true" -> "checked"
+              "false" -> "unchecked"
+              "mixed" -> "mixed checked states"
+            end}
+          </summary>
+          <fieldset class="space-y-2">
+            <legend class="text-sm font-medium text-content">Display mode</legend>
+            <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
+              <.button
+                :for={mode <- @input_render_modes}
+                id={"layout-test-input-render-#{mode}"}
+                type="button"
+                variant={if @input_config["render_as"] == mode, do: :primary, else: :neutral}
+                aria-pressed={to_string(@input_config["render_as"] == mode)}
+                phx-click="set_input_config"
+                phx-value-option="render_as"
+                phx-value-choice={mode}
+                class="px-2 py-1 text-xs"
+              >{mode}</.button>
+            </div>
+          </fieldset>
+          <div class="grid grid-cols-[1fr_1fr_2fr] subgap-4">
+            <fieldset class="space-y-2">
+              <legend class="text-sm font-medium text-content">
+                Checkbox and switch variant
+              </legend>
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
+                <.button
+                  :for={variant <- ~w(default alt)}
+                  id={"layout-test-input-variant-#{variant}"}
+                  type="button"
+                  variant={if @input_config["variant"] == variant, do: :primary, else: :neutral}
+                  aria-pressed={to_string(@input_config["variant"] == variant)}
+                  phx-click="set_input_config"
+                  phx-value-option="variant"
+                  phx-value-choice={variant}
+                  class="px-2 py-1 text-xs"
+                >{variant}</.button>
+              </div>
+            </fieldset>
+            <fieldset class="space-y-2">
+              <legend class="text-sm font-medium text-content">Checked state</legend>
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
+                <.button
+                  :for={{value, label} <- [{"false", "Unchecked"}, {"true", "Checked"}]}
+                  id={"layout-test-input-checked-#{value}"}
+                  type="button"
+                  variant={if checked_state == value, do: :primary, else: :neutral}
+                  aria-pressed={to_string(checked_state == value)}
+                  phx-click="set_input_config"
+                  phx-value-option="checked"
+                  phx-value-choice={value}
+                  class="px-2 py-1 text-xs"
+                >{label}</.button>
+              </div>
+            </fieldset>
+            <fieldset class="space-y-2">
+              <legend class="text-sm font-medium text-content">Select mode</legend>
+              <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                <.button
+                  :for={mode <- ~w(single tags quick_tags)}
+                  id={"layout-test-input-select-mode-#{mode}"}
+                  type="button"
+                  variant={if @input_config["select_mode"] == mode, do: :primary, else: :neutral}
+                  aria-pressed={to_string(@input_config["select_mode"] == mode)}
+                  phx-click="set_input_config"
+                  phx-value-option="select_mode"
+                  phx-value-choice={mode}
+                  class="px-2 py-1 text-xs"
+                >{mode}</.button>
+              </div>
+            </fieldset>
+          </div>
+        </details>
+        <div id="layout-test-input-states" class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-2">
+          <.button
+            :for={
+              {state, label} <- [
+                {"empty", "Empty values"},
+                {"unlabeled", "No labels"},
+                {"placeholder", "Placeholders"},
+                {"required", "Required"},
+                {"errors", "Errors"},
+                {"disabled", "Disabled"}
+              ]
+            }
+            id={"layout-test-input-state-#{state}"}
+            type="button"
+            variant={if @input_states[state], do: :primary, else: :neutral}
+            aria-pressed={to_string(@input_states[state])}
+            phx-click="toggle_input_state"
+            phx-value-state={state}
+            class="px-2 py-1 text-xs"
+          >{label}</.button>
+        </div>
+        <details phx-mounted={JS.ignore_attributes("open")} class="space-y-2">
+          <summary class="hover:overlay-dark cursor-pointer text-sm font-medium text-content">
+            Input attributes
+          </summary>
+          <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
+            <.button
+              :for={
+                {state, label} <- [
+                  {"readonly", "Read-only"},
+                  {"tooltip", "Tooltips"},
+                  {"constraints", "Constraints"},
+                  {"datalist", "Datalist"},
+                  {"multiple", "Multiple files"},
+                  {"capture", "Camera capture"},
+                  {"custom_class", "Custom class"},
+                  {"custom_error_class", "Custom error class"},
+                  {"prompt", "Select prompt"},
+                  {"textarea_size", "Textarea size"}
+                ]
+              }
+              id={"layout-test-input-state-#{state}"}
+              type="button"
+              variant={if @input_states[state], do: :primary, else: :neutral}
+              aria-pressed={to_string(@input_states[state])}
+              phx-click="toggle_input_state"
+              phx-value-state={state}
+              class="px-2 py-1 text-xs"
+            >{label}</.button>
+          </div>
+        </details>
+      </div>
+
+      <.form
+        for={@local_form}
+        id="layout-test-form"
+        phx-change="local_change"
+        phx-submit="local_save"
+        class="space-y-4"
+      >
+        <div id="layout-test-input-examples" class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-4">
+          <div
+            :for={
+              {field_name, type, label} <- [
+                {:project_name, "text", "Text"},
+                {:email, "email", "Email"},
+                {:password, "password", "Password"},
+                {:budget, "number", "Number"},
+                {:launch_date, "date", "Date"},
+                {:launch_time, "time", "Time"},
+                {:launch_week, "week", "Week"},
+                {:launch_month, "month", "Month"},
+                {:launch_at, "datetime-local", "Datetime"},
+                {:accent, "color", "Color"},
+                {:search, "search", "Search"},
+                {:website, "url", "URL"},
+                {:phone, "tel", "Telephone"},
+                {:role, "select", "Select"},
+                {:notes, "textarea", "Textarea"},
+                {:enabled, "checkbox", "Checkbox"},
+                {:switch, "switch", "Switch"},
+                {:upload, "file", "File"},
+                {:contact_method, "radio", "Radio"},
+                {:hidden_token, "hidden", "Hidden"}
+              ]
+            }
+            id={"layout-test-input-example-#{type}"}
+            data-input-type={type}
+            data-input-mode={@input_config["render_as"]}
+            data-input-variant={@input_config["variant"]}
+            data-select-mode={@input_config["select_mode"]}
+            class="space-y-2"
+          >
+            <% field = @local_form[field_name] %>
+            <p
+              :if={
+                @input_states["unlabeled"] or type == "hidden" or
+                  @input_config["render_as"] in ~w(hidden hidden-enabled hidden-disabled)
+              }
+              class="text-xs font-medium text-subcontent"
+            >
+              {label}
+            </p>
+            <.input
+              field={
+                if @input_states["errors"] do
+                  %{
+                    field
+                    | errors: [{"Example validation error", []}],
+                      form: %{
+                        field.form
+                        | params: Map.delete(field.form.params, "_unused_#{field.field}")
+                      }
+                  }
+                else
+                  field
+                end
+              }
+              id={if type == "select", do: "layout-test-local-role", else: field.id}
+              type={type}
+              label={
+                if @input_states["unlabeled"] or (type == "select" and @input_states["prompt"]),
+                  do: nil,
+                  else: label
+              }
+              value={field.value}
+              mode={
+                if type == "select",
+                  do: String.to_existing_atom(@input_config["select_mode"]),
+                  else: :single
+              }
+              options={
+                case type do
+                  "select" ->
+                    [{"Administrator", "admin"}, {"Designer", "designer"}, {"Viewer", "viewer"}]
+
+                  "radio" ->
+                    [{"Email", "email"}, {"Telephone", "phone"}]
+
+                  _ ->
+                    []
+                end
+              }
+              variant={@input_config["variant"]}
+              render_as={@input_config["render_as"]}
+              timezone={@user_timezone}
+              placeholder={if @input_states["placeholder"], do: "Example #{label}"}
+              prompt={if type == "select" and @input_states["prompt"], do: "Choose a role"}
+              tooltip={
+                if @input_states["tooltip"],
+                  do: "#{label} input in #{@input_config["render_as"]} mode"
+              }
+              required={@input_states["required"]}
+              disabled={@input_states["disabled"]}
+              readonly={
+                @input_states["readonly"] and
+                  type in ~w(text email password number search url tel textarea)
+              }
+              min={if type == "number" and @input_states["constraints"], do: 0}
+              max={if type == "number" and @input_states["constraints"], do: 100_000}
+              step={if type == "number" and @input_states["constraints"], do: 5}
+              minlength={
+                if type in ~w(text email password search url tel textarea) and
+                     @input_states["constraints"],
+                   do: 3
+              }
+              maxlength={
+                if type in ~w(text email password search url tel textarea) and
+                     @input_states["constraints"],
+                   do: 200
+              }
+              pattern={if type == "text" and @input_states["constraints"], do: "[^<>]+"}
+              size={if type == "text" and @input_states["constraints"], do: 12}
+              list={
+                if type == "text" and @input_states["datalist"], do: "layout-test-input-cities"
+              }
+              multiple={type == "file" and @input_states["multiple"]}
+              capture={if type == "file" and @input_states["capture"], do: "environment"}
+              accept={
+                cond do
+                  type == "file" and @input_states["capture"] ->
+                    "image/*"
+
+                  type == "file" and (@input_states["multiple"] or @input_states["constraints"]) ->
+                    "image/*,.pdf"
+
+                  true ->
+                    nil
+                end
+              }
+              rows={if type == "textarea", do: if(@input_states["textarea_size"], do: 6, else: 4)}
+              cols={if type == "textarea" and @input_states["textarea_size"], do: 60}
+              class={
+                if @input_states["custom_class"] and type not in ~w(checkbox switch radio hidden) do
+                  [
+                    "input-floating-control block w-full min-h-11 rounded-default border border-brand bg-transparent px-3 text-content disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                    (@input_states["disabled"] or
+                       @input_config["render_as"] in ~w(disabled like-disabled)) and
+                      "overlay-dark text-subcontent cursor-not-allowed",
+                    type == "textarea" and "input-floating-textarea",
+                    type == "password" and "pr-12"
+                  ]
+                end
+              }
+              error_class={
+                if @input_states["custom_error_class"], do: "border-error bg-transparent"
+              }
+              aria-label={"#{label}, #{@input_config["render_as"]}"}
+            />
+            <p
+              :if={
+                type == "hidden" or
+                  @input_config["render_as"] in ~w(hidden hidden-enabled hidden-disabled)
+              }
+              class="text-xs text-subcontent"
+            >
+              <%= cond do %>
+                <% @input_config["render_as"] == "hidden-disabled" -> %>
+                  The control and its value are omitted.
+                <% @input_config["render_as"] in ~w(hidden hidden-enabled) or (type == "hidden" and @input_config["render_as"] in ~w(enabled text text-enabled)) -> %>
+                  The control is hidden and its value submits unless disabled.
+                <% true -> %>
+                  This hidden input is shown using the selected display mode.
+              <% end %>
+            </p>
+          </div>
+        </div>
+        <datalist :if={@input_states["datalist"]} id="layout-test-input-cities">
+          <option value="Ipoh" />
+          <option value="Kuala Lumpur" />
+          <option value="George Town" />
+        </datalist>
+        <.action_button action={:save} type="submit" />
+      </.form>
+
+      <p :if={@submitted_at} class="text-sm text-content">
+        Last submitted datetime:
+        <time id="submitted-at" datetime={DateTime.to_iso8601(@submitted_at)}>
+          {Calendar.strftime(
+            DateTime.shift_zone!(@submitted_at, @user_timezone),
+            "%-d %b %Y, %H:%M %Z"
+          )}
+        </time>
+        <span id="submitted-at-utc" class="block text-subcontent">Submitted UTC: {DateTime.to_iso8601(
+          @submitted_at
+        )}</span>
+      </p>
+    </.card>
+
+    <.card id="layout-test-uploads">
+      <.header>
+        Live uploads
+        <:subtitle>
+          Compare filename chips with image and PDF previews. Up to three files per input, 1MB each.
+        </:subtitle>
+      </.header>
+      <div id="layout-test-upload-controls" class="space-y-3">
+        <div class="grid grid-cols-[1fr_1fr] subgap-3">
+          <div>
+            <details phx-mounted={JS.ignore_attributes("open")} id="upload-render-modes">
+              <summary class="hover:overlay-dark cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm">
+                Render as: {@upload_mode}
+              </summary>
+              <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+                <.button
+                  :for={mode <- @input_render_modes}
+                  id={"upload-mode-#{mode}"}
+                  type="button"
+                  variant={if @upload_mode == mode, do: :primary, else: :neutral}
+                  aria-pressed={to_string(@upload_mode == mode)}
+                  phx-click="set_showcase_option"
+                  phx-value-section="uploads"
+                  phx-value-option="render_as"
+                  phx-value-choice={mode}
                 >
-                  Open Selected Page
+                  {mode}
                 </.button>
               </div>
-            <% else %>
-              <p class="text-sm text-subcontent">
-                Pick a dependency page above to preview its target route and source package.
-              </p>
-            <% end %>
-          </.card_inset>
-        </.card>
-
-        <.card id="layout-test-ui-kit-card">
-          <.header>
-            UI Kit
-            <:subtitle>
-              Raw Tailwind primitives for alerts, badges, progress, steps, menu.
-            </:subtitle>
-          </.header>
-
-          <div class="space-y-3">
-            <div class="grid grid-cols-[1.25rem_1fr] items-center gap-2 p-4 rounded-md border bg-primary-alt border-info text-info">
-              <.icon name="hero-information-circle" class="size-5" />
-              <span>Info alert surface</span>
-            </div>
-            <div class="grid grid-cols-[1.25rem_1fr] items-center gap-2 p-4 rounded-md border bg-success border-outline text-content-alt">
-              <.icon name="hero-check-circle" class="size-5" />
-              <span>Success alert surface</span>
-            </div>
-            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
-              <span class="status-pill bg-brand text-content-alt">
-                Primary
-              </span>
-              <span class="status-pill border border-outline text-content">
-                Outline
-              </span>
-              <span class="status-pill bg-success text-content-alt">
-                Success
-              </span>
-              <span class="status-pill bg-warning text-content-alt">
-                Warning
-              </span>
-            </div>
-            <div class="w-full h-2 rounded-full bg-primary-alt overflow-hidden">
-              <div class="h-full w-[72%] bg-brand"></div>
-            </div>
-            <ol class="grid grid-cols-[1fr_1fr_1fr] items-center gap-2 w-full">
-              <li class="flex-1 text-center text-sm pb-2 border-b-2 border-brand text-brand">
-                Tokens
-              </li>
-              <li class="flex-1 text-center text-sm pb-2 border-b-2 border-brand text-brand">
-                Hooks
-              </li>
-              <li class="flex-1 text-center text-sm pb-2 border-b-2 border-outline text-subcontent">
-                Route Scan
-              </li>
-            </ol>
-            <ul class="rounded-lg bg-primary-alt p-2 flex flex-col">
-              <li>
-                <a href="/sign-in" class="block px-3 py-2 rounded-md hover:bg-primary-alt">
-                  Auth Flow
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/api/json/swaggerui"
-                  class="block px-3 py-2 rounded-md hover:bg-primary-alt"
-                >
-                  API Browser
-                </a>
-              </li>
-              <li>
-                <a href="/admin" class="block px-3 py-2 rounded-md hover:bg-primary-alt">
-                  Admin Surface
-                </a>
-              </li>
-            </ul>
+            </details>
           </div>
-        </.card>
-      </section>
-
-      <.card id="layout-test-dependency-pages">
-        <.header>
-          Dependency Pages
-          <:subtitle>
-            Live pages and route surfaces supplied by installed dependencies.
-          </:subtitle>
-        </.header>
-
-        <div class="grid grid-cols-[1fr_1fr] gap-4">
-          <.card_inset :for={page <- @dependency_pages} id={"dependency-page-#{page.id}"}>
-            <div class="space-y-4">
-              <div class="space-y-2">
-                <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-alt text-brand">
-                    {page.source}
-                  </span>
-                  <span class="status-pill bg-primary-alt text-content">
-                    {page.availability}
-                  </span>
-                </div>
-                <div class="space-y-1">
-                  <h3 class="font-semibold">{page.name}</h3>
-                  <p class="text-sm text-subcontent">{page.description}</p>
-                  <p class="text-xs text-subcontent">{page.path}</p>
-                </div>
+          <div>
+            <details phx-mounted={JS.ignore_attributes("open")} id="upload-preview-styles">
+              <summary class="hover:overlay-dark cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm">
+                Preview layout: {@showcase["uploads"]["preview_as"]}
+              </summary>
+              <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+                <.button
+                  :for={style <- ["tag", "thumbnail"]}
+                  id={"upload-preview-#{style}"}
+                  type="button"
+                  variant={
+                    if @showcase["uploads"]["preview_as"] == style, do: :primary, else: :neutral
+                  }
+                  aria-pressed={to_string(@showcase["uploads"]["preview_as"] == style)}
+                  phx-click="set_showcase_option"
+                  phx-value-section="uploads"
+                  phx-value-option="preview_as"
+                  phx-value-choice={style}
+                >
+                  {Phoenix.Naming.humanize(style)}
+                </.button>
               </div>
+            </details>
+          </div>
+        </div>
+        <div class="grid grid-cols-[repeat(6,max-content)] gap-2">
+          <.button
+            :for={
+              {option, label} <- [
+                {"labels", "Labels"},
+                {"disabled", "Native disabled"},
+                {"required", "Required"},
+                {"tooltip", "Tooltips"},
+                {"stored", "Stored files"},
+                {"errors", "Errors"}
+              ]
+            }
+            id={"showcase-uploads-#{option}"}
+            type="button"
+            variant={if @showcase["uploads"][option], do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["uploads"][option])}
+            phx-click="toggle_showcase_option"
+            phx-value-section="uploads"
+            phx-value-option={option}
+          >
+            {label}
+          </.button>
+        </div>
+      </div>
+      <.form
+        for={@upload_form}
+        id="layout-test-upload-form"
+        phx-change="upload_change"
+        phx-submit="upload_save"
+        class="flex flex-col gap-4"
+      >
+        <div class="grid grid-cols-[1fr_1fr] subgap-4">
+          <section id="layout-test-upload-tags" class="flex flex-col gap-3">
+            <h3 class="font-medium text-content">Filename chips</h3>
+            <.input
+              type="file"
+              name="files"
+              label={if @showcase["uploads"]["labels"], do: "Files"}
+              upload={@uploads.demo_files}
+              stored={if @showcase["uploads"]["stored"], do: @stored_files, else: []}
+              render_as={@upload_mode}
+              disabled={@showcase["uploads"]["disabled"]}
+              required={@showcase["uploads"]["required"]}
+              tooltip={
+                if @showcase["uploads"]["tooltip"], do: "Attach PNG, JPEG, PDF, or text files"
+              }
+              errors={
+                if @showcase["uploads"]["errors"], do: ["Choose a supported file."], else: []
+              }
+              aria-label="Filename files"
+            >
+              <:preview :let={url}>{Path.basename(url)}</:preview>
+              <:pending :let={entry}>{entry.client_name}</:pending>
+            </.input>
+          </section>
+          <section id="layout-test-upload-previews" class="flex flex-col gap-3">
+            <h3 class="font-medium text-content">Image and PDF previews</h3>
+            <.input
+              type="file"
+              name="previews"
+              label={if @showcase["uploads"]["labels"], do: "Preview files"}
+              upload={@uploads.demo_previews}
+              stored={if @showcase["uploads"]["stored"], do: @stored_previews, else: []}
+              preview_as={@showcase["uploads"]["preview_as"]}
+              render_as={@upload_mode}
+              disabled={@showcase["uploads"]["disabled"]}
+              required={@showcase["uploads"]["required"]}
+              tooltip={
+                if @showcase["uploads"]["tooltip"], do: "Attach images or PDFs to see a preview"
+              }
+              errors={
+                if @showcase["uploads"]["errors"], do: ["Choose an image or PDF."], else: []
+              }
+              aria-label="Image and PDF files"
+            >
+              <:preview :let={url}>
+                <div class="min-w-0">
+                  <div class={@showcase["uploads"]["preview_as"] == "tag" && "hidden"}>
+                    <div
+                      :if={String.starts_with?(url, "data:application/pdf;")}
+                      id={"layout-test-pdf-saved-#{Base.url_encode64(:crypto.hash(:sha256, url), padding: false)}"}
+                      phx-hook="UploadPdfPreview"
+                      phx-update="ignore"
+                      data-pdf-url={url}
+                      role="img"
+                      aria-label={"First page of #{@preview_names[url]}"}
+                      class="grid h-36 w-full place-items-center overflow-hidden rounded-default border border-outline bg-primary overlay-dark"
+                    >
+                      <canvas hidden class="max-h-full max-w-full" />
+                      <p
+                        data-pdf-status
+                        role="status"
+                        class="px-2 text-center text-sm text-subcontent"
+                      >
+                        Loading PDF preview...
+                      </p>
+                    </div>
+                    <img
+                      :if={not String.starts_with?(url, "data:application/pdf;")}
+                      src={url}
+                      alt={Map.get(@preview_names, url, Path.basename(url))}
+                      class="h-36 w-full rounded-default border border-outline bg-primary overlay-dark object-contain"
+                    />
+                  </div>
+                  <p class="mt-1 truncate text-sm text-subcontent">
+                    {Map.get(@preview_names, url, Path.basename(url))}
+                  </p>
+                </div>
+              </:preview>
+              <:pending :let={entry}>
+                <div class="min-w-0">
+                  <div class={@showcase["uploads"]["preview_as"] == "tag" && "hidden"}>
+                    <div
+                      :if={String.downcase(Path.extname(entry.client_name)) == ".pdf"}
+                      id={"layout-test-pdf-preview-#{entry.ref}"}
+                      phx-hook="UploadPdfPreview"
+                      phx-update="ignore"
+                      data-upload-ref={entry.upload_ref}
+                      data-entry-ref={entry.ref}
+                      role="img"
+                      aria-label={"First page of #{entry.client_name}"}
+                      class="grid h-36 w-full place-items-center overflow-hidden rounded-default border border-outline bg-primary overlay-dark"
+                    >
+                      <canvas hidden class="max-h-full max-w-full" />
+                      <p
+                        data-pdf-status
+                        role="status"
+                        class="px-2 text-center text-sm text-subcontent"
+                      >
+                        Loading PDF preview...
+                      </p>
+                    </div>
+                    <.live_img_preview
+                      :if={String.downcase(Path.extname(entry.client_name)) != ".pdf"}
+                      entry={entry}
+                      alt={entry.client_name}
+                      class="h-36 w-full rounded-default border border-outline bg-primary overlay-dark object-contain"
+                    />
+                  </div>
+                  <p class="mt-1 truncate text-sm text-subcontent">{entry.client_name}</p>
+                </div>
+              </:pending>
+            </.input>
+          </section>
+        </div>
+        <.button
+          :if={@upload_mode == "enabled"}
+          type="submit"
+          variant={:primary}
+          disabled={@showcase["uploads"]["disabled"]}
+        >Finish upload</.button>
+      </.form>
+      <p :if={@uploaded_names != []} id="uploaded-names" class="text-sm text-content">
+        {Enum.join(@uploaded_names, ", ")}
+      </p>
+    </.card>
 
+    <.card id="layout-test-actions">
+      <.header>
+        Record actions
+        <:subtitle>
+          Add, edit, save, send, archive, and delete sample entries for this session.
+        </:subtitle>
+      </.header>
+      <div id="layout-test-action-controls" class="space-y-3">
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-3">
+          <div :for={
+            {option, label, value, choices} <- [
+              {"selected", "Action", @showcase["actions"]["selected"],
+               Enum.map(~w(create read update save send archive delete back), fn action ->
+                 {Phoenix.Naming.humanize(action), action}
+               end)},
+              {"render_as", "Render as", @record_mode,
+               Enum.map(@input_render_modes, fn mode -> {mode, mode} end)},
+              {"columns", "Columns", to_string(@record_columns), [{"One", "1"}, {"Two", "2"}]},
+              {"count", "Entries", @showcase["actions"]["count"],
+               [{"One", "1"}, {"Two", "2"}, {"Four", "4"}]}
+            ]
+          }>
+            <details phx-mounted={JS.ignore_attributes("open")} id={"record-options-#{option}"}>
+              <summary class="hover:overlay-dark cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm">
+                {label}: {value}
+              </summary>
+              <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+                <.button
+                  :for={{choice_label, choice} <- choices}
+                  id={"record-option-#{option}-#{choice}"}
+                  type="button"
+                  variant={if value == choice, do: :primary, else: :neutral}
+                  aria-pressed={to_string(value == choice)}
+                  phx-click="set_showcase_option"
+                  phx-value-section="actions"
+                  phx-value-option={option}
+                  phx-value-choice={choice}
+                >
+                  {choice_label}
+                </.button>
+              </div>
+            </details>
+          </div>
+        </div>
+        <div class="grid grid-cols-[1fr_max-content_max-content_max-content] items-start gap-2">
+          <details phx-mounted={JS.ignore_attributes("open")} id="record-selected-entry">
+            <summary class="hover:overlay-dark cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm">
+              Selected entry: {if @record_selected, do: "##{@record_selected}", else: "None"}
+            </summary>
+            <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
               <.button
-                href={page.path}
-                variant={:neutral}
-                class="w-full"
+                :for={entry <- @record_entries}
+                id={"record-select-#{entry["id"]}"}
+                type="button"
+                variant={if @record_selected == entry["id"], do: :primary, else: :neutral}
+                aria-pressed={to_string(@record_selected == entry["id"])}
+                phx-click="record_action"
+                phx-value-action="read"
+                phx-value-id={entry["id"]}
               >
-                Open Page
+                #{entry["id"]}: {entry["name"]}
               </.button>
             </div>
-          </.card_inset>
+          </details>
+          <.button
+            :for={
+              {option, label} <- [
+                {"disabled", "Disabled"},
+                {"custom_icon", "Custom icon"},
+                {"tooltip", "Tooltip"}
+              ]
+            }
+            id={"showcase-actions-#{option}"}
+            type="button"
+            variant={if @showcase["actions"][option], do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["actions"][option])}
+            phx-click="toggle_showcase_option"
+            phx-value-section="actions"
+            phx-value-option={option}
+          >
+            {label}
+          </.button>
+        </div>
+      </div>
+      <div class="grid grid-cols-[2.75rem_1fr] items-center gap-3">
+        <.action_button
+          id={"record-action-#{@showcase["actions"]["selected"]}"}
+          action={String.to_existing_atom(@showcase["actions"]["selected"])}
+          icon={if @showcase["actions"]["custom_icon"], do: "tabler-calendar-plus"}
+          tooltip={if @showcase["actions"]["tooltip"], do: nil, else: ""}
+          aria-label={Phoenix.Naming.humanize(@showcase["actions"]["selected"])}
+          phx-click="record_action"
+          phx-value-action={@showcase["actions"]["selected"]}
+          disabled={
+            @showcase["actions"]["disabled"] or
+              (@showcase["actions"]["selected"] in ~w(read update send archive delete) and
+                 is_nil(@record_selected))
+          }
+        />
+        <p id="record-action-status" role="status" class="text-sm text-content">
+          {@record_message}
+        </p>
+      </div>
+      <% record_count = String.to_integer(@showcase["actions"]["count"]) %>
+      <% visible_entries = Enum.take(@record_entries, record_count) %>
+      <% selected_entry =
+        Enum.find(@record_entries, fn entry -> entry["id"] == @record_selected end) %>
+      <% visible_entries =
+        if selected_entry &&
+             not Enum.any?(visible_entries, fn entry -> entry["id"] == @record_selected end) do
+          Enum.take(visible_entries, record_count - 1) ++ [selected_entry]
+        else
+          visible_entries
+        end %>
+      <.form
+        for={@record_form}
+        id="layout-test-record-form"
+        phx-change="record_change"
+        phx-submit="record_action"
+      >
+        <.input type="hidden" name="action" value="save" />
+        <div
+          id="record-entry-panels"
+          class={[
+            @record_columns == 2 && "grid grid-cols-[1fr_1fr] gap-y-4",
+            @record_columns == 1 && "flex flex-col gap-4"
+          ]}
+        >
+          <.entry_panel
+            :for={{entry, index} <- Enum.with_index(visible_entries)}
+            label="Sample entry"
+            index={index}
+            columns={@record_columns}
+          >
+            <:actions>
+              <.action_button
+                id={"record-delete-#{entry["id"]}"}
+                action={:delete}
+                tooltip={"Delete #{entry["name"]}"}
+                phx-click="record_action"
+                phx-value-action="delete"
+                phx-value-id={entry["id"]}
+              />
+            </:actions>
+            <div
+              id={"record-entry-#{entry["id"]}"}
+              data-status={entry["status"]}
+              class="space-y-4"
+            >
+              <div class="grid grid-cols-[1fr_2fr_1fr] subgap-4">
+                <.input
+                  id={"record-code-#{entry["id"]}"}
+                  name={"records[#{entry["id"]}][code]"}
+                  label="Code"
+                  value={entry["code"]}
+                  render_as={@record_mode}
+                />
+                <.input
+                  id={"record-name-#{entry["id"]}"}
+                  name={"records[#{entry["id"]}][name]"}
+                  label="Name"
+                  value={entry["name"]}
+                  render_as={@record_mode}
+                />
+                <.input
+                  id={"record-quantity-#{entry["id"]}"}
+                  name={"records[#{entry["id"]}][quantity]"}
+                  type="number"
+                  label="Quantity"
+                  value={entry["quantity"]}
+                  render_as={@record_mode}
+                  min="1"
+                />
+              </div>
+              <.input
+                id={"record-notes-#{entry["id"]}"}
+                name={"records[#{entry["id"]}][notes]"}
+                type="textarea"
+                label="Notes"
+                value={entry["notes"]}
+                render_as={@record_mode}
+                rows="2"
+              />
+              <div class="grid grid-cols-[1fr_max-content] items-center gap-3">
+                <span class="text-sm text-subcontent">{entry["status"]}{if entry["id"] ==
+                                                                             @record_selected,
+                                                                           do: " · Selected"}</span>
+                <.action_button
+                  id={"record-read-#{entry["id"]}"}
+                  action={:read}
+                  tooltip={"View #{entry["name"]}"}
+                  phx-click="record_action"
+                  phx-value-action="read"
+                  phx-value-id={entry["id"]}
+                />
+              </div>
+            </div>
+          </.entry_panel>
+        </div>
+        <p :if={@record_entries == []} id="record-empty" class="text-sm text-subcontent">
+          No entries. Use Add new to create one, or Back to restore the saved entries.
+        </p>
+      </.form>
+    </.card>
+
+    <.card id="layout-test-calendar">
+      <.header>
+        Calendar and timers<:subtitle>
+          Change the calendar view with its own toolbar, then compare event styles and timer modes.
+        </:subtitle>
+      </.header>
+      <div class="space-y-3 mb-4">
+        <div class="grid grid-cols-[max-content_max-content_max-content] items-center gap-2">
+          <.button
+            type="button"
+            variant={if @showcase["calendar"]["events"], do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["calendar"]["events"])}
+            phx-click="toggle_showcase_option"
+            phx-value-section="calendar"
+            phx-value-option="events"
+          >Events</.button>
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          >
+            <summary class="hover:overlay-dark cursor-pointer text-sm">
+              Event style: {@showcase["calendar"]["variant"]}
+            </summary>
+            <div class="mt-3 grid grid-cols-[1fr_1fr] gap-2">
+              <.button
+                :for={variant <- ~w(solid outline)}
+                type="button"
+                variant={
+                  if @showcase["calendar"]["variant"] == variant, do: :primary, else: :neutral
+                }
+                aria-pressed={to_string(@showcase["calendar"]["variant"] == variant)}
+                phx-click="set_showcase_option"
+                phx-value-section="calendar"
+                phx-value-option="variant"
+                phx-value-choice={variant}
+              >{Phoenix.Naming.humanize(variant)}</.button>
+            </div>
+          </details>
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          >
+            <summary class="hover:overlay-dark cursor-pointer text-sm">
+              Event color: {@showcase["calendar"]["color"]}
+            </summary>
+            <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
+              <.button
+                :for={color <- ~w(brand info success warning error neutral)}
+                type="button"
+                variant={if @showcase["calendar"]["color"] == color, do: :primary, else: :neutral}
+                aria-pressed={to_string(@showcase["calendar"]["color"] == color)}
+                phx-click="set_showcase_option"
+                phx-value-section="calendar"
+                phx-value-option="color"
+                phx-value-choice={color}
+              >{Phoenix.Naming.humanize(color)}</.button>
+            </div>
+          </details>
+        </div>
+        <div class="grid grid-cols-[max-content_max-content_max-content_1fr] items-center gap-2">
+          <.button
+            :for={mode <- ~w(elapsed countdown)}
+            id={"timer-mode-#{mode}"}
+            type="button"
+            variant={if @showcase["calendar"]["timer"] == mode, do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["calendar"]["timer"] == mode)}
+            phx-click="set_showcase_option"
+            phx-value-section="calendar"
+            phx-value-option="timer"
+            phx-value-choice={mode}
+          >{Phoenix.Naming.humanize(mode)}</.button>
+          <.button id="timer-reset" type="button" variant={:neutral} phx-click="reset_timer">Restart timer</.button>
+          <p class="text-sm text-content">
+            {Phoenix.Naming.humanize(@showcase["calendar"]["timer"])}:
+            <span
+              id={"demo-#{@showcase["calendar"]["timer"]}-timer"}
+              phx-hook="LiveTimer"
+              data-mode={@showcase["calendar"]["timer"]}
+              data-target={
+                DateTime.to_iso8601(
+                  if @showcase["calendar"]["timer"] == "elapsed",
+                    do: @timer_start,
+                    else: @timer_finish
+                )
+              }
+            >{if @showcase["calendar"]["timer"] == "elapsed", do: "0:00", else: "in 1:00"}</span>
+          </p>
+        </div>
+      </div>
+      <ElixirbitsWeb.CalendarComponents.calendar
+        id="calendar-showcase"
+        events={
+          if @showcase["calendar"]["events"],
+            do:
+              Enum.map(@calendar_events, fn event ->
+                Map.merge(event, %{
+                  variant: String.to_existing_atom(@showcase["calendar"]["variant"]),
+                  color: String.to_existing_atom(@showcase["calendar"]["color"])
+                })
+              end),
+            else: []
+        }
+        resources={@calendar_resources}
+        timezone={@user_timezone}
+        view={@calendar_view}
+        cursor={@calendar_cursor}
+        active_event={@calendar_selected}
+      />
+      <p :if={@calendar_selected} id="calendar-selection" class="text-sm text-content">
+        Selected event: {@calendar_selected}
+      </p>
+    </.card>
+
+    <section class="grid grid-cols-[1fr_1fr] gap-4">
+      <section id="layout-test-table-card" class="space-y-4 pt-6">
+        <.header>
+          Core Table<:subtitle>Compare row interaction, action slots, and empty data.</:subtitle>
+        </.header>
+        <div class="grid grid-cols-[1fr_1fr] gap-2">
+          <.button
+            :for={
+              {option, label} <- [
+                {"empty", "Empty rows"},
+                {"actions", "Action slot"},
+                {"clickable", "Clickable rows"},
+                {"status", "Status column"}
+              ]
+            }
+            id={"table-option-#{option}"}
+            type="button"
+            variant={if @showcase["table"][option], do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["table"][option])}
+            phx-click="toggle_showcase_option"
+            phx-value-section="table"
+            phx-value-option={option}
+          >{label}</.button>
+        </div>
+        <.table
+          id="layout-test-core-table"
+          rows={
+            if @showcase["table"]["empty"],
+              do: [],
+              else: [
+                %{section: "Header", scope: "Page framing", status: "Ready"},
+                %{section: "Inputs", scope: "Form states", status: "Ready"},
+                %{section: "Dependencies", scope: "LiveSelect + pages", status: "Ready"}
+              ]
+          }
+          row_click={
+            if @showcase["table"]["clickable"],
+              do: fn row -> JS.push("inspect_table_row", value: %{section: row.section}) end
+          }
+        >
+          <:col :let={row} label="Section">{row.section}</:col>
+          <:col :let={row} label="Scope">{row.scope}</:col>
+          <:col :let={row} :if={@showcase["table"]["status"]} label="Status">
+            <span class="status-pill bg-success text-content">{row.status}</span>
+          </:col>
+          <:action :let={row} :if={@showcase["table"]["actions"]}>
+            <.button
+              type="button"
+              variant={:neutral}
+              phx-click="inspect_table_row"
+              phx-value-section={row.section}
+            >Inspect</.button>
+          </:action>
+        </.table>
+        <p :if={@table_selection} id="table-selection" role="status" class="text-sm text-content">
+          Selected row: {@table_selection}
+        </p>
+      </section>
+      <.card id="layout-test-list-card">
+        <.header>
+          Core List<:subtitle>
+            Change the number of details and their title presentation.
+          </:subtitle>
+        </.header>
+        <div class="grid grid-cols-[max-content_max-content] gap-2 mb-4">
+          <.button
+            id="list-option-titles"
+            type="button"
+            variant={if @showcase["list"]["titles"], do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["list"]["titles"])}
+            phx-click="toggle_showcase_option"
+            phx-value-section="list"
+            phx-value-option="titles"
+          >Titles</.button>
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          >
+            <summary class="hover:overlay-dark cursor-pointer text-sm">
+              Items: {@showcase["list"]["count"]}
+            </summary>
+            <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
+              <.button
+                :for={count <- ~w(1 2 4)}
+                id={"list-count-#{count}"}
+                type="button"
+                variant={if @showcase["list"]["count"] == count, do: :primary, else: :neutral}
+                aria-pressed={to_string(@showcase["list"]["count"] == count)}
+                phx-click="set_showcase_option"
+                phx-value-section="list"
+                phx-value-option="count"
+                phx-value-choice={count}
+              >{count}</.button>
+            </div>
+          </details>
+        </div>
+        <div id="layout-test-list-preview">
+          <.list>
+            <:item
+              :for={
+                {title, value} <-
+                  Enum.take(
+                    [
+                      {"Surface", "Local core components"},
+                      {"Theme", "Shared dark and light tokens"},
+                      {"Flash", "Global toast stack"},
+                      {"Tabs", "Single LiveView state"}
+                    ],
+                    String.to_integer(@showcase["list"]["count"])
+                  )
+              }
+              title={if @showcase["list"]["titles"], do: title, else: ""}
+            >
+              {value}
+            </:item>
+          </.list>
         </div>
       </.card>
-    </div>
-  <% end %>
+    </section>
+
+    <.card id="layout-test-icons-card">
+      <.header>
+        Core Icons<:subtitle>Choose an icon, its size, and a shared theme color.</:subtitle>
+      </.header>
+      <div class="grid grid-cols-[max-content_max-content_max-content_max-content] gap-3 mb-4">
+        <details
+          phx-mounted={JS.ignore_attributes("open")}
+          class="rounded-default border border-outline bg-primary overlay-dark p-3"
+        >
+          <summary class="hover:overlay-dark cursor-pointer text-sm">
+            Icon: {@showcase["icons"]["name"]}
+          </summary>
+          <div class="mt-3 grid grid-cols-[1fr_1fr] gap-2">
+            <.button
+              :for={
+                name <-
+                  ~w(hero-sparkles hero-bolt hero-cog-6-tooth hero-command-line hero-server-stack tabler-device-floppy)
+              }
+              id={"icon-name-#{name}"}
+              type="button"
+              variant={if @showcase["icons"]["name"] == name, do: :primary, else: :neutral}
+              aria-pressed={to_string(@showcase["icons"]["name"] == name)}
+              phx-click="set_showcase_option"
+              phx-value-section="icons"
+              phx-value-option="name"
+              phx-value-choice={name}
+            >{name}</.button>
+          </div>
+        </details>
+        <details
+          phx-mounted={JS.ignore_attributes("open")}
+          class="rounded-default border border-outline bg-primary overlay-dark p-3"
+        >
+          <summary class="hover:overlay-dark cursor-pointer text-sm">
+            Size: {@showcase["icons"]["size"]}
+          </summary>
+          <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            <.button
+              :for={size <- ~w(4 5 8 12)}
+              id={"icon-size-#{size}"}
+              type="button"
+              variant={if @showcase["icons"]["size"] == size, do: :primary, else: :neutral}
+              aria-pressed={to_string(@showcase["icons"]["size"] == size)}
+              phx-click="set_showcase_option"
+              phx-value-section="icons"
+              phx-value-option="size"
+              phx-value-choice={size}
+            >{size}</.button>
+          </div>
+        </details>
+        <details
+          phx-mounted={JS.ignore_attributes("open")}
+          class="rounded-default border border-outline bg-primary overlay-dark p-3"
+        >
+          <summary class="hover:overlay-dark cursor-pointer text-sm">
+            Color: {@showcase["icons"]["color"]}
+          </summary>
+          <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <.button
+              :for={color <- ~w(content brand info success warning error)}
+              id={"icon-color-#{color}"}
+              type="button"
+              variant={if @showcase["icons"]["color"] == color, do: :primary, else: :neutral}
+              aria-pressed={to_string(@showcase["icons"]["color"] == color)}
+              phx-click="set_showcase_option"
+              phx-value-section="icons"
+              phx-value-option="color"
+              phx-value-choice={color}
+            >{Phoenix.Naming.humanize(color)}</.button>
+          </div>
+        </details>
+        <.button
+          id="icon-option-label"
+          type="button"
+          variant={if @showcase["icons"]["label"], do: :primary, else: :neutral}
+          aria-pressed={to_string(@showcase["icons"]["label"])}
+          phx-click="toggle_showcase_option"
+          phx-value-section="icons"
+          phx-value-option="label"
+        >Label</.button>
+      </div>
+      <.card_inset id="layout-test-icon-preview">
+        <div class="grid grid-cols-[max-content_1fr] items-center gap-3">
+          <.icon
+            name={@showcase["icons"]["name"]}
+            class={[
+              case @showcase["icons"]["size"] do
+                "4" -> "size-4"
+                "5" -> "size-5"
+                "8" -> "size-8"
+                "12" -> "size-12"
+              end,
+              case @showcase["icons"]["color"] do
+                "content" -> "text-content"
+                "brand" -> "text-brand"
+                "info" -> "text-info"
+                "success" -> "text-success"
+                "warning" -> "text-warning"
+                "error" -> "text-error"
+              end
+            ]}
+          />
+          <span :if={@showcase["icons"]["label"]} class="text-sm font-medium">{@showcase["icons"][
+            "name"
+          ]}</span>
+        </div>
+      </.card_inset>
+    </.card>
+
+    <.card id="layout-test-dialog-card">
+      <.header>
+        Dialog<:subtitle>
+          Configure the title and action slots before opening the preview.
+        </:subtitle>
+      </.header>
+      <div class="grid grid-cols-[max-content_max-content_max-content] gap-2">
+        <.button
+          :for={{option, label} <- [{"title", "Title"}, {"actions", "Actions"}]}
+          id={"dialog-option-#{option}"}
+          type="button"
+          variant={if @showcase["dialog"][option], do: :primary, else: :neutral}
+          aria-pressed={to_string(@showcase["dialog"][option])}
+          phx-click="toggle_showcase_option"
+          phx-value-section="dialog"
+          phx-value-option={option}
+        >{label}</.button>
+        <.button
+          id="layout-test-dialog-open"
+          type="button"
+          variant={:primary}
+          phx-click="show_modal"
+        >Open dialog</.button>
+      </div>
+    </.card>
+  </div>
+
+  <div
+    id="layout-test-ecosystem-panel"
+    role="tabpanel"
+    aria-hidden={to_string(@current_tab != "ecosystem")}
+    class={["space-y-6", @current_tab != "ecosystem" && "hidden"]}
+  >
+    <section id="layout-test-cinder-collection-card" class="space-y-4">
+      <.header>
+        Cinder collection
+        <:subtitle>
+          120 sample records. Choose a layout and adjust the collection controls.
+        </:subtitle>
+      </.header>
+      <div id="layout-test-cinder-controls" class="space-y-3">
+        <div class="grid grid-cols-[1fr_1fr_1fr] subgap-4">
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            id="cinder-layout-choices"
+            class="space-y-2"
+          >
+            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+              Layout: {String.capitalize(@showcase["cinder"]["layout"])}
+            </summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+              <.button
+                :for={layout <- ~w(table list grid)}
+                id={"cinder-layout-#{layout}"}
+                type="button"
+                variant={if @showcase["cinder"]["layout"] == layout, do: :primary, else: :neutral}
+                aria-pressed={to_string(@showcase["cinder"]["layout"] == layout)}
+                phx-click="set_showcase_option"
+                phx-value-section="cinder"
+                phx-value-option="layout"
+                phx-value-choice={layout}
+              >{String.capitalize(layout)}</.button>
+            </div>
+          </details>
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            id="cinder-page-size-choices"
+            class="space-y-2"
+          >
+            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+              Records per page: {@showcase["cinder"]["page_size"]}
+            </summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+              <.button
+                :for={size <- ~w(6 12 24)}
+                id={"cinder-page-size-#{size}"}
+                type="button"
+                variant={
+                  if @showcase["cinder"]["page_size"] == size, do: :primary, else: :neutral
+                }
+                aria-pressed={to_string(@showcase["cinder"]["page_size"] == size)}
+                phx-click="set_showcase_option"
+                phx-value-section="cinder"
+                phx-value-option="page_size"
+                phx-value-choice={size}
+              >{size}</.button>
+            </div>
+          </details>
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            id="cinder-column-choices"
+            class="space-y-2"
+          >
+            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+              Grid columns: {@showcase["cinder"]["columns"]}
+            </summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+              <.button
+                :for={columns <- ~w(2 3 4)}
+                id={"cinder-columns-#{columns}"}
+                type="button"
+                variant={
+                  if @showcase["cinder"]["columns"] == columns, do: :primary, else: :neutral
+                }
+                aria-pressed={to_string(@showcase["cinder"]["columns"] == columns)}
+                phx-click="set_showcase_option"
+                phx-value-section="cinder"
+                phx-value-option="columns"
+                phx-value-choice={columns}
+                disabled={@showcase["cinder"]["layout"] != "grid"}
+              >{columns}</.button>
+            </div>
+          </details>
+        </div>
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+          <.button
+            :for={
+              {option, label} <- [
+                {"filters", "Column filters"},
+                {"search", "Search"},
+                {"sort", "Sorting"},
+                {"pagination", "Pagination"}
+              ]
+            }
+            id={"cinder-option-#{option}"}
+            type="button"
+            variant={if @showcase["cinder"][option], do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["cinder"][option])}
+            phx-click="toggle_showcase_option"
+            phx-value-section="cinder"
+            phx-value-option={option}
+          >{label}</.button>
+        </div>
+      </div>
+      <div id="layout-test-cinder-collection" data-layout={@showcase["cinder"]["layout"]}>
+        <Cinder.Collection.collection
+          id={"layout-test-cinder-component-#{@showcase["cinder"]["layout"]}-#{@showcase["cinder"]["page_size"]}"}
+          query={@showcase_query}
+          actor={nil}
+          url_state={%{filters: @cinder_preview_state}}
+          on_state_change={:cinder_preview_state_change}
+          layout={@showcase["cinder"]["layout"]}
+          page_size={String.to_integer(@showcase["cinder"]["page_size"])}
+          show_filters={@showcase["cinder"]["filters"] or @showcase["cinder"]["search"]}
+          show_sort={@showcase["cinder"]["sort"]}
+          show_pagination={@showcase["cinder"]["pagination"]}
+          search={
+            if @showcase["cinder"]["search"],
+              do: [label: "Search examples", placeholder: "Code or name"],
+              else: false
+          }
+          container_class={
+            if @showcase["cinder"]["layout"] == "grid" do
+              case @showcase["cinder"]["columns"] do
+                "2" -> "grid grid-cols-[1fr_1fr] gap-4"
+                "3" -> "grid grid-cols-[1fr_1fr_1fr] gap-4"
+                "4" -> "grid grid-cols-[1fr_1fr_1fr_1fr] gap-4"
+              end
+            end
+          }
+          query_opts={[authorize?: false]}
+        >
+          <:col
+            :let={entry}
+            field="code"
+            label="Code"
+            sort={@showcase["cinder"]["sort"]}
+            filter={@showcase["cinder"]["filters"]}
+            search
+          >
+            {entry.code}
+          </:col>
+          <:col
+            :let={entry}
+            field="name"
+            label="Name"
+            sort={@showcase["cinder"]["sort"]}
+            filter={@showcase["cinder"]["filters"]}
+            search
+          >
+            {entry.name}
+          </:col>
+          <:col
+            :let={entry}
+            field="state"
+            label="State"
+            sort={@showcase["cinder"]["sort"]}
+            filter={@showcase["cinder"]["filters"]}
+          >
+            {entry.state}
+          </:col>
+          <:col :let={entry} field="sequence" label="#" sort={@showcase["cinder"]["sort"]}>
+            {entry.sequence}
+          </:col>
+          <:item :let={entry}>
+            <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
+              <span class="status-pill bg-primary overlay-dark text-brand">{entry.code}</span>
+              <span class="status-pill bg-primary overlay-dark text-content">{entry.state}</span>
+            </div>
+            <div class="mt-3 space-y-1">
+              <p class="font-semibold">{entry.name}</p>
+              <p class="text-sm text-subcontent">{entry.description}</p>
+              <p class="text-xs text-subcontent">{entry.url}</p>
+            </div>
+          </:item>
+        </Cinder.Collection.collection>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-[1fr_1fr] gap-4">
+      <.card id="layout-test-live-select-card">
+        <.header>
+          LiveSelect
+          <:subtitle>
+            Choose a select mode and display state, then pick dependency pages.
+          </:subtitle>
+        </.header>
+        <div id="layout-test-live-select-controls" class="space-y-3">
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            id="dependency-select-mode-choices"
+            class="space-y-2"
+          >
+            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+              Selection mode: {@showcase["live_select"]["mode"]}
+            </summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+              <.button
+                :for={
+                  {mode, label} <- [
+                    {"single", "Single"},
+                    {"tags", "Tags"},
+                    {"quick_tags", "Quick tags"}
+                  ]
+                }
+                id={"dependency-select-mode-#{mode}"}
+                type="button"
+                variant={
+                  if @showcase["live_select"]["mode"] == mode, do: :primary, else: :neutral
+                }
+                aria-pressed={to_string(@showcase["live_select"]["mode"] == mode)}
+                phx-click="set_showcase_option"
+                phx-value-section="live_select"
+                phx-value-option="mode"
+                phx-value-choice={mode}
+              >{label}</.button>
+            </div>
+          </details>
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            id="dependency-select-render-choices"
+            class="space-y-2"
+          >
+            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+              Display mode: {@showcase["live_select"]["render_as"]}
+            </summary>
+            <div class="grid grid-cols-[1fr_1fr] gap-2">
+              <.button
+                :for={render_as <- @input_render_modes}
+                id={"dependency-select-render-#{render_as}"}
+                type="button"
+                variant={
+                  if @showcase["live_select"]["render_as"] == render_as,
+                    do: :primary,
+                    else: :neutral
+                }
+                aria-pressed={to_string(@showcase["live_select"]["render_as"] == render_as)}
+                phx-click="set_showcase_option"
+                phx-value-section="live_select"
+                phx-value-option="render_as"
+                phx-value-choice={render_as}
+              >{render_as}</.button>
+            </div>
+          </details>
+          <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <.button
+              :for={
+                {option, label} <- [
+                  {"prompt", "Prompt"},
+                  {"keep_options", "Keep options"},
+                  {"disabled", "Disabled"}
+                ]
+              }
+              id={"dependency-select-option-#{option}"}
+              type="button"
+              variant={if @showcase["live_select"][option], do: :primary, else: :neutral}
+              aria-pressed={to_string(@showcase["live_select"][option])}
+              disabled={
+                option == "keep_options" and @showcase["live_select"]["mode"] == "quick_tags"
+              }
+              phx-click="toggle_showcase_option"
+              phx-value-section="live_select"
+              phx-value-option={option}
+            >{label}</.button>
+          </div>
+          <p
+            :if={@showcase["live_select"]["mode"] == "quick_tags"}
+            class="text-sm text-subcontent"
+          >
+            Quick tags always keeps selected options available.
+          </p>
+        </div>
+        <.form
+          for={@dependency_form}
+          id="layout-test-dependency-form"
+          phx-change="dependency_change"
+        >
+          <.input
+            type="select"
+            field={@dependency_form[:component_search]}
+            id="layout-test-dependency-live-select"
+            options={@dependency_options}
+            mode={String.to_existing_atom(@showcase["live_select"]["mode"])}
+            render_as={@showcase["live_select"]["render_as"]}
+            prompt={if @showcase["live_select"]["prompt"], do: "Search dependency pages"}
+            keep_options_on_select={@showcase["live_select"]["keep_options"]}
+            disabled={@showcase["live_select"]["disabled"]}
+          />
+        </.form>
+        <.card_inset id="layout-test-selected-dependency">
+          <%= if @selected_dependencies == [] do %>
+            <p class="text-sm text-subcontent">
+              Pick a dependency page to inspect its route and source package.
+            </p>
+          <% else %>
+            <div class="space-y-4">
+              <div
+                :for={page <- @selected_dependencies}
+                id={"selected-dependency-#{page.id}"}
+                class="space-y-2"
+              >
+                <div class="grid grid-cols-[1fr_max-content] items-center gap-2">
+                  <p class="font-semibold">{page.name}</p>
+                  <span class="status-pill bg-primary overlay-dark text-content">{page.availability}</span>
+                </div>
+                <p class="text-sm text-subcontent">{page.description}</p>
+                <p class="text-xs text-subcontent">{page.source} · {page.path}</p>
+                <.button href={page.path} variant={:neutral}>Open {page.name}</.button>
+              </div>
+            </div>
+          <% end %>
+        </.card_inset>
+      </.card>
+
+      <.card id="layout-test-ui-kit-card">
+        <.header>
+          UI kit
+          <:subtitle>Adjust each primitive and compare its preview below.</:subtitle>
+        </.header>
+        <div id="layout-test-ui-kit-controls" class="space-y-3">
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            id="ui-kit-alert-choices"
+            class="space-y-2"
+          >
+            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+              Alert kind: {String.capitalize(@showcase["ui_kit"]["alert"])}
+            </summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+              <.button
+                :for={kind <- ~w(info success warning error)}
+                id={"ui-kit-alert-#{kind}"}
+                type="button"
+                variant={if @showcase["ui_kit"]["alert"] == kind, do: :primary, else: :neutral}
+                aria-pressed={to_string(@showcase["ui_kit"]["alert"] == kind)}
+                phx-click="set_showcase_option"
+                phx-value-section="ui_kit"
+                phx-value-option="alert"
+                phx-value-choice={kind}
+              >{String.capitalize(kind)}</.button>
+            </div>
+          </details>
+          <details
+            phx-mounted={JS.ignore_attributes("open")}
+            id="ui-kit-badge-choices"
+            class="space-y-2"
+          >
+            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+              Badge style: {String.capitalize(@showcase["ui_kit"]["badge"])}
+            </summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+              <.button
+                :for={
+                  {style, label} <- [
+                    {"brand", "Brand"},
+                    {"outline", "Outline"},
+                    {"success", "Success"},
+                    {"warning", "Warning"}
+                  ]
+                }
+                id={"ui-kit-badge-#{style}"}
+                type="button"
+                variant={if @showcase["ui_kit"]["badge"] == style, do: :primary, else: :neutral}
+                aria-pressed={to_string(@showcase["ui_kit"]["badge"] == style)}
+                phx-click="set_showcase_option"
+                phx-value-section="ui_kit"
+                phx-value-option="badge"
+                phx-value-choice={style}
+              >{label}</.button>
+            </div>
+          </details>
+          <div class="grid grid-cols-[1fr_1fr] subgap-4">
+            <details
+              phx-mounted={JS.ignore_attributes("open")}
+              id="ui-kit-step-choices"
+              class="space-y-2"
+            >
+              <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+                Current step: {@showcase["ui_kit"]["step"]}
+              </summary>
+              <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                <.button
+                  :for={step <- ~w(1 2 3)}
+                  id={"ui-kit-step-#{step}"}
+                  type="button"
+                  variant={if @showcase["ui_kit"]["step"] == step, do: :primary, else: :neutral}
+                  aria-pressed={to_string(@showcase["ui_kit"]["step"] == step)}
+                  phx-click="set_showcase_option"
+                  phx-value-section="ui_kit"
+                  phx-value-option="step"
+                  phx-value-choice={step}
+                >{step}</.button>
+              </div>
+            </details>
+            <.form
+              for={to_form(@showcase["ui_kit"], as: :showcase)}
+              id="ui-kit-progress-form"
+              phx-change="showcase_change"
+              phx-value-section="ui_kit"
+            >
+              <.input
+                id="ui-kit-progress-control"
+                name="showcase[progress]"
+                type="number"
+                label="Progress (%)"
+                value={@showcase["ui_kit"]["progress"]}
+                min="0"
+                max="100"
+                step="1"
+              />
+            </.form>
+          </div>
+          <.button
+            id="ui-kit-option-menu"
+            type="button"
+            variant={if @showcase["ui_kit"]["menu"], do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["ui_kit"]["menu"])}
+            phx-click="toggle_showcase_option"
+            phx-value-section="ui_kit"
+            phx-value-option="menu"
+          >Show menu</.button>
+        </div>
+        <div id="layout-test-ui-kit-preview" class="space-y-3">
+          <div
+            id="ui-kit-alert-preview"
+            role="status"
+            data-kind={@showcase["ui_kit"]["alert"]}
+            class={[
+              "grid grid-cols-[1.25rem_1fr] items-center gap-2 p-4 rounded-default border bg-primary overlay-dark",
+              case @showcase["ui_kit"]["alert"] do
+                "info" -> "border-info text-info"
+                "success" -> "border-success text-success"
+                "warning" -> "border-warning text-warning"
+                "error" -> "border-error text-error"
+              end
+            ]}
+          >
+            <.icon
+              name={
+                case @showcase["ui_kit"]["alert"] do
+                  "info" -> "hero-information-circle"
+                  "success" -> "hero-check-circle"
+                  "warning" -> "hero-exclamation-triangle"
+                  "error" -> "hero-x-circle"
+                end
+              }
+              class="size-5"
+            />
+            <span>{String.capitalize(@showcase["ui_kit"]["alert"])} alert surface</span>
+          </div>
+          <span
+            id="ui-kit-badge-preview"
+            data-style={@showcase["ui_kit"]["badge"]}
+            class={[
+              "status-pill",
+              case @showcase["ui_kit"]["badge"] do
+                "brand" -> "bg-brand text-content"
+                "outline" -> "border border-outline text-content"
+                "success" -> "bg-success text-content"
+                "warning" -> "bg-warning text-content"
+              end
+            ]}
+          >{String.capitalize(@showcase["ui_kit"]["badge"])}</span>
+          <div
+            id="ui-kit-progress-preview"
+            role="progressbar"
+            aria-label="Example progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow={@showcase["ui_kit"]["progress"]}
+            class="w-full h-2 rounded-full bg-primary overlay-dark overflow-hidden"
+          >
+            <div class="h-full bg-brand" style={"width: #{@showcase["ui_kit"]["progress"]}%"}>
+            </div>
+          </div>
+          <ol id="ui-kit-steps-preview" class="grid grid-cols-[1fr_1fr_1fr] items-center gap-2">
+            <li
+              :for={{label, index} <- Enum.with_index(["Tokens", "Hooks", "Routes"], 1)}
+              aria-current={
+                if index == String.to_integer(@showcase["ui_kit"]["step"]), do: "step"
+              }
+              class={[
+                "text-center text-sm pb-2 border-b-2",
+                if(index <= String.to_integer(@showcase["ui_kit"]["step"]),
+                  do: "border-brand text-brand",
+                  else: "border-outline text-subcontent"
+                )
+              ]}
+            >
+              {label}
+            </li>
+          </ol>
+          <ul
+            :if={@showcase["ui_kit"]["menu"]}
+            id="ui-kit-menu-preview"
+            class="rounded-default bg-primary overlay-dark p-2 flex flex-col"
+          >
+            <li>
+              <.link href="/sign-in" class="block px-3 py-2 rounded-default hover:overlay-dark">Auth flow</.link>
+            </li>
+            <li>
+              <.link
+                href="/api/json/swaggerui"
+                class="block px-3 py-2 rounded-default hover:overlay-dark"
+              >API browser</.link>
+            </li>
+            <li>
+              <.link href="/admin" class="block px-3 py-2 rounded-default hover:overlay-dark">Admin surface</.link>
+            </li>
+          </ul>
+        </div>
+      </.card>
+    </section>
+
+    <.card id="layout-test-dependency-pages">
+      <.header>
+        Dependency pages
+        <:subtitle>Choose a route to inspect its availability and source package.</:subtitle>
+      </.header>
+      <details
+        phx-mounted={JS.ignore_attributes("open")}
+        id="dependency-page-controls"
+        class="space-y-2"
+      >
+        <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+          Page: {Enum.find(@dependency_pages, &(&1.id == @showcase["pages"]["selected"])).name}
+        </summary>
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+          <.button
+            :for={page <- @dependency_pages}
+            id={"dependency-page-choice-#{page.id}"}
+            type="button"
+            variant={if @showcase["pages"]["selected"] == page.id, do: :primary, else: :neutral}
+            aria-pressed={to_string(@showcase["pages"]["selected"] == page.id)}
+            phx-click="set_showcase_option"
+            phx-value-section="pages"
+            phx-value-option="selected"
+            phx-value-choice={page.id}
+          >{page.name}</.button>
+        </div>
+      </details>
+      <.card_inset
+        :for={page <- @dependency_pages}
+        :if={page.id == @showcase["pages"]["selected"]}
+        id={"dependency-page-#{page.id}"}
+      >
+        <div class="space-y-3">
+          <div class="grid grid-cols-[1fr_max-content] items-center gap-2">
+            <h3 class="font-semibold">{page.name}</h3>
+            <span class="status-pill bg-primary overlay-dark text-content">{page.availability}</span>
+          </div>
+          <p class="text-sm text-subcontent">{page.description}</p>
+          <p class="text-xs text-subcontent">{page.source} · {page.path}</p>
+          <.button href={page.path} variant={:neutral}>Open page</.button>
+        </div>
+      </.card_inset>
+    </.card>
+  </div>
   <.modal :if={@show_modal} id="layout-test-modal" on_cancel={JS.push("hide_modal")}>
-    <:title>Example dialog</:title>
+    <:title :if={@showcase["dialog"]["title"]}>Example dialog</:title>
     <p class="text-sm text-content">
       Focus stays in this dialog. Escape closes it and returns focus to the opening control.
     </p>
-    <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+    <div :if={@showcase["dialog"]["actions"]} class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
       <.button id="dialog-cancel" type="button" variant={:neutral} phx-click="hide_modal">Cancel</.button>
       <.button id="dialog-confirm" type="button" variant={:primary} phx-click="hide_modal">Confirm</.button>
     </div>

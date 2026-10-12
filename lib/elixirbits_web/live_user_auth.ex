@@ -12,10 +12,10 @@ defmodule ElixirbitsWeb.LiveUserAuth do
     socket =
       socket
       |> assign_new(:user_timezone, fn ->
-        organisation =
+        organization =
           case socket.assigns[:nav] do
-            %{organisation: organisation} -> organisation
-            _ -> Elixirbits.Organisations.current_organisation!()
+            %{organization: organization} -> organization
+            _ -> Elixirbits.Organizations.current_organization!()
           end
 
         browser_timezone =
@@ -27,7 +27,7 @@ defmodule ElixirbitsWeb.LiveUserAuth do
           end
 
         (socket.assigns[:current_user] && socket.assigns.current_user.timezone) ||
-          browser_timezone || (organisation && organisation.timezone) || "Etc/UTC"
+          browser_timezone || (organization && organization.timezone) || "Etc/UTC"
       end)
       |> assign(:current_url, "/")
       |> attach_hook(:user_timezone_preference, :handle_event, fn
@@ -95,7 +95,7 @@ defmodule ElixirbitsWeb.LiveUserAuth do
       |> assign(:current_path, "/")
       |> assign(:nav, %{
         items: Permissions.visible_sitenav(permissions),
-        organisation: Elixirbits.Organisations.current_organisation!(),
+        organization: Elixirbits.Organizations.current_organization!(),
         user: permissions.user,
         timezone_form:
           to_form(%{"timezone" => (permissions.user && permissions.user.timezone) || ""}),

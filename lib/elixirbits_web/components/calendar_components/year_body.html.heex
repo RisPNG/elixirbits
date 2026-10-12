@@ -1,5 +1,5 @@
 <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
-  <div :for={month <- 1..12} class="rounded-box border border-outline bg-primary p-2">
+  <div :for={month <- 1..12} class="rounded-default border border-outline bg-primary p-2">
     <p class="mb-1 text-center text-sm font-semibold text-content">
       {Calendar.strftime(Date.new!(2000, month, 1), "%B")}
     </p>
@@ -22,12 +22,12 @@
         phx-value-view="day"
         phx-value-date={Date.to_iso8601(day)}
         class={[
-          "rounded py-0.5 text-center text-[0.65rem]",
+          "rounded-default py-0.5 text-center text-[0.65rem] hover:overlay-dark",
           cond do
-            day == @today -> "bg-brand font-semibold text-content-alt"
+            day == @today -> "bg-brand font-semibold text-content"
             day.month != month -> "text-subcontent"
-            MapSet.member?(@event_days, day) -> "font-bold text-brand hover:bg-primary-alt"
-            true -> "text-content hover:bg-primary-alt"
+            MapSet.member?(@event_days, day) -> "font-bold text-brand"
+            true -> "text-content"
           end
         ]}
       >

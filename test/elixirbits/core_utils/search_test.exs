@@ -527,7 +527,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
                Enum.sort([record1.id, record2.id])
     end
 
-    test "honours use_or for field operations" do
+    test "honors use_or for field operations" do
       record = record_fixture(%{active: true, count: 20, secondary_count: 10})
 
       result =

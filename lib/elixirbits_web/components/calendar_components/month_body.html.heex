@@ -1,4 +1,4 @@
-<div class="overflow-hidden rounded-box border border-outline">
+<div class="overflow-hidden rounded-default border border-outline">
   <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr]">
     <div
       :for={label <- ~w(Mon Tue Wed Thu Fri Sat Sun)}
@@ -9,8 +9,8 @@
     <div
       :for={day <- @days}
       class={[
-        "min-h-[6.5rem] border-b border-r border-outline p-1",
-        (day.month != @cursor.month && "bg-primary-alt") || "bg-primary"
+        "min-h-[6.5rem] border-b border-r border-outline bg-primary p-1",
+        day.month != @cursor.month && "overlay-dark"
       ]}
     >
       <% day_events = @events |> Cal.events_on(day) |> Enum.sort_by(& &1.start, DateTime) %>
@@ -18,7 +18,7 @@
         <span class={[
           "grid size-6 place-items-center rounded-full text-xs",
           cond do
-            day == @today -> "bg-brand font-semibold text-content-alt"
+            day == @today -> "bg-brand font-semibold text-content"
             day.month != @cursor.month -> "text-subcontent"
             true -> "text-content"
           end
@@ -34,7 +34,7 @@
           phx-value-event={event.id}
           aria-label={event.label}
           class={[
-            "truncate rounded px-1 py-0.5 text-left text-xs",
+            "truncate rounded-default px-1 py-0.5 text-left text-xs hover:overlay-dark",
             event.bar_class
           ]}
         >
@@ -46,7 +46,7 @@
           phx-click="calendar_change"
           phx-value-view="day"
           phx-value-date={Date.to_iso8601(day)}
-          class="px-1 text-left text-xs text-subcontent hover:text-content"
+          class="px-1 text-left text-xs text-subcontent hover:overlay-dark"
         >
           {length(day_events) - 3} more
         </button>

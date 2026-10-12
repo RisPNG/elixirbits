@@ -9,7 +9,7 @@ defmodule ElixirbitsWeb.Layouts do
 
   @no_nav %{
     items: [],
-    organisation: nil,
+    organization: nil,
     user: nil,
     timezone_form: nil,
     path: nil,
@@ -84,14 +84,14 @@ defmodule ElixirbitsWeb.Layouts do
 
     <div
       :if={@show_nav?}
-      class="fixed left-8 top-4 z-40 w-80 rounded-box border border-outline bg-secondary shadow-xl"
+      class="fixed left-8 top-4 z-40 w-80 rounded-default border border-outline bg-secondary shadow-xl"
     >
       <div class="grid grid-cols-[2.75rem_1fr] items-center">
         <button
           type="button"
           phx-click="toggle_nav"
           aria-label="Toggle navigation"
-          class="grid h-11 place-items-center text-content hover:text-brand transition-colors"
+          class="grid h-11 place-items-center text-content hover:overlay-dark transition-colors"
         >
           <.icon name={(@nav.open? && "hero-x-mark") || "hero-bars-3"} class="size-5" />
         </button>
@@ -99,7 +99,7 @@ defmodule ElixirbitsWeb.Layouts do
         <div class="grid grid-cols-[1.25rem_1fr] items-center gap-2 h-11 px-3 border-l border-dashed border-outline">
           <img src={~p"/images/logo.svg"} width="20" alt="" />
           <span class="truncate text-sm font-semibold uppercase tracking-wide text-content">
-            {(@nav.organisation && @nav.organisation.name) || "Elixirbits"}
+            {(@nav.organization && @nav.organization.name) || "Elixirbits"}
           </span>
         </div>
       </div>
@@ -116,7 +116,7 @@ defmodule ElixirbitsWeb.Layouts do
         </span>
         <a
           href={~p"/sign-out"}
-          class="truncate px-3 py-2 text-brand hover:text-brand-alt transition-colors border-l border-dashed border-outline"
+          class="truncate px-3 py-2 text-brand hover:overlay-dark transition-colors border-l border-dashed border-outline"
         >
           Sign out
         </a>
@@ -125,7 +125,7 @@ defmodule ElixirbitsWeb.Layouts do
       <.link
         :if={is_nil(@nav.user)}
         navigate={~p"/sign-in"}
-        class="block border-t border-outline px-3 py-2 text-sm text-brand hover:text-brand-alt"
+        class="block border-t border-outline px-3 py-2 text-sm text-brand hover:overlay-dark"
       >
         Sign in
       </.link>
@@ -193,10 +193,10 @@ defmodule ElixirbitsWeb.Layouts do
             :if={not is_nil(entry.url)}
             navigate={"/" <> entry.url}
             class={[
-              "truncate transition-colors",
+              "truncate hover:overlay-dark transition-colors",
               (@depth == 0 && "text-base font-bold uppercase tracking-wide") || "text-sm",
               (@current_path == "/" <> entry.url && "text-brand") ||
-                "text-subcontent hover:text-content"
+                "text-subcontent"
             ]}
           >
             {entry.name}
@@ -208,9 +208,9 @@ defmodule ElixirbitsWeb.Layouts do
             phx-click="toggle_nav_section"
             phx-value-code={entry.code}
             class={[
-              "truncate text-left transition-colors",
+              "truncate text-left hover:overlay-dark transition-colors",
               (@depth == 0 && "text-base font-bold uppercase tracking-wide") || "text-sm",
-              (entry.code in @open_codes && "text-brand") || "text-subcontent hover:text-content"
+              (entry.code in @open_codes && "text-brand") || "text-subcontent"
             ]}
           >
             {entry.name}
@@ -222,7 +222,7 @@ defmodule ElixirbitsWeb.Layouts do
             phx-click="toggle_nav_section"
             phx-value-code={entry.code}
             aria-label={"Toggle #{entry.name}"}
-            class="grid place-items-center text-subcontent hover:text-content transition-colors"
+            class="grid place-items-center text-subcontent hover:overlay-dark transition-colors"
           >
             <.icon
               name="hero-chevron-down-micro"
@@ -261,33 +261,33 @@ defmodule ElixirbitsWeb.Layouts do
   def theme_toggle(assigns) do
     ~H"""
     <div class={[
-      "relative flex flex-row items-center border-2 border-outline bg-primary-alt rounded-full",
+      "relative flex flex-row items-center border border-outline bg-primary overlay-dark rounded-full",
       @class
     ]}>
       <div class="absolute w-1/3 h-full rounded-full border border-outline bg-primary left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
 
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
       >
-        <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-computer-desktop-micro" class="size-4" />
       </button>
 
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
       >
-        <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-sun-micro" class="size-4" />
       </button>
 
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
       >
-        <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-moon-micro" class="size-4" />
       </button>
     </div>
     """

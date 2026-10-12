@@ -10,13 +10,13 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
   alias Elixirbits.Accounts
   alias Elixirbits.Accounts.User
   alias Elixirbits.Address
-  alias Elixirbits.Organisations.Organisation
+  alias Elixirbits.Organizations.Organization
 
   setup do
     for {code, url} <- [
           {"ROLES", "admin/roles"},
           {"USERS", "admin/users"},
-          {"ORG", "admin/organisation"}
+          {"ORG", "admin/organization"}
         ] do
       Ash.create!(Sitenav, %{code: code, name: code, url: url, level: 1}, actor: %{system: true})
     end
@@ -140,22 +140,22 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
     assert Ash.load!(target, :addresses, actor: %{system: true}).addresses == []
   end
 
-  test "nested organisation addresses cannot borrow user administration permissions" do
-    organisation =
-      Ash.create!(Organisation, %{name: "Office", addresses: [%{line_1: "Original office"}]},
+  test "nested organization addresses cannot borrow user administration permissions" do
+    organization =
+      Ash.create!(Organization, %{name: "Office", addresses: [%{line_1: "Original office"}]},
         action: :create,
         actor: %{system: true}
       )
       |> Ash.load!(:addresses, actor: %{system: true})
 
-    [address] = organisation.addresses
+    [address] = organization.addresses
     updater = actor(%{"ORG" => 5, "USERS" => 16})
 
-    assert [%{id: id}] = Ash.load!(organisation, :addresses, actor: updater).addresses
+    assert [%{id: id}] = Ash.load!(organization, :addresses, actor: updater).addresses
     assert id == address.id
 
-    assert {:ok, organisation} =
-             Ash.update(organisation, %{addresses: [%{id: address.id, line_1: "Updated office"}]},
+    assert {:ok, organization} =
+             Ash.update(organization, %{addresses: [%{id: address.id, line_1: "Updated office"}]},
                action: :update,
                actor: updater
              )
@@ -164,43 +164,43 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
 
     assert {:error, %Ash.Error.Forbidden{}} =
              Ash.update(
-               organisation,
+               organization,
                %{addresses: [%{id: address.id}, %{line_1: "New office"}]},
                action: :update,
                actor: updater
              )
 
     assert {:error, %Ash.Error.Forbidden{}} =
-             Ash.update(organisation, %{addresses: []}, action: :update, actor: updater)
+             Ash.update(organization, %{addresses: []}, action: :update, actor: updater)
 
-    assert {:ok, organisation} =
-             Ash.update(organisation, %{addresses: [%{id: address.id}, %{line_1: "New office"}]},
+    assert {:ok, organization} =
+             Ash.update(organization, %{addresses: [%{id: address.id}, %{line_1: "New office"}]},
                action: :update,
                actor: actor(%{"ORG" => 7})
              )
 
-    assert length(Ash.load!(organisation, :addresses, actor: %{system: true}).addresses) == 2
+    assert length(Ash.load!(organization, :addresses, actor: %{system: true}).addresses) == 2
 
-    assert {:ok, organisation} =
-             Ash.update(organisation, %{addresses: []},
+    assert {:ok, organization} =
+             Ash.update(organization, %{addresses: []},
                action: :update,
                actor: actor(%{"ORG" => 13})
              )
 
-    assert Ash.load!(organisation, :addresses, actor: %{system: true}).addresses == []
+    assert Ash.load!(organization, :addresses, actor: %{system: true}).addresses == []
   end
 
-  test "organisation creation can create nested addresses without update permission" do
+  test "organization creation can create nested addresses without update permission" do
     creator = actor(%{"ORG" => 6})
 
-    assert {:ok, organisation} =
-             Ash.create(Organisation, %{name: "Office", addresses: [%{line_1: "New office"}]},
+    assert {:ok, organization} =
+             Ash.create(Organization, %{name: "Office", addresses: [%{line_1: "New office"}]},
                action: :create,
                actor: creator
              )
 
     assert [%{line_1: "New office"}] =
-             Ash.load!(organisation, :addresses, actor: creator).addresses
+             Ash.load!(organization, :addresses, actor: creator).addresses
   end
 
   test "accounts can save a validated timezone without profile administration" do

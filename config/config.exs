@@ -110,7 +110,7 @@ config :elixirbits,
     Elixirbits.Accounts,
     Elixirbits.Events,
     Elixirbits.AccessControl,
-    Elixirbits.Organisations,
+    Elixirbits.Organizations,
     Elixirbits.Numbering
   ],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
@@ -138,7 +138,7 @@ config :esbuild,
   version: "0.28.2",
   elixirbits: [
     args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --alias:@=.),
+      ~w(app=js/app.js pdf.worker=node_modules/pdfjs-dist/build/pdf.worker.mjs node_modules/pdfjs-dist/cmaps/*.bcmap node_modules/pdfjs-dist/cmaps/LICENSE node_modules/pdfjs-dist/standard_fonts/*.pfb node_modules/pdfjs-dist/standard_fonts/*.ttf node_modules/pdfjs-dist/standard_fonts/LICENSE_* node_modules/pdfjs-dist/wasm/*.wasm node_modules/pdfjs-dist/wasm/*.js node_modules/pdfjs-dist/wasm/LICENSE_* node_modules/pdfjs-dist/iccs/*.icc node_modules/pdfjs-dist/iccs/LICENSE --bundle --format=esm --splitting --target=es2022 --outbase=node_modules/pdfjs-dist --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --alias:@=. --loader:.bcmap=copy --loader:.pfb=copy --loader:.ttf=copy --loader:.wasm=copy --loader:.icc=copy --loader:=copy),
     cd: Path.expand("../assets", __DIR__),
     env: %{
       "NODE_PATH" =>

@@ -22,7 +22,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   @doc """
   Renders a Phoenix form with browser constraint validation disabled by default.
 
-  Server validation and Phoenix form data, slots, CSRF protection, HTTP methods, and multipart uploads retain their native behaviour. Pass `novalidate={false}` to enable browser constraint validation for a particular form.
+  Server validation and Phoenix form data, slots, CSRF protection, HTTP methods, and multipart uploads retain their native behavior. Pass `novalidate={false}` to enable browser constraint validation for a particular form.
 
   ## Examples
 
@@ -85,10 +85,10 @@ defmodule ElixirbitsWeb.CoreComponents do
       {@rest}
     >
       <div class={[
-        "flex items-start gap-3 p-4 rounded-md border w-80 max-w-80 text-wrap shadow-sm",
-        @kind == :info && "bg-info border-info text-content-alt",
-        @kind == :error && "bg-error border-error text-content-alt",
-        @kind == :warning && "bg-warning border-warning text-content-alt"
+        "flex items-start gap-3 p-4 rounded-default border w-80 max-w-80 text-wrap shadow-sm",
+        @kind == :info && "bg-info border-info text-content",
+        @kind == :error && "bg-error border-error text-content",
+        @kind == :warning && "bg-warning border-warning text-content"
       ]}>
         <.icon :if={@icon} name={@icon} class="size-5 shrink-0" />
         <div>
@@ -103,8 +103,12 @@ defmodule ElixirbitsWeb.CoreComponents do
           </p>
         </div>
         <div class="flex-1" />
-        <button type="button" class="group self-start cursor-pointer" aria-label={gettext("close")}>
-          <.icon name="hero-x-mark" class="size-5 opacity-40 group-hover:opacity-70" />
+        <button
+          type="button"
+          class="self-start rounded-default cursor-pointer hover:overlay-dark"
+          aria-label={gettext("close")}
+        >
+          <.icon name="hero-x-mark" class="size-5" />
         </button>
       </div>
     </div>
@@ -223,7 +227,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   ## Variant
 
-  A labelled button that stands alongside `action_button/1` takes a `variant` instead of hand-rolled classes, so it matches the icon buttons in height and tone: `:primary` for the action a page exists to perform, `:neutral` for everything else, `:danger` for destructive confirmations.
+  A labeled button that stands alongside `action_button/1` takes a `variant` instead of hand-rolled classes, so it matches the icon buttons in height and tone: `:primary` for the action a page exists to perform, `:neutral` for everything else, `:danger` for destructive confirmations.
 
       <.button variant={:primary} phx-click="complete">Complete &amp; post variances</.button>
       <.button variant={:neutral} phx-click="cancel_delete">Cancel</.button>
@@ -253,7 +257,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     assigns =
       assign(assigns, :class, [
-        "inline-grid place-items-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none",
+        "inline-grid place-items-center rounded-default font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none",
         variant,
         assigns[:class]
       ])
@@ -301,7 +305,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   Creating a record, adding a row, viewing, updating, saving, archiving, deleting, and leaving the page all use the same square bordered icon, so these controls look consistent in page headers, table rows, and repeated sub-forms.
 
-  Destructive actions use the error colours. Other actions use neutral colours and the brand colour on hover. For a domain-specific action without its own entry, pass `icon` to override the icon while keeping the button's shape and colours, and pass a `tooltip` that describes the action.
+  Destructive actions use the error color. Other actions use neutral colors. Hovering darkens each button's existing surface. For a domain-specific action without its own entry, pass `icon` to override the icon while keeping the button's shape and colors, and pass a `tooltip` that describes the action.
 
   ## Examples
 
@@ -318,7 +322,8 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   attr :tooltip, :string,
     default: nil,
-    doc: "overrides the action's default label, used as both tooltip and aria-label"
+    doc:
+      "overrides the action's default tooltip and accessible label unless aria-label is supplied; an empty string hides the tooltip and keeps the action's label"
 
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled type)
@@ -346,14 +351,19 @@ defmodule ElixirbitsWeb.CoreComponents do
         icon: assigns.icon || icon,
         tooltip: assigns.tooltip || tooltip,
         tone: tone,
-        rest: Map.put_new(assigns.rest, :type, "button")
+        rest:
+          assigns.rest
+          |> Map.put_new(:type, "button")
+          |> Map.put_new(
+            :"aria-label",
+            if(assigns.tooltip in [nil, ""], do: tooltip, else: assigns.tooltip)
+          )
       )
 
     ~H"""
     <.button
       class={["size-11", @tone, @class]}
       tooltip={@tooltip}
-      aria-label={@tooltip}
       {@rest}
     >
       <.icon name={@icon} class="size-6" />
@@ -401,7 +411,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   `preview_as` controls the layout of each preview and its clear button. The default `"tag"` wraps the slot in the same chip a LiveSelect tag uses, with the clear button inline after the label. This suits previews that show only a name, such as a document. `"thumbnail"` lets the slot render the file content and places a round clear button in its top-right corner, which suits previews that show an image.
 
-  Either way a LiveView rendering a file field handles exactly two events: `"remove_upload"` with `phx-value-url` for a stored file, and `"cancel_upload"` with `phx-value-ref` for a picked one. Any `render_as` other than `"enabled"` keeps the previews but drops those buttons and the file control, leaving the field read-only. Hidden modes apply to the entire field, including its previews.
+  Either way a LiveView rendering a file field handles exactly two events: `"remove_upload"` with `phx-value-url` for a stored file, and `"cancel_upload"` with `phx-value-ref` for a picked one. Any visible `render_as` other than `"enabled"` keeps the previews, removes those buttons, and hides and disables the file control, leaving the field read-only while preserving the browser's picked files for pending previews. Hidden modes apply to the entire field, including its previews. `"hidden-disabled"` keeps the hidden native input disabled and retains the previews so switching modes preserves picked files.
 
   ```heex
   <.input
@@ -412,7 +422,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     stored={@images}
     preview_as="thumbnail"
   >
-    <:preview :let={url}><img src={url} class="size-20 rounded-md object-cover" /></:preview>
+    <:preview :let={url}><img src={url} class="size-20 rounded-default object-cover" /></:preview>
     <:pending :let={entry}><.live_img_preview entry={entry} class="size-20" /></:pending>
   </.input>
   ```
@@ -424,11 +434,11 @@ defmodule ElixirbitsWeb.CoreComponents do
     * `"enabled"`: the real input (default)
     * `"disabled"`: a lookalike span with the disabled input visual. No input is rendered, so the value does not submit
     * `"like-enabled"`: a lookalike span with the enabled input visual. No input is rendered, so the value does not submit
-    * `"like-disabled"`: a lookalike span with the disabled input visual plus the real input rendered hidden, so native input behaviour (submission) still works
-    * `"hidden"` / `"hidden-enabled"`: the real input rendered hidden, so native input behaviour still works
-    * `"hidden-disabled"`: nothing is rendered
+    * `"like-disabled"`: a lookalike span with the disabled input visual plus the real input rendered hidden, so native input behavior (submission) still works
+    * `"hidden"` / `"hidden-enabled"`: the real input rendered hidden, so native input behavior still works
+    * `"hidden-disabled"`: nothing is rendered, except live uploads retain their disabled input and previews inside a hidden field to preserve picked files
     * `"text"` / `"text-enabled"`: the real editable input with a plain text visual
-    * `"text-disabled"`: plain text plus the real input rendered hidden, so native input behaviour (submission) still works
+    * `"text-disabled"`: plain text plus the real input rendered hidden, so native input behavior (submission) still works
   """
   attr :id, :any, default: nil
   attr :name, :any
@@ -570,18 +580,6 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
-  def input(%{render_as: "hidden-disabled"} = assigns) do
-    ~H""
-  end
-
-  def input(%{render_as: render_as} = assigns) when render_as in ["hidden", "hidden-enabled"] do
-    assigns = assign(assigns, :render_as, "enabled")
-
-    ~H"""
-    <div class="hidden">{input(assigns)}</div>
-    """
-  end
-
   def input(%{upload: upload} = assigns) when not is_nil(upload) do
     messages =
       upload.entries
@@ -599,12 +597,12 @@ defmodule ElixirbitsWeb.CoreComponents do
     {previews_class, preview_class, clear_class, clear_icon_class} =
       if assigns.preview_as == "thumbnail" do
         {"grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 mt-3", "relative",
-         "absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-error text-content-alt hover:bg-error-alt",
+         "absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-error text-content hover:overlay-dark",
          "size-3"}
       else
         {"grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 mt-3",
-         "p-1.5 text-sm rounded-lg border border-outline bg-primary-alt grid grid-cols-[1fr_1rem] items-center gap-1",
-         "text-error hover:text-error-alt cursor-pointer", "size-4"}
+         "p-1.5 text-sm rounded-default border border-outline bg-primary overlay-dark grid grid-cols-[1fr_1rem] items-center gap-1",
+         "text-error hover:overlay-dark cursor-pointer", "size-4"}
       end
 
     assigns =
@@ -614,20 +612,31 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:preview_class, preview_class)
       |> assign(:clear_class, clear_class)
       |> assign(:clear_icon_class, clear_icon_class)
+      |> assign(:upload_editable, assigns.render_as in ["enabled", "hidden", "hidden-enabled"])
 
     ~H"""
-    <div>
-      <label :if={@render_as == "enabled"} for={@upload.ref} class="relative block">
+    <div class={@render_as in ["hidden", "hidden-enabled", "hidden-disabled"] && "hidden"}>
+      <label
+        for={@upload.ref}
+        class={if @upload_editable, do: "relative block", else: "hidden"}
+      >
         <.live_file_input
           upload={@upload}
           {@rest}
+          disabled={@rest[:disabled] || not @upload_editable}
           class={[
             @class ||
-              "input-floating-control block w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+              [
+                "input-floating-control block w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                (@errors == [] || @error_class) && "border-outline"
+              ],
             @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
           ]}
         />
-        <span class={["input-floating-label", @errors != [] && "input-floating-label-error"]}>
+        <span
+          :if={@upload_editable}
+          class={["input-floating-label", @errors != [] && "input-floating-label-error"]}
+        >
           {@label}<span
             :if={@rest[:required] && @label not in [nil, ""]}
             aria-hidden="true"
@@ -637,7 +646,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       </label>
 
       <span
-        :if={@render_as != "enabled" and @label not in [nil, ""]}
+        :if={not @upload_editable and @label not in [nil, ""]}
         class="block text-sm font-medium text-subcontent"
       >
         {@label}<span
@@ -651,8 +660,9 @@ defmodule ElixirbitsWeb.CoreComponents do
         <div :for={url <- @stored} class={@preview_class}>
           {render_slot(@preview, url)}
           <.button
-            :if={@render_as == "enabled"}
+            :if={@upload_editable}
             type="button"
+            disabled={@rest[:disabled]}
             phx-click="remove_upload"
             aria-label="Remove file"
             phx-value-url={url}
@@ -664,9 +674,10 @@ defmodule ElixirbitsWeb.CoreComponents do
         <div :for={entry <- @upload.entries} class={@preview_class}>
           {render_slot(@pending, entry)}
           <.button
-            :if={@render_as == "enabled"}
+            :if={@upload_editable}
             aria-label={"Cancel #{entry.client_name}"}
             type="button"
+            disabled={@rest[:disabled]}
             phx-click="cancel_upload"
             phx-value-ref={entry.ref}
             class={@clear_class}
@@ -681,6 +692,18 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
+  def input(%{render_as: "hidden-disabled"} = assigns) do
+    ~H""
+  end
+
+  def input(%{render_as: render_as} = assigns) when render_as in ["hidden", "hidden-enabled"] do
+    assigns = assign(assigns, :render_as, "enabled")
+
+    ~H"""
+    <div class="hidden">{input(assigns)}</div>
+    """
+  end
+
   def input(%{render_as: render_as, type: type} = assigns)
       when render_as in ["text", "text-enabled"] and
              type in ["email", "number", "search", "text", "url"] do
@@ -692,7 +715,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         :text_input_class,
         assigns.class ||
           [
-            "block w-full appearance-none bg-transparent border-0 rounded-none text-sm text-content overflow-hidden text-ellipsis whitespace-nowrap focus:outline-none focus:ring-0 focus-visible:underline disabled:cursor-not-allowed disabled:text-subcontent",
+            "block w-full appearance-none bg-transparent border-0 text-sm text-content overflow-hidden text-ellipsis whitespace-nowrap focus:outline-none focus:ring-0 focus-visible:underline disabled:overlay-dark disabled:cursor-not-allowed disabled:text-subcontent",
             if(assigns[:label], do: "min-h-6 py-1", else: "min-h-11 text-center"),
             assigns.errors != [] && (assigns.error_class || "text-error")
           ]
@@ -735,7 +758,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         :text_input_class,
         assigns.class ||
           [
-            "block w-full min-h-6 bg-transparent border-0 rounded-none py-1 text-sm text-content whitespace-pre-wrap focus:outline-none focus:ring-0 focus-visible:underline disabled:cursor-not-allowed disabled:text-subcontent",
+            "block w-full min-h-6 bg-transparent border-0 py-1 text-sm text-content whitespace-pre-wrap focus:outline-none focus:ring-0 focus-visible:underline disabled:overlay-dark disabled:cursor-not-allowed disabled:text-subcontent",
             assigns.errors != [] && (assigns.error_class || "text-error")
           ]
       )
@@ -783,14 +806,14 @@ defmodule ElixirbitsWeb.CoreComponents do
       case type do
         "checkbox" ->
           [
-            "h-5 w-5 shrink-0 rounded border bg-center bg-no-repeat bg-[length:100%_100%]",
+            "h-5 w-5 shrink-0 rounded-default border bg-center bg-no-repeat bg-[length:100%_100%]",
             disabled_look && "cursor-not-allowed",
             checked &&
               "bg-control-check",
             case {checked, disabled_look} do
-              {true, true} -> "bg-tertiary border-tertiary-alt"
+              {true, true} -> "bg-tertiary border-tertiary"
               {true, false} -> "bg-brand border-brand"
-              {false, _} -> "bg-primary-alt border-outline"
+              {false, _} -> "bg-transparent border-outline"
             end
           ]
 
@@ -798,8 +821,12 @@ defmodule ElixirbitsWeb.CoreComponents do
           [
             "relative shrink-0 w-11 h-6 rounded-full border before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full",
             disabled_look && "cursor-not-allowed",
-            (checked && "bg-brand border-brand before:translate-x-5 before:bg-content-alt") ||
-              "bg-primary-alt border-outline before:bg-subcontent"
+            checked && "before:translate-x-5",
+            case {checked, disabled_look} do
+              {true, true} -> "bg-tertiary border-tertiary before:bg-subcontent"
+              {true, false} -> "bg-brand border-brand before:bg-content"
+              {false, _} -> "bg-transparent border-outline before:bg-subcontent"
+            end
           ]
       end
 
@@ -814,9 +841,10 @@ defmodule ElixirbitsWeb.CoreComponents do
       <div
         id={if @render_as not in ["like-disabled", "text-disabled"], do: @id}
         class={[
-          "grid items-center gap-2 w-full min-h-11 px-3 rounded-md border border-outline",
+          "grid items-center gap-2 w-full min-h-11 px-3 rounded-default border bg-transparent",
+          (@errors == [] || @error_class) && "border-outline",
           (@type == "switch" && "grid-cols-[1fr_2.75rem]") || "grid-cols-[1fr_1.25rem]",
-          (@disabled_look && "cursor-not-allowed bg-primary-alt") || "bg-primary",
+          @disabled_look && "overlay-dark cursor-not-allowed",
           @errors != [] && (@error_class || "border-error")
         ]}
         {@span_rest}
@@ -914,7 +942,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     span_class =
       if text_look do
-        # A label means the value is stacked under it and keeps its compact height. Without one, it sits in a row beside real fields, so it takes the field height and centres on it.
+        # A label means the value is stacked under it and keeps its compact height. Without one, it sits in a row beside real fields, so it takes the field height and centers on it.
         stacked = assigns.type == "textarea" or assigns[:label] not in [nil, ""]
 
         [
@@ -926,7 +954,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             do: "block w-full min-h-6 py-1",
             else: "flex w-full min-h-11 items-center justify-center text-center"
           ),
-          "text-sm",
+          "text-sm bg-transparent",
           (filled && "text-content") || "text-subcontent",
           assigns.errors != [] && (assigns.error_class || "text-error")
         ]
@@ -936,7 +964,8 @@ defmodule ElixirbitsWeb.CoreComponents do
             do: "block whitespace-pre-wrap",
             else: "flex items-center overflow-hidden whitespace-nowrap"
           ),
-          "w-full min-h-11 px-3 rounded-md border border-outline",
+          "w-full min-h-11 px-3 rounded-default border bg-transparent",
+          (assigns.errors == [] || assigns.error_class) && "border-outline",
           if(filled,
             do: [
               "input-floating-control",
@@ -945,9 +974,9 @@ defmodule ElixirbitsWeb.CoreComponents do
             else: "py-2"
           ),
           cond do
-            disabled_look -> "cursor-not-allowed bg-primary-alt text-subcontent"
-            not filled and placeholder not in [nil, ""] -> "bg-primary text-subcontent"
-            true -> "bg-primary text-content"
+            disabled_look -> "overlay-dark cursor-not-allowed text-subcontent"
+            not filled and placeholder not in [nil, ""] -> "text-subcontent"
+            true -> "text-content"
           end,
           assigns.errors != [] && (assigns.error_class || "border-error")
         ]
@@ -956,8 +985,6 @@ defmodule ElixirbitsWeb.CoreComponents do
     assigns =
       assigns
       |> assign(:display, if(filled, do: display, else: placeholder))
-      |> assign(:filled, filled)
-      |> assign(:disabled_look, disabled_look)
       |> assign(:text_look, text_look)
       |> assign(:include_hidden_input, include_hidden_input)
       |> assign(:label_as_placeholder, placeholder in [nil, ""])
@@ -996,9 +1023,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           class={[
             "input-floating-label",
             !@label_as_placeholder && "input-floating-label-hidden",
-            @errors != [] && "input-floating-label-error",
-            @disabled_look && "input-floating-label-disabled-look",
-            @filled && @disabled_look && "input-floating-label-on-disabled"
+            @errors != [] && "input-floating-label-error"
           ]}
         >
           {@label}<span
@@ -1053,7 +1078,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           checked={@checked}
           class={
             @class ||
-              "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded border border-outline bg-primary-alt checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed disabled:bg-primary-alt disabled:border-outline disabled:checked:bg-tertiary disabled:checked:border-tertiary-alt checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
+              "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded-default border border-outline bg-transparent checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:border-outline disabled:checked:bg-tertiary disabled:checked:border-tertiary checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
           }
           {@rest}
         />
@@ -1079,8 +1104,9 @@ defmodule ElixirbitsWeb.CoreComponents do
       <label
         for={@id}
         class={[
-          "group cursor-pointer grid grid-cols-[1fr_1.25rem] items-center gap-2 w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
-          "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-primary-alt has-[:disabled]:text-subcontent",
+          "group cursor-pointer grid grid-cols-[1fr_1.25rem] items-center gap-2 w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+          (@errors == [] || @error_class) && "border-outline",
+          "has-[:disabled]:overlay-dark has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
           @errors != [] &&
             (@error_class || "border-error focus-within:border-error focus-within:ring-error")
         ]}
@@ -1108,7 +1134,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "appearance-none h-5 w-5 shrink-0 rounded border border-outline bg-primary-alt checked:bg-brand checked:border-brand focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:bg-primary-alt disabled:border-outline disabled:checked:bg-tertiary disabled:checked:border-tertiary-alt checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
+                "appearance-none h-5 w-5 shrink-0 rounded-default border border-outline bg-transparent checked:bg-brand checked:border-brand focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:border-outline disabled:checked:bg-tertiary disabled:checked:border-tertiary checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
             }
             {@rest}
           />
@@ -1121,8 +1147,11 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def input(%{type: "radio"} = assigns) do
     ~H"""
-    <fieldset id={@id}>
-      <legend :if={@label} class="mb-1 text-sm font-medium text-content">
+    <fieldset id={@id} class="group">
+      <legend
+        :if={@label}
+        class="mb-1 text-sm font-medium text-content group-has-[:disabled]:text-subcontent"
+      >
         {@label}<span
           :if={@rest[:required] && @label not in [nil, ""]}
           aria-hidden="true"
@@ -1145,7 +1174,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={to_string(@value) == to_string(option_value)}
             class={
               @class ||
-                "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded-full border border-outline bg-primary-alt checked:border-brand checked:bg-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed checked:bg-control-radio"
+                "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded-full border border-outline bg-transparent checked:border-brand checked:bg-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-tertiary disabled:checked:border-tertiary checked:bg-control-radio"
             }
             {@rest}
           />
@@ -1171,7 +1200,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           [
             "inline-grid grid-cols-[2.75rem_1fr] items-center gap-2 text-sm font-medium text-content",
             "has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
-            # Unlabelled means it sits in a row under its column heading, so it centres on the column and takes the field height.
+            # Unlabeled means it sits in a row under its column heading, so it centers on the column and takes the field height.
             (@label in [nil, ""] && "min-h-11 w-full justify-center") || "",
             @errors != [] && (@error_class || "text-error")
           ]
@@ -1192,7 +1221,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           checked={@checked}
           class={
             @class ||
-              "peer appearance-none shrink-0 cursor-pointer w-11 h-6 rounded-full border border-outline bg-secondary checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content-alt before:transition-transform before:duration-200 before:ease-in-out"
+              "peer appearance-none shrink-0 cursor-pointer w-11 h-6 rounded-full border border-outline bg-transparent checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-tertiary disabled:checked:border-tertiary transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content disabled:checked:before:bg-subcontent before:transition-transform before:duration-200 before:ease-in-out"
           }
           {@rest}
         />
@@ -1218,8 +1247,9 @@ defmodule ElixirbitsWeb.CoreComponents do
       <label
         for={@id}
         class={[
-          "group cursor-pointer grid grid-cols-[1fr_2.75rem] items-center gap-2 w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
-          "has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-primary-alt has-[:disabled]:text-subcontent",
+          "group cursor-pointer grid grid-cols-[1fr_2.75rem] items-center gap-2 w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+          (@errors == [] || @error_class) && "border-outline",
+          "has-[:disabled]:overlay-dark has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
           @errors != [] &&
             (@error_class || "border-error focus-within:border-error focus-within:ring-error")
         ]}
@@ -1247,7 +1277,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-outline bg-primary-alt checked:bg-brand checked:border-brand focus:outline-none focus:ring-0 disabled:cursor-not-allowed transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content-alt before:transition-transform before:duration-200 before:ease-in-out"
+                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-outline bg-transparent checked:bg-brand checked:border-brand focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:checked:bg-tertiary disabled:checked:border-tertiary transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content disabled:checked:before:bg-subcontent before:transition-transform before:duration-200 before:ease-in-out"
             }
             {@rest}
           />
@@ -1408,6 +1438,8 @@ defmodule ElixirbitsWeb.CoreComponents do
         :text_input_class,
         :text_input_selected_class,
         :option_class,
+        :available_option_class,
+        :unavailable_option_class,
         :selected_option_class,
         :active_option_class,
         :container_class,
@@ -1514,19 +1546,24 @@ defmodule ElixirbitsWeb.CoreComponents do
               options={@options}
               text_input_class={[
                 @class ||
-                  "input-floating-control block w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                  [
+                    "input-floating-control block w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                    (@errors == [] || @error_class) && "border-outline"
+                  ],
                 @errors != [] &&
                   (@error_class || "border-error focus:border-error focus:ring-error")
               ]}
               text_input_selected_class=""
-              dropdown_class="select-dropdown rounded-md border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
-              option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
-              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
-              active_option_class="bg-primary-alt"
+              dropdown_class="select-dropdown rounded-default border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
+              option_class="select-none relative py-2 px-3 hover:overlay-light"
+              available_option_class="cursor-pointer text-content"
+              unavailable_option_class="cursor-not-allowed text-subcontent [&>div]:pointer-events-none"
+              selected_option_class="cursor-pointer text-content bg-primary overlay-dark font-semibold order-first"
+              active_option_class="overlay-light"
               container_class={@container_class}
-              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
-              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-outline bg-primary-alt flex items-center gap-1"
-              clear_tag_button_extra_class="text-error hover:text-error-alt cursor-pointer"
+              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:overlay-dark"
+              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-default border border-outline bg-primary overlay-dark flex items-center gap-1"
+              clear_tag_button_extra_class="text-error hover:overlay-dark cursor-pointer"
               tags_container_extra_class="order-last flex flex-wrap"
               placeholder={@placeholder}
               keep_label_on_select
@@ -1560,19 +1597,24 @@ defmodule ElixirbitsWeb.CoreComponents do
               options={@options}
               text_input_class={[
                 @class ||
-                  "block w-full min-h-11 px-3 py-2 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                  [
+                    "block w-full min-h-11 px-3 py-2 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                    (@errors == [] || @error_class) && "border-outline"
+                  ],
                 @errors != [] &&
                   (@error_class || "border-error focus:border-error focus:ring-error")
               ]}
               text_input_selected_class=""
-              dropdown_class="select-dropdown rounded-md border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
-              option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
-              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
-              active_option_class="bg-primary-alt"
+              dropdown_class="select-dropdown rounded-default border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
+              option_class="select-none relative py-2 px-3 hover:overlay-light"
+              available_option_class="cursor-pointer text-content"
+              unavailable_option_class="cursor-not-allowed text-subcontent [&>div]:pointer-events-none"
+              selected_option_class="cursor-pointer text-content bg-primary overlay-dark font-semibold order-first"
+              active_option_class="overlay-light"
               container_class="relative flex flex-col w-full"
-              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
-              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-lg border border-outline bg-primary-alt flex items-center gap-1"
-              clear_tag_button_extra_class="text-error hover:text-error-alt cursor-pointer"
+              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:overlay-dark"
+              tag_class="mr-1 mt-1 p-1.5 text-sm rounded-default border border-outline bg-primary overlay-dark flex items-center gap-1"
+              clear_tag_button_extra_class="text-error hover:overlay-dark cursor-pointer"
               tags_container_extra_class="order-last flex flex-wrap"
               placeholder={@prompt}
               keep_label_on_select
@@ -1608,7 +1650,10 @@ defmodule ElixirbitsWeb.CoreComponents do
             placeholder={@placeholder}
             class={[
               @class ||
-                "input-floating-control input-floating-textarea block w-full px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                [
+                  "input-floating-control input-floating-textarea block w-full px-3 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                  (@errors == [] || @error_class) && "border-outline"
+                ],
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
@@ -1637,7 +1682,10 @@ defmodule ElixirbitsWeb.CoreComponents do
             name={@name}
             class={[
               @class ||
-                "block w-full px-3 py-2 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                [
+                  "block w-full px-3 py-2 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                  (@errors == [] || @error_class) && "border-outline"
+                ],
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
@@ -1720,7 +1768,14 @@ defmodule ElixirbitsWeb.CoreComponents do
           "[&:has(.input-floating-control:not(:placeholder-shown))>.input-floating-label]:!left-3"
         ]}
       >
-        <input type="hidden" name={@name} value={@composite_value} data-tel-composite />
+        <input
+          type="hidden"
+          name={@name}
+          value={@composite_value}
+          disabled={@rest[:disabled]}
+          form={@rest[:form]}
+          data-tel-composite
+        />
         <div class="input-floating-wrapper grid grid-cols-[4rem_auto] gap-0">
           <div
             id={"#{@country_id}_country_dropdown"}
@@ -1733,16 +1788,19 @@ defmodule ElixirbitsWeb.CoreComponents do
               mode={:single}
               options={@country_options}
               value={@country_field.value}
+              disabled={@rest[:disabled] not in [false, nil]}
               text_input_class={[
-                "block w-full min-h-11 px-3 rounded-l-md border border-r-0 border-outline bg-primary text-content focus:outline-none focus:border-brand focus:border-r-1 focus:ring-2 focus:ring-brand !bg-none !p-2"
+                "block w-full min-h-11 px-3 rounded-l-default border border-r-0 border-outline bg-transparent text-content focus:outline-none focus:border-brand focus:border-r-1 focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed !bg-none !p-2"
               ]}
               text_input_selected_class=""
-              dropdown_class="select-dropdown rounded-md border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
-              option_class="cursor-pointer select-none relative py-2 px-3 text-content hover:bg-primary-alt"
-              selected_option_class="cursor-pointer select-none relative py-2 px-3 text-content bg-primary-alt font-semibold hover:bg-primary-alt order-first"
-              active_option_class="bg-primary-alt"
+              dropdown_class="select-dropdown rounded-default border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
+              option_class="select-none relative py-2 px-3 hover:overlay-light"
+              available_option_class="cursor-pointer text-content"
+              unavailable_option_class="cursor-not-allowed text-subcontent [&>div]:pointer-events-none"
+              selected_option_class="cursor-pointer text-content bg-primary overlay-dark font-semibold order-first"
+              active_option_class="overlay-light"
               container_class="relative flex flex-col w-full"
-              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:text-error-alt"
+              clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error hover:overlay-dark"
               placeholder="+60"
               keep_label_on_select
               keep_options_on_select
@@ -1757,7 +1815,10 @@ defmodule ElixirbitsWeb.CoreComponents do
             data-tel-number
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-r-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                [
+                  "input-floating-control block w-full min-h-11 px-3 rounded-r-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                  (@errors == [] || @error_class) && "border-outline"
+                ],
               @errors != [] &&
                 (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
@@ -1817,7 +1878,8 @@ defmodule ElixirbitsWeb.CoreComponents do
               class={[
                 @class ||
                   [
-                    "input-floating-control block w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                    "input-floating-control block w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                    (@errors == [] || @error_class) && "border-outline",
                     @type == "password" && "pr-12"
                   ],
                 @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
@@ -1836,7 +1898,11 @@ defmodule ElixirbitsWeb.CoreComponents do
               >*</span>
             </span>
           </label>
-          <.password_visibility_toggle :if={@type == "password" && @id not in [nil, ""]} id={@id} />
+          <.password_visibility_toggle
+            :if={@type == "password" && @id not in [nil, ""]}
+            id={@id}
+            disabled={@rest[:disabled]}
+          />
         </div>
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>
@@ -1863,7 +1929,8 @@ defmodule ElixirbitsWeb.CoreComponents do
               class={[
                 @class ||
                   [
-                    "block w-full min-h-11 px-3 py-2 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                    "block w-full min-h-11 px-3 py-2 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                    (@errors == [] || @error_class) && "border-outline",
                     @type == "password" && "pr-12"
                   ],
                 @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
@@ -1871,7 +1938,11 @@ defmodule ElixirbitsWeb.CoreComponents do
               {@rest}
             />
           </label>
-          <.password_visibility_toggle :if={@type == "password" && @id not in [nil, ""]} id={@id} />
+          <.password_visibility_toggle
+            :if={@type == "password" && @id not in [nil, ""]}
+            id={@id}
+            disabled={@rest[:disabled]}
+          />
         </div>
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>
@@ -1880,17 +1951,19 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   attr :id, :any, required: true
+  attr :disabled, :any, default: false
 
   defp password_visibility_toggle(assigns) do
     ~H"""
     <button
       id={"#{@id}-password-toggle"}
       type="button"
+      disabled={@disabled}
       aria-label="Show password"
       aria-pressed="false"
       aria-controls={@id}
       data-password-toggle
-      class="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-md text-subcontent hover:text-content focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed disabled:text-subcontent"
+      class="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-default text-subcontent hover:overlay-dark focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed disabled:text-subcontent"
     >
       <span id={"#{@id}-password-eye"} data-password-show-icon>
         <.icon name="hero-eye" class="h-5 w-5" />
@@ -1984,11 +2057,14 @@ defmodule ElixirbitsWeb.CoreComponents do
             data-vc-timezone={@timezone}
             data-vc-today={@today}
             phx-hook="VCalendar"
-            phx-update="ignore"
+            phx-mounted={JS.ignore_attributes(["value", "aria-haspopup", "aria-expanded"])}
             readonly
             class={[
               @class ||
-                "input-floating-control block w-full min-h-11 px-3 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+                [
+                  "input-floating-control block w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                  (@errors == [] || @error_class) && "border-outline"
+                ],
               @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             {@rest}
@@ -2021,11 +2097,14 @@ defmodule ElixirbitsWeb.CoreComponents do
           data-vc-timezone={@timezone}
           data-vc-today={@today}
           phx-hook="VCalendar"
-          phx-update="ignore"
+          phx-mounted={JS.ignore_attributes(["value", "aria-haspopup", "aria-expanded"])}
           readonly
           class={[
             @class ||
-              "block w-full min-h-11 px-3 py-2 rounded-md border border-outline bg-primary text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:text-subcontent disabled:cursor-not-allowed disabled:bg-primary-alt",
+              [
+                "block w-full min-h-11 px-3 py-2 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                (@errors == [] || @error_class) && "border-outline"
+              ],
             @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
           ]}
           {@rest}
@@ -2088,7 +2167,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     <section
       id={@id}
       class={[
-        "flex flex-col rounded-lg border border-outline bg-primary shadow-sm",
+        "flex flex-col rounded-default border border-outline bg-primary shadow-sm",
         @class
       ]}
       {@rest}
@@ -2116,7 +2195,11 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def card_inset(assigns) do
     ~H"""
-    <div id={@id} class={["rounded-lg border border-outline bg-primary-alt p-4", @class]} {@rest}>
+    <div
+      id={@id}
+      class={["rounded-default border border-outline bg-primary overlay-dark p-4", @class]}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
     """
@@ -2270,7 +2353,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       data-cancel={@on_cancel}
     >
       <div
-        class="absolute inset-0 bg-overlay"
+        class="absolute inset-0 bg-dark"
         phx-click={JS.exec("data-cancel", to: "##{@id}")}
         aria-hidden="true"
       />
@@ -2280,7 +2363,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         aria-modal="true"
         aria-labelledby={@title != [] && "#{@id}-title"}
         aria-label={@title == [] && @label}
-        class="relative z-10 w-full max-w-lg rounded-box border border-outline bg-primary p-6 shadow-lg"
+        class="relative z-10 w-full max-w-lg rounded-default border border-outline bg-primary p-6 shadow-lg"
       >
         <h2 :if={@title != []} id={"#{@id}-title"} class="mb-4 text-lg font-semibold text-content">
           {render_slot(@title)}
@@ -2298,7 +2381,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   Tabler icons use a `tabler-` prefix and include icons that Heroicons does not provide, such as a floppy disk. They come in outline and filled styles. Outline is the default, and `-filled` selects the filled style.
 
-  You can customise the size and colours of the icons by setting width, height, and theme colour classes.
+  You can customize the size and colors of the icons by setting width, height, and theme color classes.
 
   Icons are extracted from the `deps/heroicons` and `deps/tabler_icons` directories and bundled within your compiled app.css by the plugins in `assets/vendor/heroicons.js` and `assets/vendor/tabler.js`.
 

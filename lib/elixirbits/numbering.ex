@@ -13,7 +13,7 @@ defmodule Elixirbits.Numbering do
   @doc """
   Allocates a running document number for a local date, such as `INV-20260618-00001`.
 
-  A Date fixes the period directly. A DateTime is converted using the `:timezone` option, which defaults to `Etc/UTC`. Without a date, the current instant is used. Formatting accepts `:prefix`, `:suffix`, `:padding`, and `:separator`. The allocated counter cannot be overridden. Failed or cancelled documents may leave gaps.
+  A Date fixes the period directly. A DateTime is converted using the `:timezone` option, which defaults to `Etc/UTC`. Without a date, the current instant is used. Formatting accepts `:prefix`, `:suffix`, `:padding`, and `:separator`. The allocated counter cannot be overridden. Failed or canceled documents may leave gaps.
   """
   def next_number(doc_type, date_or_opts \\ [], opts \\ [])
 

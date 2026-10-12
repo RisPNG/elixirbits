@@ -57,7 +57,7 @@ defmodule Elixirbits.MixProject do
         build: [
           "implementation-guidelines": [
             description:
-              "Use this skill for any implementation task in this codebase. Consult it before adding new code, changing behaviour, refactoring, or integrating dependencies. It defines baseline implementation conventions that apply across all frameworks, libraries, plugins, packages, and internal modules.",
+              "Use this skill for any implementation task in this codebase. Consult it before adding new code, changing behavior, refactoring, or integrating dependencies. It defines baseline implementation conventions that apply across all frameworks, libraries, plugins, packages, and internal modules.",
             usage_rules: [~r/^[a-z0-9_]+$/]
           ],
           "ash-framework": [

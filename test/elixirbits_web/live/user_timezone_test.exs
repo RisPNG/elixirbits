@@ -5,7 +5,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
-  alias Elixirbits.Organisations
+  alias Elixirbits.Organizations
 
   @system %{system: true}
 
@@ -34,8 +34,8 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     assert has_element?(view, "[data-user-timezone='America/New_York']")
   end
 
-  test "a persisted preference wins over browser and organisation timezones", %{conn: conn} do
-    Organisations.create_organisation!(%{name: "Workspace", timezone: "Pacific/Auckland"},
+  test "a persisted preference wins over browser and organization timezones", %{conn: conn} do
+    Organizations.create_organization!(%{name: "Workspace", timezone: "Pacific/Auckland"},
       actor: @system
     )
 
@@ -88,8 +88,8 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     end
   end
 
-  test "invalid browser timezone falls back to organisation settings", %{conn: conn} do
-    Organisations.create_organisation!(%{name: "Workspace", timezone: "Pacific/Auckland"},
+  test "invalid browser timezone falls back to organization settings", %{conn: conn} do
+    Organizations.create_organization!(%{name: "Workspace", timezone: "Pacific/Auckland"},
       actor: @system
     )
 

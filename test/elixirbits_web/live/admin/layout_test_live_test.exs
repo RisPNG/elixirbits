@@ -27,7 +27,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 
     assert has_element?(view, "#layout-test-local-tab[aria-selected=\"true\"]")
-    assert has_element?(view, "#layout-test-local-panel")
+    assert has_element?(view, "#layout-test-local-panel[aria-hidden=false]:not(.hidden)")
     assert has_element?(view, "#layout-test-form[novalidate]")
     assert has_element?(view, "#layout-test-upload-form[novalidate]")
     assert has_element?(view, "#layout-test-core-table")
@@ -43,22 +43,58 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     assert has_element?(view, "label[for=\"local_accent\"] .input-floating-label")
     assert has_element?(view, "#local_phone_tel_wrapper .input-floating-wrapper.gap-0")
     assert has_element?(view, "label[for=\"local_notes\"] .input-floating-label")
-    refute has_element?(view, "#layout-test-ecosystem-panel")
+    assert has_element?(view, "#layout-test-ecosystem-panel.hidden[aria-hidden=true]")
 
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
     assert has_element?(view, "#layout-test-ecosystem-tab[aria-selected=\"true\"]")
-    assert has_element?(view, "#layout-test-ecosystem-panel")
+    assert has_element?(view, "#layout-test-ecosystem-panel[aria-hidden=false]:not(.hidden)")
     assert has_element?(view, "#layout-test-dependency-form[novalidate]")
-    assert has_element?(view, "#layout-test-cinder-table")
-    assert has_element?(view, "#layout-test-cinder-grid")
-    refute has_element?(view, "#layout-test-local-panel")
+    assert has_element?(view, "#layout-test-cinder-collection[data-layout=table]")
+    render_click(element(view, "#cinder-layout-grid"))
+    assert has_element?(view, "#layout-test-cinder-collection[data-layout=grid]")
+    assert has_element?(view, "#layout-test-local-panel.hidden[aria-hidden=true]")
+  end
+
+  test "switching tabs keeps pending uploads mounted with their original file references", %{
+    conn: conn
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    upload =
+      file_input(view, "#layout-test-upload-form", :demo_files, [
+        %{name: "notes.txt", content: "Pending across tabs", type: "text/plain"}
+      ])
+
+    document = upload |> render_upload("notes.txt") |> Floki.parse_document!()
+    selector = "#layout-test-upload-tags input[type=file]"
+    [input_id] = Floki.attribute(document, selector, "id")
+    [entry_refs] = Floki.attribute(document, selector, "data-phx-active-refs")
+    assert entry_refs != ""
+
+    render_click(element(view, "#layout-test-ecosystem-tab"))
+
+    assert has_element?(
+             view,
+             "#layout-test-local-panel.hidden input[id='#{input_id}'][data-phx-active-refs='#{entry_refs}']"
+           )
+
+    render_click(element(view, "#layout-test-local-tab"))
+
+    assert has_element?(
+             view,
+             "#layout-test-local-panel:not(.hidden) input[id='#{input_id}'][data-phx-active-refs='#{entry_refs}']"
+           )
+
+    assert has_element?(view, "#layout-test-upload-tags", "notes.txt")
+    assert has_element?(view, "#layout-test-upload-tags button[phx-click=cancel_upload]")
   end
 
   test "flash buttons trigger layout flash output", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 
-    render_click(element(view, "#layout-test-flash-info"))
+    render_click(element(view, "#layout-test-flash-kind-info"))
+    render_click(element(view, "#layout-test-flash-show"))
     assert has_element?(view, "#flash-info")
 
     assert has_element?(
@@ -66,10 +102,12 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
              "#flash-info[phx-hook=\"FlashAutoDismiss\"][data-duration=\"5000\"]"
            )
 
-    render_click(element(view, "#layout-test-flash-error"))
+    render_click(element(view, "#layout-test-flash-kind-error"))
+    render_click(element(view, "#layout-test-flash-show"))
     assert has_element?(view, "#flash-error")
 
-    render_click(element(view, "#layout-test-flash-warning"))
+    render_click(element(view, "#layout-test-flash-kind-warning"))
+    render_click(element(view, "#layout-test-flash-show"))
     assert has_element?(view, "#flash-warning")
 
     assert has_element?(
@@ -191,12 +229,18 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     assert has_element?(view, "#layout-test-uploads button[phx-click=cancel_upload]")
     assert has_element?(view, "#layout-test-uploads button[phx-click=remove_upload]")
 
-    render_click(element(view, "#toggle-upload-mode"))
-    refute has_element?(view, "#layout-test-uploads input[type=file]")
+    render_click(element(view, "#upload-mode-text-disabled"))
+    assert has_element?(view, "#layout-test-upload-tags label.hidden input[type=file][disabled]")
+
+    assert has_element?(
+             view,
+             "#layout-test-upload-previews label.hidden input[type=file][disabled]"
+           )
+
     refute has_element?(view, "#layout-test-uploads button[phx-click=cancel_upload]")
     refute has_element?(view, "#layout-test-uploads button[phx-click=remove_upload]")
 
-    render_click(element(view, "#toggle-upload-mode"))
+    render_click(element(view, "#upload-mode-enabled"))
     render_submit(form(view, "#layout-test-upload-form"))
     assert has_element?(view, "#uploaded-names", "notes.txt")
     refute has_element?(view, "#layout-test-uploads button[phx-click=cancel_upload]")
@@ -204,7 +248,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
 
   test "dialog cancellation and calendar navigation update the showcase", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
-    render_click(element(view, "button[phx-click=show_modal]"))
+    render_click(element(view, "#layout-test-dialog-open"))
     assert has_element?(view, "#layout-test-modal [role=dialog]")
     render_click(element(view, "#dialog-cancel"))
     refute has_element?(view, "#layout-test-modal")

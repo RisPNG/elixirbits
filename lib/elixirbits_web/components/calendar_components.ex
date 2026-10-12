@@ -12,45 +12,45 @@ defmodule ElixirbitsWeb.CalendarComponents do
 
   @event_styles %{
     brand: %{
-      solid_rect: "fill-brand stroke-brand-alt",
-      outline_rect: "fill-transparent stroke-brand",
-      solid_bar: "bg-brand text-content-alt",
-      outline_bar: "border border-brand bg-primary-alt text-content",
+      fill: "fill-brand",
+      stroke: "stroke-brand",
+      solid_bar: "bg-brand text-content",
+      outline_bar: "border border-brand bg-primary text-content",
       dot: "bg-brand"
     },
     info: %{
-      solid_rect: "fill-info stroke-info-alt",
-      outline_rect: "fill-transparent stroke-info",
-      solid_bar: "bg-info text-content-alt",
-      outline_bar: "border border-info bg-primary-alt text-content",
+      fill: "fill-info",
+      stroke: "stroke-info",
+      solid_bar: "bg-info text-content",
+      outline_bar: "border border-info bg-primary text-content",
       dot: "bg-info"
     },
     success: %{
-      solid_rect: "fill-success stroke-success-alt",
-      outline_rect: "fill-transparent stroke-success",
-      solid_bar: "bg-success text-content-alt",
-      outline_bar: "border border-success bg-primary-alt text-content",
+      fill: "fill-success",
+      stroke: "stroke-success",
+      solid_bar: "bg-success text-content",
+      outline_bar: "border border-success bg-primary text-content",
       dot: "bg-success"
     },
     warning: %{
-      solid_rect: "fill-warning stroke-warning-alt",
-      outline_rect: "fill-transparent stroke-warning",
-      solid_bar: "bg-warning text-content-alt",
-      outline_bar: "border border-warning bg-primary-alt text-content",
+      fill: "fill-warning",
+      stroke: "stroke-warning",
+      solid_bar: "bg-warning text-content",
+      outline_bar: "border border-warning bg-primary text-content",
       dot: "bg-warning"
     },
     error: %{
-      solid_rect: "fill-error stroke-error-alt",
-      outline_rect: "fill-transparent stroke-error",
-      solid_bar: "bg-error text-content-alt",
-      outline_bar: "border border-error bg-primary-alt text-content",
+      fill: "fill-error",
+      stroke: "stroke-error",
+      solid_bar: "bg-error text-content",
+      outline_bar: "border border-error bg-primary text-content",
       dot: "bg-error"
     },
     neutral: %{
-      solid_rect: "fill-tertiary stroke-tertiary-alt",
-      outline_rect: "fill-transparent stroke-tertiary",
-      solid_bar: "bg-tertiary text-content-alt",
-      outline_bar: "border border-tertiary bg-primary-alt text-content",
+      fill: "fill-tertiary",
+      stroke: "stroke-tertiary",
+      solid_bar: "bg-tertiary text-content",
+      outline_bar: "border border-tertiary bg-primary text-content",
       dot: "bg-tertiary"
     }
   }
@@ -101,10 +101,10 @@ defmodule ElixirbitsWeb.CalendarComponents do
           "#{event.title}, #{Calendar.strftime(start, "%-d %b %Y %-I:%M %p %Z")} to #{Calendar.strftime(finish, "%-d %b %Y %-I:%M %p %Z")}"
 
         event
-        |> Map.put(:rect_class, if(outline, do: style.outline_rect, else: style.solid_rect))
+        |> Map.put(:fill_class, if(outline, do: "fill-transparent", else: style.fill))
+        |> Map.put(:stroke_class, style.stroke)
         |> Map.put(:bar_class, if(outline, do: style.outline_bar, else: style.solid_bar))
         |> Map.put(:dot_class, style.dot)
-        |> Map.put(:text_class, if(outline, do: "fill-content", else: "fill-content-alt"))
         |> Map.put(:label, if(event[:subtitle], do: "#{label}, #{event.subtitle}", else: label))
         |> Map.put(:start, start)
         |> Map.put(:finish, finish)

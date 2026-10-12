@@ -4,6 +4,7 @@ const PasswordVisibility = {
     this.onClick = event => {
       event.preventDefault()
       event.stopPropagation()
+      if (this.input?.disabled) return
 
       this.visible = !this.visible
       this.apply()

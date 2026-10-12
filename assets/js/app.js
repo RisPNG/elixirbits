@@ -27,6 +27,7 @@ import initTooltips from "./tooltip"
 import PasswordVisibility from "./password_visibility"
 import LiveTimer from "./live_timer"
 import SelectDropdown from "./select_dropdown"
+import UploadPdfPreview from "./upload_pdf_preview"
 import topbar from "topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -36,16 +37,18 @@ const liveSocket = new LiveSocket("/live", Socket, {
     _csrf_token: csrfToken,
     user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }),
-  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, SelectDropdown},
+  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, SelectDropdown, UploadPdfPreview},
 })
 
 // Show progress bar on live navigation and form submits
-const rootStyle = getComputedStyle(document.documentElement)
-topbar.config({
-  barColors: {0: rootStyle.getPropertyValue("--color-topbar").trim()},
-  shadowColor: rootStyle.getPropertyValue("--color-topbar-shadow").trim(),
+window.addEventListener("phx:page-loading-start", _info => {
+  const rootStyle = getComputedStyle(document.documentElement)
+  topbar.config({
+    barColors: {0: rootStyle.getPropertyValue("--color-brand").trim()},
+    shadowColor: rootStyle.getPropertyValue("--color-dark").trim(),
+  })
+  topbar.show(300)
 })
-window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // connect if there are any LiveViews on the page

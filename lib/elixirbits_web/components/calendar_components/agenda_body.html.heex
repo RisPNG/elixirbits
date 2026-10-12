@@ -1,4 +1,4 @@
-<div class="divide-y divide-outline rounded-box border border-outline bg-primary">
+<div class="divide-y divide-outline rounded-default border border-outline bg-primary">
   <p :if={@groups == []} class="p-4 text-sm text-subcontent">No events in this range.</p>
   <div :for={{day, day_events} <- @groups} class="grid grid-cols-[8rem_1fr]">
     <button
@@ -6,7 +6,7 @@
       phx-click="calendar_change"
       phx-value-view="day"
       phx-value-date={Date.to_iso8601(day)}
-      class="p-3 text-left hover:bg-primary-alt"
+      class="p-3 text-left hover:overlay-dark"
     >
       <p class="text-sm font-semibold text-content">{Calendar.strftime(day, "%a")}</p>
       <p class="text-xs text-subcontent">{Calendar.strftime(day, "%-d %b")}</p>
@@ -20,8 +20,8 @@
         aria-label={event.label}
         aria-pressed={event.id == @active}
         class={[
-          "grid grid-cols-[0.75rem_9rem_1fr_auto] items-center gap-2 p-3 text-left",
-          (event.id == @active && "bg-primary-alt") || "hover:bg-primary-alt"
+          "grid grid-cols-[0.75rem_9rem_1fr_auto] items-center gap-2 bg-primary p-3 text-left",
+          if(event.id == @active, do: "overlay-dark", else: "hover:overlay-dark")
         ]}
       >
         <span class={["size-2.5 rounded-full", event.dot_class]}></span>
