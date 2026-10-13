@@ -47,11 +47,11 @@ defmodule ElixirbitsWeb.CalendarComponents do
       dot: "bg-error"
     },
     neutral: %{
-      fill: "fill-tertiary",
-      stroke: "stroke-tertiary",
-      solid_bar: "bg-tertiary text-content",
-      outline_bar: "border border-tertiary bg-primary text-content",
-      dot: "bg-tertiary"
+      fill: "fill-secondary",
+      stroke: "stroke-secondary",
+      solid_bar: "bg-secondary text-content",
+      outline_bar: "border border-secondary bg-primary text-content",
+      dot: "bg-secondary"
     }
   }
 

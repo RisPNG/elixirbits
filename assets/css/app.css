@@ -17,8 +17,7 @@
 
 @theme static {
   --color-primary: oklch(98% 0.003 252.42);
-  --color-secondary: oklch(92% 0.012 254.09);
-  --color-tertiary: oklch(44% 0.044 257.287);
+  --color-secondary: oklch(44% 0.044 257.287);
   --color-content: contrast-color(var(--surface));
   --color-subcontent: color-mix(in srgb, var(--color-content) var(--subcontent-strength), var(--surface));
   --color-brand: oklch(52% 0.233 277.117);
@@ -29,23 +28,26 @@
 
   --color-outline: oklch(84% 0.012 254.09);
 
-  --overlay-opacity: 0.16;
+  --overlay-opacity: 0.25;
   --color-dark: oklch(0% 0 0 / var(--overlay-opacity));
   --color-light: oklch(100% 0 0 / var(--overlay-opacity));
 
   --radius-default: 0.5rem;
   --radius-full: calc(infinity * 1px);
 
-  /* Opaque fills publish surfaces without referencing adaptive colors. */
+  /* Fill sources publish their color and alpha without referencing adaptive colors. */
 
   --surface-primary: var(--color-primary);
   --surface-secondary: var(--color-secondary);
-  --surface-tertiary: var(--color-tertiary);
   --surface-brand: var(--color-brand);
   --surface-info: var(--color-info);
   --surface-success: var(--color-success);
   --surface-warning: var(--color-warning);
   --surface-error: var(--color-error);
+  --surface-dark: rgb(from var(--color-dark) r g b / 1);
+  --surface-dark--alpha: var(--overlay-opacity);
+  --surface-light: rgb(from var(--color-light) r g b / 1);
+  --surface-light--alpha: var(--overlay-opacity);
 }
 
 /* Adaptive background sources */
@@ -53,21 +55,17 @@
 @theme inline {
   --bg-content: var(--content-fill);
   --bg-content--content-fill: inherit;
-  --bg-content--background-color: var(--surface-base);
   --bg-subcontent: var(--subcontent-fill);
   --bg-subcontent--subcontent-fill: inherit;
-  --bg-subcontent--background-color: var(--surface-base);
   --bg-outline: var(--outline-fill);
   --bg-outline--outline-fill: inherit;
-  --bg-outline--background-color: var(--surface-base);
 }
 
 /* Dark theme */
 
 [data-theme="dark"] {
   --color-primary: oklch(30.33% 0.016 252.42);
-  --color-secondary: oklch(20.15% 0.012 254.09);
-  --color-tertiary: oklch(37% 0.044 257.287);
+  --color-secondary: oklch(37% 0.044 257.287);
   --color-brand: oklch(58% 0.233 277.117);
   --color-info: oklch(54% 0.158 241.966);
   --color-success: oklch(53% 0.118 184.704);
@@ -82,8 +80,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --color-primary: oklch(30.33% 0.016 252.42);
-    --color-secondary: oklch(20.15% 0.012 254.09);
-    --color-tertiary: oklch(37% 0.044 257.287);
+    --color-secondary: oklch(37% 0.044 257.287);
     --color-brand: oklch(58% 0.233 277.117);
     --color-info: oklch(54% 0.158 241.966);
     --color-success: oklch(53% 0.118 184.704);
@@ -123,9 +120,131 @@
   inherits: false;
 }
 
+@property --surface-slot {
+  syntax: "<integer>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --surface-a {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --surface-b {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --surface-alpha-a {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --surface-alpha-b {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --surface-overlay-kind-a {
+  syntax: "<integer>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --surface-overlay-kind-b {
+  syntax: "<integer>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --surface-overlay-alpha-a {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --surface-overlay-alpha-b {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --surface-fill {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --surface-reset {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --surface-opacity-fill {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --surface-opacity-step {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --surface-fill-alpha {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --surface-paint-alpha {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --surface-overlay-kind {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --surface-overlay-source {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --surface-overlay-step {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --surface-overlay-total-alpha {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --surface-overlay-prior-alpha {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --surface-overlay-paint-alpha {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
 @layer base {
   :root {
     --surface: var(--color-primary);
+    --surface-a: var(--color-primary);
+    --surface-b: var(--color-primary);
+    --surface-fill: var(--color-primary);
     --outline-strength: 35%;
     --subcontent-strength: 85%;
     --field-motion: 150ms;
@@ -166,42 +285,123 @@
   }
 }
 
+/* Alternating context slots preserve inherited inputs while publishing each layer's visible surface. */
+
+@utility surface-colors {
+  --surface-fill: var(--surface-base);
+  --surface-source: var(--surface-base, var(--surface-opacity-fill, var(--surface-parent)));
+  --surface-background: rgb(from var(--surface-source) r g b / var(--surface-paint-alpha));
+  --surface-rendered: color-mix(in srgb, var(--surface-parent), rgb(from var(--surface-source) r g b / 1) calc(var(--surface-paint-alpha) * 100%));
+  --surface-overlay-carry: calc(1 - sign(var(--surface-paint-alpha)));
+  --surface-overlay-total-alpha: clamp(0, calc(var(--surface-overlay-prior-alpha) + var(--surface-overlay-step)), 1);
+  --surface-overlay-paint-alpha: calc((var(--surface-overlay-total-alpha) - var(--surface-overlay-prior-alpha)) / (1 - var(--surface-overlay-prior-alpha)));
+  --surface-modified: color-mix(in srgb, var(--surface-rendered), var(--surface-overlay-source) calc(var(--surface-overlay-paint-alpha) * 100%));
+
+  @container style(--surface-slot: 0) {
+    --surface-slot: 1;
+    --surface-parent: var(--surface-b);
+    --surface-prior-alpha: var(--surface-reset, var(--surface-alpha-b));
+    --surface-total-alpha: clamp(0, calc(var(--surface-prior-alpha) + var(--surface-opacity-step, var(--surface-fill-alpha))), 1);
+    --surface-paint-alpha: calc((var(--surface-total-alpha) - var(--surface-prior-alpha)) / (1 - var(--surface-prior-alpha)));
+    --surface-alpha-a: var(--surface-total-alpha);
+    --surface-overlay-kind-a: var(--surface-overlay-kind, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-kind-b))));
+    --surface-overlay-alpha-a: var(--surface-overlay-total-alpha, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-b))));
+    --surface-a: var(--surface-modified, var(--surface-rendered));
+    --surface: var(--surface-a);
+  }
+
+  @container style(--surface-slot: 1) {
+    --surface-slot: 0;
+    --surface-parent: var(--surface-a);
+    --surface-prior-alpha: var(--surface-reset, var(--surface-alpha-a));
+    --surface-total-alpha: clamp(0, calc(var(--surface-prior-alpha) + var(--surface-opacity-step, var(--surface-fill-alpha))), 1);
+    --surface-paint-alpha: calc((var(--surface-total-alpha) - var(--surface-prior-alpha)) / (1 - var(--surface-prior-alpha)));
+    --surface-alpha-b: var(--surface-total-alpha);
+    --surface-overlay-kind-b: var(--surface-overlay-kind, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-kind-a))));
+    --surface-overlay-alpha-b: var(--surface-overlay-total-alpha, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-a))));
+    --surface-b: var(--surface-modified, var(--surface-rendered));
+    --surface: var(--surface-b);
+  }
+}
+
 @utility bg-* {
   --content-fill: --value(--bg-*--content-fill);
   --subcontent-fill: --value(--bg-*--subcontent-fill);
   --outline-fill: --value(--bg-*--outline-fill);
-  --surface-base: --value(--surface-*, --bg-*);
-  --surface: var(--surface-modified, var(--surface-base));
-  background-color: --value(--bg-*--background-color) !important;
+  --surface-base: --value(--surface-*, --bg-*, --color-*);
+  --surface-reset: 0;
+  --surface-fill-alpha: 1;
+  --surface-fill-alpha: --value(--surface-*--alpha);
+  @apply surface-colors;
+  background-color: var(--surface-background) !important;
 }
 
 @utility bg-transparent {
   --surface-base: initial;
-  --surface: var(--surface-modified, var(--surface-base));
+  --surface-reset: initial;
+  --surface-fill-alpha: 0;
+  @apply surface-colors;
+  background-color: var(--surface-background) !important;
 }
 
 @utility fill-* {
   --surface-base: --value(--surface-*);
-  --surface: var(--surface-modified, var(--surface-base));
+  --surface-reset: 0;
+  --surface-fill-alpha: 1;
+  --surface-fill-alpha: --value(--surface-*--alpha);
+  @apply surface-colors;
 }
 
 @utility fill-transparent {
   --surface-base: initial;
-  --surface: var(--surface-modified, var(--surface-base));
+  --surface-reset: initial;
+  --surface-fill-alpha: 0;
+  @apply surface-colors;
 }
 
 /* Overlay modifiers */
 
-@utility overlay-dark {
-  --surface-modified: color-mix(in srgb, var(--surface-base), oklch(from var(--color-dark) l c h / 1) calc(var(--overlay-opacity) * 100%));
-  --surface: var(--surface-modified, var(--surface-base));
-  @apply inset-shadow-[0_0_0_100vmax] inset-shadow-dark;
+@utility overlay-dark-* {
+  --surface-overlay-kind: 1;
+  --surface-overlay-source: var(--surface-dark);
+  --surface-overlay-step: clamp(0, --value([number], --default(var(--overlay-opacity))), 1);
+  --surface-overlay-prior-alpha: 0;
+  @apply surface-colors;
+  @apply inset-shadow-[0_0_0_100vmax];
+  --tw-inset-shadow-color: rgb(from var(--surface-overlay-source) r g b / var(--surface-overlay-paint-alpha));
+
+  @container style(--surface-slot: 0) and style(--surface-overlay-kind-b: 1) {
+    --surface-overlay-prior-alpha: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-b)));
+  }
+
+  @container style(--surface-slot: 1) and style(--surface-overlay-kind-a: 1) {
+    --surface-overlay-prior-alpha: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-a)));
+  }
 }
 
-@utility overlay-light {
-  --surface-modified: color-mix(in srgb, var(--surface-base), oklch(from var(--color-light) l c h / 1) calc(var(--overlay-opacity) * 100%));
-  --surface: var(--surface-modified, var(--surface-base));
-  @apply inset-shadow-[0_0_0_100vmax] inset-shadow-light;
+@utility overlay-light-* {
+  --surface-overlay-kind: 2;
+  --surface-overlay-source: var(--surface-light);
+  --surface-overlay-step: clamp(0, --value([number], --default(var(--overlay-opacity))), 1);
+  --surface-overlay-prior-alpha: 0;
+  @apply surface-colors;
+  @apply inset-shadow-[0_0_0_100vmax];
+  --tw-inset-shadow-color: rgb(from var(--surface-overlay-source) r g b / var(--surface-overlay-paint-alpha));
+
+  @container style(--surface-slot: 0) and style(--surface-overlay-kind-b: 2) {
+    --surface-overlay-prior-alpha: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-b)));
+  }
+
+  @container style(--surface-slot: 1) and style(--surface-overlay-kind-a: 2) {
+    --surface-overlay-prior-alpha: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-a)));
+  }
+}
+
+@utility overlay-opacity-* {
+  --surface-opacity-step: --value([number], --default(var(--overlay-opacity)));
+  --surface-opacity-fill: var(--surface-fill);
+  @apply surface-colors;
+  background-color: var(--surface-background) !important;
 }
 
 /* LiveView and theme variants */
@@ -268,7 +468,7 @@
 }
 
 .tooltip-floating {
-  @apply bg-tertiary;
+  @apply bg-secondary;
   position: fixed;
   z-index: 50;
   pointer-events: none;
@@ -280,6 +480,26 @@
   color: var(--color-content);
   font-size: 0.75rem;
   line-height: 1rem;
+}
+
+/* Input clear controls */
+
+input[type="search"]::-webkit-search-cancel-button {
+  @apply appearance-none hero-x-mark-mini size-5 text-error cursor-pointer;
+}
+
+.ls-clear-button {
+  @apply opacity-0 pointer-events-none;
+}
+
+[phx-hook="LiveSelect"] > div:hover > .ls-clear-button,
+.ls-clear-button:focus-visible {
+  @apply opacity-100 pointer-events-auto;
+}
+
+.ls-clear-button > svg,
+.ls-clear-tag-button > svg {
+  @apply size-5;
 }
 
 /* Floating input controls and labels */
@@ -826,7 +1046,7 @@ body {
 
 /* Input icons and file controls */
 
-[phx-hook="LiveSelect"] input[type="text"] {
+[phx-hook="LiveSelect"]:not(.input-text-wrapper) input[type="text"] {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 0.5rem center;
   background-repeat: no-repeat;
@@ -877,7 +1097,7 @@ input[type="file"]::file-selector-button {
 }
 
 @utility button-neutral {
-  @apply border border-outline bg-tertiary text-content hover:overlay-dark focus:border-brand;
+  @apply border border-outline bg-secondary text-content hover:overlay-dark focus:border-brand;
 }
 
 @utility button-danger {

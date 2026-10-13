@@ -143,7 +143,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.UploadsTest do
         assert has_element?(view, "#layout-test-upload-#{section} input[type=file]")
       end
 
-      if mode in ~w(enabled hidden hidden-enabled) do
+      if mode in ~w(enabled text text-enabled hidden hidden-enabled) do
         assert has_element?(view, "#layout-test-uploads input[type=file]:not([disabled])")
       else
         refute has_element?(view, "#layout-test-uploads input[type=file]:not([disabled])")

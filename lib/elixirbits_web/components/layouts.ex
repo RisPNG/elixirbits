@@ -84,7 +84,7 @@ defmodule ElixirbitsWeb.Layouts do
 
     <div
       :if={@show_nav?}
-      class="fixed left-8 top-4 z-40 w-80 rounded-default border border-outline bg-secondary shadow-xl"
+      class="fixed left-8 top-4 z-40 w-80 rounded-default border border-outline bg-primary overlay-dark shadow-xl"
     >
       <div class="grid grid-cols-[2.75rem_1fr] items-center">
         <button
@@ -261,10 +261,10 @@ defmodule ElixirbitsWeb.Layouts do
   def theme_toggle(assigns) do
     ~H"""
     <div class={[
-      "relative flex flex-row items-center border border-outline bg-primary overlay-dark rounded-full",
+      "relative flex flex-row items-center border border-outline bg-secondary text-content rounded-full",
       @class
     ]}>
-      <div class="absolute w-1/3 h-full rounded-full border border-outline bg-primary left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
+      <div class="absolute w-1/3 h-full rounded-full border border-outline bg-brand left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
 
       <button
         class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark"

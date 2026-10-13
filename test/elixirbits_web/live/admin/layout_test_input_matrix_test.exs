@@ -141,6 +141,72 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
     refute has_element?(view, "#layout-test-input-example-text", "Example validation error")
   end
 
+  test "text boolean modes preserve native changes and submission while read-only sentences follow their state",
+       %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    for mode <- ~w(text text-enabled) do
+      render_click(element(view, "#layout-test-input-render-#{mode}"))
+
+      for field <- ~w(enabled switch) do
+        assert has_element?(
+                 view,
+                 "input#local_#{field}[type=checkbox][name='local[#{field}]'].sr-only"
+               )
+
+        assert has_element?(view, "label[for=local_#{field}]")
+        assert has_element?(view, "input[type=hidden][name='local[#{field}]'][value=false]")
+      end
+
+      view
+      |> form("#layout-test-form", local: %{enabled: "true", switch: "false"})
+      |> render_change()
+
+      assert has_element?(view, "input#local_enabled[checked]")
+      refute has_element?(view, "input#local_switch[checked]")
+      assert has_element?(view, "#layout-test-input-controls summary", "mixed")
+
+      view
+      |> form("#layout-test-form", local: %{enabled: "false", switch: "true"})
+      |> render_submit()
+
+      refute has_element?(view, "input#local_enabled[checked]")
+      assert has_element?(view, "input#local_switch[checked]")
+      assert has_element?(view, "#submitted-at")
+
+      render_click(element(view, "#layout-test-input-render-text-disabled"))
+      visible = view |> render() |> Floki.parse_document!() |> Floki.filter_out(".hidden")
+
+      assert Floki.text(Floki.find(visible, "#layout-test-input-example-checkbox"))
+             |> String.split()
+             |> Enum.join(" ") == "Checkbox is disabled"
+
+      assert Floki.text(Floki.find(visible, "#layout-test-input-example-switch"))
+             |> String.split()
+             |> Enum.join(" ") == "Switch is on"
+
+      assert Floki.find(
+               visible,
+               "#layout-test-input-example-checkbox input, #layout-test-input-example-switch input"
+             ) == []
+
+      assert has_element?(view, ".hidden input#local_switch[checked]")
+      refute has_element?(view, ".hidden input#local_enabled[checked]")
+
+      view |> form("#layout-test-form") |> render_submit()
+      assert has_element?(view, "#layout-test-input-example-checkbox", "Checkbox is disabled")
+      assert has_element?(view, "#layout-test-input-example-switch", "Switch is on")
+
+      render_click(element(view, "#layout-test-input-checked-true"))
+      assert has_element?(view, "#layout-test-input-example-checkbox", "Checkbox is enabled")
+      assert has_element?(view, "#layout-test-input-example-switch", "Switch is on")
+
+      render_click(element(view, "#layout-test-input-checked-false"))
+      assert has_element?(view, "#layout-test-input-example-checkbox", "Checkbox is disabled")
+      assert has_element?(view, "#layout-test-input-example-switch", "Switch is off")
+    end
+  end
+
   test "checked choices follow edited values and update empty specimens", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 

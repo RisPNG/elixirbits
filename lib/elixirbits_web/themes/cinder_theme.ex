@@ -71,14 +71,14 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :filter_radio_group_option_class, "grid grid-cols-[1rem_1fr] items-center gap-2"
 
   set :filter_radio_group_radio_class,
-      "appearance-none h-4 w-4 rounded-full border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-radio focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-tertiary disabled:checked:border-tertiary"
+      "appearance-none h-4 w-4 rounded-full border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-radio focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
 
   set :filter_radio_group_label_class, "text-sm cursor-pointer text-content"
 
   set :filter_checkbox_container_class, "grid grid-cols-[1rem_1fr] items-center gap-2 min-h-10"
 
   set :filter_checkbox_input_class,
-      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-tertiary disabled:checked:border-tertiary"
+      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
 
   set :filter_checkbox_label_class, "text-sm cursor-pointer text-content"
 
@@ -91,7 +91,7 @@ defmodule ElixirbitsWeb.CinderTheme do
       "px-3 py-2 hover:overlay-dark border-b border-outline last:border-b-0 cursor-pointer text-content"
 
   set :filter_multiselect_checkbox_class,
-      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-tertiary disabled:checked:border-tertiary"
+      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
 
   set :filter_multiselect_label_class,
       "text-sm cursor-pointer select-none text-content"
@@ -102,7 +102,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :filter_multicheckboxes_option_class, "grid grid-cols-[1.25rem_1fr] items-center gap-2"
 
   set :filter_multicheckboxes_checkbox_class,
-      "appearance-none h-5 w-5 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-tertiary disabled:checked:border-tertiary"
+      "appearance-none h-5 w-5 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
 
   set :filter_multicheckboxes_label_class, "text-sm cursor-pointer text-content"
 
@@ -192,7 +192,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :grid_item_clickable_class, "cursor-pointer hover:overlay-dark transition-colors"
 
   set :selection_checkbox_class,
-      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-tertiary disabled:checked:border-tertiary"
+      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
 
   set :selected_row_class, "bg-primary even:overlay-dark"
   set :grid_selection_overlay_class, "mb-2"

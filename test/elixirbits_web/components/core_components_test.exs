@@ -3,7 +3,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest.SelectPreview do
 
   alias ElixirbitsWeb.CoreComponents
 
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     {:ok,
      assign(socket,
        form:
@@ -11,6 +11,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest.SelectPreview do
            %{"labeled_role" => "viewer", "unlabeled_role" => "viewer", "phone" => "+60123456789"},
            as: :choices
          ),
+       render_as: session["render_as"] || "enabled",
        options: [
          {"Editor", "editor"},
          {"Viewer", "viewer"},
@@ -26,6 +27,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest.SelectPreview do
       id="labeled-role"
       type="select"
       label="Role"
+      render_as={@render_as}
       options={@options}
       keep_options_on_select
     />
@@ -33,10 +35,17 @@ defmodule ElixirbitsWeb.CoreComponentsTest.SelectPreview do
       field={@form[:unlabeled_role]}
       id="unlabeled-role"
       type="select"
+      render_as={@render_as}
       options={@options}
       keep_options_on_select
     />
-    <CoreComponents.input field={@form[:phone]} id="phone" type="tel" label="Phone" />
+    <CoreComponents.input
+      field={@form[:phone]}
+      id="phone"
+      type="tel"
+      label="Phone"
+      render_as={@render_as}
+    />
     """
   end
 end
@@ -398,7 +407,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         document = Floki.parse_document!(html)
         assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
 
-        if render_as in ["enabled", "hidden", "hidden-enabled"] do
+        if render_as in ["enabled", "text", "text-enabled", "hidden", "hidden-enabled"] do
           assert Floki.find(document, "input#attachment-upload[type=file][required]") != []
           assert Floki.find(document, "input#attachment-upload[disabled]") == []
         else
@@ -410,7 +419,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       end
     end
 
-    test "read-only pending image previews retain their native upload input and references" do
+    test "pending image previews retain their upload references and respect each mode's editability" do
       for render_as <-
             ~w(disabled like-enabled like-disabled text-disabled text text-enabled hidden-disabled) do
         entry = %Phoenix.LiveView.UploadEntry{
@@ -445,17 +454,31 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         document = Floki.parse_document!(html)
 
-        assert Floki.find(
-                 document,
-                 "label.hidden input#attachment-upload[disabled][data-phx-active-refs=picked-image]"
-               ) != []
+        if render_as in ["text", "text-enabled"] do
+          assert Floki.find(
+                   document,
+                   "label[for=attachment-upload] input#attachment-upload.sr-only[data-phx-active-refs=picked-image]"
+                 ) != []
+
+          assert Floki.find(document, "input#attachment-upload[disabled]") == []
+
+          assert Floki.find(
+                   document,
+                   "button[phx-click=cancel_upload][phx-value-ref=picked-image]"
+                 ) != []
+        else
+          assert Floki.find(
+                   document,
+                   "label.hidden input#attachment-upload[disabled][data-phx-active-refs=picked-image]"
+                 ) != []
+
+          assert Floki.find(document, "button[phx-click=cancel_upload]") == []
+        end
 
         assert Floki.find(
                  document,
                  "img[data-phx-upload-ref=attachment-upload][data-phx-entry-ref=picked-image]"
                ) != []
-
-        assert Floki.find(document, "button[phx-click=cancel_upload]") == []
       end
     end
 
@@ -573,8 +596,8 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           |> Floki.parse_document!()
 
         assert [classes] = Floki.attribute(document, "input[checked][disabled]", "class")
-        assert classes =~ "disabled:checked:bg-tertiary"
-        assert classes =~ "disabled:checked:border-tertiary"
+        assert classes =~ "disabled:checked:bg-secondary"
+        assert classes =~ "disabled:checked:border-secondary"
 
         if type in ["checkbox", "switch"] and variant == "default" do
           assert [field_classes] = Floki.attribute(document, "label[for=contact]", "class")
@@ -610,7 +633,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           )
           |> Floki.parse_document!()
 
-        assert Floki.find(document, "span.bg-tertiary.border-tertiary") != []
+        assert Floki.find(document, "span.bg-secondary.border-secondary") != []
         assert Floki.find(document, "div.overlay-dark") != []
         assert Floki.find(document, "span.overlay-dark") == []
       end
@@ -861,7 +884,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
       refute html =~ "<input"
       assert html =~ "bg-transparent"
-      assert html =~ "bg-tertiary"
+      assert html =~ "bg-secondary"
       assert html =~ "cursor-not-allowed"
     end
 
@@ -882,6 +905,429 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       refute html =~ "<input"
       assert html =~ "rounded-full"
       assert html =~ "before:translate-x-5"
+    end
+
+    test "text select and telephone modes preserve picker selection and composite submission" do
+      for render_as <- ~w(text text-enabled) do
+        {:ok, view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.SelectPreview,
+            session: %{"render_as" => render_as}
+          )
+
+        document = Floki.parse_document!(html)
+
+        for id <- ["labeled-role", "unlabeled-role", "choices_phone_country_code_country_select"] do
+          assert Floki.find(
+                   document,
+                   "##{id}[phx-hook=LiveSelect].input-text-wrapper input[type=text].border-0"
+                 ) != []
+        end
+
+        assert Floki.find(
+                 document,
+                 "input[type=hidden][name='choices[labeled_role]'][value=viewer]"
+               ) != []
+
+        assert Floki.find(
+                 document,
+                 "[phx-hook=TelInput] input[data-tel-composite][name='choices[phone]'][value='+60123456789']"
+               ) != []
+
+        assert Floki.find(document, "[phx-hook=TelInput] input[data-tel-number].border-0") != []
+
+        assert Floki.find(
+                 document,
+                 ".input-floating-wrapper, .input-floating-control, .input-floating-label"
+               ) == []
+
+        render_hook(element(view, "#labeled-role"), "keydown", %{"key" => "ArrowDown"})
+        assert has_element?(view, "#labeled-role ul > li", "Editor")
+        render_hook(element(view, "#labeled-role"), "keydown", %{"key" => "Enter"})
+
+        assert has_element?(
+                 view,
+                 "input[type=hidden][name='choices[labeled_role]'][value=editor]"
+               )
+      end
+    end
+
+    test "disabled text selects retain their selected submission value without a floating label" do
+      for render_as <- ~w(text text-enabled) do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "role",
+            name: "role",
+            type: "select",
+            value: "viewer",
+            label: "Role",
+            options: [{"Viewer", "viewer"}],
+            render_as: render_as,
+            disabled: true,
+            required: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 "input#role[type=text][disabled][required][value=Viewer].border-0"
+               ) != []
+
+        assert Floki.find(document, "input[type=hidden][name=role][value=viewer]") != []
+        assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+      end
+    end
+
+    test "text color and file modes retain native pickers behind their plain values" do
+      for type <- ~w(color file), render_as <- ~w(text text-enabled), disabled <- [false, true] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "choice",
+            name: "choice",
+            type: type,
+            value: "#123456",
+            label: "Choice",
+            render_as: render_as,
+            required: true,
+            disabled: disabled,
+            placeholder: "Choose a file"
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 "[phx-hook=TextPicker] input#choice[type=#{type}][name=choice][required]"
+               ) != []
+
+        assert Floki.find(document, "input#choice[disabled]") != [] == disabled
+        assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+
+        if type == "color" do
+          assert Floki.attribute(document, "input#choice", "value") == ["#123456"]
+
+          assert Floki.text(Floki.find(document, "[data-text-picker-value]")) |> String.trim() ==
+                   "#123456"
+        else
+          assert Floki.attribute(document, "input#choice", "value") == []
+
+          assert Floki.text(Floki.find(document, "[data-text-picker-value]")) |> String.trim() ==
+                   "Choose a file"
+        end
+      end
+    end
+
+    test "text password modes expose an editable plain value without a visibility action" do
+      for render_as <- ~w(text text-enabled), label <- ["Password", nil] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "secret",
+            name: "secret",
+            type: "password",
+            value: "visible-secret",
+            label: label,
+            render_as: render_as,
+            required: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 "input#secret[type=text][name=secret][value=visible-secret][required]"
+               ) != []
+
+        assert Floki.find(
+                 document,
+                 "input#secret[disabled], [phx-hook=PasswordVisibility], button"
+               ) == []
+
+        assert Floki.find(document, "input#secret.border-0") != []
+        assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
+      end
+    end
+
+    test "text calendar modes preserve their picker contract and local values without floating labels" do
+      values = %{
+        "datetime-local" => "2027-01-01T04:15:00",
+        "date" => "2027-01-01",
+        "time" => "04:15",
+        "week" => "2026-W53",
+        "month" => "2027-01"
+      }
+
+      for {type, value} <- values,
+          render_as <- ~w(text text-enabled),
+          label <- ["Schedule", nil] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "schedule",
+            name: "schedule",
+            type: type,
+            value: ~U[2026-12-31 20:15:00Z],
+            timezone: "Asia/Kuala_Lumpur",
+            label: label,
+            render_as: render_as,
+            required: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 "input#schedule[type=text][name=schedule][readonly][required][phx-hook=VCalendar]"
+               ) != []
+
+        assert Floki.attribute(document, "input#schedule", "value") == [value]
+        assert Floki.attribute(document, "input#schedule", "data-vc-value") == [value]
+        assert Floki.attribute(document, "input#schedule", "data-vc-mode") == [type]
+
+        assert Floki.attribute(document, "input#schedule", "data-vc-timezone") == [
+                 "Asia/Kuala_Lumpur"
+               ]
+
+        assert Floki.find(document, "input#schedule.border-0") != []
+        assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
+        assert Floki.attribute(document, "input#schedule", "phx-mounted") != []
+
+        if label do
+          assert Floki.find(document, "label[for=schedule] + input#schedule") != []
+
+          assert Floki.text(Floki.find(document, "label[for=schedule]")) |> String.trim() ==
+                   "Schedule*"
+        end
+      end
+    end
+
+    test "editable text checkbox and switch modes use state sentences and retain native toggles" do
+      for type <- ~w(checkbox switch),
+          render_as <- ~w(text text-enabled),
+          checked <- [false, true],
+          disabled <- [false, true] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "active",
+            name: "active",
+            type: type,
+            value: checked,
+            label: "Active",
+            render_as: render_as,
+            required: true,
+            disabled: disabled,
+            form: "settings"
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "label[data-boolean-text][for=active]") != []
+        assert Floki.find(document, "label.border") == []
+
+        assert Floki.find(
+                 document,
+                 "input#active[type=checkbox][required][form=settings].sr-only"
+               ) != []
+
+        assert Floki.find(document, "input#active[checked]") != [] == checked
+        assert Floki.find(document, "input#active[disabled]") != [] == disabled
+        assert Floki.find(document, "input[type=hidden][name=active][disabled]") != [] == disabled
+
+        assert Floki.find(document, "input[type=hidden][name=active][value=false][form=settings]") !=
+                 []
+
+        assert Floki.find(document, ".bg-control-check, .rounded-full, label.inline-grid") == []
+        assert Floki.text(Floki.find(document, "label[for=active]")) =~ "Active"
+
+        assert Floki.attribute(document, "label[for=active] > input", "type") == [
+                 "hidden",
+                 "checkbox"
+               ]
+
+        {checked_text, unchecked_text} =
+          if type == "checkbox", do: {"enabled", "disabled"}, else: {"on", "off"}
+
+        assert Floki.text(Floki.find(document, "[data-boolean-state=checked]")) == checked_text
+
+        assert Floki.text(Floki.find(document, "[data-boolean-state=unchecked]")) ==
+                 unchecked_text
+
+        assert [checked_classes] =
+                 Floki.attribute(document, "[data-boolean-state=checked]", "class")
+
+        assert [unchecked_classes] =
+                 Floki.attribute(document, "[data-boolean-state=unchecked]", "class")
+
+        assert "group-has-[input:checked]/boolean:inline" in String.split(checked_classes)
+        assert "group-has-[input:checked]/boolean:hidden" in String.split(unchecked_classes)
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+      end
+    end
+
+    test "custom text boolean styling retains the group that follows native checked state" do
+      for type <- ~w(checkbox switch),
+          render_as <- ~w(text text-enabled),
+          checked <- [false, true] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "active",
+            name: "active",
+            type: type,
+            value: checked,
+            label: "Active",
+            render_as: render_as,
+            class: "text-brand"
+          )
+          |> Floki.parse_document!()
+
+        assert [classes] =
+                 Floki.attribute(document, "label[data-boolean-text][for=active]", "class")
+
+        assert "text-brand" in String.split(classes)
+        assert "group/boolean" in String.split(classes)
+        refute "text-sm" in String.split(classes)
+        assert Floki.find(document, "input#active[checked]") != [] == checked
+
+        {checked_text, unchecked_text} =
+          if type == "checkbox", do: {"enabled", "disabled"}, else: {"on", "off"}
+
+        assert Floki.text(Floki.find(document, "[data-boolean-state=checked]")) == checked_text
+
+        assert Floki.text(Floki.find(document, "[data-boolean-state=unchecked]")) ==
+                 unchecked_text
+      end
+    end
+
+    test "text-disabled checkbox and switch modes show the current state without a visible toggle" do
+      for type <- ~w(checkbox switch), checked <- [false, true] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "active",
+            name: "active",
+            type: type,
+            value: checked,
+            label: "Active",
+            render_as: "text-disabled",
+            required: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, ".hidden input#active[type=checkbox][checked][required]") !=
+                 [] == checked
+
+        assert Floki.find(document, ".hidden input#active[type=checkbox][required]") != []
+
+        visible = Floki.filter_out(document, ".hidden, span[aria-hidden=true]")
+
+        state =
+          case {type, checked} do
+            {"checkbox", true} -> "enabled"
+            {"checkbox", false} -> "disabled"
+            {"switch", true} -> "on"
+            {"switch", false} -> "off"
+          end
+
+        assert Floki.text(visible) |> String.split() |> Enum.join(" ") == "Active is #{state}"
+        assert Floki.find(visible, "span[data-boolean-text]") != []
+
+        assert Floki.attribute(visible, "[data-boolean-state]", "data-boolean-state") == [
+                 if(checked, do: "checked", else: "unchecked")
+               ]
+
+        assert Floki.find(visible, "input, label[for=active], .bg-control-check, .rounded-full") ==
+                 []
+
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+      end
+    end
+
+    test "text boolean modes honor explicit checked state and use standalone state words without labels" do
+      for type <- ~w(checkbox switch),
+          render_as <- ~w(text text-enabled text-disabled),
+          checked <- [false, true] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "active",
+            name: "active",
+            type: type,
+            value: not checked,
+            checked: checked,
+            render_as: render_as
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "input#active[checked]") != [] == checked
+        assert length(Floki.find(document, "#active")) == 1
+        assert Floki.find(document, "span[aria-hidden=true].text-error") == []
+
+        {checked_text, unchecked_text} =
+          if type == "checkbox", do: {"Enabled", "Disabled"}, else: {"On", "Off"}
+
+        if render_as == "text-disabled" do
+          visible = Floki.filter_out(document, ".hidden")
+
+          assert Floki.text(visible) |> String.trim() ==
+                   if(checked, do: checked_text, else: unchecked_text)
+
+          assert Floki.find(visible, "label, input") == []
+        else
+          assert Floki.text(Floki.find(document, "[data-boolean-state=checked]")) == checked_text
+
+          assert Floki.text(Floki.find(document, "[data-boolean-state=unchecked]")) ==
+                   unchecked_text
+        end
+      end
+    end
+
+    test "alternate disabled checkbox and switch displays shade their indicator without boxing the label" do
+      for type <- ~w(checkbox switch) do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "active",
+            name: "active",
+            type: type,
+            value: true,
+            label: "Active",
+            variant: "alt",
+            render_as: "disabled"
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 "div#active.inline-grid > span:first-child.overlay-dark.bg-secondary"
+               ) != []
+
+        assert Floki.find(document, "div#active.border, div#active.overlay-dark, input") == []
+
+        assert Floki.text(Floki.find(document, "div#active > span.text-subcontent"))
+               |> String.trim() == "Active"
+      end
+    end
+
+    test "text radio modes show only the selected value and preserve hidden native choices" do
+      for render_as <- ~w(text text-enabled text-disabled) do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "contact",
+            name: "contact",
+            type: "radio",
+            value: "email",
+            label: "Contact",
+            options: [{"Email", "email"}, {"Phone", "phone"}],
+            render_as: render_as,
+            required: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 ".hidden fieldset#contact input[type=radio][value=email][checked][required]"
+               ) != []
+
+        assert length(Floki.find(document, ".hidden input[type=radio]")) == 2
+
+        assert Floki.text(Floki.find(document, "div:not(.hidden) > div > span.text-content")) ==
+                 "email"
+
+        assert Floki.find(document, "div:not(.hidden) > fieldset") == []
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+      end
     end
   end
 

@@ -34,7 +34,6 @@
             {token, color_class} <- [
               {"primary", "bg-primary"},
               {"secondary", "bg-secondary"},
-              {"tertiary", "bg-tertiary"},
               {"content", "bg-content"},
               {"subcontent", "bg-subcontent"},
               {"brand", "bg-brand"},
@@ -49,7 +48,7 @@
           }
           id={"layout-test-color-#{token}"}
           data-color-token={"color-#{token}"}
-          class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
         >
           <div
             aria-hidden="true"
@@ -70,6 +69,168 @@
           <code class="mt-2 block text-center text-xs text-content">color-{token}</code>
         </li>
       </ul>
+    </section>
+
+    <section
+      id="layout-test-background-opacity"
+      aria-labelledby="layout-test-background-opacity-title"
+      class="space-y-3"
+    >
+      <div>
+        <h2 id="layout-test-background-opacity-title" class="text-base font-semibold">
+          Background opacity
+        </h2>
+        <p class="text-sm text-subcontent">
+          Set the background alpha while text and icons stay opaque. The default is 25%. Nested layers add their alpha up to 100%.
+        </p>
+      </div>
+      <ul aria-label="Background opacity examples" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
+        <li
+          :for={
+            {alpha, opacity_class} <- [
+              {10, "overlay-opacity-[0.1]"},
+              {25, "overlay-opacity"},
+              {50, "overlay-opacity-[0.5]"},
+              {100, "overlay-opacity-[1]"}
+            ]
+          }
+          class="rounded-default border border-outline bg-primary p-3"
+        >
+          <code class="block text-xs text-content">{opacity_class}</code>
+          <div
+            id={"layout-test-opacity-#{alpha}"}
+            class={[
+              "mt-2 grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3 text-content",
+              opacity_class
+            ]}
+          >
+            <.icon name="hero-sparkles" class="size-5" />
+            <span class="text-sm font-medium">{alpha}% background alpha</span>
+          </div>
+        </li>
+      </ul>
+      <div
+        id="layout-test-opacity-stack-25"
+        class="rounded-default border border-outline bg-brand overlay-opacity p-3 text-content"
+      >
+        <p class="text-sm font-medium">25% background alpha</p>
+        <div class="mt-3">
+          <div
+            id="layout-test-opacity-stack-50"
+            class="rounded-default border border-outline overlay-opacity p-3 text-content"
+          >
+            <p class="text-sm font-medium">50% background alpha</p>
+            <div
+              id="layout-test-opacity-stack-75"
+              class="mt-3 rounded-default border border-outline overlay-opacity p-3 text-content"
+            >
+              <p class="text-sm font-medium">75% background alpha</p>
+              <div
+                id="layout-test-opacity-stack-100"
+                class="mt-3 rounded-default border border-outline overlay-opacity p-3 text-content"
+              >
+                <p class="text-sm font-medium">100% background alpha</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section
+      id="layout-test-overlay-strength"
+      aria-labelledby="layout-test-overlay-strength-title"
+      class="space-y-3"
+    >
+      <div>
+        <h2 id="layout-test-overlay-strength-title" class="text-base font-semibold">
+          Overlay strength
+        </h2>
+        <p class="text-sm text-subcontent">
+          Dark and light overlays default to 25% strength. Nested overlays of the same kind add their strength up to 100%, while text and icons stay opaque.
+        </p>
+      </div>
+      <div class="grid grid-cols-[1fr_1fr] gap-3">
+        <div
+          :for={
+            {kind, title, default_class, strengths} <- [
+              {"dark", "Dark overlay", "overlay-dark",
+               [
+                 {10, "overlay-dark-[0.1]"},
+                 {25, "overlay-dark"},
+                 {50, "overlay-dark-[0.5]"},
+                 {100, "overlay-dark-[1]"}
+               ]},
+              {"light", "Light overlay", "overlay-light",
+               [
+                 {10, "overlay-light-[0.1]"},
+                 {25, "overlay-light"},
+                 {50, "overlay-light-[0.5]"},
+                 {100, "overlay-light-[1]"}
+               ]}
+            ]
+          }
+          class="space-y-3 rounded-default border border-outline bg-primary p-3"
+        >
+          <h3 class="text-base font-semibold text-content">{title}</h3>
+          <ul
+            aria-label={"#{title} strength examples"}
+            class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3"
+          >
+            <li :for={{strength, overlay_class} <- strengths}>
+              <code class="block min-h-8 text-xs text-content">{overlay_class}</code>
+              <div
+                id={"layout-test-overlay-#{kind}-#{strength}"}
+                class={[
+                  "mt-2 grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3 text-content",
+                  overlay_class
+                ]}
+              >
+                <.icon name="hero-sparkles" class="size-5" />
+                <span class="text-sm font-medium">{strength}% strength</span>
+              </div>
+            </li>
+          </ul>
+          <div
+            id={"layout-test-overlay-#{kind}-stack-25"}
+            class={[
+              "rounded-default border border-outline bg-brand p-3 text-content",
+              default_class
+            ]}
+          >
+            <p class="text-sm font-medium">25% combined strength</p>
+            <div class="mt-3">
+              <div
+                id={"layout-test-overlay-#{kind}-stack-50"}
+                class={[
+                  "rounded-default border border-outline p-3 text-content",
+                  default_class
+                ]}
+              >
+                <p class="text-sm font-medium">50% combined strength</p>
+                <div
+                  id={"layout-test-overlay-#{kind}-stack-75"}
+                  class={[
+                    "mt-3 rounded-default border border-outline p-3 text-content",
+                    default_class
+                  ]}
+                >
+                  <p class="text-sm font-medium">75% combined strength</p>
+                  <div
+                    id={"layout-test-overlay-#{kind}-stack-100"}
+                    class={[
+                      "mt-3 rounded-default border border-outline p-3 text-content",
+                      default_class
+                    ]}
+                  >
+                    <p class="text-sm font-medium">100% combined strength</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <div
@@ -132,9 +293,9 @@
         <div class="space-y-3">
           <details
             phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
           >
-            <summary class="hover:overlay-dark cursor-pointer text-sm">
+            <summary class="cursor-pointer text-sm">
               Button style: {@showcase["header"]["variant"]}
             </summary>
             <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
@@ -237,9 +398,9 @@
           </div>
           <details
             phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
           >
-            <summary class="hover:overlay-dark cursor-pointer text-sm">
+            <summary class="cursor-pointer text-sm">
               Duration: {@showcase["flash"]["duration"]}{if @showcase["flash"]["duration"] !=
                                                               "default",
                                                             do: "ms"}
@@ -290,7 +451,7 @@
         id="layout-test-theme-preview"
         class={[
           "rounded-default p-4 text-content",
-          @showcase["theme"]["inset"] && "border border-outline bg-primary overlay-dark"
+          @showcase["theme"]["inset"] && "border border-outline bg-brand overlay-opacity-[0.15]"
         ]}
       >
         <p class="font-medium">Shared theme preview</p>
@@ -318,7 +479,7 @@
 
       <div id="layout-test-input-controls" class="space-y-3">
         <details phx-mounted={JS.ignore_attributes("open")} class="space-y-3">
-          <summary class="hover:overlay-dark cursor-pointer text-sm font-medium text-content">
+          <summary class="cursor-pointer text-sm font-medium text-content">
             Input options: {@input_config["render_as"]} display, {@input_config["variant"]} controls, {@input_config[
               "select_mode"
             ]} select, and {case checked_state do
@@ -418,7 +579,7 @@
           >{label}</.button>
         </div>
         <details phx-mounted={JS.ignore_attributes("open")} class="space-y-2">
-          <summary class="hover:overlay-dark cursor-pointer text-sm font-medium text-content">
+          <summary class="cursor-pointer text-sm font-medium text-content">
             Input attributes
           </summary>
           <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
@@ -787,7 +948,7 @@
                       data-pdf-url={url}
                       role="img"
                       aria-label={"First page of #{@preview_names[url]}"}
-                      class="grid h-36 w-full place-items-center overflow-hidden rounded-default border border-outline bg-primary overlay-dark"
+                      class="grid h-36 w-full place-items-center overflow-hidden rounded-default border border-outline bg-transparent"
                     >
                       <canvas hidden class="max-h-full max-w-full" />
                       <p
@@ -802,7 +963,7 @@
                       :if={not String.starts_with?(url, "data:application/pdf;")}
                       src={url}
                       alt={Map.get(@preview_names, url, Path.basename(url))}
-                      class="h-36 w-full rounded-default border border-outline bg-primary overlay-dark object-contain"
+                      class="h-36 w-full rounded-default border border-outline bg-transparent object-contain"
                     />
                   </div>
                   <p class={
@@ -826,7 +987,7 @@
                       data-entry-ref={entry.ref}
                       role="img"
                       aria-label={"First page of #{entry.client_name}"}
-                      class="grid h-36 w-full place-items-center overflow-hidden rounded-default border border-outline bg-primary overlay-dark"
+                      class="grid h-36 w-full place-items-center overflow-hidden rounded-default border border-outline bg-transparent"
                     >
                       <canvas hidden class="max-h-full max-w-full" />
                       <p
@@ -841,7 +1002,7 @@
                       :if={String.downcase(Path.extname(entry.client_name)) != ".pdf"}
                       entry={entry}
                       alt={entry.client_name}
-                      class="h-36 w-full rounded-default border border-outline bg-primary overlay-dark object-contain"
+                      class="h-36 w-full rounded-default border border-outline bg-transparent object-contain"
                     />
                   </div>
                   <p class={
@@ -1091,9 +1252,9 @@
           >Events</.button>
           <details
             phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
           >
-            <summary class="hover:overlay-dark cursor-pointer text-sm">
+            <summary class="cursor-pointer text-sm">
               Event style: {@showcase["calendar"]["variant"]}
             </summary>
             <div class="mt-3 grid grid-cols-[1fr_1fr] gap-2">
@@ -1113,9 +1274,9 @@
           </details>
           <details
             phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
           >
-            <summary class="hover:overlay-dark cursor-pointer text-sm">
+            <summary class="cursor-pointer text-sm">
               Event color: {@showcase["calendar"]["color"]}
             </summary>
             <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
@@ -1262,9 +1423,9 @@
           >Titles</.button>
           <details
             phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-primary overlay-dark p-3"
+            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
           >
-            <summary class="hover:overlay-dark cursor-pointer text-sm">
+            <summary class="cursor-pointer text-sm">
               Items: {@showcase["list"]["count"]}
             </summary>
             <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
@@ -1313,9 +1474,9 @@
       <div class="grid grid-cols-[max-content_max-content_max-content_max-content] gap-3 mb-4">
         <details
           phx-mounted={JS.ignore_attributes("open")}
-          class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
         >
-          <summary class="hover:overlay-dark cursor-pointer text-sm">
+          <summary class="cursor-pointer text-sm">
             Icon: {@showcase["icons"]["name"]}
           </summary>
           <div class="mt-3 grid grid-cols-[1fr_1fr] gap-2">
@@ -1337,9 +1498,9 @@
         </details>
         <details
           phx-mounted={JS.ignore_attributes("open")}
-          class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
         >
-          <summary class="hover:overlay-dark cursor-pointer text-sm">
+          <summary class="cursor-pointer text-sm">
             Size: {@showcase["icons"]["size"]}
           </summary>
           <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
@@ -1358,9 +1519,9 @@
         </details>
         <details
           phx-mounted={JS.ignore_attributes("open")}
-          class="rounded-default border border-outline bg-primary overlay-dark p-3"
+          class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
         >
-          <summary class="hover:overlay-dark cursor-pointer text-sm">
+          <summary class="cursor-pointer text-sm">
             Color: {@showcase["icons"]["color"]}
           </summary>
           <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
