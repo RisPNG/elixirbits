@@ -148,7 +148,7 @@ config :esbuild,
             Path.expand(Mix.Project.build_path()),
             Path.expand("../_build/dev", __DIR__)
           ],
-          ":"
+          if(match?({:win32, _}, :os.type()), do: ";", else: ":")
         )
     }
   ]
