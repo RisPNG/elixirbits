@@ -153,7 +153,6 @@ defmodule Elixirbits.MixProject do
       {:heroicons,
        github: "tailwindlabs/heroicons", sparse: "optimized", app: false, compile: false, depth: 1},
       {:igniter, ">= 0.6.0", only: [:dev, :test]},
-      {:image, ">= 0.65.0"},
       {:jason, ">= 1.2.0"},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:live_debugger, ">= 0.3.0", only: :dev},
