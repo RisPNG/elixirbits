@@ -266,13 +266,11 @@ defmodule ElixirbitsWeb.Layouts do
   def theme_toggle(assigns) do
     ~H"""
     <div class={[
-      "relative flex flex-row items-center border border-outline bg-secondary text-content rounded-full",
+      "grid grid-cols-[2rem_2rem_2rem] items-center border border-outline bg-secondary text-content rounded-full",
       @class
     ]}>
-      <div class="absolute w-1/3 h-full rounded-full border border-outline bg-brand left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
-
       <button
-        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark [:root:not([data-theme])_&]:text-content-inverse dark:[:root:not([data-theme])_&]:text-content"
+        class="grid place-items-center size-8 cursor-pointer rounded-full border border-transparent transition-colors hover:overlay-dark [:root:not([data-theme])_&]:border-outline [:root:not([data-theme])_&]:bg-brand [:root:not([data-theme])_&]:text-content-inverse dark:[:root:not([data-theme])_&]:text-content"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
       >
@@ -280,7 +278,7 @@ defmodule ElixirbitsWeb.Layouts do
       </button>
 
       <button
-        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark [[data-theme=light]_&]:text-content-inverse"
+        class="grid place-items-center size-8 cursor-pointer rounded-full border border-transparent transition-colors hover:overlay-dark [[data-theme=light]_&]:border-outline [[data-theme=light]_&]:bg-brand [[data-theme=light]_&]:text-content-inverse"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
       >
@@ -288,7 +286,7 @@ defmodule ElixirbitsWeb.Layouts do
       </button>
 
       <button
-        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark"
+        class="grid place-items-center size-8 cursor-pointer rounded-full border border-transparent transition-colors hover:overlay-dark [[data-theme=dark]_&]:border-outline [[data-theme=dark]_&]:bg-brand"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
       >

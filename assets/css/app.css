@@ -186,8 +186,8 @@
   --color-content-inverse: var(--theme-dark-content);
   --color-subcontent-inverse: var(--theme-dark-subcontent);
   --color-brand: oklch(58% 0.233 277.117);
-  --color-brand-dark: color-mix(in srgb, var(--color-brand), var(--surface-dark) calc(var(--overlay-opacity) * 100%));
-  --color-subcontent-dark: color-mix(in srgb, var(--color-subcontent), var(--surface-dark) calc(var(--overlay-opacity) * 100%));
+  --color-brand-dark: hsl(from var(--color-brand) h calc(s + (100 - s) * var(--overlay-opacity) * sign(s)) calc(l * (1 - var(--overlay-opacity))));
+  --color-subcontent-dark: hsl(from var(--color-subcontent) h calc(s + (100 - s) * var(--overlay-opacity) * sign(s)) calc(l * (1 - var(--overlay-opacity))));
   --color-info: oklch(82% 0.09 241.966);
   --color-success: oklch(82% 0.085 184.704);
   --color-warning: oklch(84% 0.1 58.318);
@@ -339,16 +339,28 @@
   initial-value: 0;
 }
 
-@property --surface-overlay-alpha-a {
+@property --surface-overlay-strength-a {
   syntax: "<number>";
   inherits: true;
   initial-value: 0;
 }
 
-@property --surface-overlay-alpha-b {
+@property --surface-overlay-strength-b {
   syntax: "<number>";
   inherits: true;
   initial-value: 0;
+}
+
+@property --surface-overlay-source-a {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --surface-overlay-source-b {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
 }
 
 @property --surface-fill {
@@ -394,23 +406,22 @@
   inherits: false;
 }
 
+@property --surface-overlay-lightness {
+  syntax: "*";
+  inherits: false;
+}
+
 @property --surface-overlay-step {
   syntax: "*";
   inherits: false;
 }
 
-@property --surface-overlay-total-alpha {
+@property --surface-overlay-total-strength {
   syntax: "*";
   inherits: false;
 }
 
-@property --surface-overlay-prior-alpha {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 0;
-}
-
-@property --surface-overlay-paint-alpha {
+@property --surface-overlay-prior-strength {
   syntax: "<number>";
   inherits: false;
   initial-value: 0;
@@ -462,12 +473,11 @@
 @utility surface-colors {
   --surface-fill: var(--surface-base);
   --surface-source: var(--surface-base, var(--surface-opacity-fill, var(--surface-parent)));
-  --surface-background: rgb(from var(--surface-source) r g b / var(--surface-paint-alpha));
+  --surface-background: var(--surface-modified, rgb(from var(--surface-source) r g b / var(--surface-paint-alpha)));
   --surface-rendered: color-mix(in srgb, var(--surface-parent), rgb(from var(--surface-source) r g b / 1) calc(var(--surface-paint-alpha) * 100%));
   --surface-overlay-carry: calc(1 - sign(var(--surface-paint-alpha)));
-  --surface-overlay-total-alpha: clamp(0, calc(var(--surface-overlay-prior-alpha) + var(--surface-overlay-step)), 1);
-  --surface-overlay-paint-alpha: calc((var(--surface-overlay-total-alpha) - var(--surface-overlay-prior-alpha)) / (1 - var(--surface-overlay-prior-alpha)));
-  --surface-modified: color-mix(in srgb, var(--surface-rendered), var(--surface-overlay-source) calc(var(--surface-overlay-paint-alpha) * 100%));
+  --surface-overlay-total-strength: clamp(0, calc(var(--surface-overlay-prior-strength) + var(--surface-overlay-step)), 1);
+  --surface-modified: hsl(from var(--surface-overlay-source) h calc(s + (100 - s) * var(--surface-overlay-total-strength) * sign(s)) calc(l + (var(--surface-overlay-lightness) - l) * var(--surface-overlay-total-strength)) / 1);
 
   @container style(--surface-slot: 0) {
     --surface-slot: 1;
@@ -477,7 +487,8 @@
     --surface-paint-alpha: calc((var(--surface-total-alpha) - var(--surface-prior-alpha)) / (1 - var(--surface-prior-alpha)));
     --surface-alpha-a: var(--surface-total-alpha);
     --surface-overlay-kind-a: var(--surface-overlay-kind, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-kind-b))));
-    --surface-overlay-alpha-a: var(--surface-overlay-total-alpha, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-b))));
+    --surface-overlay-strength-a: var(--surface-overlay-total-strength, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-strength-b))));
+    --surface-overlay-source-a: var(--surface-overlay-source, color-mix(in srgb, var(--surface-rendered), var(--surface-overlay-source-b) calc(var(--surface-overlay-carry) * 100%)));
     --surface-a: var(--surface-modified, var(--surface-rendered));
     --surface: var(--surface-a);
   }
@@ -490,7 +501,8 @@
     --surface-paint-alpha: calc((var(--surface-total-alpha) - var(--surface-prior-alpha)) / (1 - var(--surface-prior-alpha)));
     --surface-alpha-b: var(--surface-total-alpha);
     --surface-overlay-kind-b: var(--surface-overlay-kind, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-kind-a))));
-    --surface-overlay-alpha-b: var(--surface-overlay-total-alpha, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-a))));
+    --surface-overlay-strength-b: var(--surface-overlay-total-strength, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-strength-a))));
+    --surface-overlay-source-b: var(--surface-overlay-source, color-mix(in srgb, var(--surface-rendered), var(--surface-overlay-source-a) calc(var(--surface-overlay-carry) * 100%)));
     --surface-b: var(--surface-modified, var(--surface-rendered));
     --surface: var(--surface-b);
   }
@@ -520,6 +532,7 @@
   --surface-fill-alpha: 1;
   --surface-fill-alpha: --value(--surface-*--alpha);
   @apply surface-colors;
+  fill: var(--surface-background, --value(--surface-*)) !important;
 }
 
 @utility fill-transparent {
@@ -527,43 +540,48 @@
   --surface-reset: initial;
   --surface-fill-alpha: 0;
   @apply surface-colors;
+  fill: var(--surface-background) !important;
 }
 
 /* Overlay modifiers */
 
 @utility overlay-dark-* {
   --surface-overlay-kind: 1;
-  --surface-overlay-source: var(--surface-dark);
+  --surface-overlay-lightness: 0;
   --surface-overlay-step: clamp(0, --value([number], --default(var(--overlay-opacity))), 1);
-  --surface-overlay-prior-alpha: 0;
+  --surface-overlay-prior-strength: 0;
+  --surface-overlay-source: var(--surface-rendered);
   @apply surface-colors;
-  @apply inset-shadow-[0_0_0_100vmax];
-  --tw-inset-shadow-color: rgb(from var(--surface-overlay-source) r g b / var(--surface-overlay-paint-alpha));
+  background-color: var(--surface-background) !important;
 
   @container style(--surface-slot: 0) and style(--surface-overlay-kind-b: 1) {
-    --surface-overlay-prior-alpha: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-b)));
+    --surface-overlay-prior-strength: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-strength-b)));
+    --surface-overlay-source: color-mix(in srgb, var(--surface-rendered), var(--surface-overlay-source-b) calc(sign(var(--surface-overlay-prior-strength)) * 100%));
   }
 
   @container style(--surface-slot: 1) and style(--surface-overlay-kind-a: 1) {
-    --surface-overlay-prior-alpha: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-a)));
+    --surface-overlay-prior-strength: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-strength-a)));
+    --surface-overlay-source: color-mix(in srgb, var(--surface-rendered), var(--surface-overlay-source-a) calc(sign(var(--surface-overlay-prior-strength)) * 100%));
   }
 }
 
 @utility overlay-light-* {
   --surface-overlay-kind: 2;
-  --surface-overlay-source: var(--surface-light);
+  --surface-overlay-lightness: 100;
   --surface-overlay-step: clamp(0, --value([number], --default(var(--overlay-opacity))), 1);
-  --surface-overlay-prior-alpha: 0;
+  --surface-overlay-prior-strength: 0;
+  --surface-overlay-source: var(--surface-rendered);
   @apply surface-colors;
-  @apply inset-shadow-[0_0_0_100vmax];
-  --tw-inset-shadow-color: rgb(from var(--surface-overlay-source) r g b / var(--surface-overlay-paint-alpha));
+  background-color: var(--surface-background) !important;
 
   @container style(--surface-slot: 0) and style(--surface-overlay-kind-b: 2) {
-    --surface-overlay-prior-alpha: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-b)));
+    --surface-overlay-prior-strength: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-strength-b)));
+    --surface-overlay-source: color-mix(in srgb, var(--surface-rendered), var(--surface-overlay-source-b) calc(sign(var(--surface-overlay-prior-strength)) * 100%));
   }
 
   @container style(--surface-slot: 1) and style(--surface-overlay-kind-a: 2) {
-    --surface-overlay-prior-alpha: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-alpha-a)));
+    --surface-overlay-prior-strength: calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-strength-a)));
+    --surface-overlay-source: color-mix(in srgb, var(--surface-rendered), var(--surface-overlay-source-a) calc(sign(var(--surface-overlay-prior-strength)) * 100%));
   }
 }
 
@@ -1259,13 +1277,11 @@ body {
 [data-vc=calendar][data-vc-theme] .vc-time__range input::-webkit-slider-thumb {
   @apply bg-primary border! border-outline!;
   border-radius: var(--radius-default);
-  background: var(--color-primary) !important;
   box-shadow: none !important;
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range input::-moz-range-thumb {
   @apply bg-primary border! border-outline!;
   border-radius: var(--radius-default);
-  background: var(--color-primary) !important;
   box-shadow: none !important;
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus-visible,
@@ -1294,14 +1310,12 @@ body {
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus-visible::-webkit-slider-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus::-webkit-slider-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:active::-webkit-slider-thumb {
-  background: var(--color-primary) !important;
   border: 1px solid var(--color-brand) !important;
   box-shadow: none !important;
 }
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus-visible::-moz-range-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:focus::-moz-range-thumb,
 [data-vc=calendar][data-vc-theme] .vc-time__range input:active::-moz-range-thumb {
-  background: var(--color-primary) !important;
   border: 1px solid var(--color-brand) !important;
   box-shadow: none !important;
 }

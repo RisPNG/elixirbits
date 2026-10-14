@@ -68,7 +68,7 @@
       />
 
       <g :for={{col, i} <- Enum.with_index(@columns)}>
-        <g :for={event <- col.events} class={event.fill_class}>
+        <g :for={event <- col.events} class={[event.fill_class, "hover:overlay-dark"]}>
           <% box = event_box(event, i, @col_w) %>
           <rect
             aria-hidden="true"
@@ -105,7 +105,7 @@
               data-tooltip={event.label}
               phx-click="calendar_change"
               phx-value-event={event.id}
-              class="block h-full w-full cursor-pointer rounded-default hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+              class="block h-full w-full cursor-pointer rounded-default focus-visible:outline-2 focus-visible:outline-brand"
             >
               <span class="sr-only">{event.title}</span>
             </button>
