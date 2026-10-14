@@ -840,6 +840,29 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(document, "input#portrait[value]") == []
         assert Floki.find(document, "[data-file-preview-region]") != []
+
+        if editor == false do
+          assert Floki.find(document, "template[data-file-editor-template]") == []
+        else
+          assert Floki.find(document, "template[data-file-editor-template] dialog.file-editor") !=
+                   []
+
+          assert Floki.find(
+                   document,
+                   "template cropper-image[alt='Image to edit'][rotatable][scalable][translatable]"
+                 ) != []
+
+          assert Floki.find(
+                   document,
+                   "template cropper-selection[initial-coverage='0.8'][min-inset='0'][movable][resizable]"
+                 ) != []
+
+          assert Floki.find(document, "template button[data-editor-action=cancel][disabled]") ==
+                   []
+
+          assert Floki.find(document, "template button[data-editor-action=confirm][disabled]") !=
+                   []
+        end
       end
     end
 
@@ -1997,6 +2020,16 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
                ) != []
 
         assert Floki.attribute(document, "input#schedule", "phx-update") == []
+
+        assert Floki.attribute(document, "input#schedule", "aria-controls") == [
+                 "schedule-calendar"
+               ]
+
+        assert Floki.find(
+                 document,
+                 "#schedule-calendar[popover=auto][data-calendar-popover][data-vc=calendar][data-vc-theme=elixirbits][data-vc-mode=#{type}][phx-update=ignore]"
+               ) != []
+
         assert [classes] = Floki.attribute(document, "input#schedule", "class")
         assert "disabled:overlay-dark" in String.split(classes)
         assert [mounted] = Floki.attribute(document, "input#schedule", "phx-mounted")
@@ -2344,6 +2377,30 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       assert html =~ "before:translate-x-5"
     end
 
+    test "number steppers respect server-rendered disabled, readonly, and any-step state" do
+      for attrs <- [[disabled: true], [readonly: true], [step: "any"], [step: "ANY"]] do
+        document =
+          render_component(
+            &CoreComponents.input/1,
+            [id: "quantity", name: "quantity", type: "number", value: 4] ++ attrs
+          )
+          |> Floki.parse_document!()
+
+        assert length(Floki.find(document, "button[data-number-step][disabled]")) == 2
+      end
+
+      html =
+        render_component(&CoreComponents.input/1,
+          id: "quantity",
+          name: "quantity",
+          type: "number",
+          value: 4,
+          step: "0.5"
+        )
+
+      assert Floki.find(Floki.parse_document!(html), "button[data-number-step][disabled]") == []
+    end
+
     test "text select and telephone modes preserve picker selection and composite submission" do
       for render_as <- ~w(text text-enabled) do
         {:ok, view, html} =
@@ -2371,6 +2428,11 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
                ) != []
 
         assert Floki.find(document, "[phx-hook=TelInput] input[data-tel-number].border-0") != []
+
+        assert [country_label] =
+                 Floki.attribute(document, "#choices_phone_country_code_text_input", "value")
+
+        assert country_label == "+60"
 
         assert Floki.find(
                  document,

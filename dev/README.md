@@ -20,6 +20,8 @@ mise exec -- mix phx.server
 
 Node and npm manage the JavaScript dependencies. `mix assets.setup` installs them and updates `assets/package-lock.json` through npm. For a clean installation of the locked versions, run `mise exec -- npm ci --prefix assets` after fetching the Mix dependencies.
 
+Chart.js, Pretext, and Web Haptics remain available for future development. Import them when an application feature needs them; the current entry bundle does not load them.
+
 `assets/package.json` installs `super-image-cropper` from the `ris` branch of `RisPNG/super-image-cropper`, and `assets/package-lock.json` records the exact Git revision. npm prepares the package and its internal worker during installation, so the application does not require a sibling checkout. Update the dependency deliberately when adopting a newer fork revision. Keep the fork's `master` branch as the clean upstream reference and implement fixes on `ris`.
 
 Open [localhost:4000](http://localhost:4000). The component showcase is at `/dev_panel/layout_test`.
@@ -97,6 +99,10 @@ Leave the plug's `configuration` at its empty-map default for now. The 0.3.0 ren
 
 `CoreComponents` provides forms, actions, cards, entry panels, tables, and inputs, including searchable selects, radios, switches, password visibility, and upload previews. Its imported `<.form>` disables browser submission validation by default and delegates native form behaviour to Phoenix. Colours live in `assets/css/app.css`. Fixed form grids use explicit tracks and `subgap` for aligned transparent fields. The showcase demonstrates the supported input modes and interactions.
 
+Client controls target current Chromium, Firefox, and Safari releases. Select, colour, and themed calendar popovers use native CSS anchor positioning for size, placement, scrolling, and viewport constraints. Their hooks connect the existing widgets to native popovers without measuring layout or adding JavaScript positioning fallbacks. Calendars retain the themed Vanilla Calendar interface, with native outside-click and Escape dismissal. Keyboard arrows enter the calendar, and Tab follows the browser's focus order. Calendar focus never changes `HTMLElement.prototype`.
+
+Telephone inputs keep separate country and national-number controls. LiveSelect's selected-label option displays only the dial code in the field, while its full dropdown labels and the existing server search match dial codes, country names, and ISO codes. The small telephone hook only composes the submitted number. Theme animation, clipped-text tooltips, the timer demonstration, and AshTypescript RPC support remain part of the template. Timers share one second-based scheduler and refresh when the page becomes visible.
+
 ### Interface patterns
 
 The application's existing pages, layouts, shared components, and central theme define its interface patterns together. [Layout Test](http://localhost:4000/dev_panel/layout_test) demonstrates shared component behaviour and states. Follow the existing page pattern that fits the new page's purpose and action hierarchy, and implement reusable colour and control behaviour through the central theme and existing component APIs.
@@ -164,6 +170,8 @@ When editing is enabled, PNG, JPEG, GIF, and WebP previews expose a bottom Edit 
 The layout test uses one upload input with single, singles, multiple, preview, preview layout, and editor controls. Its single/singles preview sits in a separate region outside the upload form, while multiple previews stay inside the input. Single mode allows one pending file; singles and multiple allow three, with singles choosing them individually. Save or cancel pending files before switching selection mode, because LiveView needs an empty queue to change its upload configuration. Other display options retain the current selection. Turning Preview off shows the active filename inside single and singles inputs, or filename chips in multiple mode, and turns editing off. Switching to multiple also turns editing off. Saved files are session-only examples: saving a single file replaces them, while saving new singles or multiple files appends to them. Re-editing a saved file replaces that item in its existing position when saved. The Core Inputs file specimen uses the same component as a native picker without a LiveView upload configuration. Its demo Save does not transfer file bytes; a native multipart form can instead send its prepared File to an HTTP controller.
 
 Cropper.js 2.3.0 provides the editing interface through its native custom elements, and the maintained Super Image Cropper fork prepares the accepted image. The fork reads the image transform and selection to apply the same crop to static images and GIF frames. It owns exact output resizing, GIF frame composition, loop counts, delays, transparency, encoding, and cancellation cleanup. Its GIF encoder uses a reserved transparent palette index so opaque black remains opaque. The application consumes its Blob output directly and has no separate GIF worker implementation. Esbuild preserves dependency licence notices in linked `.LEGAL.txt` files, which must accompany the generated JavaScript assets.
+
+The shared HEEx image-editor template owns the dialog, buttons, status, and Cropper markup. JavaScript clones those inert native nodes when editing starts, configures the source and constraints, and delegates to the installed engines. The active dialog lives outside LiveView's patched DOM and is removed when editing ends. Editor dependencies remain lazy-loaded.
 
 ```heex
 <.input

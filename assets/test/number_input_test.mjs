@@ -45,7 +45,6 @@ function openInput(options = {}) {
   controls.input.stepDown = function() { calls.push({method: "down", input: this}) }
   for (const control of Object.values(controls)) control.parentElement = wrapper
   wrapper.querySelector = () => controls.input
-  wrapper.querySelectorAll = () => [controls.up, controls.down]
   controls.input.addEventListener("input", event => notifications.push({type: event.type, value: event.target.value, bubbles: event.bubbles}))
   controls.input.addEventListener("blur", event => notifications.push({type: event.type, value: event.target.value, bubbles: event.bubbles}))
   const context = {...NumberInput, el: wrapper}
@@ -94,13 +93,11 @@ test("native limits that leave the value unchanged do not trigger form updates",
   field.context.destroyed()
 })
 
-test("disabled, readonly, and any-step fields disable buttons and never invoke invalid native stepping", () => {
+test("disabled, readonly, and any-step fields never invoke invalid native stepping", () => {
   for (const options of [{disabled: true}, {readOnly: true}, {step: "any"}, {step: "ANY"}]) {
     const field = openInput(options)
     field.controls.input.stepUp = () => { throw new Error("This field must not invoke native stepping") }
     field.controls.input.stepDown = () => { throw new Error("This field must not invoke native stepping") }
-    assert.equal(field.controls.up.disabled, true)
-    assert.equal(field.controls.down.disabled, true)
     field.click("up")
     field.click("down")
     assert.deepEqual(field.notifications, [])
@@ -108,8 +105,6 @@ test("disabled, readonly, and any-step fields disable buttons and never invoke i
     field.controls.input.readOnly = false
     field.controls.input.step = "0.25"
     field.context.updated()
-    assert.equal(field.controls.up.disabled, false)
-    assert.equal(field.controls.down.disabled, false)
     field.context.destroyed()
   }
 })
@@ -136,7 +131,6 @@ test("patches use the current native input and destruction removes delegated lis
   replacement.stepDown = function() { field.calls.push({method: "down", input: this}) }
   field.controls.input = replacement
   field.context.updated()
-  assert.equal(field.controls.up.disabled, false)
   field.click("up")
   assert.equal(field.calls[0].input, replacement)
   assert.notEqual(field.calls[0].input, original)

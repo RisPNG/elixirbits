@@ -157,7 +157,10 @@ const FileInput = {
       const {default: ImageEditor} = await import("./image_editor")
       if (this.disposed || sequence !== this.sequence || this.input.disabled) return
       this.editor = new ImageEditor()
-      const accepted = await this.editor.edit(file, options)
+      const accepted = await this.editor.edit(file, {
+        ...(options === true ? {} : options),
+        template: this.el.querySelector("[data-file-editor-template]"),
+      })
       if (this.disposed || sequence !== this.sequence || this.input.disabled || !accepted) return
       const maxSize = Number(this.el.dataset.fileMaxSize)
       if (maxSize && accepted.size > maxSize) throw new Error("The edited image exceeds the file size limit.")

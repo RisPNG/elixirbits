@@ -110,6 +110,7 @@ function fixture(options = {}, mount = true) {
   const next = new Element(root)
   next.dataset.fileNext = ""
   const metadata = new Element(root)
+  const editorTemplate = new Element(root)
   const inputPosition = new Element()
   const previewPosition = new Element()
   Object.assign(root.dataset, {fileEditor: "true", fileSelection: "single", fileEntryRefs: "[]", filePreview: "true", fileMode: "enabled", ...options})
@@ -123,6 +124,7 @@ function fixture(options = {}, mount = true) {
   root.nodes.set("[data-file-clear]", clear)
   root.nodes.set("[data-file-item]", [])
   root.nodes.set("[data-file-replacements]", metadata)
+  root.nodes.set("[data-file-editor-template]", editorTemplate)
   root.nodes.set("[data-file-previous], [data-file-next]", [previous, next])
   root.nodes.set("[data-file-position]", [inputPosition, previewPosition])
   region.nodes.set("[data-file-preview-image]", image)
@@ -140,7 +142,7 @@ function fixture(options = {}, mount = true) {
   window.addEventListener("change", () => changes.push([...input.files]))
   if (mount) context.mounted()
   return {
-    context, root, input, form, window, name, readonly, error, region, image, pdf, open, previewName, caption, stored, clear, edit, previous, next, metadata, inputPosition, previewPosition, changes, created, revoked,
+    context, root, input, form, window, name, readonly, error, region, image, pdf, open, previewName, caption, stored, clear, edit, previous, next, metadata, editorTemplate, inputPosition, previewPosition, changes, created, revoked,
     select(file) {
       input.files = [file]
       input.dispatchEvent(new UIEvent("input", {bubbles: true}))
@@ -1113,7 +1115,7 @@ test("changing editor configuration cancels stale preparation and the next edit 
     setup.context.editSelection(setup.context.activeKey)
     await settled()
     const exactEditor = Editor.instances.at(-1)
-    assert.deepEqual(exactEditor.options, {width: 512, height: 512})
+    assert.deepEqual(exactEditor.options, {width: 512, height: 512, template: setup.editorTemplate})
     const exactResult = exactEditor.resolve
     setup.root.dataset.fileEditor = JSON.stringify({ratio: 16 / 9})
     setup.context.updated()
@@ -1123,7 +1125,7 @@ test("changing editor configuration cancels stale preparation and the next edit 
     assert.deepEqual(setup.input.files, [accepted])
     setup.context.editSelection(setup.context.activeKey)
     await settled()
-    assert.deepEqual(Editor.instances.at(-1).options, {ratio: 16 / 9})
+    assert.deepEqual(Editor.instances.at(-1).options, {ratio: 16 / 9, template: setup.editorTemplate})
     const edited = new File(["current"], "current.png", {type: "image/png"})
     Editor.instances.at(-1).resolve(edited)
     await settled()

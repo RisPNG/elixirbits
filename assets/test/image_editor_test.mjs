@@ -12,17 +12,6 @@ class Element extends EventTarget {
   }
   setAttribute(name, value) { this[name] = value }
   appendChild(child) { this.children.push(child); child.parentNode = this }
-  set innerHTML(value) {
-    this.html = value
-    this.buttons = [...value.matchAll(/data-editor-action="([^"]+)"/g)].map(([, action]) => {
-      const button = new Element("button")
-      button.dataset.editorAction = action
-      return button
-    })
-    for (const selector of [".file-editor-canvas", ".file-editor-status", ".file-editor-error"]) this.nodes.set(selector, new Element("div"))
-    this.nodes.get(".file-editor-status").textContent = "Loading image..."
-    this.nodes.get(".file-editor-error").hidden = true
-  }
   querySelector(selector) {
     if (selector === "[data-editor-action=confirm]") return this.buttons.find(button => button.dataset.editorAction === "confirm")
     return this.nodes.get(selector)
@@ -79,6 +68,10 @@ class CropperSelection extends Element {
     this.height = 120
     this.aspectRatio = aspectRatio
   }
+  setAttribute(name, value) {
+    super.setAttribute(name, value)
+    if (name === "aspect-ratio") this.aspectRatio = Number(value)
+  }
   $change(x, y, width = this.width, height = this.height) {
     const detail = {x, y, width, height}
     const event = new Event("change", {cancelable: true})
@@ -89,16 +82,50 @@ class CropperSelection extends Element {
   $reset() { this.resetCount = (this.resetCount || 0) + 1; return this.$change(130, 65, 240, 120) }
 }
 
+class Dialog extends Element {
+  constructor() {
+    super("dialog")
+    this.buttons = ["rotate-left", "rotate-right", "flip-horizontal", "flip-vertical", "reset", "cancel", "confirm"].map(action => {
+      const button = new Element("button")
+      button.dataset.editorAction = action
+      return button
+    })
+    const container = new Element("div")
+    const source = new Element("img")
+    source.hidden = true
+    source.alt = "Image to edit"
+    const canvas = new Element("cropper-canvas")
+    canvas.rect = {x: 0, y: 0, width: 600, height: 400}
+    const image = new CropperImage()
+    const selection = new CropperSelection(NaN)
+    container.appendChild(source)
+    container.appendChild(canvas)
+    canvas.appendChild(image)
+    canvas.appendChild(selection)
+    container.nodes.set("cropper-canvas", canvas)
+    container.nodes.set("cropper-image", image)
+    container.nodes.set("cropper-selection", selection)
+    this.nodes.set(".file-editor-canvas", container)
+    this.nodes.set("[data-editor-source]", source)
+    this.nodes.set("cropper-image", image)
+    this.nodes.set("cropper-selection", selection)
+    this.nodes.set("[data-editor-status]", new Element("p"))
+    this.nodes.set("[data-editor-error]", new Element("p"))
+    this.nodes.get("[data-editor-status]").textContent = "Loading image..."
+    this.nodes.get("[data-editor-error]").hidden = true
+  }
+  cloneNode(deep) { assert.equal(deep, true); return new Dialog() }
+}
+
 class Cropper {
   static instances = []
   constructor(image, options) {
     Cropper.instances.push(this)
     this.image = image
     this.options = options
-    this.cropperImage = new CropperImage()
-    this.selection = new CropperSelection(Number(options.template.match(/aspect-ratio="([^"]+)"/)?.[1] ?? NaN))
-    this.canvas = new Element("cropper-canvas")
-    this.canvas.rect = {x: 0, y: 0, width: 600, height: 400}
+    this.cropperImage = options.container.querySelector("cropper-image")
+    this.selection = options.container.querySelector("cropper-selection")
+    this.canvas = options.container.querySelector("cropper-canvas")
   }
   ready() { this.cropperImage.resolveReady(this.image) }
   getCropperImage() { return this.cropperImage }
@@ -129,14 +156,26 @@ function fixture() {
   const original = {document: globalThis.document, create: URL.createObjectURL, revoke: URL.revokeObjectURL}
   const revoked = []
   const dialogs = []
-  globalThis.document = {createElement: tagName => new Element(tagName), body: {appendChild: dialog => dialogs.push(dialog)}}
-  URL.createObjectURL = () => `blob:editor-${dialogs.length}`
+  const templateDialog = new Dialog()
+  const template = {content: new Element("fragment")}
+  template.content.nodes.set("dialog", templateDialog)
+  globalThis.document = {
+    importNode(content, deep) {
+      assert.equal(content, template.content)
+      const fragment = new Element("fragment")
+      fragment.nodes.set("dialog", content.querySelector("dialog").cloneNode(deep))
+      return fragment
+    },
+    body: {appendChild: dialog => dialogs.push(dialog)},
+  }
+  let nextUrl = 0
+  URL.createObjectURL = () => `blob:editor-${++nextUrl}`
   URL.revokeObjectURL = url => revoked.push(url)
   Cropper.instances = []
   SuperImageCropper.instances = []
   const editor = new ImageEditor()
   return {
-    editor, dialogs, revoked,
+    editor, dialogs, revoked, template, templateDialog,
     cleanup() {
       editor.destroy()
       globalThis.document = original.document
@@ -150,13 +189,16 @@ test("exact dimensions and source-resolution ratio crops use the fork with the o
   const setup = fixture()
   try {
     const file = new File(["image"], "profile.png", {type: "image/png"})
-    const pending = setup.editor.edit(file, {width: 300, height: 150})
+    const pending = setup.editor.edit(file, {width: 300, height: 150, template: setup.template})
     const cropper = Cropper.instances.at(-1)
     const dialog = setup.dialogs.at(-1)
     assert.equal(cropper.selection.aspectRatio, 2)
-    assert.match(cropper.options.template, /initial-coverage="0.8"/)
-    assert.match(cropper.options.template, /min-inset="0"/)
-    assert.match(cropper.options.template, /rotatable scalable translatable/)
+    assert.equal(cropper.options.template, null)
+    assert.equal(cropper.options.container, dialog.querySelector(".file-editor-canvas"))
+    assert.equal(cropper.cropperImage.src, "blob:editor-1")
+    assert.notEqual(dialog, setup.templateDialog)
+    assert.equal(setup.templateDialog.querySelector("[data-editor-source]").src, undefined)
+    assert.equal(Number.isNaN(setup.templateDialog.querySelector("cropper-selection").aspectRatio), true)
     assert.equal(dialog.querySelector(".file-editor-canvas").children[0], cropper.image)
     assert.equal(cropper.image.src, "blob:editor-1")
     cropper.ready()
@@ -178,7 +220,7 @@ test("exact dimensions and source-resolution ratio crops use the fork with the o
     assert.equal(processor.destroyCount, 1)
     assert.equal(cropper.destroyed, true)
 
-    const ratioPending = setup.editor.edit(file, {ratio: 2})
+    const ratioPending = setup.editor.edit(file, {ratio: 2, template: setup.template})
     const ratioCropper = Cropper.instances.at(-1)
     assert.equal(ratioCropper.selection.aspectRatio, 2)
     ratioCropper.ready()
@@ -199,7 +241,7 @@ test("exact dimensions and source-resolution ratio crops use the fork with the o
 test("cancel aborts GIF processing, destroys both engines, and releases the caller-owned source URL", async () => {
   const setup = fixture()
   try {
-    const pending = setup.editor.edit(new File(["gif"], "avatar.gif", {type: "image/gif"}), true)
+    const pending = setup.editor.edit(new File(["gif"], "avatar.gif", {type: "image/gif"}), {template: setup.template})
     const cropper = Cropper.instances.at(-1)
     assert.equal(Number.isNaN(cropper.selection.aspectRatio), true)
     cropper.ready()
@@ -207,7 +249,7 @@ test("cancel aborts GIF processing, destroys both engines, and releases the call
     const dialog = setup.dialogs.at(-1)
     dialog.click("confirm")
     const processor = SuperImageCropper.instances.at(-1)
-    assert.equal(dialog.querySelector(".file-editor-status").textContent, "Preparing image...")
+    assert.equal(dialog.querySelector("[data-editor-status]").textContent, "Preparing image...")
     assert.equal(dialog.buttons.find(button => button.dataset.editorAction === "cancel").disabled, false)
     const cancel = new Event("cancel", {cancelable: true})
     dialog.dispatchEvent(cancel)
@@ -227,13 +269,13 @@ test("cancel aborts GIF processing, destroys both engines, and releases the call
 test("late crop and image readiness callbacks cannot modify a replacement editor", async () => {
   const setup = fixture()
   try {
-    const first = setup.editor.edit(new File(["first"], "first.png", {type: "image/png"}), true)
+    const first = setup.editor.edit(new File(["first"], "first.png", {type: "image/png"}), {template: setup.template})
     const firstCropper = Cropper.instances.at(-1)
     firstCropper.ready()
     await settled()
     setup.dialogs.at(-1).click("confirm")
     const firstProcessor = SuperImageCropper.instances.at(-1)
-    const second = setup.editor.edit(new File(["second"], "second.png", {type: "image/png"}), true)
+    const second = setup.editor.edit(new File(["second"], "second.png", {type: "image/png"}), {template: setup.template})
     assert.equal(await first, null)
     const secondDialog = setup.dialogs.at(-1)
     firstCropper.ready()
@@ -253,14 +295,14 @@ test("late crop and image readiness callbacks cannot modify a replacement editor
     assert.equal(firstProcessor.destroyCount, 1)
     assert.equal(secondProcessor.destroyCount, 1)
 
-    const loading = setup.editor.edit(new File(["loading"], "loading.png", {type: "image/png"}), true)
+    const loading = setup.editor.edit(new File(["loading"], "loading.png", {type: "image/png"}), {template: setup.template})
     const loadingCropper = Cropper.instances.at(-1)
-    const current = setup.editor.edit(new File(["current"], "current.png", {type: "image/png"}), true)
+    const current = setup.editor.edit(new File(["current"], "current.png", {type: "image/png"}), {template: setup.template})
     assert.equal(await loading, null)
     loadingCropper.ready()
     await settled()
     assert.equal(setup.dialogs.at(-1).querySelector("[data-editor-action=confirm]").disabled, true)
-    assert.equal(setup.dialogs.at(-1).querySelector(".file-editor-status").textContent, "Loading image...")
+    assert.equal(setup.dialogs.at(-1).querySelector("[data-editor-status]").textContent, "Loading image...")
     setup.editor.destroy()
     assert.equal(await current, null)
   } finally { setup.cleanup() }
@@ -269,7 +311,7 @@ test("late crop and image readiness callbacks cannot modify a replacement editor
 test("native Cropper rotate, flip, and reset actions remain available when processing fails", async () => {
   const setup = fixture()
   try {
-    const pending = setup.editor.edit(new File(["image"], "picture.bmp", {type: "image/bmp"}), true)
+    const pending = setup.editor.edit(new File(["image"], "picture.bmp", {type: "image/bmp"}), {template: setup.template})
     const cropper = Cropper.instances.at(-1)
     cropper.ready()
     await settled()
@@ -294,8 +336,8 @@ test("native Cropper rotate, flip, and reset actions remain available when proce
     failed.reject(new Error("Unsupported image"))
     await settled()
     assert.equal(failed.destroyCount, 1)
-    assert.equal(dialog.querySelector(".file-editor-error").textContent, "Unsupported image")
-    assert.equal(dialog.querySelector(".file-editor-error").hidden, false)
+    assert.equal(dialog.querySelector("[data-editor-error]").textContent, "Unsupported image")
+    assert.equal(dialog.querySelector("[data-editor-error]").hidden, false)
     assert.equal(dialog.buttons.every(button => !button.disabled), true)
     assert.equal(cropper.canvas.disabled, false)
     assert.notEqual(cropper.destroyed, true)
@@ -315,22 +357,22 @@ test("native Cropper rotate, flip, and reset actions remain available when proce
 test("image loading failures leave cancel available and late errors do not reach another dialog", async () => {
   const setup = fixture()
   try {
-    const first = setup.editor.edit(new File(["invalid"], "broken.png", {type: "image/png"}), true)
+    const first = setup.editor.edit(new File(["invalid"], "broken.png", {type: "image/png"}), {template: setup.template})
     const failedCropper = Cropper.instances.at(-1)
     const failedDialog = setup.dialogs.at(-1)
     failedCropper.cropperImage.rejectReady(new Error("Failed to load the image source"))
     await settled()
-    assert.equal(failedDialog.querySelector(".file-editor-error").textContent, "The image could not be opened.")
+    assert.equal(failedDialog.querySelector("[data-editor-error]").textContent, "The image could not be opened.")
     assert.equal(failedDialog.querySelector("[data-editor-action=confirm]").disabled, true)
     assert.equal(failedDialog.buttons.find(button => button.dataset.editorAction === "cancel").disabled, false)
-    const second = setup.editor.edit(new File(["current"], "current.png", {type: "image/png"}), true)
+    const second = setup.editor.edit(new File(["current"], "current.png", {type: "image/png"}), {template: setup.template})
     assert.equal(await first, null)
     const loadingCropper = Cropper.instances.at(-1)
-    const current = setup.editor.edit(new File(["latest"], "latest.png", {type: "image/png"}), true)
+    const current = setup.editor.edit(new File(["latest"], "latest.png", {type: "image/png"}), {template: setup.template})
     assert.equal(await second, null)
     loadingCropper.cropperImage.rejectReady(new Error("Failed to load the image source"))
     await settled()
-    assert.notEqual(setup.dialogs.at(-1).querySelector(".file-editor-error").hidden, false)
+    assert.notEqual(setup.dialogs.at(-1).querySelector("[data-editor-error]").hidden, false)
     setup.editor.destroy()
     assert.equal(await current, null)
   } finally { setup.cleanup() }
@@ -339,7 +381,7 @@ test("image loading failures leave cancel available and late errors do not reach
 test("selection changes stay inside a letterboxed image and image pan or zoom keeps the crop covered", async () => {
   const setup = fixture()
   try {
-    const pending = setup.editor.edit(new File(["image"], "portrait.png", {type: "image/png"}), true)
+    const pending = setup.editor.edit(new File(["image"], "portrait.png", {type: "image/png"}), {template: setup.template})
     const cropper = Cropper.instances.at(-1)
     cropper.ready()
     await settled()
@@ -369,7 +411,7 @@ test("rotation and reset refit free and constrained selections without blocking 
   const setup = fixture()
   try {
     for (const options of [true, {ratio: 2}, {width: 200, height: 200}]) {
-      const pending = setup.editor.edit(new File(["image"], "profile.png", {type: "image/png"}), options)
+      const pending = setup.editor.edit(new File(["image"], "profile.png", {type: "image/png"}), {...(options === true ? {} : options), template: setup.template})
       const cropper = Cropper.instances.at(-1)
       cropper.ready()
       await settled()

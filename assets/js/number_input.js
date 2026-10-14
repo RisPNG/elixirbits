@@ -21,14 +21,10 @@ const NumberInput = {
     this.el.addEventListener("click", this.onClick)
     this.el.addEventListener("pointerdown", this.onPointerDown)
     this.input = this.el.querySelector("input[type=number]")
-    const unavailable = this.input.disabled || this.input.readOnly || this.input.step.toLowerCase() === "any"
-    for (const button of this.el.querySelectorAll("[data-number-step]")) button.disabled = unavailable
   },
 
   updated() {
     this.input = this.el.querySelector("input[type=number]")
-    const unavailable = this.input.disabled || this.input.readOnly || this.input.step.toLowerCase() === "any"
-    for (const button of this.el.querySelectorAll("[data-number-step]")) button.disabled = unavailable
   },
 
   destroyed() {

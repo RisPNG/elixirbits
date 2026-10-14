@@ -5,16 +5,13 @@ import {readFile} from "node:fs/promises"
 const source = await readFile(new URL("../js/color_input.js", import.meta.url), "utf8")
 const ColorInput = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)).default
 
-const originalGlobals = Object.fromEntries(["document", "window", "requestAnimationFrame", "cancelAnimationFrame", "getComputedStyle"].map(name => [name, globalThis[name]]))
-const frames = new Map()
+const originalGlobals = Object.fromEntries(["document"].map(name => [name, globalThis[name]]))
 const fields = new Set()
-let frameId = 0
 let fieldId = 0
 
 test.afterEach(() => {
   for (const field of fields) if (!field.context.destroyedInput) field.context.destroyed()
   fields.clear()
-  frames.clear()
 })
 test.after(() => {
   for (const [name, value] of Object.entries(originalGlobals)) {
@@ -40,8 +37,6 @@ class Element extends EventTarget {
     this.hidden = false
     this.parentElement = null
     this.captureListeners = new Map()
-    this.bounds = {left: 20, top: 20, bottom: 44, width: 24, height: 24}
-    this.scrollHeight = 232
     this.popoverOpen = false
     this.submissions = []
   }
@@ -62,14 +57,12 @@ class Element extends EventTarget {
     if (this.emitOnSet) this.dispatchEvent(new CustomEvent("color-changed", {bubbles: true, detail: {value}}))
   }
   matches(selector) { return selector === ":popover-open" && this.popoverOpen }
-  getBoundingClientRect() {
-    return {...this.bounds, width: Math.min(this.bounds.width, parseFloat(this.style.maxWidth) || Infinity)}
-  }
-  showPopover() {
+  showPopover(options) {
     const before = Object.assign(new Event("beforetoggle", {cancelable: true}), {newState: "open"})
     this.dispatchEvent(before)
     if (!before.defaultPrevented) {
       this.popoverOpen = true
+      this.popoverSource = options?.source
       this.dispatchEvent(Object.assign(new Event("toggle"), {newState: "open"}))
     }
   }
@@ -80,10 +73,6 @@ class Element extends EventTarget {
   setAttribute(name, value) { this.attributes.set(name, String(value)) }
   getAttribute(name) { return this.attributes.get(name) ?? null }
   hasAttribute(name) { return this.attributes.has(name) }
-  toggleAttribute(name, present) {
-    if (present) this.attributes.set(name, "")
-    else this.attributes.delete(name)
-  }
   setCustomValidity(message) { this.customValidity = message }
   get validity() { return {valid: !this.customValidity && (!this.required || !!this.value)} }
   contains(node) {
@@ -113,12 +102,6 @@ class Element extends EventTarget {
 }
 
 globalThis.document = new Element()
-globalThis.window = new Element()
-window.innerWidth = 1000
-window.innerHeight = 800
-globalThis.getComputedStyle = () => ({borderTopWidth: "1px", borderBottomWidth: "1px"})
-globalThis.requestAnimationFrame = callback => { frames.set(++frameId, callback); return frameId }
-globalThis.cancelAnimationFrame = id => frames.delete(id)
 
 function nativeColor(value = "#c9822b", format = "hex", extra = {}) {
   return {valid: true, value, format, label: format === "oklab" ? "OKLab" : format === "lab" ? "Lab" : format.toUpperCase(), swatch: value ? "rgb(201 130 43)" : null, rgba: value ? {r: 201, g: 130, b: 43, a: 1} : null, ...extra}
@@ -148,7 +131,6 @@ function openInput(state = nativeColor(), options = {}) {
   controls.input.value = state.value
   controls.input.textContent = state.value
   controls.picker.emitOnSet = options.emitOnSet
-  controls.popover.bounds.width = 240
   controls.input.form = form
   Object.assign(controls.input, options)
   controls.spaceInput.name = wrapper.dataset.colorSpaceName
@@ -517,6 +499,7 @@ test("picker opening awaits native validation and lets a valid pick recover an i
   await field.reply(0, nativeColor("oklch(.65 .14 65)", "oklch"))
   await finishReplies()
   assert.equal(field.controls.popover.popoverOpen, true)
+  assert.equal(field.controls.popover.popoverSource, field.controls.trigger)
   field.controls.popover.hidePopover()
   field.type("bad")
   field.open()
@@ -578,17 +561,15 @@ test("disabled, read-only and text-only displays neither request conversion nor 
   assert.equal(display.requests.length, 0)
 })
 
-test("popover stays inside the viewport and releases its scrolling listeners and frames", () => {
+test("closing the native popover clears alpha interaction and destruction dismisses it", () => {
   const field = openInput()
-  field.controls.trigger.bounds = {left: 950, top: 740, bottom: 764, width: 24, height: 24}
   field.open()
-  assert.equal(field.controls.popover.style.left, "752px")
-  assert.equal(field.controls.popover.style.top, "502px")
-  window.dispatchEvent(new Event("resize"))
-  assert.equal(frames.size, 1)
+  field.context.editingAlpha = true
   field.controls.popover.hidePopover()
-  assert.equal(frames.size, 0)
-  assert.equal(document.captureListeners.get("scroll").size, 0)
+  assert.equal(field.context.editingAlpha, false)
+  field.open()
+  field.context.destroyed()
+  assert.equal(field.controls.popover.popoverOpen, false)
 })
 
 test("form rebinding and destruction release shared submission handling and ignore pending replies", async () => {

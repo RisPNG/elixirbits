@@ -261,10 +261,12 @@ defmodule Elixirbits.CoreUtils.Phones do
   def list_countries, do: @countries
 
   @doc """
-  Returns LiveSelect-shaped options. Each option is `{label, iso}` where the label is `"+60 Malaysia (MY)"`.
+  Returns LiveSelect-shaped options with the full country label for searching and the dial code as the selected label.
   """
   def options do
-    Enum.map(@countries, fn c -> {label_for(c), c.iso} end)
+    Enum.map(@countries, fn c ->
+      %{label: label_for(c), value: c.iso, selected_label: c.dial_code}
+    end)
   end
 
   @doc """
@@ -282,7 +284,9 @@ defmodule Elixirbits.CoreUtils.Phones do
           String.contains?(String.downcase(c.name), needle) or
           String.contains?(String.trim_leading(c.dial_code, "+"), needle)
       end)
-      |> Enum.map(fn c -> {label_for(c), c.iso} end)
+      |> Enum.map(fn c ->
+        %{label: label_for(c), value: c.iso, selected_label: c.dial_code}
+      end)
     end
   end
 

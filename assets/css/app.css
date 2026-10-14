@@ -634,13 +634,22 @@
 
 .select-dropdown {
   position: fixed;
+  position-anchor: auto;
+  position-area: block-end span-inline-end;
+  position-try-fallbacks: flip-inline, flip-block, flip-block flip-inline;
+  position-try-order: most-block-size;
   inset: auto;
-  margin: 0;
+  margin: 0.25rem 0.5rem;
   padding: 0;
-  max-height: 15rem;
+  width: min(max(anchor-size(width), var(--select-dropdown-min-width, 0rem)), calc(100vw - 1rem));
+  max-height: min(15rem, 100% - 0.5rem);
   max-width: calc(100vw - 1rem);
   display: flex;
   flex-direction: column;
+}
+
+[data-dropdown-min-width="18"] .select-dropdown {
+  --select-dropdown-min-width: 18rem;
 }
 
 .select-dropdown[popover]:not(:popover-open) {
@@ -818,10 +827,15 @@ input[type="search"]::-webkit-search-cancel-button {
 
 .color-input-popover {
   position: fixed;
+  position-anchor: auto;
+  position-area: block-end span-inline-end;
+  position-try-fallbacks: flip-inline, flip-block, flip-block flip-inline;
+  position-try-order: most-block-size;
   inset: auto;
-  margin: 0;
+  margin: 0.25rem 0.5rem;
   width: 15rem;
   max-width: calc(100vw - 1rem);
+  max-height: calc(100% - 0.5rem);
   padding: 0.75rem;
   overflow-y: auto;
 }
@@ -981,30 +995,38 @@ body {
     border-radius: 0;
   }
 }
-[data-vc=calendar][data-vc-input] {
-  @apply bg-primary;
-  z-index: 50;
-  color: var(--color-content);
-  border: 1px solid var(--color-outline);
-  box-shadow: 0 10px 25px rgb(0 0 0 / 0.25);
+[data-calendar-popover][data-vc=calendar] {
+  @apply rounded-default border border-outline bg-primary text-content shadow-lg;
+  position: fixed;
+  position-anchor: auto;
+  position-area: block-end span-inline-end;
+  position-try-fallbacks: flip-inline, flip-block, flip-block flip-inline;
+  position-try-order: most-block-size;
+  inset: auto;
+  margin: 0.25rem 0.5rem;
+  width: max(anchor-size(width), 17.5rem);
+  min-width: 0;
+  max-width: calc(100vw - 1rem);
+  max-height: calc(100% - 0.5rem);
+  overflow-y: auto;
 }
-[data-vc=calendar][data-vc-input][data-vc-calendar-hidden] {
-  top: -10000px !important;
-  left: -10000px !important;
+
+[data-calendar-popover]:not(:popover-open) {
+  display: none;
 }
 
 [data-vc=calendar][data-vc-mode=time] [data-vc=header],
 [data-vc=calendar][data-vc-mode=time] [data-vc=wrapper],
-[data-vc=calendar][data-vc-mode=time] [data-vc=controls],
-.vc-mode-time [data-vc=header],
-.vc-mode-time [data-vc=wrapper],
-.vc-mode-time [data-vc=controls] {
+[data-vc=calendar][data-vc-mode=time] [data-vc=controls] {
   display: none !important;
 }
-[data-vc=calendar][data-vc-mode=time],
-.vc-mode-time {
+[data-vc=calendar][data-vc-mode=time] {
   min-width: 0;
   padding: 0.5rem;
+}
+
+[data-calendar-popover][data-vc-mode=time] {
+  width: anchor-size(width);
 }
 
 /* Calendar navigation */

@@ -68,34 +68,14 @@ const ColorInput = {
         pending.then(reply => {
           this.opening = false
           if (this.destroyedInput || this.revision !== revision) return
-          if (reply && !this.draft && !this.pending) this.popover.showPopover()
+          if (reply && !this.draft && !this.pending) this.popover.showPopover({source: this.trigger})
           else this.input.focus()
         })
       }
     }
     this.onToggle = event => {
       if (event.target !== this.popover) return
-      if (this.popover.matches(":popover-open")) {
-        this.positionPicker()
-        document.addEventListener("scroll", this.onScroll, true)
-        window.addEventListener("resize", this.onViewportChange)
-      } else {
-        document.removeEventListener("scroll", this.onScroll, true)
-        window.removeEventListener("resize", this.onViewportChange)
-        cancelAnimationFrame(this.positionFrame)
-        this.positionFrame = null
-        this.editingAlpha = false
-      }
-    }
-    this.onViewportChange = () => {
-      cancelAnimationFrame(this.positionFrame)
-      this.positionFrame = requestAnimationFrame(() => {
-        this.positionFrame = null
-        this.positionPicker()
-      })
-    }
-    this.onScroll = event => {
-      if (!this.popover.contains(event.target)) this.onViewportChange()
+      if (!this.popover.matches(":popover-open")) this.editingAlpha = false
     }
 
     this.el.addEventListener("input", this.onInput)
@@ -138,9 +118,6 @@ const ColorInput = {
         colorForms.delete(this.form)
       }
     }
-    document.removeEventListener("scroll", this.onScroll, true)
-    window.removeEventListener("resize", this.onViewportChange)
-    cancelAnimationFrame(this.positionFrame)
     if (this.popover?.matches(":popover-open")) this.popover.hidePopover()
   },
 
@@ -159,9 +136,6 @@ const ColorInput = {
     const popover = this.el.querySelector("[data-color-popover]")
     if (popover !== this.popover) {
       if (this.popover?.matches(":popover-open")) this.popover.hidePopover()
-      document.removeEventListener("scroll", this.onScroll, true)
-      window.removeEventListener("resize", this.onViewportChange)
-      cancelAnimationFrame(this.positionFrame)
       this.popover = popover
     }
     const form = this.editable ? this.input.form : null
@@ -316,7 +290,6 @@ const ColorInput = {
   renderColor() {
     if (this.formatLabel) this.formatLabel.textContent = this.state.label
     const preview = this.preview || (!this.error && this.state)
-    this.el.toggleAttribute("data-color-empty", !preview?.swatch)
     if (preview?.swatch) this.swatch.style.setProperty("--input-color", preview.swatch)
     else this.swatch.style.removeProperty("--input-color")
     if (!this.editable) return
@@ -337,24 +310,6 @@ const ColorInput = {
       this.picker.color = preview.rgba
       this.updatingPicker = false
     }
-    if (this.popover.matches(":popover-open")) this.positionPicker()
-  },
-
-  positionPicker() {
-    if (!this.popover?.matches(":popover-open")) return
-    const bounds = this.trigger.getBoundingClientRect()
-    this.popover.style.maxWidth = `${Math.max(0, window.innerWidth - 16)}px`
-    this.popover.style.maxHeight = ""
-    const width = this.popover.getBoundingClientRect().width
-    const style = getComputedStyle(this.popover)
-    const height = this.popover.scrollHeight + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth)
-    const below = Math.max(0, window.innerHeight - bounds.bottom - 12)
-    const above = Math.max(0, bounds.top - 12)
-    const openAbove = height > below && above > below
-    const availableHeight = openAbove ? above : below
-    this.popover.style.maxHeight = `${availableHeight}px`
-    this.popover.style.left = `${Math.max(8, Math.min(bounds.left, window.innerWidth - width - 8))}px`
-    this.popover.style.top = `${openAbove ? bounds.top - 4 - Math.min(height, availableHeight) : bounds.bottom + 4}px`
   },
 }
 

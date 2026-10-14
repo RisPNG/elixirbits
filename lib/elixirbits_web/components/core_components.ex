@@ -19,6 +19,8 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   alias Phoenix.LiveView.JS
 
+  embed_templates "core_components/*"
+
   @color_space_options Elixirbits.CoreUtils.Color.options()
 
   def on_mount(:inputs, _params, _session, socket) do
@@ -905,13 +907,10 @@ defmodule ElixirbitsWeb.CoreComponents do
       data-file-editor={@file_editor}
       data-file-selection={@selection}
       data-file-upload-name={@upload && @upload.name}
-      data-file-entry-ref={List.first(@file_entries) && List.first(@file_entries).ref}
       data-file-entry-refs={@file_entry_refs}
       data-file-max-entries={@upload && @upload.max_entries}
       data-file-max-size={@upload && @upload.max_file_size}
       data-file-mode={@render_as}
-      data-file-collection-id={"#{@file_id}-file-previews"}
-      data-file-preview-id={(@file_detached && @preview_id) || nil}
       class={[
         "relative",
         @render_as in ["hidden", "hidden-enabled", "hidden-disabled"] && "hidden",
@@ -1131,6 +1130,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       <% else %>
         {file_previews(assigns)}
       <% end %>
+      <.image_editor :if={@file_editor_enabled} />
       <div id={"#{@file_id}-file-replacements"} phx-update="ignore" data-file-replacements />
       <p data-file-error hidden role="alert" class="mt-2 text-sm text-error" />
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -1160,6 +1160,11 @@ defmodule ElixirbitsWeb.CoreComponents do
       assigns
       |> assign(:id, base_id)
       |> assign(:number_id, "#{base_id}-number-input")
+      |> assign(
+        :number_steps_disabled,
+        assigns.rest[:disabled] || assigns.rest[:readonly] ||
+          String.downcase(to_string(assigns.rest[:step])) == "any"
+      )
       |> assign(:text_look, text_look)
       |> assign(:label_as_placeholder, placeholder in [nil, ""])
       |> assign(
@@ -1229,7 +1234,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               data-number-step="1"
               aria-label="Increase value"
               aria-controls={@id}
-              disabled={@rest[:disabled] || @rest[:readonly] || @rest[:step] == "any"}
+              disabled={@number_steps_disabled}
               class={[
                 "grid min-h-3.5 place-items-center rounded-none text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
                 !@text_look && "rounded-tr-default hover:overlay-dark"
@@ -1242,7 +1247,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               data-number-step="-1"
               aria-label="Decrease value"
               aria-controls={@id}
-              disabled={@rest[:disabled] || @rest[:readonly] || @rest[:step] == "any"}
+              disabled={@number_steps_disabled}
               class={[
                 "grid min-h-3.5 place-items-center rounded-none border-t border-outline text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
                 !@text_look && "rounded-br-default hover:overlay-dark"
@@ -3514,6 +3519,9 @@ defmodule ElixirbitsWeb.CoreComponents do
             data-vc-value={@value || ""}
             data-vc-timezone={@timezone}
             data-vc-today={@today}
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls={"#{@id}-calendar"}
             phx-hook="VCalendar"
             phx-mounted={JS.ignore_attributes(["value", "aria-haspopup", "aria-expanded"])}
             readonly
@@ -3551,6 +3559,16 @@ defmodule ElixirbitsWeb.CoreComponents do
             >*</span>
           </span>
         </div>
+        <div
+          id={"#{@id}-calendar"}
+          popover="auto"
+          data-calendar-popover
+          data-vc="calendar"
+          data-vc-theme="elixirbits"
+          data-vc-mode={@type}
+          aria-label={@label || "Calendar"}
+          phx-update="ignore"
+        />
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>
       """
@@ -3566,6 +3584,9 @@ defmodule ElixirbitsWeb.CoreComponents do
           data-vc-value={@value || ""}
           data-vc-timezone={@timezone}
           data-vc-today={@today}
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-controls={"#{@id}-calendar"}
           phx-hook="VCalendar"
           phx-mounted={JS.ignore_attributes(["value", "aria-haspopup", "aria-expanded"])}
           readonly
@@ -3587,6 +3608,16 @@ defmodule ElixirbitsWeb.CoreComponents do
                  ))
           ]}
           {@rest}
+        />
+        <div
+          id={"#{@id}-calendar"}
+          popover="auto"
+          data-calendar-popover
+          data-vc="calendar"
+          data-vc-theme="elixirbits"
+          data-vc-mode={@type}
+          aria-label="Calendar"
+          phx-update="ignore"
         />
         <.error :for={msg <- @errors}>{msg}</.error>
       </div>

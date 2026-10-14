@@ -43,20 +43,10 @@ const setValue = (input, value) => {
   input.dispatchEvent(new Event("change", {bubbles: true}))
 }
 
-if (typeof HTMLElement !== "undefined" && !HTMLElement.prototype._vcFocusPatched) {
-  HTMLElement.prototype._vcFocusPatched = true
-  const origFocus = HTMLElement.prototype.focus
-  HTMLElement.prototype.focus = function(opts) {
-    if (this.closest && this.closest("[data-vc=calendar]")) {
-      return origFocus.call(this, { ...(opts || {}), preventScroll: true })
-    }
-    return origFocus.call(this, opts)
-  }
-}
-
 const VCalendar = {
   mounted() {
     const input = this.el
+    this.popover = document.getElementById(`${input.id}-calendar`)
     input.value = input.dataset.vcValue ?? input.value
     input.setAttribute("value", input.value)
     const mode = input.dataset.vcMode
@@ -82,13 +72,10 @@ const VCalendar = {
 
     this.weekObserver = null
 
-    const markMode = (self) => {
+    const onRender = (self) => {
       const main = self?.context?.mainElement
       if (main instanceof HTMLElement && main.dataset.vc === "calendar") {
-        main.setAttribute("data-vc-mode", mode)
-        main.classList.add(`vc-mode-${mode}`)
-        const natural = mode === "time" ? 0 : 280
-        main.style.minWidth = `${Math.max(input.offsetWidth, natural)}px`
+        main.setAttribute("role", "dialog")
         markWeek(main)
         if (mode === "week" && !this.weekObserver) {
           this.weekObserver = new MutationObserver(() => markWeek(main))
@@ -98,13 +85,12 @@ const VCalendar = {
     }
 
     const base = {
-      inputMode: true,
-      openOnFocus: false,
-      positionToInput: ["bottom", "left"],
+      inputMode: false,
+      selectedTheme: this.popover.dataset.vcTheme,
+      labels: {application: this.popover.getAttribute("aria-label")},
       ...(input.dataset.vcToday ? {dateToday: input.dataset.vcToday} : {}),
-      onInit: markMode,
-      onShow: markMode,
-      onUpdate: markMode,
+      onInit: onRender,
+      onUpdate: onRender,
     }
 
     const opts =
@@ -118,7 +104,7 @@ const VCalendar = {
         onClickDate: (self) => {
           const [d] = self.context.selectedDates
           if (d) setValue(input, d)
-          self.hide()
+          this.popover.hidePopover()
         },
       }
       : mode === "datetime-local" ? {
@@ -167,7 +153,7 @@ const VCalendar = {
           this.selectedWeek = {year, week: weekNumber}
           markWeek(self?.context?.mainElement)
           setValue(input, `${year}-W${pad(weekNumber)}`)
-          self.hide()
+          this.popover.hidePopover()
         },
       }
       : {
@@ -181,16 +167,37 @@ const VCalendar = {
           const y = self.context.selectedYear
           const m = self.context.selectedMonth
           if (y != null && m != null) setValue(input, `${y}-${pad(m + 1)}`)
-          self.hide()
+          this.popover.hidePopover()
         },
       }
 
-    this.calendar = new Calendar(input, opts)
+    this.calendar = new Calendar(this.popover, opts)
     this.calendar.init()
+
+    this.onClick = () => {
+      if (!input.disabled && !this.popover.matches(":popover-open")) {
+        this.popover.showPopover({source: input})
+      }
+    }
+    this.onKeydown = event => {
+      if (input.disabled || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return
+      this.onClick()
+      const control = [...this.popover.querySelectorAll("button, input, [tabindex]")].find(el =>
+        el.tabIndex >= 0 && !el.disabled && el.getAttribute("aria-disabled") !== "true" && el.getClientRects().length,
+      )
+      if (control) {
+        event.preventDefault()
+        control.focus({preventScroll: true})
+      }
+    }
+    this.onBeforeToggle = event => input.setAttribute("aria-expanded", String(event.newState === "open"))
+    input.addEventListener("click", this.onClick)
+    input.addEventListener("keydown", this.onKeydown)
+    this.popover.addEventListener("beforetoggle", this.onBeforeToggle)
   },
   updated() {
     const input = this.el
-    if (input.disabled) this.calendar.hide()
+    if (input.disabled && this.popover.matches(":popover-open")) this.popover.hidePopover()
     const value = input.dataset.vcValue ?? input.value
     const timezone = input.dataset.vcTimezone
     const today = input.dataset.vcToday
@@ -219,6 +226,10 @@ const VCalendar = {
     }, {year: true, month: true, dates: true, time: true, locale: false})
   },
   destroyed() {
+    this.el.removeEventListener("click", this.onClick)
+    this.el.removeEventListener("keydown", this.onKeydown)
+    this.popover.removeEventListener("beforetoggle", this.onBeforeToggle)
+    if (this.popover.matches(":popover-open")) this.popover.hidePopover()
     this.weekObserver?.disconnect()
     this.calendar?.destroy()
   },

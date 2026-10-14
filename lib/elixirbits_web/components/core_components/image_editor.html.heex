@@ -1,0 +1,50 @@
+<template data-file-editor-template>
+  <dialog class="file-editor" aria-label="Edit image">
+    <h2>Edit image</h2>
+    <div class="file-editor-canvas">
+      <img data-editor-source hidden alt="Image to edit" />
+      <cropper-canvas>
+        <cropper-image alt="Image to edit" rotatable scalable translatable initial-fit="contain">
+        </cropper-image>
+        <cropper-shade hidden theme-color="var(--color-dark)"></cropper-shade>
+        <cropper-handle action="select" plain></cropper-handle>
+        <cropper-selection
+          initial-coverage="0.8"
+          min-inset="0"
+          movable
+          resizable
+          precise
+          outlined
+          theme-color="var(--color-brand)"
+        >
+          <cropper-grid role="grid" covered theme-color="var(--color-content)"></cropper-grid>
+          <cropper-crosshair centered theme-color="var(--color-content)"></cropper-crosshair>
+          <cropper-handle action="move" theme-color="var(--color-light)"></cropper-handle>
+          <cropper-handle action="n-resize" theme-color="var(--color-brand)"></cropper-handle>
+          <cropper-handle action="e-resize" theme-color="var(--color-brand)"></cropper-handle>
+          <cropper-handle action="s-resize" theme-color="var(--color-brand)"></cropper-handle>
+          <cropper-handle action="w-resize" theme-color="var(--color-brand)"></cropper-handle>
+          <cropper-handle action="ne-resize" theme-color="var(--color-brand)"></cropper-handle>
+          <cropper-handle action="nw-resize" theme-color="var(--color-brand)"></cropper-handle>
+          <cropper-handle action="se-resize" theme-color="var(--color-brand)"></cropper-handle>
+          <cropper-handle action="sw-resize" theme-color="var(--color-brand)"></cropper-handle>
+        </cropper-selection>
+      </cropper-canvas>
+    </div>
+    <div class="file-editor-actions">
+      <.button type="button" variant={:neutral} data-editor-action="rotate-left" disabled>Rotate left</.button>
+      <.button type="button" variant={:neutral} data-editor-action="rotate-right" disabled>Rotate right</.button>
+      <.button type="button" variant={:neutral} data-editor-action="flip-horizontal" disabled>Flip horizontally</.button>
+      <.button type="button" variant={:neutral} data-editor-action="flip-vertical" disabled>Flip vertically</.button>
+      <.button type="button" variant={:neutral} data-editor-action="reset" disabled>Reset</.button>
+    </div>
+    <p class="file-editor-status" data-editor-status role="status" aria-live="polite">
+      Loading image...
+    </p>
+    <p class="file-editor-error" data-editor-error role="alert" hidden></p>
+    <div class="file-editor-actions">
+      <.button type="button" variant={:neutral} data-editor-action="cancel">Cancel</.button>
+      <.button type="button" variant={:primary} data-editor-action="confirm" disabled>Use image</.button>
+    </div>
+  </dialog>
+</template>

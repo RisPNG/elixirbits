@@ -60,7 +60,6 @@ const PasswordVisibility = {
       return
     }
 
-    this.button.disabled = this.input.disabled
     this.input.type = this.visible ? "text" : "password"
     this.button.setAttribute("aria-label", this.visible ? "Hide password" : "Show password")
     this.button.setAttribute("aria-pressed", this.visible ? "true" : "false")

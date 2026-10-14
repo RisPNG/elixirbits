@@ -34,57 +34,22 @@ export default class ImageEditor {
   edit(file, options) {
     this.destroy()
     this.file = file
-    this.options = options === true ? {} : options
+    this.options = options
     this.adjustingImage = false
-    this.dialog = document.createElement("dialog")
-    this.dialog.className = "file-editor"
+    this.dialog = document.importNode(options.template.content, true).querySelector("dialog")
     const dialog = this.dialog
-    this.dialog.setAttribute("aria-label", "Edit image")
-    this.dialog.innerHTML = `
-      <h2>Edit image</h2>
-      <div class="file-editor-canvas"></div>
-      <div class="file-editor-actions">
-        <button type="button" class="button-neutral" data-editor-action="rotate-left" aria-label="Rotate left">Rotate left</button>
-        <button type="button" class="button-neutral" data-editor-action="rotate-right" aria-label="Rotate right">Rotate right</button>
-        <button type="button" class="button-neutral" data-editor-action="flip-horizontal">Flip horizontally</button>
-        <button type="button" class="button-neutral" data-editor-action="flip-vertical">Flip vertically</button>
-        <button type="button" class="button-neutral" data-editor-action="reset">Reset</button>
-      </div>
-      <p class="file-editor-status" role="status" aria-live="polite">Loading image...</p>
-      <p class="file-editor-error" role="alert" hidden></p>
-      <div class="file-editor-actions">
-        <button type="button" class="button-neutral" data-editor-action="cancel">Cancel</button>
-        <button type="button" class="button-primary" data-editor-action="confirm" disabled>Use image</button>
-      </div>`
+    this.url = URL.createObjectURL(file)
+    const image = dialog.querySelector("[data-editor-source]")
+    image.src = this.url
+    dialog.querySelector("cropper-image").setAttribute("src", this.url)
+    const ratio = this.options.ratio ?? (this.options.width && this.options.height ? this.options.width / this.options.height : NaN)
+    if (!Number.isNaN(ratio)) dialog.querySelector("cropper-selection").setAttribute("aspect-ratio", ratio)
     document.body.appendChild(dialog)
     dialog.showModal()
     for (const button of dialog.querySelectorAll("[data-editor-action]")) button.disabled = button.dataset.editorAction !== "cancel"
-    this.url = URL.createObjectURL(file)
-    const image = document.createElement("img")
-    image.alt = "Image to edit"
-    image.src = this.url
-    dialog.querySelector(".file-editor-canvas").appendChild(image)
-    const ratio = this.options.ratio ?? (this.options.width && this.options.height ? this.options.width / this.options.height : NaN)
     this.cropper = new Cropper(image, {
-      template: `
-        <cropper-canvas>
-          <cropper-image rotatable scalable translatable initial-fit="contain"></cropper-image>
-          <cropper-shade hidden theme-color="var(--color-dark)"></cropper-shade>
-          <cropper-handle action="select" plain></cropper-handle>
-          <cropper-selection initial-coverage="0.8" ${Number.isNaN(ratio) ? "" : `aspect-ratio="${ratio}"`} min-inset="0" movable resizable precise outlined theme-color="var(--color-brand)">
-            <cropper-grid role="grid" covered theme-color="var(--color-content)"></cropper-grid>
-            <cropper-crosshair centered theme-color="var(--color-content)"></cropper-crosshair>
-            <cropper-handle action="move" theme-color="var(--color-light)"></cropper-handle>
-            <cropper-handle action="n-resize" theme-color="var(--color-brand)"></cropper-handle>
-            <cropper-handle action="e-resize" theme-color="var(--color-brand)"></cropper-handle>
-            <cropper-handle action="s-resize" theme-color="var(--color-brand)"></cropper-handle>
-            <cropper-handle action="w-resize" theme-color="var(--color-brand)"></cropper-handle>
-            <cropper-handle action="ne-resize" theme-color="var(--color-brand)"></cropper-handle>
-            <cropper-handle action="nw-resize" theme-color="var(--color-brand)"></cropper-handle>
-            <cropper-handle action="se-resize" theme-color="var(--color-brand)"></cropper-handle>
-            <cropper-handle action="sw-resize" theme-color="var(--color-brand)"></cropper-handle>
-          </cropper-selection>
-        </cropper-canvas>`,
+      container: dialog.querySelector(".file-editor-canvas"),
+      template: null,
     })
     const cropperImage = this.cropper.getCropperImage()
     const selection = this.cropper.getCropperSelection()
@@ -107,13 +72,13 @@ export default class ImageEditor {
       if (this.dialog !== dialog) return
       this.fitCropSelection()
       for (const button of dialog.querySelectorAll("[data-editor-action]")) button.disabled = false
-      dialog.querySelector(".file-editor-status").textContent = "Choose the area to keep."
+      dialog.querySelector("[data-editor-status]").textContent = "Choose the area to keep."
     }).catch(() => {
       if (this.dialog !== dialog) return
-      const alert = dialog.querySelector(".file-editor-error")
+      const alert = dialog.querySelector("[data-editor-error]")
       alert.textContent = "The image could not be opened."
       alert.hidden = false
-      dialog.querySelector(".file-editor-status").textContent = "Choose another image or cancel."
+      dialog.querySelector("[data-editor-status]").textContent = "Choose another image or cancel."
     })
     dialog.addEventListener("cancel", event => {
       event.preventDefault()
@@ -169,8 +134,8 @@ export default class ImageEditor {
     const canvas = this.cropper.getCropperCanvas()
     canvas.disabled = true
     for (const button of dialog.querySelectorAll("[data-editor-action]")) button.disabled = button.dataset.editorAction !== "cancel"
-    const status = dialog.querySelector(".file-editor-status")
-    const alert = dialog.querySelector(".file-editor-error")
+    const status = dialog.querySelector("[data-editor-status]")
+    const alert = dialog.querySelector("[data-editor-error]")
     alert.hidden = true
     status.textContent = "Preparing image..."
     const processor = this.processor = new SuperImageCropper()
@@ -219,6 +184,7 @@ export default class ImageEditor {
     if (this.url) URL.revokeObjectURL(this.url)
     this.url = null
     this.file = null
+    this.options = null
     this.resolve?.(null)
     this.resolve = null
   }
