@@ -61,20 +61,22 @@
               :if={token not in ["outline", "dark", "light"]}
               class={[
                 "text-sm font-semibold",
-                if(token in ["content", "subcontent"],
-                  do: "text-content-inverse",
-                  else: "text-content"
-                )
+                case token do
+                  token when token in ["content", "subcontent"] -> "text-content-inverse"
+                  "brand" -> "text-content-inverse dark:text-content"
+                  _ -> "text-content"
+                end
               ]}
             >Aa</span>
             <span
               :if={token not in ["outline", "dark", "light"]}
               class={[
                 "text-xs",
-                if(token in ["content", "subcontent"],
-                  do: "text-subcontent-inverse",
-                  else: "text-subcontent"
-                )
+                case token do
+                  token when token in ["content", "subcontent"] -> "text-subcontent-inverse"
+                  "brand" -> "text-subcontent-inverse dark:text-subcontent"
+                  _ -> "text-subcontent"
+                end
               ]}
             >Aa</span>
           </div>
@@ -93,7 +95,7 @@
           Background opacity
         </h2>
         <p class="text-sm text-subcontent">
-          Set the background alpha while text and icons stay opaque. The default is 25%. Nested layers add their alpha up to 100%.
+          Set the background alpha while text and icons stay opaque. The default is 25%. Nested layers add their alpha up to 100%. In light mode, brand backgrounds at 50% alpha or less use dark text and icons.
         </p>
       </div>
       <ul aria-label="Background opacity examples" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
@@ -112,7 +114,11 @@
           <div
             id={"layout-test-opacity-#{alpha}"}
             class={[
-              "mt-2 grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3 text-content",
+              "mt-2 grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3",
+              if(alpha <= 50,
+                do: "text-content",
+                else: "text-content-inverse dark:text-content"
+              ),
               opacity_class
             ]}
           >
@@ -129,17 +135,17 @@
         <div class="mt-3">
           <div
             id="layout-test-opacity-stack-50"
-            class="rounded-default border border-outline overlay-opacity p-3 text-content"
+            class="rounded-default border border-outline overlay-opacity p-3"
           >
             <p class="text-sm font-medium">50% background alpha</p>
             <div
               id="layout-test-opacity-stack-75"
-              class="mt-3 rounded-default border border-outline overlay-opacity p-3 text-content"
+              class="mt-3 rounded-default border border-outline overlay-opacity p-3 text-content-inverse dark:text-content"
             >
               <p class="text-sm font-medium">75% background alpha</p>
               <div
                 id="layout-test-opacity-stack-100"
-                class="mt-3 rounded-default border border-outline overlay-opacity p-3 text-content"
+                class="mt-3 rounded-default border border-outline overlay-opacity p-3"
               >
                 <p class="text-sm font-medium">100% background alpha</p>
               </div>
@@ -159,7 +165,7 @@
           Overlay strength
         </h2>
         <p class="text-sm text-subcontent">
-          Dark and light overlays default to 25% strength. Nested overlays of the same kind add their strength up to 100%. Text and icons use the opposite theme's content color where needed.
+          Dark and light overlays default to 25% strength. Nested overlays of the same kind add their strength up to 100%. Light overlays on brand at 50% strength or more use dark text and icons in both modes.
         </p>
       </div>
       <div class="grid grid-cols-[1fr_1fr] gap-3">
@@ -174,7 +180,7 @@
                  {100, "overlay-dark-[1]"}
                ]},
               {"light", "Light overlay", "overlay-light",
-               "text-content dark:text-content-inverse",
+               "text-content-inverse dark:text-content",
                [
                  {10, "overlay-light-[0.1]"},
                  {25, "overlay-light"},
@@ -196,7 +202,10 @@
                 id={"layout-test-overlay-#{kind}-#{strength}"}
                 class={[
                   "mt-2 grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3",
-                  content_class,
+                  if(kind == "light" and strength >= 50,
+                    do: "text-content dark:text-content-inverse",
+                    else: content_class
+                  ),
                   overlay_class
                 ]}
               >
@@ -219,7 +228,8 @@
                 id={"layout-test-overlay-#{kind}-stack-50"}
                 class={[
                   "rounded-default border border-outline p-3",
-                  default_class
+                  default_class,
+                  kind == "light" && "text-content dark:text-content-inverse"
                 ]}
               >
                 <p class="text-sm font-medium">50% combined strength</p>
@@ -2047,7 +2057,7 @@
             class={[
               "status-pill",
               case @showcase["ui_kit"]["badge"] do
-                "brand" -> "bg-brand text-content"
+                "brand" -> "bg-brand text-content-inverse dark:text-content"
                 "outline" -> "border border-outline text-content"
                 "success" -> "bg-success text-content"
                 "warning" -> "bg-warning text-content"
@@ -2093,7 +2103,7 @@
             </li>
             <li>
               <.link
-                href="/api/json/swaggerui"
+                href="/api/json/scalar"
                 class="block px-3 py-2 rounded-default hover:overlay-dark"
               >API browser</.link>
             </li>

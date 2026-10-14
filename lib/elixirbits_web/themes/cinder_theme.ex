@@ -27,7 +27,7 @@ defmodule ElixirbitsWeb.CinderTheme do
       "cursor-pointer select-none inline-grid grid-cols-[1rem_max-content_max-content] items-center gap-1 min-h-11 px-4 py-2 rounded-default text-sm! font-medium! button-neutral transition-colors"
 
   set :filter_count_class,
-      "inline-grid place-items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand text-content"
+      "inline-grid place-items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand text-content-inverse dark:text-content"
 
   set :filter_clear_all_class,
       "inline-grid place-items-center min-h-11 px-4 py-2 rounded-default text-sm font-medium button-neutral transition-colors focus:outline-none focus:ring-2 focus:ring-brand"
@@ -71,14 +71,14 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :filter_radio_group_option_class, "grid grid-cols-[1rem_1fr] items-center gap-2"
 
   set :filter_radio_group_radio_class,
-      "appearance-none h-4 w-4 rounded-full border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-radio focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
+      "appearance-none h-4 w-4 rounded-full border border-outline bg-transparent text-content checked:border-brand checked:bg-brand checked:text-content-inverse dark:checked:text-content checked:bg-control-radio focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content"
 
   set :filter_radio_group_label_class, "text-sm cursor-pointer text-content"
 
   set :filter_checkbox_container_class, "grid grid-cols-[1rem_1fr] items-center gap-2 min-h-10"
 
   set :filter_checkbox_input_class,
-      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
+      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent text-content checked:border-brand checked:bg-brand checked:text-content-inverse dark:checked:text-content checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content"
 
   set :filter_checkbox_label_class, "text-sm cursor-pointer text-content"
 
@@ -91,7 +91,7 @@ defmodule ElixirbitsWeb.CinderTheme do
       "px-3 py-2 hover:overlay-dark border-b border-outline last:border-b-0 cursor-pointer text-content"
 
   set :filter_multiselect_checkbox_class,
-      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
+      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent text-content checked:border-brand checked:bg-brand checked:text-content-inverse dark:checked:text-content checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content"
 
   set :filter_multiselect_label_class,
       "text-sm cursor-pointer select-none text-content"
@@ -102,7 +102,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :filter_multicheckboxes_option_class, "grid grid-cols-[1.25rem_1fr] items-center gap-2"
 
   set :filter_multicheckboxes_checkbox_class,
-      "appearance-none h-5 w-5 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
+      "appearance-none h-5 w-5 rounded-default border border-outline bg-transparent text-content checked:border-brand checked:bg-brand checked:text-content-inverse dark:checked:text-content checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content"
 
   set :filter_multicheckboxes_label_class, "text-sm cursor-pointer text-content"
 
@@ -124,7 +124,7 @@ defmodule ElixirbitsWeb.CinderTheme do
       "inline-grid place-items-center min-h-11 min-w-11 px-3 rounded-default text-sm font-medium button-neutral transition-colors"
 
   set :pagination_current_class,
-      "inline-grid place-items-center min-h-11 min-w-11 px-3 rounded-default border border-outline text-sm font-medium bg-brand text-content hover:overlay-dark"
+      "inline-grid place-items-center min-h-11 min-w-11 px-3 rounded-default border border-outline text-sm font-medium bg-brand text-content-inverse dark:text-content hover:overlay-dark"
 
   set :page_size_container_class, "grid grid-cols-[max-content] items-center"
   set :page_size_label_class, "text-subcontent text-sm"
@@ -138,7 +138,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :page_size_option_class,
       "w-full text-left px-3 py-2 text-sm hover:overlay-dark cursor-pointer text-content"
 
-  set :page_size_selected_class, "bg-brand text-content"
+  set :page_size_selected_class, "bg-brand text-content-inverse dark:text-content"
 
   set :search_input_class,
       "block w-full min-h-11 pl-10 px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
@@ -191,7 +191,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :grid_item_clickable_class, "cursor-pointer hover:overlay-dark transition-colors"
 
   set :selection_checkbox_class,
-      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent checked:border-brand checked:bg-brand checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary"
+      "appearance-none h-4 w-4 rounded-default border border-outline bg-transparent text-content checked:border-brand checked:bg-brand checked:text-content-inverse dark:checked:text-content checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%] focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content"
 
   set :selected_row_class, "bg-primary even:overlay-dark"
   set :grid_selection_overlay_class, "mb-2"

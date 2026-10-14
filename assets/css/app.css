@@ -171,7 +171,7 @@
 @plugin "../vendor/heroicons";
 @plugin "../vendor/tabler";
 
-/* Light theme */
+/* Shared palette and light theme */
 
 @theme static {
   --theme-light-content: oklch(24% 0.016 252.42);
@@ -185,7 +185,7 @@
   --color-subcontent: var(--theme-light-subcontent);
   --color-content-inverse: var(--theme-dark-content);
   --color-subcontent-inverse: var(--theme-dark-subcontent);
-  --color-brand: oklch(80% 0.1 277.117);
+  --color-brand: oklch(58% 0.233 277.117);
   --color-brand-dark: color-mix(in srgb, var(--color-brand), var(--surface-dark) calc(var(--overlay-opacity) * 100%));
   --color-subcontent-dark: color-mix(in srgb, var(--color-subcontent), var(--surface-dark) calc(var(--overlay-opacity) * 100%));
   --color-info: oklch(82% 0.09 241.966);
@@ -235,7 +235,6 @@
   --color-subcontent: var(--theme-dark-subcontent);
   --color-content-inverse: var(--theme-light-content);
   --color-subcontent-inverse: var(--theme-light-subcontent);
-  --color-brand: oklch(58% 0.233 277.117);
   --color-info: oklch(54% 0.158 241.966);
   --color-success: oklch(53% 0.118 184.704);
   --color-warning: oklch(56% 0.179 58.318);
@@ -254,7 +253,6 @@
     --color-subcontent: var(--theme-dark-subcontent);
     --color-content-inverse: var(--theme-light-content);
     --color-subcontent-inverse: var(--theme-light-subcontent);
-    --color-brand: oklch(58% 0.233 277.117);
     --color-info: oklch(54% 0.158 241.966);
     --color-success: oklch(53% 0.118 184.704);
     --color-warning: oklch(56% 0.179 58.318);
@@ -1134,8 +1132,7 @@ body {
 [data-vc=calendar][data-vc-theme] [data-vc-date-weekend][data-vc-date-selected] .vc-date__btn,
 [data-vc=calendar][data-vc-theme] [data-vc-date-selected] .vc-date__btn:hover,
 [data-vc=calendar][data-vc-theme] [data-vc-date-weekend][data-vc-date-selected] .vc-date__btn:hover {
-  @apply bg-brand;
-  color: var(--color-content);
+  @apply bg-brand text-content-inverse dark:text-content;
 }
 
 /* Calendar week selection */
@@ -1160,8 +1157,7 @@ body {
   cursor: pointer;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-week-number][data-vc-week-selected] {
-  @apply bg-brand;
-  color: var(--color-content);
+  @apply bg-brand text-content-inverse dark:text-content;
 }
 
 /* Calendar month and year selection */
@@ -1182,8 +1178,7 @@ body {
 }
 [data-vc=calendar][data-vc-theme] [data-vc-months-month-selected],
 [data-vc=calendar][data-vc-theme] [data-vc-years-year-selected] {
-  @apply bg-brand;
-  color: var(--color-content);
+  @apply bg-brand text-content-inverse dark:text-content;
 }
 
 /* Calendar time controls */
@@ -1361,7 +1356,7 @@ input[type="file"]::file-selector-button {
 }
 
 @utility button-primary {
-  @apply border border-outline bg-brand text-content hover:overlay-dark focus:border-brand;
+  @apply border border-outline bg-brand text-content-inverse dark:text-content hover:overlay-dark focus:border-brand;
 }
 
 @utility button-neutral {
@@ -1377,7 +1372,7 @@ input[type="file"]::file-selector-button {
 }
 
 @utility bg-control-radio {
-  background-image: radial-gradient(circle, var(--color-content) 28%, transparent 32%);
+  background-image: radial-gradient(circle, currentColor 28%, transparent 32%);
 }
 
 @utility bg-control-check {
@@ -1387,7 +1382,7 @@ input[type="file"]::file-selector-button {
     content: "";
     position: absolute;
     inset: 0;
-    background-color: var(--color-content);
+    background-color: currentColor;
     mask: url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e') center / 100% 100% no-repeat;
   }
 }

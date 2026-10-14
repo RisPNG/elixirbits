@@ -272,7 +272,7 @@ defmodule ElixirbitsWeb.Layouts do
       <div class="absolute w-1/3 h-full rounded-full border border-outline bg-brand left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
 
       <button
-        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark"
+        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark [:root:not([data-theme])_&]:text-content-inverse dark:[:root:not([data-theme])_&]:text-content"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
       >
@@ -280,7 +280,7 @@ defmodule ElixirbitsWeb.Layouts do
       </button>
 
       <button
-        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark"
+        class="relative flex p-2 cursor-pointer w-1/3 rounded-full hover:overlay-dark [[data-theme=light]_&]:text-content-inverse"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
       >

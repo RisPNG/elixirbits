@@ -52,5 +52,11 @@ defmodule ElixirbitsWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+
+  plug ScalarPlug,
+    path: "/api/json/scalar",
+    spec_href: "/api/json/open_api",
+    title: "Elixirbits API"
+
   plug ElixirbitsWeb.Router
 end

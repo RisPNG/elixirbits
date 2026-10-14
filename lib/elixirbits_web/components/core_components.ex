@@ -1754,8 +1754,8 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked &&
               "bg-control-check",
             case {checked, disabled_look} do
-              {true, true} -> "bg-secondary border-secondary"
-              {true, false} -> "bg-brand border-brand"
+              {true, true} -> "bg-secondary border-secondary text-content"
+              {true, false} -> "bg-brand border-brand text-content-inverse dark:text-content"
               {false, _} -> "bg-transparent border-outline"
             end
           ]
@@ -1767,9 +1767,14 @@ defmodule ElixirbitsWeb.CoreComponents do
             display_alt && disabled_look && "overlay-dark",
             checked && "before:translate-x-5",
             case {checked, disabled_look} do
-              {true, true} -> "bg-secondary border-secondary before:bg-subcontent"
-              {true, false} -> "bg-brand border-brand before:bg-content"
-              {false, _} -> "bg-transparent border-outline before:bg-subcontent"
+              {true, true} ->
+                "bg-secondary border-secondary before:bg-subcontent"
+
+              {true, false} ->
+                "bg-brand border-brand before:bg-content-inverse dark:before:bg-content"
+
+              {false, _} ->
+                "bg-transparent border-outline before:bg-subcontent"
             end
           ]
       end
@@ -2037,7 +2042,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           checked={@checked}
           class={
             @class ||
-              "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded-default border border-outline bg-transparent checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:border-outline disabled:checked:bg-secondary disabled:checked:border-secondary checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
+              "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded-default border border-outline bg-transparent text-content checked:bg-brand checked:border-brand checked:text-content-inverse dark:checked:text-content focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:border-outline disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
           }
           {@rest}
         />
@@ -2093,7 +2098,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "appearance-none h-5 w-5 shrink-0 rounded-default border border-outline bg-transparent checked:bg-brand checked:border-brand focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:border-outline disabled:checked:bg-secondary disabled:checked:border-secondary checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
+                "appearance-none h-5 w-5 shrink-0 rounded-default border border-outline bg-transparent text-content checked:bg-brand checked:border-brand checked:text-content-inverse dark:checked:text-content focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:border-outline disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content checked:bg-control-check bg-center bg-no-repeat bg-[length:100%_100%]"
             }
             {@rest}
           />
@@ -2133,7 +2138,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={to_string(@value) == to_string(option_value)}
             class={
               @class ||
-                "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded-full border border-outline bg-transparent checked:border-brand checked:bg-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary checked:bg-control-radio"
+                "appearance-none h-5 w-5 shrink-0 cursor-pointer rounded-full border border-outline bg-transparent text-content checked:border-brand checked:bg-brand checked:text-content-inverse dark:checked:text-content focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content checked:bg-control-radio"
             }
             {@rest}
           />
@@ -2180,7 +2185,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           checked={@checked}
           class={
             @class ||
-              "peer appearance-none shrink-0 cursor-pointer w-11 h-6 rounded-full border border-outline bg-transparent checked:bg-brand checked:border-brand focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content disabled:checked:before:bg-subcontent before:transition-transform before:duration-200 before:ease-in-out"
+              "peer appearance-none shrink-0 cursor-pointer w-11 h-6 rounded-full border border-outline bg-transparent text-content checked:bg-brand checked:border-brand checked:text-content-inverse dark:checked:text-content focus:outline-none focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content-inverse dark:checked:before:bg-content disabled:checked:before:bg-subcontent before:transition-transform before:duration-200 before:ease-in-out"
           }
           {@rest}
         />
@@ -2236,7 +2241,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             checked={@checked}
             class={
               @class ||
-                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-outline bg-transparent checked:bg-brand checked:border-brand focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content disabled:checked:before:bg-subcontent before:transition-transform before:duration-200 before:ease-in-out"
+                "peer appearance-none shrink-0 w-11 h-6 rounded-full border border-outline bg-transparent text-content checked:bg-brand checked:border-brand checked:text-content-inverse dark:checked:text-content focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:checked:bg-secondary disabled:checked:border-secondary disabled:checked:text-content transition-colors duration-200 ease-in-out relative before:absolute before:top-[1px] before:left-[1px] before:h-5 before:w-5 before:rounded-full before:bg-subcontent checked:before:translate-x-5 checked:before:bg-content-inverse dark:checked:before:bg-content disabled:checked:before:bg-subcontent before:transition-transform before:duration-200 before:ease-in-out"
             }
             {@rest}
           />

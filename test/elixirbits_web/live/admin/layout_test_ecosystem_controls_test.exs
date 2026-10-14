@@ -8,29 +8,29 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.EcosystemControlsTest do
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
     render_change(view, "dependency_change", %{
-      "dependency" => %{"component_search" => "/api/json/swaggerui"}
+      "dependency" => %{"component_search" => "/api/json/scalar"}
     })
 
-    assert has_element?(view, "#selected-dependency-swagger")
+    assert has_element?(view, "#selected-dependency-scalar")
 
     for mode <- ~w(tags quick_tags) do
       render_click(element(view, "#dependency-select-mode-#{mode}"))
 
       assert has_element?(
                view,
-               "#layout-test-dependency-live-select input[name='dependency[component_search][]'][value='/api/json/swaggerui']"
+               "#layout-test-dependency-live-select input[name='dependency[component_search][]'][value='/api/json/scalar']"
              )
 
       render_change(view, "dependency_change", %{
-        "dependency" => %{"component_search" => ["/api/json/swaggerui", "/dev/dashboard"]}
+        "dependency" => %{"component_search" => ["/api/json/scalar", "/dev/dashboard"]}
       })
 
-      assert has_element?(view, "#selected-dependency-swagger")
+      assert has_element?(view, "#selected-dependency-scalar")
       assert has_element?(view, "#selected-dependency-dashboard")
     end
 
     render_click(element(view, "#dependency-select-mode-single"))
-    assert has_element?(view, "#selected-dependency-swagger")
+    assert has_element?(view, "#selected-dependency-scalar")
     refute has_element?(view, "#selected-dependency-dashboard")
 
     render_click(element(view, "#dependency-select-mode-tags"))
@@ -39,7 +39,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.EcosystemControlsTest do
       "dependency" => %{"component_search_empty_selection" => ""}
     })
 
-    refute has_element?(view, "#selected-dependency-swagger")
+    refute has_element?(view, "#selected-dependency-scalar")
     assert has_element?(view, "#layout-test-selected-dependency", "Pick a dependency page")
   end
 
@@ -63,25 +63,25 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.EcosystemControlsTest do
     assert has_element?(view, "#dependency-select-option-keep_options[aria-pressed=false]")
 
     render_change(view, "dependency_change", %{
-      "dependency" => %{"component_search" => "/api/json/swaggerui"}
+      "dependency" => %{"component_search" => "/api/json/scalar"}
     })
 
     for render_as <-
           ~w(enabled disabled like-enabled like-disabled hidden hidden-enabled hidden-disabled text text-enabled text-disabled) do
       render_click(element(view, "#dependency-select-render-#{render_as}"))
       assert has_element?(view, "#dependency-select-render-#{render_as}[aria-pressed=true]")
-      assert has_element?(view, "#selected-dependency-swagger")
+      assert has_element?(view, "#selected-dependency-scalar")
     end
 
     render_click(element(view, "#dependency-select-render-enabled"))
     render_click(element(view, "#dependency-select-option-disabled"))
     assert has_element?(view, "#layout-test-dependency-form input[type=text][disabled]")
-    assert has_element?(view, "#selected-dependency-swagger")
+    assert has_element?(view, "#selected-dependency-scalar")
     render_click(element(view, "#dependency-select-option-disabled"))
 
     assert has_element?(
              view,
-             "#layout-test-dependency-live-select input[type=hidden][value='/api/json/swaggerui']"
+             "#layout-test-dependency-live-select input[type=hidden][value='/api/json/scalar']"
            )
   end
 
@@ -111,7 +111,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.EcosystemControlsTest do
     render_click(element(view, "#ui-kit-option-menu"))
     refute has_element?(view, "#ui-kit-menu-preview")
     render_click(element(view, "#ui-kit-option-menu"))
-    assert has_element?(view, "#ui-kit-menu-preview a[href='/api/json/swaggerui']")
+    assert has_element?(view, "#ui-kit-menu-preview a[href='/api/json/scalar']")
   end
 
   test "dependency page selection keeps every route reachable from one preview", %{conn: conn} do
@@ -119,7 +119,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.EcosystemControlsTest do
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
     pages = [
-      {"swagger", "/api/json/swaggerui"},
+      {"scalar", "/api/json/scalar"},
       {"dashboard", "/dev/dashboard"},
       {"mailbox", "/dev/mailbox"},
       {"ash-admin", "/admin"}

@@ -655,7 +655,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
 
     assert has_element?(view, "#layout-test-local-role li", "Viewer")
     refute has_element?(view, "#layout-test-local-role li", "Administrator")
-    refute has_element?(view, "#layout-test-local-role li", "Swagger UI")
+    refute has_element?(view, "#layout-test-local-role li", "Scalar")
 
     render_hook(element(view, "#layout-test-local-role"), "option_click", %{"idx" => "0"})
 

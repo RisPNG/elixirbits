@@ -24,7 +24,7 @@
         class={[
           "rounded-default py-0.5 text-center text-[0.65rem] hover:overlay-dark",
           cond do
-            day == @today -> "bg-brand font-semibold text-content"
+            day == @today -> "bg-brand font-semibold text-content-inverse dark:text-content"
             day.month != month -> "text-subcontent"
             MapSet.member?(@event_days, day) -> "font-bold text-brand"
             true -> "text-content"

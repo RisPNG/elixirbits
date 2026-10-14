@@ -18,7 +18,7 @@
         <span class={[
           "grid size-6 place-items-center rounded-full text-xs",
           cond do
-            day == @today -> "bg-brand font-semibold text-content"
+            day == @today -> "bg-brand font-semibold text-content-inverse dark:text-content"
             day.month != @cursor.month -> "text-subcontent"
             true -> "text-content"
           end

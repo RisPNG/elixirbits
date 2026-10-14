@@ -13,13 +13,15 @@ defmodule ElixirbitsWeb.CalendarComponents do
   @event_styles %{
     brand: %{
       fill: "fill-brand",
+      label_fill: "fill-content-inverse dark:fill-content",
       stroke: "stroke-brand",
-      solid_bar: "bg-brand text-content",
+      solid_bar: "bg-brand text-content-inverse dark:text-content",
       outline_bar: "border border-brand bg-primary text-content",
       dot: "bg-brand"
     },
     info: %{
       fill: "fill-info",
+      label_fill: "fill-content",
       stroke: "stroke-info",
       solid_bar: "bg-info text-content",
       outline_bar: "border border-info bg-primary text-content",
@@ -27,6 +29,7 @@ defmodule ElixirbitsWeb.CalendarComponents do
     },
     success: %{
       fill: "fill-success",
+      label_fill: "fill-content",
       stroke: "stroke-success",
       solid_bar: "bg-success text-content",
       outline_bar: "border border-success bg-primary text-content",
@@ -34,6 +37,7 @@ defmodule ElixirbitsWeb.CalendarComponents do
     },
     warning: %{
       fill: "fill-warning",
+      label_fill: "fill-content",
       stroke: "stroke-warning",
       solid_bar: "bg-warning text-content",
       outline_bar: "border border-warning bg-primary text-content",
@@ -41,6 +45,7 @@ defmodule ElixirbitsWeb.CalendarComponents do
     },
     error: %{
       fill: "fill-error",
+      label_fill: "fill-content",
       stroke: "stroke-error",
       solid_bar: "bg-error text-content",
       outline_bar: "border border-error bg-primary text-content",
@@ -48,6 +53,7 @@ defmodule ElixirbitsWeb.CalendarComponents do
     },
     neutral: %{
       fill: "fill-secondary",
+      label_fill: "fill-content",
       stroke: "stroke-secondary",
       solid_bar: "bg-secondary text-content",
       outline_bar: "border border-secondary bg-primary text-content",
@@ -102,6 +108,7 @@ defmodule ElixirbitsWeb.CalendarComponents do
 
         event
         |> Map.put(:fill_class, if(outline, do: "fill-transparent", else: style.fill))
+        |> Map.put(:label_fill_class, if(outline, do: "fill-content", else: style.label_fill))
         |> Map.put(:stroke_class, style.stroke)
         |> Map.put(:bar_class, if(outline, do: style.outline_bar, else: style.solid_bar))
         |> Map.put(:dot_class, style.dot)

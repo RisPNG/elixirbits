@@ -8,10 +8,10 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   @dependency_pages [
     %{
-      id: "swagger",
-      name: "Swagger UI",
-      source: "OpenApiSpex",
-      path: "/api/json/swaggerui",
+      id: "scalar",
+      name: "Scalar",
+      source: "scalar_api_plug",
+      path: "/api/json/scalar",
       availability: "always",
       description: "JSON API explorer and schema browser."
     },
@@ -126,7 +126,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
       "step" => "2",
       "menu" => true
     },
-    "pages" => %{"selected" => "swagger"}
+    "pages" => %{"selected" => "scalar"}
   }
 
   @impl true
