@@ -5,6 +5,28 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
 
   alias ElixirbitsWeb.CoreComponents
 
+  test "native file specimens keep preview and editing off for single and multiple selections", %{
+    conn: conn
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    selector = "#layout-test-input-example-file [phx-hook=FileInput]"
+    assert has_element?(view, "#{selector}[data-file-preview=false][data-file-editor=false]")
+
+    assert has_element?(
+             view,
+             "#{selector}[data-file-selection=single] input#local_upload:not([multiple])"
+           )
+
+    render_click(element(view, "#layout-test-input-state-multiple"))
+    assert has_element?(view, "#{selector}[data-file-preview=false][data-file-editor=false]")
+
+    assert has_element?(
+             view,
+             "#{selector}[data-file-selection=multiple] input#local_upload[multiple]"
+           )
+  end
+
   test "one specimen per supported type exposes the complete finite option vocabulary", %{
     conn: conn
   } do
@@ -107,9 +129,9 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
           end
 
           if variant == "alt" do
-            assert has_element?(view, "label[for='local_#{field}'].inline-grid")
+            assert has_element?(view, "label[for='local_#{field}'].grid.w-fit")
           else
-            refute has_element?(view, "label[for='local_#{field}'].inline-grid")
+            refute has_element?(view, "label[for='local_#{field}'].w-fit")
           end
         end
       end

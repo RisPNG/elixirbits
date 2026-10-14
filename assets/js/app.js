@@ -28,7 +28,10 @@ import PasswordVisibility from "./password_visibility"
 import LiveTimer from "./live_timer"
 import SelectDropdown from "./select_dropdown"
 import UploadPdfPreview from "./upload_pdf_preview"
-import TextPicker from "./text_picker"
+import FileInput, {FilePreview} from "./file_input"
+import ColorInput from "./color_input"
+import NumberInput from "./number_input"
+import "vanilla-colorful/rgba-color-picker.js"
 import topbar from "topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -38,7 +41,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
     _csrf_token: csrfToken,
     user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }),
-  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, SelectDropdown, UploadPdfPreview, TextPicker},
+  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, SelectDropdown, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput},
 })
 
 // Show progress bar on live navigation and form submits

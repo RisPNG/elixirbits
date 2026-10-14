@@ -48,6 +48,7 @@ defmodule ElixirbitsWeb do
       use Phoenix.LiveView
 
       on_mount {ElixirbitsWeb.LiveUserAuth, :timezone}
+      on_mount {ElixirbitsWeb.CoreComponents, :inputs}
 
       import ElixirbitsWeb.CalendarComponents
 

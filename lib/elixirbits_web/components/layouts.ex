@@ -68,7 +68,11 @@ defmodule ElixirbitsWeb.Layouts do
     ~H"""
     <div class="min-h-screen" data-user-timezone={@user_timezone}>
       <header class="grid grid-cols-[1fr_auto] items-center w-full min-h-16 px-8 border-b border-outline">
-        <a :if={!@show_nav?} href="/" class="flex w-fit items-center gap-2">
+        <a
+          :if={!@show_nav?}
+          href="/"
+          class="grid grid-cols-[2.25rem_max-content] w-fit items-center gap-2"
+        >
           <img src={~p"/images/logo.svg"} width="36" alt="" />
           <span class="text-sm font-semibold">Elixirbits</span>
         </a>
@@ -91,7 +95,7 @@ defmodule ElixirbitsWeb.Layouts do
           type="button"
           phx-click="toggle_nav"
           aria-label="Toggle navigation"
-          class="grid h-11 place-items-center text-content hover:overlay-dark transition-colors"
+          class="grid h-11 place-items-center cursor-pointer text-content hover:overlay-dark transition-colors"
         >
           <.icon name={(@nav.open? && "hero-x-mark") || "hero-bars-3"} class="size-5" />
         </button>
@@ -116,7 +120,7 @@ defmodule ElixirbitsWeb.Layouts do
         </span>
         <a
           href={~p"/sign-out"}
-          class="truncate px-3 py-2 text-brand hover:overlay-dark transition-colors border-l border-dashed border-outline"
+          class="truncate px-3 py-2 text-brand underline-offset-4 hover:underline focus-visible:underline border-l border-dashed border-outline"
         >
           Sign out
         </a>
@@ -125,7 +129,7 @@ defmodule ElixirbitsWeb.Layouts do
       <.link
         :if={is_nil(@nav.user)}
         navigate={~p"/sign-in"}
-        class="block border-t border-outline px-3 py-2 text-sm text-brand hover:overlay-dark"
+        class="block border-t border-outline px-3 py-2 text-sm text-brand hover:overlay-dark underline-offset-4 focus-visible:underline"
       >
         Sign in
       </.link>
@@ -193,10 +197,10 @@ defmodule ElixirbitsWeb.Layouts do
             :if={not is_nil(entry.url)}
             navigate={"/" <> entry.url}
             class={[
-              "truncate hover:overlay-dark transition-colors",
+              "max-w-full justify-self-start truncate underline-offset-4 focus-visible:underline transition-colors",
               (@depth == 0 && "text-base font-bold uppercase tracking-wide") || "text-sm",
-              (@current_path == "/" <> entry.url && "text-brand") ||
-                "text-subcontent"
+              (@current_path == "/" <> entry.url && "text-brand hover:text-brand-dark") ||
+                "text-subcontent hover:text-subcontent-dark"
             ]}
           >
             {entry.name}
@@ -208,9 +212,10 @@ defmodule ElixirbitsWeb.Layouts do
             phx-click="toggle_nav_section"
             phx-value-code={entry.code}
             class={[
-              "truncate text-left hover:overlay-dark transition-colors",
+              "max-w-full justify-self-start truncate cursor-pointer text-left underline-offset-4 focus-visible:underline transition-colors",
               (@depth == 0 && "text-base font-bold uppercase tracking-wide") || "text-sm",
-              (entry.code in @open_codes && "text-brand") || "text-subcontent"
+              (entry.code in @open_codes && "text-brand hover:text-brand-dark") ||
+                "text-subcontent hover:text-subcontent-dark"
             ]}
           >
             {entry.name}
@@ -222,7 +227,7 @@ defmodule ElixirbitsWeb.Layouts do
             phx-click="toggle_nav_section"
             phx-value-code={entry.code}
             aria-label={"Toggle #{entry.name}"}
-            class="grid place-items-center text-subcontent hover:overlay-dark transition-colors"
+            class="grid place-items-center cursor-pointer text-subcontent transition-colors"
           >
             <.icon
               name="hero-chevron-down-micro"

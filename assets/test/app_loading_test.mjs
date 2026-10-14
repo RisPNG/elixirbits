@@ -39,6 +39,10 @@ test("page loading uses the current theme colors on every navigation", async () 
     LiveTimer: {},
     SelectDropdown: {},
     UploadPdfPreview: {},
+    FileInput: {},
+    FilePreview: {},
+    ColorInput: {},
+    NumberInput: {},
     initTooltips: () => {},
     process: {env: {NODE_ENV: "test"}},
   })

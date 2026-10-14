@@ -50,6 +50,24 @@ defmodule ElixirbitsWeb.CoreComponentsTest.SelectPreview do
   end
 end
 
+defmodule ElixirbitsWeb.CoreComponentsTest.ColorPreview do
+  use Phoenix.LiveView, layout: false
+
+  alias ElixirbitsWeb.CoreComponents
+
+  on_mount {CoreComponents, :inputs}
+
+  def mount(_params, session, socket) do
+    {:ok, assign(socket, :input_assigns, session["input_assigns"])}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <CoreComponents.input type="color" {@input_assigns} />
+    """
+  end
+end
+
 defmodule ElixirbitsWeb.CoreComponentsTest do
   use ExUnit.Case, async: true
 
@@ -194,10 +212,1426 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
     end
   end
 
+  describe "color inputs" do
+    test "standalone labels target the named color field when no ID is supplied" do
+      {:ok, _view, html} =
+        live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.ColorPreview,
+          session: %{
+            "input_assigns" => %{name: "accent", value: "#c9822b", label: "Accent"}
+          }
+        )
+
+      document = Floki.parse_document!(html)
+
+      assert Floki.find(document, "input#accent[data-color-value][name=accent]") != []
+      assert Floki.text(Floki.find(document, "label[for=accent]")) |> String.trim() == "Accent"
+    end
+
+    test "supported color strings remain the submitted value beside a swatch-triggered picker" do
+      for {value, format} <- [
+            {"#12345678", "hex"},
+            {"rgb(18 52 86 / 0.5)", "rgb"},
+            {"rgba(18, 52, 86, 0.5)", "rgb"},
+            {"hsl(210 65% 20% / 0.5)", "hsl"},
+            {"hsla(210, 65%, 20%, 0.5)", "hsl"},
+            {"lab(52 -2 -7 / 0.5)", "lab"},
+            {"lch(52 24 270 / 0.5)", "lch"},
+            {"oklab(0.32 -0.02 -0.07 / 0.5)", "oklab"},
+            {"oklch(0.32 0.073 254 / 0.5)", "oklch"},
+            {"color(xyz-d50 0.2 0.3 0.4 / 0.5)", "xyz-d50"},
+            {"color(xyz-d65 0.2 0.3 0.4 / 0.5)", "xyz-d65"},
+            {"device-cmyk(0.1 0.2 0.3 0.4 / 0.5)", "cmyk"}
+          ] do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.ColorPreview,
+            session: %{
+              "input_assigns" => %{
+                id: "accent",
+                name: "settings[accent]",
+                value: value,
+                label: "Accent"
+              }
+            }
+          )
+
+        document = Floki.parse_document!(html)
+
+        assert Floki.find(document, "#accent-color-input[phx-hook=ColorInput]") != []
+
+        assert Floki.find(
+                 document,
+                 "input#accent[type=text][name='settings[accent]'][data-color-value]"
+               ) != []
+
+        assert Floki.attribute(document, "input#accent", "value") == [value]
+        assert length(Floki.find(document, "[name='settings[accent]']")) == 1
+        assert Floki.find(document, "input[type=color]") == []
+
+        [initial_state] =
+          Floki.attribute(document, "#accent-color-input", "data-color-state")
+
+        assert %{
+                 "valid" => true,
+                 "value" => ^value,
+                 "format" => ^format,
+                 "swatch" => swatch,
+                 "rgba" => %{"r" => r, "g" => g, "b" => b, "a" => alpha}
+               } = Jason.decode!(initial_state)
+
+        assert is_binary(swatch)
+        assert Enum.all?([r, g, b], &(is_number(&1) && &1 >= 0 && &1 <= 255))
+        assert_in_delta alpha, if(format == "hex", do: 120 / 255, else: 0.5), 1.0e-10
+
+        assert Floki.find(
+                 document,
+                 "button[type=button][data-color-trigger][aria-label='Choose color'][popovertarget=accent-color-popover]:not([name]):not([disabled])"
+               ) != []
+
+        assert Floki.find(
+                 document,
+                 "#accent-color-popover[popover=auto][role=dialog][data-color-popover][aria-label='Choose color'] rgba-color-picker#accent-color-picker[data-color-picker][phx-update=ignore]:not([name])"
+               ) != []
+
+        assert Floki.find(document, "[data-color-swatch]") != []
+
+        assert Floki.find(
+                 document,
+                 "#accent_color_space_select[phx-hook=LiveSelect] input[type=text]"
+               ) != []
+
+        assert Floki.find(
+                 document,
+                 "[data-color-cycle]"
+               ) == []
+
+        assert Floki.find(document, "#accent-color-error[data-color-error]") != []
+      end
+    end
+
+    test "saved native formats select their color-space label in editable and read-only modes" do
+      for render_as <- ~w(enabled text-disabled),
+          {value, format} <- [
+            {"#12345678", "HEX"},
+            {"color(xyz 0.2 0.3 0.4 / 0.5)", "XYZ D65"},
+            {"color(xyz-d50 0.2 0.3 0.4 / 0.5)", "XYZ D50"},
+            {"lab(52 -2 -7 / 0.5)", "Lab"},
+            {"lch(52 24 270 / 0.5)", "LCH"},
+            {"oklab(0.32 -0.02 -0.07 / 0.5)", "OKLab"},
+            {"oklch(0.32 0.073 254 / 0.5)", "OKLCH"},
+            {"rgba(18, 52, 86, 0.5)", "RGB"},
+            {"hsla(210, 65%, 20%, 0.5)", "HSL"},
+            {"device-cmyk(0.1 0.2 0.3 0.4 / 0.5)", "CMYK"}
+          ] do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.ColorPreview,
+            session: %{
+              "input_assigns" => %{
+                id: "accent",
+                name: "accent",
+                value: value,
+                render_as: render_as
+              }
+            }
+          )
+
+        document = Floki.parse_document!(html)
+
+        if render_as == "enabled" do
+          assert Floki.attribute(document, "#accent_color_space_select input[type=text]", "value") ==
+                   [format]
+        else
+          assert Floki.text(Floki.find(document, "[data-color-format]")) |> String.trim() ==
+                   format
+        end
+
+        assert Floki.attribute(document, "input#accent", "value") == [value]
+      end
+    end
+
+    test "form fields forward their attributes to the submitted text and keep one required label" do
+      form =
+        to_form(%{"accent" => "rgba(18, 52, 86, 0.5)"},
+          as: :settings,
+          errors: [accent: {"Accent is invalid", []}]
+        )
+
+      {:ok, _view, html} =
+        live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.ColorPreview,
+          session: %{
+            "input_assigns" => %{
+              field: form[:accent],
+              label: "Accent",
+              required: true,
+              readonly: true,
+              disabled: true,
+              autocomplete: "off",
+              "phx-debounce": "200",
+              "data-purpose": "brand",
+              "aria-label": "Brand accent"
+            }
+          }
+        )
+
+      document = Floki.parse_document!(html)
+
+      assert Floki.find(
+               document,
+               "input#settings_accent[type=text][name='settings[accent]'][required][readonly][disabled][autocomplete=off][phx-debounce='200'][data-purpose=brand][aria-label='Brand accent']"
+             ) != []
+
+      assert Floki.attribute(document, "input#settings_accent", "value") == [
+               "rgba(18, 52, 86, 0.5)"
+             ]
+
+      assert Floki.find(document, "label[for=settings_accent]") != []
+      assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+
+      assert Floki.find(
+               document,
+               "[data-color-picker][name], [data-color-picker][required], [data-color-trigger][name], [data-color-trigger][required]"
+             ) == []
+
+      assert Floki.find(document, "button[data-color-trigger][disabled]") != []
+
+      assert Floki.find(
+               document,
+               "#settings_accent_color_space_select input[type=text][disabled]"
+             ) != []
+
+      assert Floki.text(document) =~ "Accent is invalid"
+    end
+
+    test "disabled and readonly text fields cannot open the picker" do
+      for restriction <- [:disabled, :readonly] do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.ColorPreview,
+            session: %{
+              "input_assigns" =>
+                Map.put(
+                  %{id: "accent", name: "accent", value: "rgba(18, 52, 86, 0.5)"},
+                  restriction,
+                  true
+                )
+            }
+          )
+
+        document = Floki.parse_document!(html)
+
+        assert Floki.find(document, "input#accent[type=text][name=accent][#{restriction}]") != []
+        assert Floki.find(document, "button[data-color-trigger][disabled]") != []
+        assert Floki.find(document, "#accent_color_space_select input[type=text][disabled]") != []
+      end
+    end
+
+    test "editable modes retain text submission while text modes keep their stacked labels" do
+      for render_as <- ~w(enabled text text-enabled hidden hidden-enabled) do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.ColorPreview,
+            session: %{
+              "input_assigns" => %{
+                id: "accent",
+                name: "accent",
+                value: "oklch(0.65 0.15 270 / 0.5)",
+                label: "Accent",
+                render_as: render_as,
+                required: true
+              }
+            }
+          )
+
+        document = Floki.parse_document!(html)
+
+        assert Floki.find(document, "#accent-color-input[phx-hook=ColorInput]") != []
+        assert Floki.find(document, "input#accent[type=text][name=accent][required]") != []
+        assert Floki.find(document, "button[data-color-trigger]:not([disabled])") != []
+
+        assert Floki.attribute(document, "input#accent", "value") == [
+                 "oklch(0.65 0.15 270 / 0.5)"
+               ]
+
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+
+        if render_as in ~w(text text-enabled) do
+          assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
+          assert Floki.find(document, "label[for=accent]") != []
+        end
+
+        if render_as in ~w(hidden hidden-enabled) do
+          assert Floki.find(document, ".hidden input#accent[required]") != []
+        end
+      end
+    end
+
+    test "read-only modes show the swatch and preserve their existing submission semantics" do
+      for render_as <- ~w(disabled like-enabled like-disabled text-disabled hidden-disabled),
+          value <- ["hsl(210 65% 20% / 0.5)", "device-cmyk(0.1 0.2 0.3 0.4 / 0.5)"] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "accent",
+            name: "accent",
+            type: "color",
+            value: value,
+            label: "Accent",
+            render_as: render_as,
+            required: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 "[data-color-space-select], [data-color-cycle], [data-color-trigger], [data-color-popover], [data-color-picker]"
+               ) == []
+
+        if render_as == "hidden-disabled" do
+          assert document == []
+        else
+          assert Floki.find(
+                   document,
+                   "#accent-color-input[phx-hook=ColorInput][data-color-editable=false] span[data-color-value]"
+                 ) != []
+
+          assert Floki.find(document, "[data-color-swatch]") != []
+          assert Floki.text(document) =~ value
+          assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+        end
+
+        if render_as in ~w(like-disabled text-disabled) do
+          assert Floki.find(document, "input#accent[type=hidden][name=accent][required]") != []
+
+          assert Floki.attribute(document, "input#accent", "value") == [value]
+        else
+          assert Floki.find(document, "[name=accent]") == []
+        end
+      end
+    end
+  end
+
+  describe "file previews and editing" do
+    test "a standalone preview destination supplies only its ID and visual attributes" do
+      document =
+        render_component(&CoreComponents.file_preview/1,
+          id: "profile:avatar-preview",
+          class: "size-20",
+          "data-purpose": "portrait"
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(
+               document,
+               "[id='profile:avatar-preview'][data-file-preview-outlet].size-20[data-purpose=portrait]"
+             ) != []
+
+      assert Floki.find(document, "input, img, iframe, [data-file-item], [phx-hook]") == []
+    end
+
+    test "detached LiveView previews render the canonical items once through a native portal" do
+      assigns = %{
+        destination: "profile:avatar-preview",
+        upload: %Phoenix.LiveView.UploadConfig{
+          name: :attachment,
+          ref: "attachment-upload",
+          accept: :any,
+          max_entries: 3,
+          entries: [
+            %Phoenix.LiveView.UploadEntry{
+              ref: "picked-image",
+              upload_ref: "attachment-upload",
+              client_name: "new-portrait.png",
+              client_type: "image/png"
+            },
+            %Phoenix.LiveView.UploadEntry{
+              ref: "picked-pdf",
+              upload_ref: "attachment-upload",
+              client_name: "document.pdf",
+              client_type: "application/pdf"
+            }
+          ]
+        }
+      }
+
+      document =
+        rendered_to_string(~H"""
+        <CoreComponents.input
+          type="file"
+          upload={@upload}
+          stored={["/uploads/portrait.png"]}
+          selection="singles"
+          preview
+          preview_id={@destination}
+          thumbnail_class="h-full w-full"
+          phx-target="#profile"
+        >
+          <:stored_preview :let={url}><img src={url} alt="Custom portrait" /></:stored_preview>
+          <:preview_caption>saved-portrait.png</:preview_caption>
+          <:pending_caption :let={pending_entry}>{pending_entry.client_name}</:pending_caption>
+        </CoreComponents.input>
+        <CoreComponents.file_preview id={@destination} class="size-20" />
+        """)
+        |> Floki.parse_document!()
+
+      assert Floki.attribute(
+               document,
+               "template#attachment-upload-file-preview-portal",
+               "data-phx-portal"
+             ) == ["[id=\"profile:avatar-preview\"]"]
+
+      assert Floki.find(
+               document,
+               "template #attachment-upload-file-previews[phx-hook=FilePreview][data-file-input-id=attachment-upload][data-file-detached=true][data-file-preview-as=thumbnail]"
+             ) != []
+
+      assert length(Floki.find(document, "[data-file-item]")) == 3
+
+      assert Floki.find(
+               document,
+               "template [data-file-item] img[alt='Custom portrait'][src='/uploads/portrait.png']"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "template img[data-phx-entry-ref=picked-image][data-phx-upload-ref=attachment-upload]"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "template [phx-hook=UploadPdfPreview][data-entry-ref=picked-pdf] iframe[data-pdf-viewer]"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "template button[phx-click=cancel_upload][phx-value-ref=picked-image][phx-target='#profile']"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "#attachment-upload-file-input > [data-file-replacements][phx-update=ignore]"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "template [data-file-replacements], template input[type=file], #attachment-upload-file-input > [data-file-collection]"
+             ) == []
+
+      assert Floki.find(
+               document,
+               "#attachment-upload-file-previews.mt-1, #attachment-upload-file-previews.mt-3, #attachment-upload-file-previews [data-file-server-previews].mt-3"
+             ) == []
+
+      assert Floki.text(
+               Floki.find(
+                 document,
+                 "template [data-file-key='/uploads/portrait.png'] [data-file-filename]"
+               )
+             )
+             |> String.trim() == "saved-portrait.png"
+    end
+
+    test "detached native previews retain their local surface and follow hidden modes" do
+      for {preview, mode} <- [{false, "enabled"}, {true, "hidden"}, {true, "hidden-disabled"}] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "portrait",
+            name: "portrait",
+            type: "file",
+            preview: preview,
+            preview_id: "portrait-preview",
+            render_as: mode,
+            stored: ["/uploads/portrait.png"],
+            thumbnail_class: "h-full w-full"
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 "template#portrait-file-preview-portal #portrait-file-previews[hidden][data-file-detached=true]"
+               ) != []
+
+        assert Floki.find(
+                 document,
+                 "template #portrait-file-local-preview[phx-update=ignore][data-file-preview-region]"
+               ) != []
+
+        assert Floki.find(document, "template img[src='/uploads/portrait.png']") != []
+        assert Floki.find(document, "template #portrait-file-preview-frame.mt-3") == []
+        assert Floki.find(document, "#portrait-file-input input#portrait[data-file-input]") != []
+      end
+    end
+
+    test "ordinary and multiple previews keep the same inline collection renderer" do
+      for {selection, max_entries, preview_id} <- [
+            {"single", 1, nil},
+            {"multiple", 3, "detached-preview"}
+          ] do
+        document =
+          render_component(&CoreComponents.input/1,
+            type: "file",
+            upload: %Phoenix.LiveView.UploadConfig{
+              name: :attachment,
+              ref: "attachment-upload",
+              accept: :any,
+              max_entries: max_entries
+            },
+            selection: selection,
+            preview: true,
+            preview_id: preview_id,
+            stored: ["/uploads/portrait.png"]
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "template[data-phx-portal]") == []
+
+        assert Floki.find(
+                 document,
+                 "#attachment-upload-file-input > #attachment-upload-file-previews[phx-hook=FilePreview][data-file-detached=false]"
+               ) != []
+
+        assert length(Floki.find(document, "[data-file-item]")) == 1
+        assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-preview-id") == []
+      end
+    end
+
+    test "file fields default to filenames without image editing or built-in media" do
+      entry = %Phoenix.LiveView.UploadEntry{
+        ref: "picked-image",
+        upload_ref: "attachment-upload",
+        client_name: "portrait.png",
+        client_type: "image/png"
+      }
+
+      upload = %Phoenix.LiveView.UploadConfig{
+        name: :attachment,
+        ref: "attachment-upload",
+        accept: :any,
+        max_entries: 2,
+        entries: [entry]
+      }
+
+      document =
+        render_component(&CoreComponents.input/1,
+          type: "file",
+          upload: upload,
+          stored: ["/uploads/previous.png"]
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-preview") == ["false"]
+      assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-editor") == ["false"]
+      assert Floki.find(document, "img, iframe") == []
+      assert Floki.text(document) =~ "previous.png"
+      assert Floki.text(document) =~ "portrait.png"
+      assert Floki.find(document, "button[phx-click=remove_upload]") != []
+      assert Floki.find(document, "button[phx-click=cancel_upload]") != []
+    end
+
+    test "built-in image and PDF previews use the same stored and pending renderer" do
+      image = %Phoenix.LiveView.UploadEntry{
+        ref: "picked-image",
+        upload_ref: "attachment-upload",
+        client_name: "portrait.png",
+        client_type: "image/png"
+      }
+
+      pdf = %Phoenix.LiveView.UploadEntry{
+        ref: "picked-pdf",
+        upload_ref: "attachment-upload",
+        client_name: "document.pdf",
+        client_type: "application/pdf"
+      }
+
+      upload = %Phoenix.LiveView.UploadConfig{
+        name: :attachment,
+        ref: "attachment-upload",
+        accept: :any,
+        max_entries: 3,
+        entries: [image, pdf]
+      }
+
+      document =
+        render_component(&CoreComponents.input/1,
+          type: "file",
+          upload: upload,
+          preview: true,
+          stored: ["/uploads/previous.png", "/uploads/document.PDF?token=preview"]
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(document, "img[src='/uploads/previous.png'][alt='previous.png']") != []
+
+      assert Floki.find(
+               document,
+               "img[data-phx-entry-ref=picked-image][data-phx-upload-ref=attachment-upload][alt='portrait.png']"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "[phx-hook=UploadPdfPreview][data-entry-ref=picked-pdf] iframe[data-pdf-viewer][title='PDF preview of document.pdf']"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "[phx-hook=UploadPdfPreview][data-pdf-url='/uploads/document.PDF?token=preview'] iframe"
+             ) != []
+
+      assert length(
+               Floki.find(document, "[data-pdf-open][target=_blank][rel='noopener noreferrer']")
+             ) == 2
+
+      assert Floki.find(document, "canvas") == []
+      assert Floki.find(document, "[class~='grid-cols-[1fr_1fr_1fr_1fr]']") != []
+    end
+
+    test "a single pending file hides the stored frame while retaining its media and removal state" do
+      entry = %Phoenix.LiveView.UploadEntry{
+        ref: "picked-image",
+        upload_ref: "attachment-upload",
+        client_name: "portrait.png",
+        client_type: "image/png"
+      }
+
+      upload = %Phoenix.LiveView.UploadConfig{
+        name: :attachment,
+        ref: "attachment-upload",
+        accept: :any,
+        max_entries: 1,
+        entries: [entry]
+      }
+
+      document =
+        render_component(&CoreComponents.input/1,
+          type: "file",
+          upload: upload,
+          preview: true,
+          stored: ["/uploads/previous.png"]
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(document, "[data-file-stored].hidden img[src='/uploads/previous.png']") !=
+               []
+
+      assert Floki.find(document, "[data-file-entry-ref=picked-image]:not(.hidden) img") != []
+      assert Floki.find(document, "input#attachment-upload[multiple]") == []
+
+      assert Floki.find(
+               document,
+               "[data-file-stored] button[phx-value-url='/uploads/previous.png']"
+             ) != []
+    end
+
+    test "editor configuration preserves native multipart selection with previews enabled" do
+      for editor <- [false, true, %{width: 512, height: 256}, %{ratio: 16 / 9}] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "portrait",
+            name: "profile[portrait]",
+            type: "file",
+            editor: editor,
+            preview: true,
+            required: true
+          )
+          |> Floki.parse_document!()
+
+        [encoded] = Floki.attribute(document, "#portrait-file-input", "data-file-editor")
+        assert Jason.decode!(encoded) == Jason.decode!(Jason.encode!(editor))
+
+        assert Floki.find(
+                 document,
+                 "input#portrait[data-file-input][type=file][name='profile[portrait]'][required]"
+               ) != []
+
+        assert Floki.find(document, "input#portrait[value]") == []
+        assert Floki.find(document, "[data-file-preview-region]") != []
+      end
+    end
+
+    test "invalid image editor options fail clearly at the component boundary" do
+      for editor <- [
+            nil,
+            "true",
+            %{},
+            %{width: 512},
+            %{height: 512},
+            %{width: 0, height: 1},
+            %{width: 1.5, height: 1},
+            %{width: 1, height: 1, ratio: 1},
+            %{ratio: 0},
+            %{ratio: -1},
+            %{ratio: "1"}
+          ] do
+        assert_raise ArgumentError, ~r/editor must be/, fn ->
+          render_component(&CoreComponents.input/1,
+            id: "portrait",
+            name: "portrait",
+            type: "file",
+            editor: editor
+          )
+        end
+      end
+
+      assert_raise ArgumentError, "image editing requires single or singles selection", fn ->
+        render_component(&CoreComponents.input/1,
+          id: "portrait",
+          name: "portrait",
+          type: "file",
+          editor: true,
+          multiple: true
+        )
+      end
+
+      assert_raise ArgumentError, "image editing requires preview: true", fn ->
+        render_component(&CoreComponents.input/1,
+          id: "portrait",
+          name: "portrait",
+          type: "file",
+          editor: true
+        )
+      end
+
+      for upload <- [
+            %Phoenix.LiveView.UploadConfig{
+              name: :attachment,
+              ref: "attachment-upload",
+              accept: :any,
+              max_entries: 2
+            },
+            %Phoenix.LiveView.UploadConfig{
+              name: :attachment,
+              ref: "attachment-upload",
+              accept: :any,
+              auto_upload?: true
+            }
+          ] do
+        assert_raise ArgumentError, fn ->
+          render_component(&CoreComponents.input/1,
+            type: "file",
+            upload: upload,
+            editor: true,
+            preview: true
+          )
+        end
+      end
+    end
+
+    test "singles retain the complete upload queue behind one preview and an individual picker" do
+      image = %Phoenix.LiveView.UploadEntry{
+        ref: "picked-image",
+        upload_ref: "attachment-upload",
+        client_name: "portrait.png",
+        client_type: "image/png",
+        preflighted?: true
+      }
+
+      pdf = %Phoenix.LiveView.UploadEntry{
+        ref: "picked-pdf",
+        upload_ref: "attachment-upload",
+        client_name: "document.pdf",
+        client_type: "application/pdf",
+        preflighted?: true,
+        done?: true
+      }
+
+      upload = %Phoenix.LiveView.UploadConfig{
+        name: :attachment,
+        ref: "attachment-upload",
+        accept: :any,
+        max_entries: 3,
+        entries: [image, pdf]
+      }
+
+      document =
+        render_component(&CoreComponents.input/1,
+          type: "file",
+          upload: upload,
+          selection: "singles",
+          preview: true,
+          editor: %{ratio: 1},
+          stored: ["/uploads/previous.png", "/images/logo.svg"]
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(
+               document,
+               "[phx-hook=FileInput][data-file-selection=singles][data-file-max-entries='3']"
+             ) != []
+
+      assert Floki.find(document, "input#attachment-upload[multiple]") == []
+
+      assert Floki.attribute(document, "input#attachment-upload", "data-phx-active-refs") == [
+               "picked-image,picked-pdf"
+             ]
+
+      assert Floki.attribute(document, "input#attachment-upload", "data-phx-done-refs") == [
+               "picked-pdf"
+             ]
+
+      assert Floki.attribute(document, "input#attachment-upload", "data-phx-preflighted-refs") ==
+               ["picked-image,picked-pdf"]
+
+      assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-entry-refs") == [
+               Jason.encode!(["picked-image", "picked-pdf"])
+             ]
+
+      assert length(Floki.find(document, "[data-file-item]")) == 4
+      assert length(Floki.find(document, "[data-file-item]:not([hidden])")) == 1
+
+      assert Floki.find(document, "[data-file-key='/uploads/previous.png']:not([hidden]) img") !=
+               []
+
+      assert Floki.find(
+               document,
+               "[data-file-entry-ref=picked-image][hidden] img[data-phx-entry-ref=picked-image]"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "[data-file-entry-ref=picked-pdf][hidden] [phx-hook=UploadPdfPreview]"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "button[data-file-cycle=previous]:not([hidden]), button[data-file-cycle=next]:not([hidden])"
+             )
+             |> length() == 2
+
+      assert Floki.find(document, "button[data-file-edit='/uploads/previous.png']") != []
+      assert Floki.find(document, "button[data-file-edit=picked-image]") != []
+
+      assert Floki.find(
+               document,
+               "[data-file-key='/images/logo.svg'] [data-file-edit], [data-file-key=picked-pdf] [data-file-edit]"
+             ) == []
+
+      assert Floki.find(
+               document,
+               "#attachment-upload-file-replacements[data-file-replacements][phx-update=ignore]"
+             ) != []
+    end
+
+    test "explicit single selection requires a one-entry LiveView queue" do
+      upload = %Phoenix.LiveView.UploadConfig{
+        name: :attachment,
+        ref: "attachment-upload",
+        accept: :any,
+        max_entries: 3
+      }
+
+      assert_raise ArgumentError, "single selection requires max_entries: 1", fn ->
+        render_component(&CoreComponents.input/1,
+          type: "file",
+          upload: upload,
+          selection: "single"
+        )
+      end
+    end
+
+    test "singles show a count while their genuine native picker remains focusable" do
+      for {stored, count} <- [
+            {[], "0 files"},
+            {["/uploads/previous.png"], "1 file"},
+            {["/uploads/previous.png", "/uploads/document.pdf"], "2 files"}
+          ] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "portraits",
+            name: "portraits",
+            type: "file",
+            selection: "singles",
+            preview: true,
+            stored: stored
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.text(
+                 Floki.find(document, "[data-file-name][data-file-count][aria-live=polite]")
+               ) == count
+
+        assert Floki.find(
+                 document,
+                 "label[for=portraits] input#portraits[type=file].sr-only.peer:not([disabled]):not([multiple])"
+               ) != []
+
+        assert Floki.find(document, "input#portraits[tabindex='-1']") == []
+
+        assert Floki.attribute(document, "[data-file-name]", "data-file-default-name") == [
+                 "Choose a file"
+               ]
+
+        assert Floki.find(
+                 document,
+                 "[data-file-preview-region][phx-update=ignore] [data-file-preview-caption][data-file-caption][hidden]"
+               ) != []
+      end
+    end
+
+    test "singles thumbnail hover captions keep slot filenames inside the preview" do
+      image = %Phoenix.LiveView.UploadEntry{
+        ref: "picked-image",
+        upload_ref: "attachment-upload",
+        client_name: "new-portrait.png",
+        client_type: "image/png"
+      }
+
+      assigns = %{
+        upload: %Phoenix.LiveView.UploadConfig{
+          name: :attachment,
+          ref: "attachment-upload",
+          accept: :any,
+          max_entries: 3,
+          entries: [image]
+        },
+        saved: "data:image/png;base64,c2F2ZWQ="
+      }
+
+      document =
+        rendered_to_string(~H"""
+        <CoreComponents.input type="file" upload={@upload} selection="singles" preview stored={[@saved]}>
+          <:preview_caption>saved-portrait.png</:preview_caption>
+          <:pending_caption :let={entry}>{entry.client_name}</:pending_caption>
+        </CoreComponents.input>
+        """)
+        |> Floki.parse_document!()
+
+      assert Floki.text(Floki.find(document, "[data-file-name][data-file-count]")) == "2 files"
+
+      assert Floki.text(
+               Floki.find(
+                 document,
+                 "[data-file-stored] > [data-file-preview-as=thumbnail] > [data-file-caption]"
+               )
+             )
+             |> String.trim() == "saved-portrait.png"
+
+      assert Floki.text(
+               Floki.find(
+                 document,
+                 "[data-file-entry-ref=picked-image] > [data-file-preview-as=thumbnail] > [data-file-caption]"
+               )
+             )
+             |> String.trim() == "new-portrait.png"
+
+      assert Floki.find(
+               document,
+               "[data-file-item] > [data-file-caption], [data-file-item] > span"
+             ) == []
+
+      assert Floki.find(
+               document,
+               "[data-file-collection] > button[data-file-cycle=previous][aria-label='Previous file'], [data-file-collection] > button[data-file-cycle=next][aria-label='Next file']"
+             )
+             |> length() == 2
+
+      assert Floki.find(
+               document,
+               "[data-file-cycle][class*=bg-], [data-file-cycle][class*=border]"
+             ) == []
+
+      assert Floki.find(document, "[data-file-collection][class*=grid-cols-]") == []
+    end
+
+    test "singles read-only modes retain a count alongside their stored previews" do
+      upload = %Phoenix.LiveView.UploadConfig{
+        name: :attachment,
+        ref: "attachment-upload",
+        accept: :any,
+        max_entries: 3
+      }
+
+      document =
+        render_component(&CoreComponents.input/1,
+          type: "file",
+          upload: upload,
+          selection: "singles",
+          preview: true,
+          render_as: "text-disabled",
+          stored: ["/uploads/first.png", "/uploads/second.png"]
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.text(Floki.find(document, "[data-file-readonly-name]")) == "2 files"
+      assert Floki.find(document, "input#attachment-upload[disabled]") != []
+      assert length(Floki.find(document, "[data-file-item]")) == 2
+    end
+
+    test "singles count preserves floating labels and plain text-mode controls" do
+      for mode <- ["enabled", "text"] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "portraits",
+            name: "portraits",
+            type: "file",
+            selection: "singles",
+            preview: true,
+            label: "Portraits",
+            render_as: mode
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.text(Floki.find(document, "[data-file-name]")) == "0 files"
+
+        if mode == "enabled" do
+          assert Floki.find(
+                   document,
+                   "input.sr-only.peer.input-floating-control + .input-floating-label"
+                 ) != []
+
+          assert Floki.find(document, "[data-file-name][data-file-count]") != []
+        else
+          assert Floki.find(
+                   document,
+                   "input.input-floating-control, [data-file-count], .input-floating-label"
+                 ) == []
+
+          assert Floki.find(document, "[data-file-name].block:not(.hidden)") != []
+        end
+      end
+    end
+
+    test "multiple selection keeps filenames below its thumbnails" do
+      document =
+        render_component(&CoreComponents.input/1,
+          type: "file",
+          upload: %Phoenix.LiveView.UploadConfig{
+            name: :attachment,
+            ref: "attachment-upload",
+            accept: :any,
+            max_entries: 3
+          },
+          selection: "multiple",
+          preview: true,
+          stored: ["/uploads/previous.png"]
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(document, "[data-file-count], [data-file-caption], input.sr-only") == []
+
+      assert Floki.text(Floki.find(document, "[data-file-item] > span")) |> String.trim() ==
+               "previous.png"
+    end
+
+    test "single thumbnails keep custom and pending filenames inside inline and detached previews" do
+      for preview_id <- [nil, "portrait-preview"] do
+        assigns = %{
+          preview_id: preview_id,
+          upload: %Phoenix.LiveView.UploadConfig{
+            name: :attachment,
+            ref: "attachment-upload",
+            accept: :any,
+            max_entries: 1,
+            entries: [
+              %Phoenix.LiveView.UploadEntry{
+                ref: "picked-image",
+                upload_ref: "attachment-upload",
+                client_name: "new-portrait.png",
+                client_type: "image/png"
+              }
+            ]
+          }
+        }
+
+        document =
+          rendered_to_string(~H"""
+          <CoreComponents.input
+            type="file"
+            upload={@upload}
+            stored={["/uploads/previous.png"]}
+            preview
+            preview_id={@preview_id}
+          >
+            <:stored_preview :let={url}><img src={url} alt="Custom portrait" /></:stored_preview>
+            <:preview_caption>saved-portrait.png</:preview_caption>
+            <:pending_caption :let={pending_entry}>{pending_entry.client_name}</:pending_caption>
+          </CoreComponents.input>
+          """)
+          |> Floki.parse_document!()
+
+        assert Floki.text(
+                 Floki.find(
+                   document,
+                   "[data-file-key='/uploads/previous.png'] > [data-file-preview-as=thumbnail] > [data-file-caption][data-file-filename]"
+                 )
+               )
+               |> String.trim() == "saved-portrait.png"
+
+        assert Floki.text(
+                 Floki.find(
+                   document,
+                   "[data-file-key=picked-image] > [data-file-preview-as=thumbnail] > [data-file-caption][data-file-filename]"
+                 )
+               )
+               |> String.trim() == "new-portrait.png"
+
+        assert Floki.find(
+                 document,
+                 "[data-file-key='/uploads/previous.png'] img[alt='Custom portrait']"
+               ) != []
+
+        assert Floki.find(document, "[data-file-item] > [data-file-filename]") == []
+      end
+    end
+
+    test "singles filename chips leave room for navigation inside the full preview width" do
+      document =
+        render_component(&CoreComponents.input/1,
+          id: "attachments",
+          name: "attachments",
+          type: "file",
+          selection: "singles",
+          preview: true,
+          preview_as: "tag",
+          stored: ["/uploads/first.png", "/uploads/second.pdf"]
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(
+               document,
+               "[data-file-collection].mt-1 [data-file-server-previews].grid:not(.flex)"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "[data-file-item] > [data-file-preview-as=tag].px-9:not(.mr-1):not(.mt-1)"
+             )
+             |> length() == 2
+
+      assert Floki.find(document, "[data-file-preview-container][data-file-preview-as=tag].px-9") !=
+               []
+
+      assert Floki.find(
+               document,
+               "[data-file-collection] > button[data-file-cycle=previous], [data-file-collection] > button[data-file-cycle=next]"
+             )
+             |> length() == 2
+
+      assert Floki.text(Floki.find(document, "[data-file-key='/uploads/first.png']")) =~
+               "first.png"
+    end
+
+    test "single and singles without previews show slot filenames inside the input and retain parked actions" do
+      for {selection, max_entries, expected_name} <- [
+            {"single", 1, "new-portrait.png"},
+            {"singles", 3, "saved-portrait.png"}
+          ] do
+        entry = %Phoenix.LiveView.UploadEntry{
+          ref: "picked-image",
+          upload_ref: "attachment-upload",
+          client_name: "new-portrait.png",
+          client_type: "image/png"
+        }
+
+        assigns = %{
+          selection: selection,
+          upload: %Phoenix.LiveView.UploadConfig{
+            name: :attachment,
+            ref: "attachment-upload",
+            accept: :any,
+            max_entries: max_entries,
+            entries: [entry]
+          },
+          saved: "data:image/png;base64,c2F2ZWQ="
+        }
+
+        document =
+          rendered_to_string(~H"""
+          <CoreComponents.input type="file" upload={@upload} selection={@selection} stored={[@saved]}>
+            <:preview_caption>saved-portrait.png</:preview_caption>
+            <:pending_caption :let={pending_entry}>{pending_entry.client_name}</:pending_caption>
+          </CoreComponents.input>
+          """)
+          |> Floki.parse_document!()
+
+        assert Floki.text(Floki.find(document, "[data-file-control] [data-file-name]"))
+               |> String.trim() == expected_name
+
+        assert Floki.find(document, "[data-file-control] button[data-file-clear]") != []
+
+        assert Floki.find(
+                 document,
+                 "label button[data-file-clear], label [data-file-cycle-input]"
+               ) == []
+
+        assert Floki.find(
+                 document,
+                 "[data-file-collection][hidden] [data-file-item] [data-file-filename]"
+               )
+               |> length() == 2
+
+        assert Floki.find(
+                 document,
+                 "[data-file-collection][hidden] button[data-file-remove][phx-click=cancel_upload][phx-value-ref=picked-image]"
+               ) != []
+
+        assert Floki.find(
+                 document,
+                 "[data-file-cycle], [data-file-preview-position], [data-file-count]"
+               ) == []
+
+        if selection == "singles" do
+          assert Floki.text(Floki.find(document, "[data-file-control] [data-file-position]")) ==
+                   "1/2"
+
+          assert Floki.find(
+                   document,
+                   "[data-file-control] button[data-file-cycle-input=next][data-file-next] .hero-chevron-up-micro"
+                 ) != []
+
+          assert Floki.find(
+                   document,
+                   "[data-file-control] button[data-file-cycle-input=previous][data-file-previous] .hero-chevron-down-micro"
+                 ) != []
+        else
+          assert Floki.find(document, "[data-file-position], [data-file-cycle-input]") == []
+        end
+      end
+    end
+
+    test "singles filename navigation remains in the input and disabled until a collection exists" do
+      document =
+        render_component(&CoreComponents.input/1,
+          id: "attachments",
+          name: "attachments",
+          type: "file",
+          selection: "singles"
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.text(Floki.find(document, "[data-file-name]")) == "Choose a file"
+      assert Floki.text(Floki.find(document, "[data-file-position]")) == "0/0"
+      assert length(Floki.find(document, "[data-file-cycle-input][disabled]:not([hidden])")) == 2
+
+      assert Floki.find(
+               document,
+               "label[for=attachments] input#attachments.sr-only.peer:not([disabled])"
+             ) != []
+    end
+
+    test "compact read-only file fields shade their wrapper once and retain collection browsing" do
+      for mode <- ["disabled", "like-disabled"] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "attachments",
+            name: "attachments",
+            type: "file",
+            selection: "singles",
+            render_as: mode,
+            stored: ["/uploads/first.png", "/uploads/second.pdf"]
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "[data-file-control].overlay-dark") != []
+        assert Floki.find(document, "[data-file-name].overlay-dark") == []
+        assert Floki.find(document, "[data-file-name].text-subcontent") != []
+        assert Floki.find(document, "input#attachments[disabled]") != []
+        assert length(Floki.find(document, "[data-file-cycle-input]:not([disabled])")) == 2
+        assert Floki.find(document, "[data-file-clear][disabled]") != []
+      end
+    end
+
+    test "native selection modes control only picker cardinality and retain the local editor surface" do
+      for selection <- ["single", "singles", "multiple"] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "portrait",
+            name: "portrait",
+            type: "file",
+            selection: selection,
+            preview: true,
+            editor: selection != "multiple",
+            multiple: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.attribute(document, "#portrait-file-input", "data-file-selection") == [
+                 selection
+               ]
+
+        assert Floki.find(document, "input#portrait[multiple]") != [] == (selection == "multiple")
+
+        assert Floki.find(
+                 document,
+                 "[data-file-preview-region][phx-update=ignore] button[data-file-edit][hidden]"
+               ) != []
+
+        assert length(Floki.find(document, "[data-file-cycle]")) ==
+                 if(selection == "singles", do: 2, else: 0)
+      end
+    end
+
+    test "image edit controls follow file types, preview layout, and each mode's editability" do
+      for mode <-
+            ~w(enabled disabled like-enabled like-disabled hidden hidden-enabled hidden-disabled text text-enabled text-disabled),
+          preview_as <- ["tag", "thumbnail"] do
+        upload = %Phoenix.LiveView.UploadConfig{
+          name: :attachment,
+          ref: "attachment-upload",
+          accept: :any,
+          max_entries: 3
+        }
+
+        document =
+          render_component(&CoreComponents.input/1,
+            type: "file",
+            upload: upload,
+            selection: "singles",
+            preview: true,
+            editor: true,
+            preview_as: preview_as,
+            render_as: mode,
+            stored: ["/uploads/previous.webp", "/images/logo.svg", "/uploads/document.pdf"]
+          )
+          |> Floki.parse_document!()
+
+        editable = mode in ~w(enabled text text-enabled hidden hidden-enabled)
+
+        assert Floki.find(document, "button[data-file-edit='/uploads/previous.webp']") != [] ==
+                 editable
+
+        assert Floki.find(
+                 document,
+                 "[data-file-key='/images/logo.svg'] [data-file-edit], [data-file-key='/uploads/document.pdf'] [data-file-edit]"
+               ) == []
+      end
+    end
+
+    test "text file thumbnails remain picker labels when custom media has no caption" do
+      entry = %Phoenix.LiveView.UploadEntry{
+        ref: "picked-image",
+        upload_ref: "attachment-upload",
+        client_name: "portrait.png",
+        client_type: "image/png"
+      }
+
+      for mode <- ["text", "text-enabled"] do
+        assigns = %{
+          mode: mode,
+          upload: %Phoenix.LiveView.UploadConfig{
+            name: :attachment,
+            ref: "attachment-upload",
+            accept: :any,
+            max_entries: 2,
+            entries: [entry]
+          }
+        }
+
+        document =
+          rendered_to_string(~H"""
+          <CoreComponents.input
+            upload={@upload}
+            type="file"
+            render_as={@mode}
+            stored={["/uploads/previous.png"]}
+            preview_as="thumbnail"
+          >
+            <:stored_preview :let={url}><img src={url} alt="Stored portrait" /></:stored_preview>
+            <:pending_preview :let={pending_entry}>
+              <.live_img_preview entry={pending_entry} alt="Pending portrait" />
+            </:pending_preview>
+          </CoreComponents.input>
+          """)
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "input#attachment-upload.sr-only") != []
+
+        assert Floki.find(
+                 document,
+                 "[data-file-stored] label[for=attachment-upload] img[alt='Stored portrait']"
+               ) != []
+
+        assert Floki.find(
+                 document,
+                 "[data-file-entry-ref=picked-image] label[for=attachment-upload] img[alt='Pending portrait']"
+               ) != []
+      end
+    end
+
+    test "native read-only file modes expose their server filename to the client hook" do
+      for mode <- ["disabled", "like-enabled", "like-disabled", "text-disabled"] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "portrait",
+            name: "portrait",
+            type: "file",
+            render_as: mode,
+            value: "portrait.png"
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "input#portrait[data-file-input][disabled]") != []
+
+        assert Floki.attribute(document, "[data-file-readonly-name]", "data-file-default-name") ==
+                 ["portrait.png"]
+
+        assert Floki.text(Floki.find(document, "[data-file-readonly-name]")) == "portrait.png"
+      end
+    end
+
+    test "native file previews expose the resolved layout and a selection clear control" do
+      for preview_as <- [nil, "tag", "thumbnail"] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "portrait",
+            name: "portrait",
+            type: "file",
+            preview: true,
+            preview_as: preview_as
+          )
+          |> Floki.parse_document!()
+
+        expected = preview_as || "thumbnail"
+
+        assert Floki.attribute(document, "#portrait-file-input", "data-file-preview-as") == [
+                 expected
+               ]
+
+        assert Floki.attribute(document, "[data-file-preview-container]", "data-file-preview-as") ==
+                 [expected]
+
+        assert Floki.attribute(document, "[data-file-preview-container]", "phx-update") == []
+
+        assert Floki.find(
+                 document,
+                 "[data-file-preview-container][hidden] > [data-file-preview-region][phx-update=ignore].contents"
+               ) != []
+
+        assert Floki.find(
+                 document,
+                 "button[data-file-clear][type=button][hidden][aria-label='Clear selected file']"
+               ) != []
+
+        assert Floki.find(document, "button[data-file-clear][disabled]") == []
+      end
+    end
+
+    test "native file fields retain their disabled input and preview region in hidden-disabled mode" do
+      document =
+        render_component(&CoreComponents.input/1,
+          id: "portrait",
+          name: "portrait",
+          type: "file",
+          label: "Portrait",
+          preview: true,
+          render_as: "hidden-disabled",
+          required: true
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(
+               document,
+               "#portrait-file-input.hidden[phx-hook=FileInput] input#portrait[disabled][required]"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "#portrait-file-local-preview[phx-update=ignore][data-file-preview-region]"
+             ) != []
+
+      assert Floki.find(document, "button[data-file-clear][hidden][disabled]") != []
+      assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+    end
+  end
+
   describe "required input labels" do
     test "native controls retain required and mark their label once" do
       types =
-        ~w(color email file number password search text url textarea date datetime-local time week month checkbox switch radio)
+        ~w(email file number password search text url textarea date datetime-local time week month checkbox switch radio)
 
       for {type, variant} <-
             Enum.map(types, &{&1, "default"}) ++ [{"checkbox", "alt"}, {"switch", "alt"}] do
@@ -413,7 +1847,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         else
           assert Floki.find(
                    document,
-                   "label.hidden input#attachment-upload[type=file][required][disabled]"
+                   "label[for=attachment-upload] input#attachment-upload.sr-only[type=file][required][disabled]"
                  ) != []
         end
       end
@@ -448,7 +1882,9 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             render_as={@render_as}
             disabled={false}
           >
-            <:pending :let={pending_entry}><.live_img_preview entry={pending_entry} /></:pending>
+            <:pending_preview :let={pending_entry}>
+              <.live_img_preview entry={pending_entry} />
+            </:pending_preview>
           </CoreComponents.input>
           """)
 
@@ -469,7 +1905,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         else
           assert Floki.find(
                    document,
-                   "label.hidden input#attachment-upload[disabled][data-phx-active-refs=picked-image]"
+                   "label[for=attachment-upload] input#attachment-upload.sr-only[disabled][data-phx-active-refs=picked-image]"
                  ) != []
 
           assert Floki.find(document, "button[phx-click=cancel_upload]") == []
@@ -513,7 +1949,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
       assert Floki.find(
                Floki.parse_document!(excluded),
-               "div.hidden label.hidden input#attachment-upload[disabled]"
+               "div.hidden label[for=attachment-upload] input#attachment-upload.sr-only[disabled]"
              ) != []
     end
 
@@ -673,6 +2109,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           name: :attachment,
           ref: "attachment-upload",
           accept: :any,
+          max_entries: 2,
           entries: [entry]
         }
       }
@@ -686,8 +2123,8 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           label="Attachment"
           disabled
         >
-          <:preview :let={url}>{url}</:preview>
-          <:pending>{@entry.client_name}</:pending>
+          <:stored_preview :let={url}>{url}</:stored_preview>
+          <:pending_preview>{@entry.client_name}</:pending_preview>
         </CoreComponents.input>
         """)
 
@@ -978,14 +2415,13 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       end
     end
 
-    test "text color and file modes retain native pickers behind their plain values" do
-      for type <- ~w(color file), render_as <- ~w(text text-enabled), disabled <- [false, true] do
+    test "text file modes retain native pickers behind their plain values" do
+      for render_as <- ~w(text text-enabled), disabled <- [false, true] do
         document =
           render_component(&CoreComponents.input/1,
             id: "choice",
             name: "choice",
-            type: type,
-            value: "#123456",
+            type: "file",
             label: "Choice",
             render_as: render_as,
             required: true,
@@ -996,24 +2432,17 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(
                  document,
-                 "[phx-hook=TextPicker] input#choice[type=#{type}][name=choice][required]"
+                 "[phx-hook=FileInput] input#choice[type=file][name=choice][required]"
                ) != []
 
         assert Floki.find(document, "input#choice[disabled]") != [] == disabled
         assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
         assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
 
-        if type == "color" do
-          assert Floki.attribute(document, "input#choice", "value") == ["#123456"]
+        assert Floki.attribute(document, "input#choice", "value") == []
 
-          assert Floki.text(Floki.find(document, "[data-text-picker-value]")) |> String.trim() ==
-                   "#123456"
-        else
-          assert Floki.attribute(document, "input#choice", "value") == []
-
-          assert Floki.text(Floki.find(document, "[data-text-picker-value]")) |> String.trim() ==
-                   "Choose a file"
-        end
+        assert Floki.text(Floki.find(document, "[data-file-name]")) |> String.trim() ==
+                 "Choose a file"
       end
     end
 

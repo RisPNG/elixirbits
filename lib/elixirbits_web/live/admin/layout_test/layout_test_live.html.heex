@@ -25,7 +25,7 @@
       <div>
         <h2 id="layout-test-colors-title" class="text-base font-semibold">System colors</h2>
         <p class="text-sm text-subcontent">
-          Main and muted text adapt to each background. Switch themes to compare the colors. Dark and light layer over each surface.
+          Main and muted text use fixed colors for each theme. Outlines adapt to each background. Dark and light layer over each surface.
         </p>
       </div>
       <ul aria-label="System color tokens" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
@@ -48,7 +48,7 @@
           }
           id={"layout-test-color-#{token}"}
           data-color-token={"color-#{token}"}
-          class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
+          class="rounded-default border border-outline bg-secondary text-content p-3"
         >
           <div
             aria-hidden="true"
@@ -59,11 +59,23 @@
           >
             <span
               :if={token not in ["outline", "dark", "light"]}
-              class="text-sm font-semibold text-content"
+              class={[
+                "text-sm font-semibold",
+                if(token in ["content", "subcontent"],
+                  do: "text-content-inverse",
+                  else: "text-content"
+                )
+              ]}
             >Aa</span>
             <span
               :if={token not in ["outline", "dark", "light"]}
-              class="text-xs text-subcontent"
+              class={[
+                "text-xs",
+                if(token in ["content", "subcontent"],
+                  do: "text-subcontent-inverse",
+                  else: "text-subcontent"
+                )
+              ]}
             >Aa</span>
           </div>
           <code class="mt-2 block text-center text-xs text-content">color-{token}</code>
@@ -147,14 +159,14 @@
           Overlay strength
         </h2>
         <p class="text-sm text-subcontent">
-          Dark and light overlays default to 25% strength. Nested overlays of the same kind add their strength up to 100%, while text and icons stay opaque.
+          Dark and light overlays default to 25% strength. Nested overlays of the same kind add their strength up to 100%. Text and icons use the opposite theme's content color where needed.
         </p>
       </div>
       <div class="grid grid-cols-[1fr_1fr] gap-3">
         <div
           :for={
-            {kind, title, default_class, strengths} <- [
-              {"dark", "Dark overlay", "overlay-dark",
+            {kind, title, default_class, content_class, strengths} <- [
+              {"dark", "Dark overlay", "overlay-dark", "text-content-inverse dark:text-content",
                [
                  {10, "overlay-dark-[0.1]"},
                  {25, "overlay-dark"},
@@ -162,6 +174,7 @@
                  {100, "overlay-dark-[1]"}
                ]},
               {"light", "Light overlay", "overlay-light",
+               "text-content dark:text-content-inverse",
                [
                  {10, "overlay-light-[0.1]"},
                  {25, "overlay-light"},
@@ -182,7 +195,8 @@
               <div
                 id={"layout-test-overlay-#{kind}-#{strength}"}
                 class={[
-                  "mt-2 grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3 text-content",
+                  "mt-2 grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3",
+                  content_class,
                   overlay_class
                 ]}
               >
@@ -194,7 +208,8 @@
           <div
             id={"layout-test-overlay-#{kind}-stack-25"}
             class={[
-              "rounded-default border border-outline bg-brand p-3 text-content",
+              "rounded-default border border-outline bg-brand p-3",
+              content_class,
               default_class
             ]}
           >
@@ -203,7 +218,7 @@
               <div
                 id={"layout-test-overlay-#{kind}-stack-50"}
                 class={[
-                  "rounded-default border border-outline p-3 text-content",
+                  "rounded-default border border-outline p-3",
                   default_class
                 ]}
               >
@@ -211,7 +226,7 @@
                 <div
                   id={"layout-test-overlay-#{kind}-stack-75"}
                   class={[
-                    "mt-3 rounded-default border border-outline p-3 text-content",
+                    "mt-3 rounded-default border border-outline p-3",
                     default_class
                   ]}
                 >
@@ -219,7 +234,7 @@
                   <div
                     id={"layout-test-overlay-#{kind}-stack-100"}
                     class={[
-                      "mt-3 rounded-default border border-outline p-3 text-content",
+                      "mt-3 rounded-default border border-outline p-3",
                       default_class
                     ]}
                   >
@@ -244,13 +259,7 @@
         type="button"
         role="tab"
         aria-selected={if(@current_tab == "local", do: "true", else: "false")}
-        class={[
-          "px-4 py-2 text-sm",
-          if(@current_tab == "local",
-            do: "bg-brand text-content hover:overlay-dark",
-            else: "bg-primary text-brand hover:overlay-dark"
-          )
-        ]}
+        variant={if @current_tab == "local", do: :primary, else: :neutral}
         phx-click="change_tab"
         phx-value-tab="local"
       >
@@ -262,13 +271,7 @@
         type="button"
         role="tab"
         aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
-        class={[
-          "px-4 py-2 text-sm",
-          if(@current_tab == "ecosystem",
-            do: "bg-brand text-content hover:overlay-dark",
-            else: "bg-primary text-brand hover:overlay-dark"
-          )
-        ]}
+        variant={if @current_tab == "ecosystem", do: :primary, else: :neutral}
         phx-click="change_tab"
         phx-value-tab="ecosystem"
       >
@@ -291,14 +294,11 @@
           </:subtitle>
         </.header>
         <div class="space-y-3">
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
-          >
-            <summary class="cursor-pointer text-sm">
+          <details phx-mounted={JS.ignore_attributes("open")}>
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Button style: {@showcase["header"]["variant"]}
             </summary>
-            <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={variant <- ~w(unstyled neutral primary danger)}
                 type="button"
@@ -396,16 +396,13 @@
               phx-value-option={option}
             >{label}</.button>
           </div>
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
-          >
-            <summary class="cursor-pointer text-sm">
+          <details phx-mounted={JS.ignore_attributes("open")}>
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Duration: {@showcase["flash"]["duration"]}{if @showcase["flash"]["duration"] !=
                                                               "default",
                                                             do: "ms"}
             </summary>
-            <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={duration <- ~w(default 1000 5000 8000)}
                 type="button"
@@ -451,7 +448,7 @@
         id="layout-test-theme-preview"
         class={[
           "rounded-default p-4 text-content",
-          @showcase["theme"]["inset"] && "border border-outline bg-brand overlay-opacity-[0.15]"
+          @showcase["theme"]["inset"] && "border border-outline bg-secondary"
         ]}
       >
         <p class="font-medium">Shared theme preview</p>
@@ -478,8 +475,8 @@
       </.header>
 
       <div id="layout-test-input-controls" class="space-y-3">
-        <details phx-mounted={JS.ignore_attributes("open")} class="space-y-3">
-          <summary class="cursor-pointer text-sm font-medium text-content">
+        <details phx-mounted={JS.ignore_attributes("open")}>
+          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
             Input options: {@input_config["render_as"]} display, {@input_config["variant"]} controls, {@input_config[
               "select_mode"
             ]} select, and {case checked_state do
@@ -488,7 +485,7 @@
               "mixed" -> "mixed checked states"
             end}
           </summary>
-          <fieldset class="space-y-2">
+          <fieldset class="mt-2 space-y-2">
             <legend class="text-sm font-medium text-content">Display mode</legend>
             <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
               <.button
@@ -500,11 +497,10 @@
                 phx-click="set_input_config"
                 phx-value-option="render_as"
                 phx-value-choice={mode}
-                class="px-2 py-1 text-xs"
               >{mode}</.button>
             </div>
           </fieldset>
-          <div class="grid grid-cols-[1fr_1fr_2fr] subgap-4">
+          <div class="mt-3 grid grid-cols-[1fr_1fr_2fr] subgap-4">
             <fieldset class="space-y-2">
               <legend class="text-sm font-medium text-content">
                 Checkbox and switch variant
@@ -519,7 +515,6 @@
                   phx-click="set_input_config"
                   phx-value-option="variant"
                   phx-value-choice={variant}
-                  class="px-2 py-1 text-xs"
                 >{variant}</.button>
               </div>
             </fieldset>
@@ -535,7 +530,6 @@
                   phx-click="set_input_config"
                   phx-value-option="checked"
                   phx-value-choice={value}
-                  class="px-2 py-1 text-xs"
                 >{label}</.button>
               </div>
             </fieldset>
@@ -551,13 +545,15 @@
                   phx-click="set_input_config"
                   phx-value-option="select_mode"
                   phx-value-choice={mode}
-                  class="px-2 py-1 text-xs"
                 >{mode}</.button>
               </div>
             </fieldset>
           </div>
         </details>
-        <div id="layout-test-input-states" class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-2">
+        <div
+          id="layout-test-input-states"
+          class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-2 border-y border-outline py-3"
+        >
           <.button
             :for={
               {state, label} <- [
@@ -575,14 +571,13 @@
             aria-pressed={to_string(@input_states[state])}
             phx-click="toggle_input_state"
             phx-value-state={state}
-            class="px-2 py-1 text-xs"
           >{label}</.button>
         </div>
-        <details phx-mounted={JS.ignore_attributes("open")} class="space-y-2">
-          <summary class="cursor-pointer text-sm font-medium text-content">
+        <details phx-mounted={JS.ignore_attributes("open")}>
+          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
             Input attributes
           </summary>
-          <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
+          <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
             <.button
               :for={
                 {state, label} <- [
@@ -604,7 +599,6 @@
               aria-pressed={to_string(@input_states[state])}
               phx-click="toggle_input_state"
               phx-value-state={state}
-              class="px-2 py-1 text-xs"
             >{label}</.button>
           </div>
         </details>
@@ -810,14 +804,14 @@
       <.header>
         Live uploads
         <:subtitle>
-          Compare filename chips with image and PDF previews. Up to three files per input, 1MB each.
+          Choose one file, add files one at a time, or select up to three files together. Each file can be up to 1MB.
         </:subtitle>
       </.header>
       <div id="layout-test-upload-controls" class="space-y-3">
-        <div class="grid grid-cols-[1fr_1fr] subgap-3">
+        <div class="grid grid-cols-[1fr_1fr] items-start subgap-3">
           <div>
             <details phx-mounted={JS.ignore_attributes("open")} id="upload-render-modes">
-              <summary class="hover:overlay-dark cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm">
+              <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
                 Render as: {@upload_mode}
               </summary>
               <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
@@ -839,7 +833,7 @@
           </div>
           <div>
             <details phx-mounted={JS.ignore_attributes("open")} id="upload-preview-styles">
-              <summary class="hover:overlay-dark cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm">
+              <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
                 Preview layout: {@showcase["uploads"]["preview_as"]}
               </summary>
               <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
@@ -851,6 +845,7 @@
                     if @showcase["uploads"]["preview_as"] == style, do: :primary, else: :neutral
                   }
                   aria-pressed={to_string(@showcase["uploads"]["preview_as"] == style)}
+                  disabled={!@showcase["uploads"]["preview"]}
                   phx-click="set_showcase_option"
                   phx-value-section="uploads"
                   phx-value-option="preview_as"
@@ -862,7 +857,69 @@
             </details>
           </div>
         </div>
-        <div class="grid grid-cols-[repeat(6,max-content)] gap-2">
+        <div class="grid grid-cols-[1fr_1fr] items-start subgap-3">
+          <section id="layout-test-upload-selection-controls" class="flex flex-col gap-3">
+            <h3 class="font-medium text-content">File selection</h3>
+            <div class="grid grid-cols-[1fr_1fr_2fr] gap-2">
+              <.button
+                :for={
+                  {choice, label} <- [
+                    {"single", "Single file"},
+                    {"singles", "Singles"},
+                    {"multiple", "Multiple files"}
+                  ]
+                }
+                id={"upload-selection-#{choice}"}
+                type="button"
+                variant={
+                  if @showcase["uploads"]["selection"] == choice, do: :primary, else: :neutral
+                }
+                aria-pressed={to_string(@showcase["uploads"]["selection"] == choice)}
+                disabled={@uploads.demo_files.entries != []}
+                phx-click="set_showcase_option"
+                phx-value-section="uploads"
+                phx-value-option="selection"
+                phx-value-choice={choice}
+              >{label}</.button>
+            </div>
+            <p class="text-sm text-subcontent">
+              Save or cancel selected files before changing selection mode.
+            </p>
+          </section>
+          <section id="layout-test-upload-editor-controls" class="flex flex-col gap-3">
+            <h3 class="font-medium text-content">Image editor</h3>
+            <div class="grid grid-cols-[1fr_1fr] gap-2">
+              <.button
+                :for={
+                  {choice, label} <- [
+                    {"false", "Editor off"},
+                    {"true", "Free crop"},
+                    {"exact", "512 × 512 pixels"},
+                    {"ratio", "16:9 crop"}
+                  ]
+                }
+                id={"upload-editor-#{choice}"}
+                type="button"
+                variant={
+                  if @showcase["uploads"]["editor"] == choice, do: :primary, else: :neutral
+                }
+                aria-pressed={to_string(@showcase["uploads"]["editor"] == choice)}
+                disabled={
+                  @showcase["uploads"]["selection"] == "multiple" or
+                    !@showcase["uploads"]["preview"]
+                }
+                phx-click="set_showcase_option"
+                phx-value-section="uploads"
+                phx-value-option="editor"
+                phx-value-choice={choice}
+              >{label}</.button>
+            </div>
+            <p class="text-sm text-subcontent">
+              Editing requires Preview in Single file or Singles mode. Hover over an image to edit it again. PDFs use the browser's document viewer.
+            </p>
+          </section>
+        </div>
+        <div class="grid grid-cols-[repeat(7,max-content)] gap-2">
           <.button
             :for={
               {option, label} <- [
@@ -871,6 +928,7 @@
                 {"required", "Required"},
                 {"tooltip", "Tooltips"},
                 {"stored", "Stored files"},
+                {"preview", "Preview"},
                 {"errors", "Errors"}
               ]
             }
@@ -886,144 +944,97 @@
           </.button>
         </div>
       </div>
-      <.form
-        for={@upload_form}
-        id="layout-test-upload-form"
-        phx-change="upload_change"
-        phx-submit="upload_save"
-        class="flex flex-col gap-4"
-      >
-        <div class="grid grid-cols-[1fr_1fr] subgap-4">
-          <section id="layout-test-upload-tags" class="flex flex-col gap-3">
-            <h3 class="font-medium text-content">Filename chips</h3>
+      <div class={[
+        "grid items-start",
+        if(@showcase["uploads"]["selection"] == "multiple",
+          do: "grid-cols-[1fr]",
+          else: "grid-cols-[1fr_1fr] subgap-4"
+        )
+      ]}>
+        <.form
+          for={@upload_form}
+          id="layout-test-upload-form"
+          phx-change="upload_change"
+          phx-submit="upload_save"
+          class="flex flex-col gap-4"
+        >
+          <div id="layout-test-upload-input">
             <.input
               type="file"
               name="files"
               label={if @showcase["uploads"]["labels"], do: "Files"}
               upload={@uploads.demo_files}
-              stored={if @showcase["uploads"]["stored"], do: @stored_files, else: []}
+              selection={@showcase["uploads"]["selection"]}
+              preview_id={
+                if @showcase["uploads"]["selection"] != "multiple",
+                  do: "layout-test-upload-preview"
+              }
+              thumbnail_class={
+                if @showcase["uploads"]["selection"] != "multiple",
+                  do: "h-full w-full",
+                  else: "h-36 w-full"
+              }
+              stored={
+                cond do
+                  !@showcase["uploads"]["stored"] -> []
+                  @showcase["uploads"]["selection"] == "single" -> Enum.take(@stored_files, 1)
+                  true -> @stored_files
+                end
+              }
+              preview={@showcase["uploads"]["preview"]}
+              editor={
+                case @showcase["uploads"]["editor"] do
+                  "true" -> true
+                  "exact" -> %{width: 512, height: 512}
+                  "ratio" -> %{ratio: 16 / 9}
+                  _ -> false
+                end
+              }
+              preview_as={
+                if @showcase["uploads"]["preview"],
+                  do: @showcase["uploads"]["preview_as"],
+                  else: "tag"
+              }
               render_as={@upload_mode}
               disabled={@showcase["uploads"]["disabled"]}
               required={@showcase["uploads"]["required"]}
               tooltip={
-                if @showcase["uploads"]["tooltip"], do: "Attach PNG, JPEG, PDF, or text files"
+                if @showcase["uploads"]["tooltip"],
+                  do: "Choose PNG, JPEG, GIF, WebP, PDF, or text files"
               }
               errors={
                 if @showcase["uploads"]["errors"], do: ["Choose a supported file."], else: []
               }
-              aria-label="Filename files"
+              aria-label="Upload files"
             >
-              <:preview :let={url}>{Path.basename(url)}</:preview>
-              <:pending :let={entry}>{entry.client_name}</:pending>
+              <:preview_caption :let={url}>
+                <span class="truncate">
+                  {Map.get(@preview_names, url, Path.basename(url))}
+                </span>
+              </:preview_caption>
+              <:pending_caption :let={entry}>
+                <span class="truncate">{entry.client_name}</span>
+              </:pending_caption>
             </.input>
-          </section>
-          <section id="layout-test-upload-previews" class="flex flex-col gap-3">
-            <h3 class="font-medium text-content">Image and PDF previews</h3>
-            <.input
-              type="file"
-              name="previews"
-              label={if @showcase["uploads"]["labels"], do: "Preview files"}
-              upload={@uploads.demo_previews}
-              stored={if @showcase["uploads"]["stored"], do: @stored_previews, else: []}
-              preview_as={@showcase["uploads"]["preview_as"]}
-              render_as={@upload_mode}
-              disabled={@showcase["uploads"]["disabled"]}
-              required={@showcase["uploads"]["required"]}
-              tooltip={
-                if @showcase["uploads"]["tooltip"], do: "Attach images or PDFs to see a preview"
-              }
-              errors={
-                if @showcase["uploads"]["errors"], do: ["Choose an image or PDF."], else: []
-              }
-              aria-label="Image and PDF files"
-            >
-              <:preview :let={url}>
-                <div class="min-w-0">
-                  <div class={@showcase["uploads"]["preview_as"] == "tag" && "hidden"}>
-                    <div
-                      :if={String.starts_with?(url, "data:application/pdf;")}
-                      id={"layout-test-pdf-saved-#{Base.url_encode64(:crypto.hash(:sha256, url), padding: false)}"}
-                      phx-hook="UploadPdfPreview"
-                      phx-update="ignore"
-                      data-pdf-url={url}
-                      role="img"
-                      aria-label={"First page of #{@preview_names[url]}"}
-                      class="grid h-36 w-full place-items-center overflow-hidden rounded-default border border-outline bg-transparent"
-                    >
-                      <canvas hidden class="max-h-full max-w-full" />
-                      <p
-                        data-pdf-status
-                        role="status"
-                        class="px-2 text-center text-sm text-subcontent"
-                      >
-                        Loading PDF preview...
-                      </p>
-                    </div>
-                    <img
-                      :if={not String.starts_with?(url, "data:application/pdf;")}
-                      src={url}
-                      alt={Map.get(@preview_names, url, Path.basename(url))}
-                      class="h-36 w-full rounded-default border border-outline bg-transparent object-contain"
-                    />
-                  </div>
-                  <p class={
-                    if @showcase["uploads"]["preview_as"] == "tag",
-                      do: "truncate",
-                      else: "mt-1 truncate text-sm text-subcontent"
-                  }>
-                    {Map.get(@preview_names, url, Path.basename(url))}
-                  </p>
-                </div>
-              </:preview>
-              <:pending :let={entry}>
-                <div class="min-w-0">
-                  <div class={@showcase["uploads"]["preview_as"] == "tag" && "hidden"}>
-                    <div
-                      :if={String.downcase(Path.extname(entry.client_name)) == ".pdf"}
-                      id={"layout-test-pdf-preview-#{entry.ref}"}
-                      phx-hook="UploadPdfPreview"
-                      phx-update="ignore"
-                      data-upload-ref={entry.upload_ref}
-                      data-entry-ref={entry.ref}
-                      role="img"
-                      aria-label={"First page of #{entry.client_name}"}
-                      class="grid h-36 w-full place-items-center overflow-hidden rounded-default border border-outline bg-transparent"
-                    >
-                      <canvas hidden class="max-h-full max-w-full" />
-                      <p
-                        data-pdf-status
-                        role="status"
-                        class="px-2 text-center text-sm text-subcontent"
-                      >
-                        Loading PDF preview...
-                      </p>
-                    </div>
-                    <.live_img_preview
-                      :if={String.downcase(Path.extname(entry.client_name)) != ".pdf"}
-                      entry={entry}
-                      alt={entry.client_name}
-                      class="h-36 w-full rounded-default border border-outline bg-transparent object-contain"
-                    />
-                  </div>
-                  <p class={
-                    if @showcase["uploads"]["preview_as"] == "tag",
-                      do: "truncate",
-                      else: "mt-1 truncate text-sm text-subcontent"
-                  }>
-                    {entry.client_name}
-                  </p>
-                </div>
-              </:pending>
-            </.input>
-          </section>
+          </div>
+          <.button
+            :if={@upload_mode == "enabled"}
+            type="submit"
+            variant={:primary}
+            disabled={@showcase["uploads"]["disabled"]}
+          >Save files</.button>
+        </.form>
+        <div :if={@showcase["uploads"]["selection"] != "multiple"}>
+          <.file_preview
+            id="layout-test-upload-preview"
+            class={
+              if @showcase["uploads"]["preview_as"] == "thumbnail",
+                do: "h-44 w-full",
+                else: "w-full"
+            }
+          />
         </div>
-        <.button
-          :if={@upload_mode == "enabled"}
-          type="submit"
-          variant={:primary}
-          disabled={@showcase["uploads"]["disabled"]}
-        >Finish upload</.button>
-      </.form>
+      </div>
       <p :if={@uploaded_names != []} id="uploaded-names" class="text-sm text-content">
         {Enum.join(@uploaded_names, ", ")}
       </p>
@@ -1037,7 +1048,7 @@
         </:subtitle>
       </.header>
       <div id="layout-test-action-controls" class="space-y-3">
-        <div class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-3">
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr] items-start subgap-3">
           <div :for={
             {option, label, value, choices} <- [
               {"selected", "Action", @showcase["actions"]["selected"],
@@ -1052,7 +1063,7 @@
             ]
           }>
             <details phx-mounted={JS.ignore_attributes("open")} id={"record-options-#{option}"}>
-              <summary class="hover:overlay-dark cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm">
+              <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
                 {label}: {value}
               </summary>
               <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
@@ -1075,7 +1086,7 @@
         </div>
         <div class="grid grid-cols-[1fr_max-content_max-content_max-content] items-start gap-2">
           <details phx-mounted={JS.ignore_attributes("open")} id="record-selected-entry">
-            <summary class="hover:overlay-dark cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm">
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Selected entry: {if @record_selected, do: "##{@record_selected}", else: "None"}
             </summary>
             <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
@@ -1241,7 +1252,7 @@
         </:subtitle>
       </.header>
       <div class="space-y-3 mb-4">
-        <div class="grid grid-cols-[max-content_max-content_max-content] items-center gap-2">
+        <div class="grid grid-cols-[max-content_max-content_max-content] items-start gap-2">
           <.button
             type="button"
             variant={if @showcase["calendar"]["events"], do: :primary, else: :neutral}
@@ -1250,14 +1261,11 @@
             phx-value-section="calendar"
             phx-value-option="events"
           >Events</.button>
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
-          >
-            <summary class="cursor-pointer text-sm">
+          <details phx-mounted={JS.ignore_attributes("open")}>
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Event style: {@showcase["calendar"]["variant"]}
             </summary>
-            <div class="mt-3 grid grid-cols-[1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
               <.button
                 :for={variant <- ~w(solid outline)}
                 type="button"
@@ -1272,14 +1280,11 @@
               >{Phoenix.Naming.humanize(variant)}</.button>
             </div>
           </details>
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
-          >
-            <summary class="cursor-pointer text-sm">
+          <details phx-mounted={JS.ignore_attributes("open")}>
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Event color: {@showcase["calendar"]["color"]}
             </summary>
-            <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={color <- ~w(brand info success warning error neutral)}
                 type="button"
@@ -1411,7 +1416,7 @@
             Change the number of details and their title presentation.
           </:subtitle>
         </.header>
-        <div class="grid grid-cols-[max-content_max-content] gap-2 mb-4">
+        <div class="grid grid-cols-[max-content_max-content] items-start gap-2 mb-4">
           <.button
             id="list-option-titles"
             type="button"
@@ -1421,14 +1426,11 @@
             phx-value-section="list"
             phx-value-option="titles"
           >Titles</.button>
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
-          >
-            <summary class="cursor-pointer text-sm">
+          <details phx-mounted={JS.ignore_attributes("open")}>
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Items: {@showcase["list"]["count"]}
             </summary>
-            <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={count <- ~w(1 2 4)}
                 id={"list-count-#{count}"}
@@ -1471,15 +1473,12 @@
       <.header>
         Core Icons<:subtitle>Choose an icon, its size, and a shared theme color.</:subtitle>
       </.header>
-      <div class="grid grid-cols-[max-content_max-content_max-content_max-content] gap-3 mb-4">
-        <details
-          phx-mounted={JS.ignore_attributes("open")}
-          class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
-        >
-          <summary class="cursor-pointer text-sm">
+      <div class="grid grid-cols-[max-content_max-content_max-content_max-content] items-start gap-3 mb-4">
+        <details phx-mounted={JS.ignore_attributes("open")}>
+          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
             Icon: {@showcase["icons"]["name"]}
           </summary>
-          <div class="mt-3 grid grid-cols-[1fr_1fr] gap-2">
+          <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
             <.button
               :for={
                 name <-
@@ -1496,14 +1495,11 @@
             >{name}</.button>
           </div>
         </details>
-        <details
-          phx-mounted={JS.ignore_attributes("open")}
-          class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
-        >
-          <summary class="cursor-pointer text-sm">
+        <details phx-mounted={JS.ignore_attributes("open")}>
+          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
             Size: {@showcase["icons"]["size"]}
           </summary>
-          <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+          <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
             <.button
               :for={size <- ~w(4 5 8 12)}
               id={"icon-size-#{size}"}
@@ -1517,14 +1513,11 @@
             >{size}</.button>
           </div>
         </details>
-        <details
-          phx-mounted={JS.ignore_attributes("open")}
-          class="rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-3"
-        >
-          <summary class="cursor-pointer text-sm">
+        <details phx-mounted={JS.ignore_attributes("open")}>
+          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
             Color: {@showcase["icons"]["color"]}
           </summary>
-          <div class="mt-3 grid grid-cols-[1fr_1fr_1fr] gap-2">
+          <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
               :for={color <- ~w(content brand info success warning error)}
               id={"icon-color-#{color}"}
@@ -1617,16 +1610,15 @@
         </:subtitle>
       </.header>
       <div id="layout-test-cinder-controls" class="space-y-3">
-        <div class="grid grid-cols-[1fr_1fr_1fr] subgap-4">
+        <div class="grid grid-cols-[1fr_1fr_1fr] items-start subgap-4">
           <details
             phx-mounted={JS.ignore_attributes("open")}
             id="cinder-layout-choices"
-            class="space-y-2"
           >
-            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Layout: {String.capitalize(@showcase["cinder"]["layout"])}
             </summary>
-            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={layout <- ~w(table list grid)}
                 id={"cinder-layout-#{layout}"}
@@ -1643,12 +1635,11 @@
           <details
             phx-mounted={JS.ignore_attributes("open")}
             id="cinder-page-size-choices"
-            class="space-y-2"
           >
-            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Records per page: {@showcase["cinder"]["page_size"]}
             </summary>
-            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={size <- ~w(6 12 24)}
                 id={"cinder-page-size-#{size}"}
@@ -1667,12 +1658,11 @@
           <details
             phx-mounted={JS.ignore_attributes("open")}
             id="cinder-column-choices"
-            class="space-y-2"
           >
-            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Grid columns: {@showcase["cinder"]["columns"]}
             </summary>
-            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={columns <- ~w(2 3 4)}
                 id={"cinder-columns-#{columns}"}
@@ -1797,12 +1787,11 @@
           <details
             phx-mounted={JS.ignore_attributes("open")}
             id="dependency-select-mode-choices"
-            class="space-y-2"
           >
-            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Selection mode: {@showcase["live_select"]["mode"]}
             </summary>
-            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={
                   {mode, label} <- [
@@ -1827,12 +1816,11 @@
           <details
             phx-mounted={JS.ignore_attributes("open")}
             id="dependency-select-render-choices"
-            class="space-y-2"
           >
-            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Display mode: {@showcase["live_select"]["render_as"]}
             </summary>
-            <div class="grid grid-cols-[1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
               <.button
                 :for={render_as <- @input_render_modes}
                 id={"dependency-select-render-#{render_as}"}
@@ -1929,12 +1917,11 @@
           <details
             phx-mounted={JS.ignore_attributes("open")}
             id="ui-kit-alert-choices"
-            class="space-y-2"
           >
-            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Alert kind: {String.capitalize(@showcase["ui_kit"]["alert"])}
             </summary>
-            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={kind <- ~w(info success warning error)}
                 id={"ui-kit-alert-#{kind}"}
@@ -1951,12 +1938,11 @@
           <details
             phx-mounted={JS.ignore_attributes("open")}
             id="ui-kit-badge-choices"
-            class="space-y-2"
           >
-            <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
               Badge style: {String.capitalize(@showcase["ui_kit"]["badge"])}
             </summary>
-            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={
                   {style, label} <- [
@@ -1977,16 +1963,15 @@
               >{label}</.button>
             </div>
           </details>
-          <div class="grid grid-cols-[1fr_1fr] subgap-4">
+          <div class="grid grid-cols-[1fr_1fr] items-start subgap-4">
             <details
               phx-mounted={JS.ignore_attributes("open")}
               id="ui-kit-step-choices"
-              class="space-y-2"
             >
-              <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+              <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
                 Current step: {@showcase["ui_kit"]["step"]}
               </summary>
-              <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+              <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
                 <.button
                   :for={step <- ~w(1 2 3)}
                   id={"ui-kit-step-#{step}"}
@@ -2128,12 +2113,11 @@
       <details
         phx-mounted={JS.ignore_attributes("open")}
         id="dependency-page-controls"
-        class="space-y-2"
       >
-        <summary class="hover:overlay-dark min-h-11 cursor-pointer rounded-default border border-outline bg-primary px-3 py-2 text-sm font-medium text-content">
+        <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
           Page: {Enum.find(@dependency_pages, &(&1.id == @showcase["pages"]["selected"])).name}
         </summary>
-        <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+        <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
           <.button
             :for={page <- @dependency_pages}
             id={"dependency-page-choice-#{page.id}"}

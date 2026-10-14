@@ -19,13 +19,19 @@
         required
       />
       <.input field={@form[:password]} type="password" label="Password" required />
-      <.input
-        field={@form[:remember_me]}
-        type="checkbox"
-        variant="alt"
-        label="Remember me"
-        tooltip="Keeps you signed in for a year."
-      />
+      <div class="grid grid-cols-[1fr_max-content] items-center gap-4">
+        <.input
+          field={@form[:remember_me]}
+          type="checkbox"
+          variant="alt"
+          label="Remember me"
+          tooltip="Keeps you signed in for a year."
+        />
+        <.link
+          navigate={~p"/reset"}
+          class="text-sm text-brand underline-offset-4 hover:underline focus-visible:underline"
+        >Forgot password?</.link>
+      </div>
 
       <div class="flex flex-col gap-2">
         <.button
@@ -37,7 +43,7 @@
         </.button>
         <.button
           type="button"
-          variant={:neutral}
+          class="self-center text-sm text-brand underline-offset-4 hover:underline focus-visible:underline"
           phx-click="request_magic_link"
         >
           Email me a magic link
@@ -45,16 +51,11 @@
       </div>
     </.form>
 
-    <div class="grid grid-cols-[1fr_1fr] gap-2 text-sm">
-      <.link navigate={~p"/reset"} class="text-brand hover:underline hover:overlay-dark">
-        Forgot password?
-      </.link>
+    <p class="border-t border-outline pt-4 text-center text-sm text-subcontent">
       <.link
         navigate={~p"/register"}
-        class="text-brand hover:underline hover:overlay-dark justify-self-end"
-      >
-        Create an account
-      </.link>
-    </div>
+        class="text-brand underline-offset-4 hover:underline focus-visible:underline"
+      >Create an account</.link>
+    </p>
   </.card>
 </Layouts.app>

@@ -3,6 +3,164 @@
 @import "tailwindcss" source(none);
 @import "vanilla-calendar-pro/styles/index.css";
 @import "./subgap.css";
+
+.file-editor {
+  @apply rounded-default border border-outline bg-primary text-content p-4 shadow-lg;
+  margin: auto;
+  width: min(56rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+.file-editor[open] {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.file-editor::backdrop {
+  background: var(--color-dark);
+}
+
+.file-editor h2 {
+  @apply text-lg font-semibold;
+}
+
+.file-editor-canvas {
+  height: min(60vh, 28rem);
+  min-height: 12rem;
+}
+
+.file-editor-canvas cropper-canvas {
+  width: 100%;
+  height: 100%;
+  background: var(--surface-primary);
+  background-image: repeating-conic-gradient(var(--color-outline) 0 25%, var(--surface-primary) 0 50%);
+  background-size: 1rem 1rem;
+}
+
+.file-editor-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+  gap: 0.5rem;
+}
+
+.file-editor-actions button {
+  @apply inline-grid place-items-center min-h-11 px-4 py-2 text-sm rounded-default font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.file-editor-status {
+  @apply min-h-5 text-sm text-subcontent;
+}
+
+.file-editor-error {
+  @apply text-sm text-error;
+}
+
+[data-file-preview-outlet]:not(:has([data-file-collection]:not([hidden]) [data-file-item]:not([hidden]), [data-file-collection]:not([hidden]) [data-file-preview-container]:not([hidden]))) {
+  display: none;
+}
+
+[data-file-collection][data-file-detached="true"][data-file-preview-as="thumbnail"] [data-file-server-previews] {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+[data-file-collection][data-file-detached="true"] [data-file-item]:not([hidden]):has(> [data-file-preview-as="thumbnail"]) {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+}
+
+[data-file-collection][data-file-detached="true"] [data-file-preview-as="thumbnail"] {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+[data-file-collection][data-file-focused="true"][data-file-mode="text"] label,
+[data-file-collection][data-file-focused="true"][data-file-mode="text-enabled"] label {
+  text-decoration-line: underline;
+}
+
+[data-file-preview-container][data-file-preview-as="thumbnail"] [data-file-preview-open] {
+  @apply absolute bottom-1 left-1;
+}
+
+[data-file-cycle],
+[data-file-edit],
+[data-file-caption],
+[data-file-preview-position] {
+  @apply opacity-0 pointer-events-none transition-opacity;
+}
+
+[data-file-cycle] {
+  @apply absolute top-1/2 z-20 -translate-y-1/2;
+}
+
+[data-file-cycle]:focus {
+  @apply ring-0;
+}
+
+[data-file-cycle="previous"] {
+  @apply left-1;
+}
+
+[data-file-cycle="next"] {
+  @apply right-1;
+}
+
+[data-file-caption] {
+  @apply absolute top-1 left-1 right-8 z-10 w-fit truncate rounded-default bg-primary px-1 text-sm text-content;
+  max-width: calc(100% - 2.25rem);
+}
+
+[data-file-preview-position] {
+  @apply absolute bottom-1 right-1 z-10 rounded-default bg-primary px-1 text-sm text-content;
+}
+
+[data-file-cycle]:not(:disabled),
+[data-file-cycle-input]:not(:disabled),
+[data-file-edit]:not(:disabled) {
+  @apply cursor-pointer;
+}
+
+[data-file-edit] {
+  @apply absolute bottom-1 left-1/2 -translate-x-1/2;
+}
+
+[data-file-collection]:hover [data-file-cycle]:not(:disabled),
+[data-file-collection]:focus-within [data-file-cycle]:not(:disabled),
+[data-file-item]:hover [data-file-edit]:not(:disabled),
+[data-file-item]:focus-within [data-file-edit]:not(:disabled),
+[data-file-preview-container]:hover [data-file-edit]:not(:disabled),
+[data-file-preview-container]:focus-within [data-file-edit]:not(:disabled) {
+  @apply opacity-100 pointer-events-auto;
+}
+
+[data-file-collection]:hover [data-file-caption],
+[data-file-collection]:focus-within [data-file-caption] {
+  @apply opacity-100;
+}
+
+[data-file-collection]:hover [data-file-preview-position] {
+  @apply opacity-100;
+}
+
+[data-file-collection]:has(> [data-file-preview-position]) [data-file-preview-as="tag"] {
+  @apply pb-8;
+}
+
+[data-file-collection]:has(> [data-file-preview-position]):has([data-file-preview-as="tag"]) [data-file-cycle] {
+  @apply top-4;
+}
+
+[data-file-preview-as="tag"]:has(> [data-file-edit]),
+[data-file-preview-container][data-file-preview-as="tag"]:has([data-file-edit]:not([hidden])),
+[data-file-collection]:has(> [data-file-preview-position]) [data-file-preview-as="tag"]:has([data-file-edit]:not([hidden])) {
+  @apply pb-9;
+}
+
 @source "../../deps/cinder";
 @source "../../deps/ash_authentication_phoenix";
 @source "../../deps/live_select/lib/live_select/component.*ex";
@@ -16,15 +174,24 @@
 /* Light theme */
 
 @theme static {
+  --theme-light-content: oklch(24% 0.016 252.42);
+  --theme-light-subcontent: oklch(44% 0.024 252.42);
+  --theme-dark-content: oklch(96% 0.003 252.42);
+  --theme-dark-subcontent: oklch(78% 0.012 252.42);
+
   --color-primary: oklch(98% 0.003 252.42);
-  --color-secondary: oklch(44% 0.044 257.287);
-  --color-content: contrast-color(var(--surface));
-  --color-subcontent: color-mix(in srgb, var(--color-content) var(--subcontent-strength), var(--surface));
-  --color-brand: oklch(52% 0.233 277.117);
-  --color-info: oklch(50% 0.158 241.966);
-  --color-success: oklch(48% 0.118 184.704);
-  --color-warning: oklch(52% 0.179 58.318);
-  --color-error: oklch(50% 0.253 17.585);
+  --color-secondary: oklch(88% 0.018 257.287);
+  --color-content: var(--theme-light-content);
+  --color-subcontent: var(--theme-light-subcontent);
+  --color-content-inverse: var(--theme-dark-content);
+  --color-subcontent-inverse: var(--theme-dark-subcontent);
+  --color-brand: oklch(80% 0.1 277.117);
+  --color-brand-dark: color-mix(in srgb, var(--color-brand), var(--surface-dark) calc(var(--overlay-opacity) * 100%));
+  --color-subcontent-dark: color-mix(in srgb, var(--color-subcontent), var(--surface-dark) calc(var(--overlay-opacity) * 100%));
+  --color-info: oklch(82% 0.09 241.966);
+  --color-success: oklch(82% 0.085 184.704);
+  --color-warning: oklch(84% 0.1 58.318);
+  --color-error: oklch(81% 0.105 17.585);
 
   --color-outline: oklch(84% 0.012 254.09);
 
@@ -39,6 +206,8 @@
 
   --surface-primary: var(--color-primary);
   --surface-secondary: var(--color-secondary);
+  --surface-content: var(--color-content);
+  --surface-subcontent: var(--color-subcontent);
   --surface-brand: var(--color-brand);
   --surface-info: var(--color-info);
   --surface-success: var(--color-success);
@@ -50,15 +219,11 @@
   --surface-light--alpha: var(--overlay-opacity);
 }
 
-/* Adaptive background sources */
+/* Adaptive outline background */
 
 @theme inline {
-  --bg-content: var(--content-fill);
-  --bg-content--content-fill: inherit;
-  --bg-subcontent: var(--subcontent-fill);
-  --bg-subcontent--subcontent-fill: inherit;
-  --bg-outline: var(--outline-fill);
-  --bg-outline--outline-fill: inherit;
+  --background-color-outline: var(--outline-fill);
+  --background-color-outline--outline-fill: color-mix(in oklab, var(--surface-parent), oklch(from var(--color-dark) l c h / 1) var(--outline-strength));
 }
 
 /* Dark theme */
@@ -66,6 +231,10 @@
 [data-theme="dark"] {
   --color-primary: oklch(30.33% 0.016 252.42);
   --color-secondary: oklch(37% 0.044 257.287);
+  --color-content: var(--theme-dark-content);
+  --color-subcontent: var(--theme-dark-subcontent);
+  --color-content-inverse: var(--theme-light-content);
+  --color-subcontent-inverse: var(--theme-light-subcontent);
   --color-brand: oklch(58% 0.233 277.117);
   --color-info: oklch(54% 0.158 241.966);
   --color-success: oklch(53% 0.118 184.704);
@@ -81,6 +250,10 @@
   :root:not([data-theme]) {
     --color-primary: oklch(30.33% 0.016 252.42);
     --color-secondary: oklch(37% 0.044 257.287);
+    --color-content: var(--theme-dark-content);
+    --color-subcontent: var(--theme-dark-subcontent);
+    --color-content-inverse: var(--theme-light-content);
+    --color-subcontent-inverse: var(--theme-light-subcontent);
     --color-brand: oklch(58% 0.233 277.117);
     --color-info: oklch(54% 0.158 241.966);
     --color-success: oklch(53% 0.118 184.704);
@@ -103,6 +276,12 @@
 }
 
 /* Adaptive surface colors */
+
+@property --outline-fill {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
 
 @property --surface {
   syntax: "<color>";
@@ -246,7 +425,6 @@
     --surface-b: var(--color-primary);
     --surface-fill: var(--color-primary);
     --outline-strength: 35%;
-    --subcontent-strength: 85%;
     --field-motion: 150ms;
   }
 }
@@ -263,8 +441,6 @@
 ::before,
 ::after {
   @apply adaptive-outline;
-  --color-content: contrast-color(var(--surface));
-  --color-subcontent: color-mix(in srgb, var(--color-content) var(--subcontent-strength), var(--surface));
 }
 
 ::-webkit-slider-thumb {
@@ -279,8 +455,6 @@
   *,
   ::before,
   ::after {
-    --content-fill: var(--color-content);
-    --subcontent-fill: var(--color-subcontent);
     --outline-fill: var(--color-outline);
   }
 }
@@ -325,10 +499,8 @@
 }
 
 @utility bg-* {
-  --content-fill: --value(--bg-*--content-fill);
-  --subcontent-fill: --value(--bg-*--subcontent-fill);
-  --outline-fill: --value(--bg-*--outline-fill);
-  --surface-base: --value(--surface-*, --bg-*, --color-*);
+  --outline-fill: --value(--background-color-*--outline-fill);
+  --surface-base: --value(--background-color-*, --surface-*, --color-*);
   --surface-reset: 0;
   --surface-fill-alpha: 1;
   --surface-fill-alpha: --value(--surface-*--alpha);
@@ -410,7 +582,17 @@
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
 @custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
 
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@custom-variant dark {
+  &:where([data-theme=dark], [data-theme=dark] *) {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
 
 /* Theme switching animation */
 
@@ -483,6 +665,16 @@
 }
 
 /* Input clear controls */
+
+.number-input-control input[type="number"] {
+  appearance: textfield;
+}
+
+.number-input-control input[type="number"]::-webkit-inner-spin-button,
+.number-input-control input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
 
 input[type="search"]::-webkit-search-cancel-button {
   @apply appearance-none hero-x-mark-mini size-5 text-error cursor-pointer;
@@ -619,6 +811,76 @@ input[type="search"]::-webkit-search-cancel-button {
 .input-floating-textarea:focus + .input-floating-label,
 .input-floating-textarea:not(:placeholder-shown) + .input-floating-label {
   transform: translateY(-50%);
+}
+
+.color-input-swatch {
+  background-image: linear-gradient(var(--input-color, transparent), var(--input-color, transparent)), conic-gradient(var(--color-outline) 25%, var(--color-primary) 0 50%, var(--color-outline) 0 75%, var(--color-primary) 0);
+  background-size: 100% 100%, 0.5rem 0.5rem;
+}
+
+.color-input-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: 15rem;
+  max-width: calc(100vw - 1rem);
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+
+.color-input-popover rgba-color-picker {
+  width: 100%;
+  height: 13rem;
+}
+
+.color-input-popover rgba-color-picker::part(saturation) {
+  border-bottom: 0;
+  border-radius: var(--radius-default) var(--radius-default) 0 0;
+}
+
+.color-input-popover rgba-color-picker::part(alpha) {
+  border-radius: 0 0 var(--radius-default) var(--radius-default);
+}
+
+.color-input-popover rgba-color-picker::part(alpha),
+.color-input-popover rgba-color-picker::part(alpha-pointer) {
+  background-color: var(--color-primary);
+  background-image: conic-gradient(var(--color-outline) 25%, var(--color-primary) 0 50%, var(--color-outline) 0 75%, var(--color-primary) 0);
+  background-size: 0.5rem 0.5rem;
+}
+
+.color-input-popover rgba-color-picker::part(saturation-pointer),
+.color-input-popover rgba-color-picker::part(hue-pointer),
+.color-input-popover rgba-color-picker::part(alpha-pointer) {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-color: var(--color-content);
+  box-shadow: 0 0 0 1px var(--color-outline);
+}
+
+.color-input-popover rgba-color-picker::part(saturation):focus,
+.color-input-popover rgba-color-picker::part(hue):focus,
+.color-input-popover rgba-color-picker::part(alpha):focus {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.color-input-label {
+  left: 2.75rem;
+}
+
+.color-input-control:has(.input-floating-control:focus) + .color-input-label,
+.color-input-control:has(.input-floating-control:not(:placeholder-shown)) + .color-input-label,
+.color-input-label-filled {
+  left: 0.75rem;
+  top: 0;
+  color: var(--color-brand);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.color-input-label-filled::before {
+  opacity: 1;
 }
 
 /* Floating label validation */
@@ -1046,15 +1308,21 @@ body {
 
 /* Input icons and file controls */
 
-[phx-hook="LiveSelect"]:not(.input-text-wrapper) input[type="text"] {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.5rem center;
-  background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
+[phx-hook="LiveSelect"].input-select-wrapper input[type="text"] {
   padding-right: 2.5rem;
 }
 
-input[type="file"] {
+[phx-hook="LiveSelect"].input-select-wrapper > div:has(> input[type="text"]) {
+  position: relative;
+
+  &::after {
+    @apply hero-chevron-down-micro size-6 text-subcontent absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none;
+    content: "";
+  }
+}
+
+input[type="file"],
+[data-file-display] {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12m4.5-4.5v13.5'/%3e%3c/svg%3e");
   background-position: left 0.75rem center;
   background-repeat: no-repeat;

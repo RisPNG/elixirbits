@@ -10,11 +10,13 @@ export default function initTooltips() {
 
   let target = null
   let described = null
+  let hovered = null
   let focused = null
   let dismissed = null
   let anchorX = 0
   let anchorY = 0
   const nativeSources = new Map()
+  let observed = new Set()
 
   const hide = () => {
     if (described) {
@@ -28,33 +30,64 @@ export default function initTooltips() {
     tip.hidden = true
   }
 
-  const reveal = (el, control, x, y) => {
-    const native = el?.getAttribute("title")
-    if (native != null) {
-      const source = nativeSources.get(el) || {title: native, text: null, label: null}
-      source.title = native
-      if (!el.dataset.tooltip || el.dataset.tooltip === source.text) {
-        el.dataset.tooltip = native
-        source.text = native
-      } else {
-        source.text = null
+  const resolveTooltip = (control, includeChildren = false) => {
+    if (!control || control === tip || tip.contains(control)) return null
+    const explicit = control.closest?.("[data-tooltip], [title]")
+    if (explicit) {
+      const native = explicit.getAttribute("title")
+      if (native != null) {
+        const source = nativeSources.get(explicit) || {title: native, text: null, label: null}
+        source.title = native
+        if (!explicit.dataset.tooltip || explicit.dataset.tooltip === source.text) {
+          explicit.dataset.tooltip = native
+          source.text = native
+        } else {
+          source.text = null
+        }
+        if ((source.label !== null && explicit.getAttribute("aria-label") === source.label) ||
+          (!explicit.getAttribute("aria-label") && !explicit.getAttribute("aria-labelledby") && !explicit.textContent.trim())) {
+          explicit.setAttribute("aria-label", explicit.dataset.tooltip)
+          source.label = explicit.dataset.tooltip
+        }
+        nativeSources.set(explicit, source)
+        explicit.removeAttribute("title")
       }
-      if ((source.label !== null && el.getAttribute("aria-label") === source.label) ||
-        (!el.getAttribute("aria-label") && !el.getAttribute("aria-labelledby") && !el.textContent.trim())) {
-        el.setAttribute("aria-label", el.dataset.tooltip)
-        source.label = el.dataset.tooltip
-      }
-      nativeSources.set(el, source)
-      el.removeAttribute("title")
+      return explicit.dataset.tooltip ? {owner: explicit, text: explicit.dataset.tooltip} : null
     }
-    const text = el?.dataset.tooltip
+    if (control.matches("input[type=password], input[type=file]")) return null
+
+    const candidates = [control]
+    if (includeChildren) candidates.push(...control.querySelectorAll("*"))
+    for (let ancestor = control.parentElement; ancestor && ancestor !== document.body; ancestor = ancestor.parentElement) {
+      candidates.push(ancestor)
+    }
+    for (const owner of candidates) {
+      if (owner.matches("input[type=password], input[type=file]")) continue
+      const style = getComputedStyle(owner)
+      if (style.overflowX === "auto" || style.overflowX === "scroll" ||
+        style.overflowY === "auto" || style.overflowY === "scroll") continue
+      const clipsX = (style.overflowX === "hidden" || style.overflowX === "clip") && owner.scrollWidth > owner.clientWidth
+      const clipsY = (style.overflowY === "hidden" || style.overflowY === "clip" || Number(style.webkitLineClamp) > 0) && owner.scrollHeight > owner.clientHeight
+      if (!clipsX && !clipsY) continue
+
+      let text = owner.matches("input, textarea") ? owner.value : owner.innerText
+      if (!text.trim()) continue
+      if (owner.matches("input, textarea")) {
+        if (style.textTransform === "uppercase") text = text.toUpperCase()
+        else if (style.textTransform === "lowercase") text = text.toLowerCase()
+      }
+      return {owner, text}
+    }
+    return null
+  }
+
+  const reveal = (source, control, x, y) => {
+    const {owner: el, text} = source || {}
     if (!text || el === dismissed) return hide()
 
     if (target !== el || described !== control) hide()
     target = el
     described = control
-    anchorX = x
-    anchorY = y
     if (tip.textContent !== text) tip.textContent = text
     tip.hidden = false
     const descriptions = new Set((control.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean))
@@ -67,26 +100,46 @@ export default function initTooltips() {
     tip.style.top = `${Math.max(0, y + OFFSET + height > window.innerHeight ? y - OFFSET - height : y + OFFSET)}px`
   }
 
+  const refresh = () => {
+    const focusedSource = resolveTooltip(focused, true)
+    const source = focusedSource || resolveTooltip(hovered)
+    const control = focusedSource ? focused : source?.owner
+    const bounds = focusedSource && focused.getBoundingClientRect()
+    reveal(source, control, bounds?.left ?? anchorX, bounds?.bottom ?? anchorY)
+
+    const elements = new Set()
+    for (const control of [hovered, focused]) {
+      for (let el = control; el && el !== document.body; el = el.parentElement) elements.add(el)
+    }
+    if (focused) focused.querySelectorAll("*").forEach(el => elements.add(el))
+    if (source) elements.add(source.owner)
+    if (elements.size !== observed.size || [...elements].some(el => !observed.has(el))) {
+      resizeObserver.disconnect()
+      elements.forEach(el => resizeObserver.observe(el))
+      observed = elements
+    }
+  }
+
   const onMove = event => {
-    const el = event.target.closest?.("[data-tooltip], [title]")
-    if (el !== dismissed) dismissed = null
-    if (focused) return
-    reveal(el, el, event.clientX, event.clientY)
+    hovered = event.target
+    anchorX = event.clientX
+    anchorY = event.clientY
+    if (resolveTooltip(hovered)?.owner !== dismissed) dismissed = null
+    refresh()
   }
 
   const onFocus = event => {
-    const owner = event.target.closest?.("[data-tooltip], [title]")
-    focused = owner ? {owner, control: event.target} : null
+    focused = event.target
     dismissed = null
-    if (focused) {
-      const bounds = focused.control.getBoundingClientRect()
-      reveal(focused.owner, focused.control, bounds.left, bounds.bottom)
-    } else hide()
+    refresh()
   }
 
   const onBlur = () => {
+    hovered = null
     focused = null
     dismissed = null
+    resizeObserver.disconnect()
+    observed.clear()
     hide()
   }
 
@@ -97,7 +150,9 @@ export default function initTooltips() {
     }
   }
 
-  const observer = new MutationObserver(() => {
+  const resizeObserver = new ResizeObserver(refresh)
+  const observer = new MutationObserver((records) => {
+    if (records.length && records.every(record => record.target === tip || tip.contains(record.target))) return
     nativeSources.forEach((source, el) => {
       if (!el.isConnected) {
         if ((source.text === null || el.dataset.tooltip === source.text) && el.getAttribute("title") == null) {
@@ -108,23 +163,23 @@ export default function initTooltips() {
         nativeSources.delete(el)
       }
     })
-    if ((focused && (!focused.owner.isConnected || !focused.control.isConnected)) ||
+    if ((hovered && !hovered.isConnected) || (focused && !focused.isConnected) ||
       (target && (!target.isConnected || !described.isConnected))) onBlur()
-    else if (target) {
-      const bounds = focused?.control.getBoundingClientRect()
-      reveal(target, described, bounds?.left ?? anchorX, bounds?.bottom ?? anchorY)
-    }
+    else if (hovered || focused) refresh()
   })
-  observer.observe(document.body, {childList: true, subtree: true, attributes: true, attributeFilter: ["data-tooltip", "title", "aria-describedby"]})
+  observer.observe(document.body, {childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["data-tooltip", "title", "aria-describedby", "class", "style", "value", "type", "hidden"]})
 
   const listeners = [
     [document, "mousemove", onMove],
     [document, "focusin", onFocus],
     [document, "focusout", onBlur],
     [document, "keydown", onKey],
-    [document, "mousedown", hide],
-    [document, "mouseleave", hide],
-    [document, "scroll", hide, true],
+    [document, "input", refresh],
+    [document, "change", refresh],
+    [document, "mousedown", onBlur],
+    [document, "mouseleave", onBlur],
+    [document, "scroll", onBlur, true],
+    [window, "resize", refresh],
     [window, "blur", onBlur],
     [window, "phx:page-loading-start", onBlur],
   ]

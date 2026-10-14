@@ -19,6 +19,116 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   alias Phoenix.LiveView.JS
 
+  @color_space_options Elixirbits.CoreUtils.Color.options()
+
+  def on_mount(:inputs, _params, _session, socket) do
+    socket =
+      Phoenix.LiveView.attach_hook(socket, :core_input_options, :handle_event, fn
+        "live_select_change", %{"id" => id} = params, socket ->
+          if String.ends_with?(id, "_color_space_select") do
+            options =
+              Elixirbits.CoreUtils.Search.filter(
+                @color_space_options,
+                Map.get(params, "text", "")
+              )
+
+            Phoenix.LiveView.send_update(LiveSelect.Component, id: id, options: options)
+            {:halt, socket}
+          else
+            {:cont, socket}
+          end
+
+        "color_input", %{"id" => id, "selector_id" => selector_id} = params, socket ->
+          colors = socket.private[:core_colors] || %{}
+          value = Map.get(params, "value", "")
+          format = Map.get(params, "format", "hex")
+          operation = params["operation"]
+
+          if operation == "release" do
+            {:halt, %{},
+             Phoenix.LiveView.put_private(socket, :core_colors, Map.delete(colors, id))}
+          else
+            source =
+              case colors[id] do
+                %{value: ^value, color: nil} -> {:ok, nil}
+                %{value: ^value} = state -> {:ok, state}
+                _ -> Elixirbits.CoreUtils.Color.inspect_color(value)
+              end
+
+            result =
+              if String.ends_with?(id, "-color-input") and
+                   selector_id == String.replace_suffix(id, "-color-input", "_color_space_select") and
+                   Enum.any?(@color_space_options, fn {_label, mode} -> mode == format end) do
+                case operation do
+                  "validate" ->
+                    source
+
+                  "convert" ->
+                    with {:ok, state} <- source do
+                      if state && state.format != format,
+                        do: Elixirbits.CoreUtils.Color.convert_color(state.color, format),
+                        else: {:ok, state}
+                    end
+
+                  "pick" ->
+                    previous =
+                      case source do
+                        {:ok, state} -> state
+                        _ -> nil
+                      end
+
+                    with %{"r" => r, "g" => g, "b" => b, "a" => a}
+                         when is_number(r) and is_number(g) and is_number(b) and is_number(a) <-
+                           params["rgba"],
+                         alpha =
+                           if(previous && !params["alpha_changed"], do: previous.rgba.a, else: a),
+                         {:ok, picked} <- Color.new([r / 255, g / 255, b / 255, alpha * 1.0]) do
+                      Elixirbits.CoreUtils.Color.convert_color(picked, format)
+                    else
+                      _ -> {:error, "must be a supported color value"}
+                    end
+
+                  _ ->
+                    {:error, "must be a supported color value"}
+                end
+              else
+                {:error, "must be a supported color value"}
+              end
+
+            case result do
+              {:ok, state} ->
+                state =
+                  state || %{value: value, format: format, swatch: nil, rgba: nil, color: nil}
+
+                Phoenix.LiveView.send_update(LiveSelect.Component,
+                  id: selector_id,
+                  options: @color_space_options,
+                  value: state.format
+                )
+
+                socket =
+                  Phoenix.LiveView.put_private(socket, :core_colors, Map.put(colors, id, state))
+
+                label =
+                  Enum.find_value(@color_space_options, fn {label, mode} ->
+                    if mode == state.format, do: label
+                  end)
+
+                {:halt, state |> Map.delete(:color) |> Map.merge(%{valid: true, label: label}),
+                 socket}
+
+              {:error, _reason} ->
+                {:halt, %{valid: false, error: "Enter a supported color value."}, socket}
+            end
+          end
+
+        _event, _params, socket ->
+          {:cont, socket}
+      end)
+
+    {:cont, socket}
+  end
+
   @doc """
   Renders a Phoenix form with browser constraint validation disabled by default.
 
@@ -227,15 +337,16 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   ## Variant
 
-  A labeled button that stands alongside `action_button/1` takes a `variant` instead of hand-rolled classes, so it matches the icon buttons in height and tone: `:primary` for the action a page exists to perform, `:neutral` for everything else, `:danger` for destructive confirmations.
+  A labeled action that needs a filled button takes a `variant` instead of hand-rolled classes, so it matches the icon buttons in height and tone: `:primary` for the preferred action, `:neutral` for a secondary action that needs button emphasis, and `:danger` for destructive confirmations.
 
       <.button variant={:primary} phx-click="complete">Complete &amp; post variances</.button>
       <.button variant={:neutral} phx-click="cancel_delete">Cancel</.button>
 
-  Leaving `variant` unset keeps the bare button, for tiles, tabs, and other controls that are not part of the action family.
+  Section tabs use `:primary` when selected and `:neutral` otherwise. Leaving `variant` unset supports intentional text actions, such as the subordinate magic-link sign-in option, with contextual text and hover/focus styling. Controls with their own shape, such as square toolbar icons, also leave the variant unset and use the shared button color utilities. Inline and hierarchical navigation links keep their text presentation through `<.link>`.
   """
   attr :rest, :global,
-    include: ~w(href navigate patch method download name value disabled type target rel)
+    include:
+      ~w(href navigate patch method download name value disabled type target rel popovertarget popovertargetaction)
 
   attr :variant, :atom, values: [nil, :primary, :neutral, :danger], default: nil
 
@@ -407,24 +518,40 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   ## File type
 
-  Passing `upload` puts a strip of previews under the control, the way a `:quick_tags` select puts its tags under the input: the files already stored on the record, followed by the ones picked but not yet saved. Give `stored` the URLs held on the record, wrapping a single-file value in a list. Describe each preview with the `preview` slot (given a stored URL) and the `pending` slot (given an upload entry).
+  File fields keep picked files in the browser until submission. Pass `upload` for LiveView uploads and give `stored` the URLs already held on the record, wrapping a single-file value in a list. `selection` accepts `"single"` for one replacement, `"singles"` for a collection picked one file at a time, or `"multiple"` for a collection picked together. Without `selection`, LiveView's `max_entries` or a native multipart field's `multiple` determines the mode. The real upload configuration's `max_entries` remains the queue capacity; `"single"` requires `max_entries: 1`. Picking a single replacement hides the stored preview until the replacement is canceled or saved. With previews enabled, `"singles"` displays the file count in the picker and one preview with controls inside it to browse the collection; thumbnail filenames appear in the top-left corner on hover or keyboard focus, and the current position appears in the bottom-right corner on hover. Without previews, `"single"` and `"singles"` show the filename inside the input; `"singles"` also shows the current position and stacked navigation arrows.
 
-  `preview_as` controls the layout of each preview and its clear button. The default `"tag"` wraps the slot in the same chip a LiveSelect tag uses, with the clear button inline after the label. This suits previews that show only a name, such as a document. `"thumbnail"` lets the slot render the file content and places a round clear button in its top-right corner, which suits previews that show an image.
+  `preview` defaults to `false`, which shows filenames. Setting it to `true` supplies image previews and the browser's native PDF viewer. The `stored_preview` and `pending_preview` slots override media rendering for stored URLs and pending upload entries. `preview_as` defaults to `"thumbnail"` when previews are enabled and `"tag"` otherwise. Explicit `"tag"` hides the media and shows its filename chip; `"thumbnail"` supplies the media frame and corner clear button. Single and singles thumbnail filenames appear inside the top-left corner on hover or keyboard focus, while multiple thumbnail filenames stay below the frame. Both layouts reveal the clear button on hover or keyboard focus. Use `thumbnail_class` to size the displayed frame, and `preview_caption` or `pending_caption` to override filenames.
+
+  `editor` defaults to `false`. `true` opens a free crop for image selections, `%{width: 512, height: 512}` requires that exact output size, and `%{ratio: 16 / 9}` requires that crop ratio. Maps enable editing and re-encode the accepted crop in the browser. Editing requires `preview: true`, a `"single"` or `"singles"` selection, and LiveView's `auto_upload` to remain `false`. An image preview's Edit button prepares a replacement for that image; edits to stored files submit the original URL as `<upload.name>_replacements[entry.ref]` so the save handler can replace the right stored item. PDFs and other file types skip the image editor. Canceling the editor preserves the previous selection.
+
+  Give `preview_id` the ID of a `<.file_preview>` destination to place a single or singles preview elsewhere in the same LiveView. Keep the destination mounted, including when previews are turned off. The input still owns the upload configuration, stored files, editor, and all media and caption slots; LiveView's native portal renders that one preview collection into the destination. Multiple selection keeps its previews inline. The destination's `class` controls its placement and size; use `thumbnail_class="h-full w-full"` on the input when the destination sets the thumbnail dimensions.
 
   Either way a LiveView rendering a file field handles exactly two events: `"remove_upload"` with `phx-value-url` for a stored file, and `"cancel_upload"` with `phx-value-ref` for a picked one. The editable modes (`"enabled"`, `"text"`, and `"text-enabled"`) keep the picker and those buttons. Other visible modes keep the previews, remove those buttons, and hide and disable the file control, leaving the field read-only while preserving the browser's picked files for pending previews. Hidden modes apply to the entire field, including its previews. `"hidden-disabled"` keeps the hidden native input disabled and retains the previews so switching modes preserves picked files.
 
   ```heex
   <.input
     type="file"
-    name="images"
-    label="Images"
-    upload={@uploads.images}
-    stored={@images}
-    preview_as="thumbnail"
-  >
-    <:preview :let={url}><img src={url} class="size-20 rounded-default object-cover" /></:preview>
-    <:pending :let={entry}><.live_img_preview entry={entry} class="size-20" /></:pending>
-  </.input>
+    name="portrait"
+    label="Portrait"
+    upload={@uploads.portrait}
+    stored={List.wrap(@portrait)}
+    preview={true}
+    editor={%{width: 512, height: 512}}
+    thumbnail_class="size-20"
+  />
+  ```
+
+  ```heex
+  <.input
+    type="file"
+    upload={@uploads.portrait}
+    stored={List.wrap(@portrait)}
+    preview={true}
+    preview_id="portrait-preview"
+    thumbnail_class="h-full w-full"
+  />
+
+  <.file_preview id="portrait-preview" class="size-20" />
   ```
 
   ## Render as
@@ -436,7 +563,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     * `"like-enabled"`: a lookalike span with the enabled input visual. No input is rendered, so the value does not submit
     * `"like-disabled"`: a lookalike span with the disabled input visual plus the real input rendered hidden, so native input behavior (submission) still works
     * `"hidden"` / `"hidden-enabled"`: the real input rendered hidden, so native input behavior still works
-    * `"hidden-disabled"`: nothing is rendered, except live uploads retain their disabled input and previews inside a hidden field to preserve picked files
+    * `"hidden-disabled"`: nothing is rendered, except file fields retain their disabled input and previews inside a hidden field to preserve picked files
     * `"text"` / `"text-enabled"`: the real editable input with a plain text visual; picker controls retain their popups, passwords show plain text without a visibility action, checkbox and switch show clickable state sentences, and radio shows only its selected value while preserving submission
     * `"text-disabled"`: plain text plus the real input rendered hidden, so native input behavior (submission) still works
   """
@@ -499,14 +626,45 @@ defmodule ElixirbitsWeb.CoreComponents do
     default: [],
     doc: "for a file field, the URLs of the files already held on the record"
 
+  attr :selection, :string,
+    default: nil,
+    values: [nil, "single", "singles", "multiple"],
+    doc:
+      "for a file field, one replacement, a collection picked individually, or a collection picked together"
+
+  attr :preview, :boolean,
+    default: false,
+    doc: "for a file field, shows built-in image and native PDF previews"
+
+  attr :preview_id, :string,
+    default: nil,
+    doc:
+      "for single or singles selection, the ID of a file_preview destination rendered elsewhere in the same LiveView"
+
+  attr :editor, :any,
+    default: false,
+    doc:
+      "with previews and single or singles selection, false, true for a free crop, or a map containing positive width and height or a positive ratio"
+
   attr :preview_as, :string,
-    default: "tag",
-    values: ~w(tag thumbnail),
+    default: nil,
+    values: [nil, "tag", "thumbnail"],
     doc:
       "how a file field draws each preview: \"tag\" for a chip that clears like a LiveSelect tag, \"thumbnail\" for an image tile with a corner clear button"
 
-  slot :preview, doc: "for a file field, renders one stored file, given its URL"
-  slot :pending, doc: "for a file field, renders one picked file, given its upload entry"
+  attr :thumbnail_class, :any,
+    default: "h-36 w-full",
+    doc: "the size of a thumbnail's media frame"
+
+  slot :stored_preview, doc: "for a file field, overrides one stored file's media, given its URL"
+
+  slot :pending_preview,
+    doc: "for a file field, overrides one picked file's media, given its upload entry"
+
+  slot :preview_caption, doc: "for a file field, renders a stored file's caption, given its URL"
+
+  slot :pending_caption,
+    doc: "for a file field, renders a picked file's caption, given its upload entry"
 
   @live_select_rest_global (if Code.ensure_loaded?(LiveSelect.Component) do
                               LiveSelect.Component.default_opts()
@@ -583,161 +741,398 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
-  def input(%{upload: upload} = assigns) when not is_nil(upload) do
-    messages =
-      upload.entries
-      |> Enum.flat_map(&upload_errors(upload, &1))
-      |> Enum.concat(upload_errors(upload))
-      |> Enum.uniq()
-      |> Enum.map(fn
-        :too_large -> "File is too large (max #{div(upload.max_file_size, 1_000_000)}MB)."
-        :too_many_files -> "Too many files (max #{upload.max_entries})."
-        :not_accepted -> "Unsupported file type."
-        _other -> "Upload failed."
-      end)
+  def input(%{type: type, upload: upload} = assigns) when type == "file" or not is_nil(upload) do
+    selection =
+      assigns.selection ||
+        cond do
+          upload -> if(upload.max_entries == 1, do: "single", else: "multiple")
+          assigns.rest[:multiple] in [nil, false] -> "single"
+          true -> "multiple"
+        end
 
-    # A thumbnail shows the file, so its remove button sits at the corner of the image. A tag shows only a label, so its clear button works like a LiveSelect tag's.
-    {previews_class, preview_class, clear_class, clear_icon_name, clear_icon_class} =
-      if assigns.preview_as == "thumbnail" do
-        {"grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 mt-3", "relative",
-         "absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-error text-content hover:overlay-dark",
-         "hero-x-mark", "size-3"}
+    if upload && selection == "single" && upload.max_entries != 1,
+      do: raise(ArgumentError, "single selection requires max_entries: 1")
+
+    editor =
+      case assigns.editor do
+        false ->
+          false
+
+        true ->
+          true
+
+        %{width: width, height: height} = options
+        when map_size(options) == 2 and is_integer(width) and width > 0 and
+               is_integer(height) and height > 0 ->
+          options
+
+        %{ratio: ratio} = options
+        when map_size(options) == 1 and is_number(ratio) and ratio > 0 ->
+          options
+
+        _ ->
+          raise ArgumentError,
+                "editor must be false, true, %{width: positive_integer, height: positive_integer}, or %{ratio: positive_number}"
+      end
+
+    if editor != false and selection == "multiple",
+      do: raise(ArgumentError, "image editing requires single or singles selection")
+
+    if editor != false and not assigns.preview,
+      do: raise(ArgumentError, "image editing requires preview: true")
+
+    if (editor != false and upload) && upload.auto_upload?,
+      do: raise(ArgumentError, "image editing requires auto_upload: false")
+
+    entries = if upload, do: upload.entries, else: []
+    file_count = length(assigns.stored) + length(entries)
+    file_inline = selection != "multiple" && (!assigns.preview || selection == "singles")
+    file_steps = selection == "singles" && !assigns.preview
+    file_detached = assigns.preview_id != nil && selection != "multiple"
+    first_entry = List.first(entries)
+    first_url = List.first(assigns.stored)
+
+    {file_name, file_caption, file_caption_value} =
+      cond do
+        selection == "single" && first_entry ->
+          {first_entry.client_name, assigns.pending_caption, first_entry}
+
+        first_url ->
+          {if(String.starts_with?(first_url, "data:"),
+             do: "File",
+             else: Path.basename(URI.parse(first_url).path || first_url)
+           ), assigns.preview_caption, first_url}
+
+        first_entry ->
+          {first_entry.client_name, assigns.pending_caption, first_entry}
+
+        true ->
+          {assigns[:value] || assigns.rest[:placeholder] || "Choose a file", [], nil}
+      end
+
+    file_id = if upload, do: upload.ref, else: assigns.id || assigns[:name]
+    preview_as = assigns.preview_as || if(assigns.preview, do: "thumbnail", else: "tag")
+    text_look = assigns.render_as in ["text", "text-enabled", "text-disabled"]
+
+    editable =
+      assigns.render_as in ["enabled", "text", "text-enabled", "hidden", "hidden-enabled"]
+
+    placeholder = assigns.rest[:placeholder]
+
+    messages =
+      if upload do
+        entries
+        |> Enum.flat_map(&upload_errors(upload, &1))
+        |> Enum.concat(upload_errors(upload))
+        |> Enum.uniq()
+        |> Enum.map(fn
+          :too_large -> "File is too large (max #{div(upload.max_file_size, 1_000_000)}MB)."
+          :too_many_files -> "Too many files (max #{upload.max_entries})."
+          :not_accepted -> "Unsupported file type."
+          _other -> "Upload failed."
+        end)
       else
-        {"flex flex-wrap gap-1 p-1",
-         "group/tag mr-1 mt-1 p-1.5 text-sm rounded-default border border-outline bg-brand overlay-opacity-[0.15] flex items-center gap-1",
-         "min-h-5 min-w-5 text-error cursor-pointer opacity-0 pointer-events-none group-hover/tag:opacity-100 group-hover/tag:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto disabled:opacity-0!",
-         "hero-x-mark-mini", "size-5"}
+        []
       end
 
     assigns =
       assigns
-      |> assign(:errors, assigns.errors ++ messages)
-      |> assign(:previews_class, previews_class)
-      |> assign(:preview_class, preview_class)
-      |> assign(:clear_class, clear_class)
-      |> assign(:clear_icon_name, clear_icon_name)
-      |> assign(:clear_icon_class, clear_icon_class)
-      |> assign(:text_look, assigns.render_as in ["text", "text-enabled"])
+      |> assign(:file_id, file_id)
+      |> assign(:selection, selection)
       |> assign(
-        :upload_editable,
-        assigns.render_as in ["enabled", "text", "text-enabled", "hidden", "hidden-enabled"]
+        :file_upload,
+        if(upload && selection != "multiple", do: %{upload | max_entries: 1}, else: upload)
+      )
+      |> assign(:file_entries, entries)
+      |> assign(:file_inline, file_inline)
+      |> assign(:file_steps, file_steps)
+      |> assign(:file_detached, file_detached)
+      |> assign(:file_name, file_name)
+      |> assign(:file_caption, file_caption)
+      |> assign(:file_caption_value, file_caption_value)
+      |> assign(:file_position, "#{if(file_count > 0, do: 1, else: 0)}/#{file_count}")
+      |> assign(
+        :file_count_label,
+        "#{file_count} #{if(file_count == 1, do: "file", else: "files")}"
+      )
+      |> assign(:file_entry_refs, Jason.encode!(Enum.map(entries, & &1.ref)))
+      |> assign(:file_editor, Jason.encode!(editor))
+      |> assign(:file_editor_enabled, editor != false)
+      |> assign(:file_editable, editable)
+      |> assign(:preview_as, preview_as)
+      |> assign(:text_look, text_look)
+      |> assign(:label_as_placeholder, placeholder in [nil, ""])
+      |> assign(
+        :file_placeholder,
+        placeholder || if(selection == "multiple", do: "Choose files", else: "Choose a file")
+      )
+      |> assign(
+        :file_readonly_name,
+        assigns[:value] || placeholder ||
+          if(selection == "multiple", do: "Choose files", else: "Choose a file")
+      )
+      |> assign(:errors, assigns.errors ++ messages)
+      |> assign(
+        :rest,
+        if(!upload && selection == "multiple",
+          do: Map.put(assigns.rest, :multiple, true),
+          else: Map.delete(assigns.rest, :multiple)
+        )
+      )
+      |> assign(
+        :previews_class,
+        if preview_as == "thumbnail" do
+          [
+            "grid gap-2",
+            !file_detached && selection != "singles" && "mt-3",
+            file_detached && "h-full",
+            if(selection == "multiple",
+              do: "grid-cols-[1fr_1fr_1fr_1fr]",
+              else: "grid-cols-[1fr]"
+            )
+          ]
+        else
+          if(selection == "singles", do: "grid grid-cols-[1fr]", else: "flex flex-wrap gap-1 p-1")
+        end
       )
 
     ~H"""
-    <div class={[
-      @render_as in ["hidden", "hidden-enabled", "hidden-disabled"] && "hidden",
-      @text_look && "group/upload"
-    ]}>
-      <label
-        for={@upload.ref}
+    <div
+      id={"#{@file_id}-file-input"}
+      phx-hook="FileInput"
+      data-file-preview={to_string(@preview)}
+      data-file-preview-as={@preview_as}
+      data-file-editor={@file_editor}
+      data-file-selection={@selection}
+      data-file-upload-name={@upload && @upload.name}
+      data-file-entry-ref={List.first(@file_entries) && List.first(@file_entries).ref}
+      data-file-entry-refs={@file_entry_refs}
+      data-file-max-entries={@upload && @upload.max_entries}
+      data-file-max-size={@upload && @upload.max_file_size}
+      data-file-mode={@render_as}
+      data-file-collection-id={"#{@file_id}-file-previews"}
+      data-file-preview-id={(@file_detached && @preview_id) || nil}
+      class={[
+        "relative",
+        @render_as in ["hidden", "hidden-enabled", "hidden-disabled"] && "hidden",
+        @text_look && "group/upload"
+      ]}
+    >
+      <div
+        data-file-control
         class={[
-          if(@upload_editable, do: "relative block", else: "hidden"),
-          @text_look && "flex flex-col gap-1 cursor-pointer has-[:disabled]:cursor-not-allowed"
+          "relative group/file-control",
+          !@file_editable && !@file_inline && "hidden",
+          @file_inline &&
+            [
+              "grid items-center",
+              cond do
+                @file_steps -> "grid-cols-[minmax(0,1fr)_auto_1.75rem_1.75rem]"
+                @preview && @upload -> "grid-cols-[minmax(0,1fr)]"
+                true -> "grid-cols-[minmax(0,1fr)_1.75rem]"
+              end,
+              !@text_look &&
+                [
+                  "input-floating-wrapper min-h-11 rounded-default border bg-transparent text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+                  (@errors == [] || @error_class) && "border-outline",
+                  @errors != [] &&
+                    (@error_class || "border-error focus-within:border-error focus-within:ring-error")
+                ],
+              @text_look && if(@label, do: "min-h-7", else: "min-h-11"),
+              (@rest[:disabled] || @render_as in ["disabled", "like-disabled"]) &&
+                "overlay-dark cursor-not-allowed text-subcontent"
+            ]
         ]}
       >
-        <.live_file_input
-          upload={@upload}
-          {@rest}
-          disabled={@rest[:disabled] || not @upload_editable}
-          class={
-            if @text_look,
-              do: "sr-only",
-              else: [
+        <label
+          for={@file_id}
+          class={[
+            "min-w-0",
+            if(@file_editable || @file_inline, do: "relative block", else: "hidden"),
+            @text_look && "flex flex-col gap-1 cursor-pointer has-[:disabled]:cursor-not-allowed"
+          ]}
+        >
+          <% input_class =
+            if @text_look do
+              "sr-only"
+            else
+              [
                 @class ||
                   [
-                    "input-floating-control block w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                    "block w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                    if(@label, do: "input-floating-control", else: "py-2"),
                     (@errors == [] || @error_class) && "border-outline"
                   ],
                 @errors != [] && (@error_class || "border-error focus:border-error focus:ring-error")
               ]
-          }
-        />
+            end %>
+          <.live_file_input
+            :if={@upload}
+            upload={@file_upload}
+            {@rest}
+            data-file-input
+            disabled={@rest[:disabled] || not @file_editable}
+            class={
+              if @file_inline,
+                do: ["sr-only peer", @label && !@text_look && "input-floating-control"],
+                else: input_class
+            }
+          />
+          <input
+            :if={!@upload}
+            type="file"
+            id={@file_id}
+            name={@name}
+            {Map.delete(@rest, :placeholder)}
+            data-file-input
+            placeholder={
+              if @label && !@text_look && @label_as_placeholder, do: " ", else: @rest[:placeholder]
+            }
+            disabled={@rest[:disabled] || not @file_editable}
+            class={
+              if @file_inline,
+                do: ["sr-only peer", @label && !@text_look && "input-floating-control"],
+                else: input_class
+            }
+          />
+          <span
+            :if={(@file_editable || @file_inline) && @label not in [nil, ""]}
+            class={
+              if @text_look,
+                do: ["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"],
+                else: [
+                  "input-floating-label",
+                  !@label_as_placeholder && "input-floating-label-hidden",
+                  @errors != [] && "input-floating-label-error"
+                ]
+            }
+          >
+            {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+          </span>
+          <span
+            data-file-name
+            data-file-readonly-name={if @file_inline && !@file_editable, do: ""}
+            data-file-display={if @file_inline && !@text_look, do: ""}
+            data-file-count={if @selection == "singles" && @preview && !@text_look, do: ""}
+            data-file-default-name={
+              if @file_inline && !@file_editable, do: @file_readonly_name, else: @file_placeholder
+            }
+            aria-live={if @selection == "singles", do: "polite"}
+            class={[
+              if(
+                @file_inline ||
+                  (@text_look && (@upload == nil || (@stored == [] && @file_entries == []))),
+                do: "block",
+                else: "hidden"
+              ),
+              "w-full text-sm overflow-hidden text-ellipsis whitespace-nowrap group-has-[input:focus-visible]/upload:underline",
+              if(@file_inline && !@text_look,
+                do: [
+                  @class || "min-h-10.5 px-3 py-2.5",
+                  "peer-focus-visible:underline",
+                  @rest[:disabled] && "cursor-not-allowed"
+                ],
+                else: if(@label, do: "min-h-6 py-1", else: "min-h-11 content-center text-center")
+              ),
+              if(@rest[:disabled] || !@file_editable, do: "text-subcontent", else: "text-content"),
+              @errors != [] && (@error_class || "text-error")
+            ]}
+          >{cond do
+            @selection == "singles" && @preview -> @file_count_label
+            @file_inline && @file_caption != [] -> render_slot(@file_caption, @file_caption_value)
+            @file_inline -> @file_name
+            true -> @file_placeholder
+          end}</span>
+        </label>
         <span
-          :if={@upload_editable && @label not in [nil, ""]}
-          class={
-            if @text_look,
-              do: ["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"],
-              else: ["input-floating-label", @errors != [] && "input-floating-label-error"]
-          }
+          :if={@file_steps}
+          data-file-position
+          class="px-1 text-sm whitespace-nowrap text-subcontent"
+        >{@file_position}</span>
+        <div
+          :if={@upload == nil || (@file_inline && !@preview)}
+          class={if @file_inline, do: "grid place-items-center", else: "contents"}
         >
-          {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
-            aria-hidden="true"
-            class="ml-1 text-error"
-          >*</span>
-        </span>
-        <span
-          :if={@text_look && @stored == [] && @upload.entries == []}
-          class={[
-            "block w-full text-sm text-subcontent group-has-[input:focus-visible]/upload:underline",
-            if(@label, do: "min-h-6 py-1", else: "min-h-11 text-center"),
-            @errors != [] && (@error_class || "text-error")
-          ]}
-        >{@rest[:placeholder] || "Choose files"}</span>
-      </label>
-
-      <span
-        :if={not @upload_editable and @label not in [nil, ""]}
-        class="block text-sm font-medium text-subcontent"
-      >
-        {@label}<span
-          :if={@rest[:required] && @label not in [nil, ""]}
-          aria-hidden="true"
-          class="ml-1 text-error"
-        >*</span>
-      </span>
-
-      <div :if={@stored != [] or @upload.entries != []} class={@previews_class}>
-        <div :for={url <- @stored} class={@preview_class}>
-          <%= if @text_look do %>
-            <label
-              for={@upload.ref}
-              class={[
-                "group-has-[input:focus-visible]/upload:underline",
-                if(@rest[:disabled], do: "cursor-not-allowed", else: "cursor-pointer")
-              ]}
-            >{render_slot(@preview, url)}</label>
-          <% else %>
-            {render_slot(@preview, url)}
-          <% end %>
           <.button
-            :if={@upload_editable}
             type="button"
-            disabled={@rest[:disabled]}
-            phx-click="remove_upload"
-            aria-label="Remove file"
-            phx-value-url={url}
-            class={@clear_class}
-          >
-            <.icon name={@clear_icon_name} class={@clear_icon_class} />
-          </.button>
+            data-file-clear
+            hidden
+            disabled={@rest[:disabled] || not @file_editable}
+            aria-label="Clear selected file"
+            class={[
+              "grid size-7 place-items-center rounded-default text-error cursor-pointer focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
+              !@file_inline && "absolute top-2 right-2 bg-primary"
+            ]}
+          ><.icon name="hero-x-mark-mini" class="size-5" /></.button>
         </div>
-        <div :for={entry <- @upload.entries} class={@preview_class}>
-          <%= if @text_look do %>
-            <label
-              for={@upload.ref}
-              class={[
-                "group-has-[input:focus-visible]/upload:underline",
-                if(@rest[:disabled], do: "cursor-not-allowed", else: "cursor-pointer")
-              ]}
-            >{render_slot(@pending, entry)}</label>
-          <% else %>
-            {render_slot(@pending, entry)}
-          <% end %>
+        <div
+          :if={@file_steps}
+          class={[
+            "grid grid-cols-[1fr] grid-rows-[1fr_1fr] self-stretch border-l border-outline",
+            @text_look &&
+              "opacity-0 pointer-events-none group-hover/file-control:opacity-100 group-hover/file-control:pointer-events-auto has-[:focus-visible]:opacity-100 has-[:focus-visible]:pointer-events-auto"
+          ]}
+        >
           <.button
-            :if={@upload_editable}
-            aria-label={"Cancel #{entry.client_name}"}
             type="button"
-            disabled={@rest[:disabled]}
-            phx-click="cancel_upload"
-            phx-value-ref={entry.ref}
-            class={@clear_class}
-          >
-            <.icon name={@clear_icon_name} class={@clear_icon_class} />
-          </.button>
+            data-file-cycle-input="next"
+            data-file-next
+            aria-label="Next file"
+            aria-controls={@file_id}
+            disabled={length(@stored) + length(@file_entries) < 2}
+            class={[
+              "grid min-h-3.5 place-items-center rounded-none text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
+              !@text_look && "rounded-tr-default hover:overlay-dark"
+            ]}
+          ><.icon name="hero-chevron-up-micro" class="size-3" /></.button>
+          <.button
+            type="button"
+            data-file-cycle-input="previous"
+            data-file-previous
+            aria-label="Previous file"
+            aria-controls={@file_id}
+            disabled={length(@stored) + length(@file_entries) < 2}
+            class={[
+              "grid min-h-3.5 place-items-center rounded-none border-t border-outline text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
+              !@text_look && "rounded-br-default hover:overlay-dark"
+            ]}
+          ><.icon name="hero-chevron-down-micro" class="size-3" /></.button>
         </div>
       </div>
-
+      <span
+        :if={(not @file_editable && !@file_inline) and @label not in [nil, ""]}
+        class="block text-sm font-medium text-subcontent"
+      >
+        {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+      </span>
+      <span
+        :if={@upload == nil && !@file_inline && not @file_editable}
+        data-file-readonly-name
+        data-file-default-name={@file_readonly_name}
+        class={[
+          "block w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-subcontent",
+          if(@text_look,
+            do: "min-h-6 py-1",
+            else: [
+              "min-h-11 rounded-default border border-outline bg-transparent px-3 py-2",
+              @render_as in ["disabled", "like-disabled"] && "overlay-dark"
+            ]
+          )
+        ]}
+      >{if @selection == "singles", do: @file_count_label, else: @file_readonly_name}</span>
+      <%= if @file_detached do %>
+        <.portal
+          id={"#{@file_id}-file-preview-portal"}
+          target={"[id=#{Jason.encode!(@preview_id)}]"}
+          class="contents"
+        >
+          {file_previews(assigns)}
+        </.portal>
+      <% else %>
+        {file_previews(assigns)}
+      <% end %>
+      <div id={"#{@file_id}-file-replacements"} phx-update="ignore" data-file-replacements />
+      <p data-file-error hidden role="alert" class="mt-2 text-sm text-error" />
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
@@ -755,9 +1150,128 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
+  def input(%{render_as: render_as, type: "number"} = assigns)
+      when render_as in ["enabled", "text", "text-enabled"] do
+    placeholder = assigns.rest[:placeholder]
+    text_look = render_as in ["text", "text-enabled"]
+    base_id = assigns.id || assigns.name
+
+    assigns =
+      assigns
+      |> assign(:id, base_id)
+      |> assign(:number_id, "#{base_id}-number-input")
+      |> assign(:text_look, text_look)
+      |> assign(:label_as_placeholder, placeholder in [nil, ""])
+      |> assign(
+        :placeholder,
+        if(assigns.label && placeholder in [nil, ""], do: " ", else: placeholder)
+      )
+      |> assign(
+        :rest,
+        assigns.rest |> Map.delete(:placeholder) |> Map.put_new(:"phx-debounce", "blur")
+      )
+
+    ~H"""
+    <div>
+      <div
+        id={@number_id}
+        phx-hook="NumberInput"
+        class={["relative", @text_look && "flex flex-col gap-1"]}
+      >
+        <label
+          :if={@text_look && @label}
+          for={@id}
+          class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
+        >
+          {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+        </label>
+        <div class={[
+          "number-input-control group/number grid grid-cols-[minmax(0,1fr)_1.75rem] items-center",
+          !@text_look &&
+            [
+              "input-floating-wrapper min-h-11 ps-3 rounded-default border bg-transparent text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+              (@errors == [] || @error_class) && "border-outline",
+              @errors != [] &&
+                (@error_class || "border-error focus-within:border-error focus-within:ring-error")
+            ],
+          @text_look && if(@label, do: "min-h-7", else: "min-h-11"),
+          @rest[:disabled] && "overlay-dark cursor-not-allowed text-subcontent"
+        ]}>
+          <input
+            type="number"
+            id={@id}
+            name={@name}
+            value={Phoenix.HTML.Form.normalize_value("number", @value)}
+            placeholder={@placeholder}
+            class={
+              @class ||
+                [
+                  "min-w-0 w-full appearance-none border-0 bg-transparent p-0 text-sm text-content focus:outline-none focus:ring-0 disabled:text-subcontent disabled:cursor-not-allowed",
+                  if(@text_look,
+                    do: [
+                      "py-1 focus-visible:underline",
+                      !@label && "text-center",
+                      @errors != [] && (@error_class || "text-error")
+                    ],
+                    else: "input-floating-control"
+                  )
+                ]
+            }
+            {@rest}
+          />
+          <div class={[
+            "grid grid-cols-[1fr] grid-rows-[1fr_1fr] self-stretch border-l border-outline",
+            @text_look &&
+              "opacity-0 pointer-events-none group-hover/number:opacity-100 group-hover/number:pointer-events-auto has-[:focus-visible]:opacity-100 has-[:focus-visible]:pointer-events-auto"
+          ]}>
+            <.button
+              type="button"
+              data-number-step="1"
+              aria-label="Increase value"
+              aria-controls={@id}
+              disabled={@rest[:disabled] || @rest[:readonly] || @rest[:step] == "any"}
+              class={[
+                "grid min-h-3.5 place-items-center rounded-none text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
+                !@text_look && "rounded-tr-default hover:overlay-dark"
+              ]}
+            >
+              <.icon name="hero-chevron-up-micro" class="size-3" />
+            </.button>
+            <.button
+              type="button"
+              data-number-step="-1"
+              aria-label="Decrease value"
+              aria-controls={@id}
+              disabled={@rest[:disabled] || @rest[:readonly] || @rest[:step] == "any"}
+              class={[
+                "grid min-h-3.5 place-items-center rounded-none border-t border-outline text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
+                !@text_look && "rounded-br-default hover:overlay-dark"
+              ]}
+            >
+              <.icon name="hero-chevron-down-micro" class="size-3" />
+            </.button>
+          </div>
+        </div>
+        <label
+          :if={!@text_look && @label}
+          for={@id}
+          class={[
+            "input-floating-label",
+            !@label_as_placeholder && "input-floating-label-hidden",
+            @errors != [] && "input-floating-label-error"
+          ]}
+        >
+          {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+        </label>
+      </div>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
   def input(%{render_as: render_as, type: type} = assigns)
       when render_as in ["text", "text-enabled"] and
-             type in ["email", "number", "password", "search", "text", "url"] do
+             type in ["email", "password", "search", "text", "url"] do
     assigns =
       assigns
       |> assign(:render_as, "enabled")
@@ -799,36 +1313,105 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
-  def input(%{render_as: render_as, type: type} = assigns)
-      when render_as in ["enabled", "text", "text-enabled"] and type in ["color", "file"] do
+  def input(%{type: "color"} = assigns) do
+    editable = assigns.render_as in ["enabled", "text", "text-enabled"]
+    text_look = assigns.render_as in ["text", "text-enabled", "text-disabled"]
+    disabled_look = assigns.render_as in ["disabled", "like-disabled"]
+    value = assigns[:value] || ""
+    base_id = assigns.id || assigns.name
     placeholder = assigns.rest[:placeholder]
-    label_as_placeholder = placeholder in [nil, ""]
+
+    color_state =
+      case Elixirbits.CoreUtils.Color.inspect_color(value) do
+        {:ok, state} -> state
+        {:error, _reason} -> nil
+      end
+
+    format = color_state && color_state.format
+
+    parent_form =
+      case assigns[:form_field] do
+        %Phoenix.HTML.FormField{form: form} -> form
+        _ -> to_form(%{}, as: "_color_#{base_id}")
+      end
+
+    base_field_key =
+      case assigns[:form_field] do
+        %Phoenix.HTML.FormField{field: field} -> field
+        _ -> :color
+      end
+
+    format_field_key = String.to_atom("#{base_field_key}_color_space")
+    requested_format = format || parent_form[format_field_key].value
+
+    {format_label, format} =
+      Enum.find(@color_space_options, {"HEX", "hex"}, fn {_label, mode} ->
+        mode == requested_format
+      end)
+
+    format_field = %{parent_form[format_field_key] | value: format}
 
     assigns =
       assigns
-      |> assign(:picker_id, "#{assigns.id || assigns.name}-text-picker")
-      |> assign(:text_look, render_as in ["text", "text-enabled"])
-      |> assign(:label_as_placeholder, label_as_placeholder)
-      |> assign(:rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
-
-    assigns =
-      assign(
-        assigns,
+      |> assign(:value, value)
+      |> assign(:id, base_id)
+      |> assign(:color_id, "#{base_id}-color-input")
+      |> assign(:color_picker_id, "#{base_id}-color-picker")
+      |> assign(:color_popover_id, "#{base_id}-color-popover")
+      |> assign(:color_error_id, "#{base_id}-color-error")
+      |> assign(:color_editable, editable)
+      |> assign(:color_format, format_label)
+      |> assign(:color_format_field, format_field)
+      |> assign(:color_format_id, "#{base_id}_color_space_select")
+      |> assign(:color_format_options, @color_space_options)
+      |> assign(:color_swatch, color_state && color_state.swatch)
+      |> assign(:color_state, %{
+        valid: color_state != nil || String.trim(value) == "",
+        value: value,
+        format: format,
+        label: format_label,
+        swatch: color_state && color_state.swatch,
+        rgba: color_state && color_state.rgba,
+        error:
+          if(color_state == nil && String.trim(value) != "", do: "Enter a supported color value.")
+      })
+      |> assign(:text_look, text_look)
+      |> assign(:disabled_look, disabled_look)
+      |> assign(:include_hidden_input, assigns.render_as in ["like-disabled", "text-disabled"])
+      |> assign(:label_as_placeholder, placeholder in [nil, ""])
+      |> assign(
         :placeholder,
-        if(assigns.label && label_as_placeholder && !assigns.text_look,
-          do: " ",
-          else: placeholder
+        if(assigns.label && placeholder in [nil, ""], do: " ", else: placeholder)
+      )
+      |> assign(
+        :rest,
+        assigns.rest
+        |> Map.delete(:placeholder)
+        |> Map.put_new(:"phx-debounce", "blur")
+        |> Map.put(
+          :"aria-describedby",
+          Enum.join(
+            Enum.reject([assigns.rest[:"aria-describedby"], "#{base_id}-color-error"], &is_nil/1),
+            " "
+          )
         )
       )
 
     ~H"""
     <div>
-      <label
-        for={@id}
-        class={if @text_look, do: "flex flex-col gap-1", else: "relative block"}
+      <div
+        id={@color_id}
+        phx-hook="ColorInput"
+        data-color-editable={to_string(@color_editable)}
+        data-color-server-invalid={to_string(@errors != [])}
+        data-color-space-name={@color_format_field.name}
+        data-color-space-id={@color_format_id}
+        data-color-state={Jason.encode!(@color_state)}
+        class={["relative", @text_look && "flex flex-col gap-1"]}
       >
-        <span
-          :if={@label && @text_look}
+        <label
+          :if={@text_look && @label}
+          for={if @color_editable, do: @id}
           class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
         >
           {@label}<span
@@ -836,65 +1419,175 @@ defmodule ElixirbitsWeb.CoreComponents do
             aria-hidden="true"
             class="ml-1 text-error"
           >*</span>
-        </span>
-        <span id={@picker_id} phx-hook="TextPicker" class="relative block">
+        </label>
+        <div class={[
+          "color-input-control grid grid-cols-[1.5rem_minmax(0,1fr)_4rem] items-center gap-2",
+          !@text_look &&
+            [
+              "input-floating-wrapper min-h-11 ps-3 rounded-default border bg-transparent text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
+              !@color_editable && "pe-3",
+              (@errors == [] || @error_class) && "border-outline",
+              @errors != [] &&
+                (@error_class || "border-error focus-within:border-error focus-within:ring-error")
+            ],
+          @text_look && if(@label, do: "min-h-6", else: "min-h-11"),
+          (@disabled_look || @rest[:disabled]) && "overlay-dark cursor-not-allowed text-subcontent"
+        ]}>
+          <.button
+            :if={@color_editable}
+            type="button"
+            aria-label="Choose color"
+            aria-haspopup="dialog"
+            popovertarget={@color_popover_id}
+            data-color-trigger
+            disabled={@rest[:disabled] || @rest[:readonly]}
+            class="size-6 rounded-none cursor-pointer disabled:cursor-not-allowed"
+          >
+            <span
+              data-color-swatch
+              aria-hidden="true"
+              class="color-input-swatch block size-full border border-outline"
+              style={if @color_swatch, do: "--input-color: #{@color_swatch}"}
+            />
+          </.button>
+          <span
+            :if={!@color_editable}
+            data-color-swatch
+            aria-hidden="true"
+            class="color-input-swatch block size-6 border border-outline"
+            style={if @color_swatch, do: "--input-color: #{@color_swatch}"}
+          />
           <input
-            type={@type}
+            :if={@color_editable}
+            type="text"
             id={@id}
             name={@name}
-            value={if @type == "color", do: Phoenix.HTML.Form.normalize_value(@type, @value)}
+            value={@value}
+            data-color-value
             placeholder={@placeholder}
+            spellcheck="false"
+            aria-invalid={if @errors != [], do: "true"}
             class={
-              if @text_look do
-                "peer absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
-              else
+              @class ||
                 [
-                  @class ||
-                    [
-                      "block w-full min-h-11 px-3 rounded-default border bg-transparent text-content focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
-                      if(@label, do: "input-floating-control", else: "py-2"),
-                      (@errors == [] || @error_class) && "border-outline"
-                    ],
-                  @errors != [] &&
-                    (@error_class || "border-error focus:border-error focus:ring-error")
+                  "min-w-0 w-full appearance-none bg-transparent border-0 p-0 text-sm text-content focus:outline-none focus:ring-0 disabled:text-subcontent disabled:cursor-not-allowed",
+                  !@text_look && "input-floating-control",
+                  @text_look && "py-1 focus-visible:underline"
                 ]
-              end
             }
-            {Map.delete(@rest, :placeholder)}
+            {@rest}
           />
           <span
-            :if={@label && !@text_look}
+            :if={!@color_editable}
+            id={if !@include_hidden_input, do: @id}
+            data-color-value
+            class={@class || "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm"}
+          >{@value}</span>
+          <span
+            :if={!@color_editable}
+            data-color-format
+            class="min-w-0 truncate text-sm text-content"
+            aria-live="polite"
+          >
+            {@color_format}
+          </span>
+          <div
+            :if={@color_editable}
+            id={"#{@color_format_id}_dropdown"}
+            phx-hook="SelectDropdown"
+            data-color-space-select
+            data-dropdown-min-width="18"
             class={[
-              "input-floating-label",
-              !@label_as_placeholder && "input-floating-label-hidden",
-              @errors != [] && "input-floating-label-error"
+              "min-w-0 self-stretch",
+              !@text_look && "border-l border-outline"
             ]}
           >
-            {@label}<span
-              :if={@rest[:required] && @label not in [nil, ""]}
-              aria-hidden="true"
-              class="ml-1 text-error"
-            >*</span>
-          </span>
-          <span
-            data-text-picker-value
-            class={
-              if @text_look,
-                do:
-                  @class ||
-                    [
-                      "block w-full text-sm bg-transparent overflow-hidden text-ellipsis whitespace-nowrap peer-focus-visible:underline",
-                      if(@label, do: "min-h-6 py-1", else: "min-h-11 content-center text-center"),
-                      if(@rest[:disabled], do: "text-subcontent", else: "text-content"),
-                      @errors != [] && (@error_class || "text-error")
-                    ],
-                else: "hidden"
-            }
-          >
-            {if @type == "color", do: @value, else: @rest[:placeholder]}
-          </span>
-        </span>
-      </label>
+            <label for={"#{@color_format_field.id}_text_input"} class="sr-only">Color space</label>
+            <LiveSelect.live_select
+              field={@color_format_field}
+              id={@color_format_id}
+              mode={:single}
+              options={@color_format_options}
+              value={@color_format_field.value}
+              disabled={@rest[:disabled] not in [false, nil] || @rest[:readonly] not in [false, nil]}
+              allow_clear={false}
+              update_min_len={0}
+              phx-focus="live_select_change"
+              text_input_class={[
+                "block w-full min-w-0 appearance-none border-0 bg-transparent text-content overflow-hidden text-ellipsis whitespace-nowrap focus:outline-none focus:ring-0 disabled:text-subcontent disabled:cursor-not-allowed",
+                if(@text_look,
+                  do: [
+                    "text-sm !px-0 focus-visible:underline",
+                    if(@label, do: "min-h-6 py-1", else: "min-h-11")
+                  ],
+                  else: "min-h-10.5 px-2 rounded-r-default"
+                )
+              ]}
+              text_input_selected_class=""
+              dropdown_class="select-dropdown rounded-default border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
+              option_class="select-none relative py-2 px-3 hover:overlay-light"
+              available_option_class="cursor-pointer text-content"
+              unavailable_option_class="cursor-not-allowed text-subcontent [&>div]:pointer-events-none"
+              selected_option_class="cursor-pointer text-content bg-primary overlay-dark font-semibold order-first"
+              active_option_class="overlay-light"
+              container_class={
+                if @text_look,
+                  do: "input-text-wrapper relative flex flex-col w-full",
+                  else: "relative flex flex-col w-full"
+              }
+              keep_label_on_select
+              keep_options_on_select
+              dropdown_selectable_priority
+            />
+          </div>
+        </div>
+        <label
+          :if={!@text_look && @label}
+          for={if @color_editable, do: @id}
+          class={[
+            "input-floating-label color-input-label",
+            !@label_as_placeholder && "input-floating-label-hidden",
+            @errors != [] && "input-floating-label-error",
+            !@color_editable && @value != "" && "color-input-label-filled"
+          ]}
+        >
+          {@label}<span
+            :if={@rest[:required] && @label not in [nil, ""]}
+            aria-hidden="true"
+            class="ml-1 text-error"
+          >*</span>
+        </label>
+        <div
+          :if={@color_editable}
+          id={@color_popover_id}
+          popover="auto"
+          role="dialog"
+          aria-label="Choose color"
+          data-color-popover
+          class="color-input-popover rounded-default border border-outline bg-primary text-content"
+        >
+          <rgba-color-picker
+            id={@color_picker_id}
+            data-color-picker
+            phx-update="ignore"
+          />
+        </div>
+        <p
+          id={@color_error_id}
+          data-color-error
+          hidden
+          aria-live="polite"
+          class="mt-2 text-sm text-error"
+        />
+        <input
+          :if={@include_hidden_input}
+          type="hidden"
+          id={@id}
+          name={@name}
+          value={@value}
+          {@rest}
+        />
+      </div>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
@@ -1324,7 +2017,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       <label
         for={@id}
         class={[
-          "inline-grid grid-cols-[1.25rem_1fr] items-center gap-2 text-sm font-medium text-content",
+          "grid w-fit grid-cols-[1.25rem_1fr] items-center gap-2 text-sm font-medium text-content",
           "has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
           @errors != [] && (@error_class || "text-error")
         ]}
@@ -1464,10 +2157,10 @@ defmodule ElixirbitsWeb.CoreComponents do
         for={@id}
         class={
           [
-            "inline-grid grid-cols-[2.75rem_1fr] items-center gap-2 text-sm font-medium text-content",
+            "grid grid-cols-[2.75rem_1fr] items-center gap-2 text-sm font-medium text-content",
             "has-[:disabled]:cursor-not-allowed has-[:disabled]:text-subcontent",
             # Unlabeled means it sits in a row under its column heading, so it centers on the column and takes the field height.
-            (@label in [nil, ""] && "min-h-11 w-full justify-center") || "",
+            (@label in [nil, ""] && "min-h-11 w-full justify-center") || "w-fit",
             @errors != [] && (@error_class || "text-error")
           ]
         }
@@ -1782,13 +2475,13 @@ defmodule ElixirbitsWeb.CoreComponents do
           "input-text-wrapper relative flex flex-col w-full"
 
         !assigns[:label] ->
-          "relative flex flex-col w-full"
+          "input-select-wrapper relative flex flex-col w-full"
 
         mode == :single ->
-          "input-floating-wrapper relative flex flex-col w-full"
+          "input-select-wrapper input-floating-wrapper relative flex flex-col w-full"
 
         true ->
-          "input-floating-wrapper input-floating-wrapper-tags relative flex flex-col w-full"
+          "input-select-wrapper input-floating-wrapper input-floating-wrapper-tags relative flex flex-col w-full"
       end
 
     placeholder = assigns.rest[:placeholder]
@@ -1875,7 +2568,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             active_option_class="overlay-light"
             container_class={@container_class}
             clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error"
-            tag_class="group/tag mr-1 mt-1 p-1.5 text-sm rounded-default border border-outline bg-brand overlay-opacity-[0.15] flex items-center gap-1"
+            tag_class="group/tag mr-1 mt-1 p-1.5 text-sm rounded-default border border-outline bg-secondary text-content flex items-center gap-1"
             clear_tag_button_extra_class="text-error cursor-pointer opacity-0 pointer-events-none group-hover/tag:opacity-100 group-hover/tag:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
             tags_container_extra_class="order-last flex flex-wrap"
             placeholder={@placeholder}
@@ -2087,11 +2780,11 @@ defmodule ElixirbitsWeb.CoreComponents do
               text_input_class={[
                 if(@text_look,
                   do: [
-                    "block w-full appearance-none border-0 bg-transparent text-sm text-content cursor-pointer focus:outline-none focus:ring-0 focus-visible:underline disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed !bg-none !p-0",
+                    "block w-full appearance-none border-0 bg-transparent text-sm text-content cursor-pointer focus:outline-none focus:ring-0 focus-visible:underline disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed !px-0",
                     if(@label, do: "min-h-6 py-1", else: "min-h-11")
                   ],
                   else:
-                    "block w-full min-h-11 px-3 rounded-l-default border border-r-0 border-outline bg-transparent text-content focus:outline-none focus:border-brand focus:border-r-1 focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed !bg-none !p-2"
+                    "block w-full min-h-11 px-3 rounded-l-default border border-r-0 border-outline bg-transparent text-content focus:outline-none focus:border-brand focus:border-r-1 focus:ring-2 focus:ring-brand disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed !p-2"
                 )
               ]}
               text_input_selected_class=""
@@ -2262,6 +2955,437 @@ defmodule ElixirbitsWeb.CoreComponents do
       </div>
       """
     end
+  end
+
+  @doc """
+  Renders a destination for a file input's preview. Give the input the same `preview_id`, and keep this destination mounted in the same LiveView. The input owns the files, editing, captions, and media slots; the destination supplies their placement and styling.
+  """
+  attr :id, :string, required: true
+  attr :class, :any, default: "h-36 w-full"
+  attr :rest, :global
+
+  def file_preview(assigns) do
+    ~H"""
+    <div id={@id} data-file-preview-outlet class={@class} {@rest} />
+    """
+  end
+
+  defp file_previews(assigns) do
+    ~H"""
+    <div
+      id={"#{@file_id}-file-previews"}
+      phx-hook="FilePreview"
+      data-file-input-id={@file_id}
+      data-file-detached={to_string(@file_detached)}
+      data-file-preview-as={@preview_as}
+      data-file-collection
+      hidden={
+        (!@preview && @selection != "multiple") ||
+          (@file_detached && @render_as in ["hidden", "hidden-enabled", "hidden-disabled"])
+      }
+      class={[
+        "group/file-previews relative",
+        @file_detached && "w-full",
+        @file_detached && @preview_as == "thumbnail" && "h-full",
+        !@file_detached && @selection == "singles" &&
+          if(@preview_as == "thumbnail", do: "mt-3", else: "mt-1")
+      ]}
+    >
+      <.button
+        :if={@selection == "singles" && @preview}
+        type="button"
+        data-file-cycle="previous"
+        data-file-previous
+        hidden={length(@stored) + length(@file_entries) < 2}
+        aria-label="Previous file"
+        class="grid size-7 place-items-center text-content cursor-pointer focus-visible:text-brand focus-visible:outline-none"
+      ><.icon name="hero-chevron-left-mini" class="size-5" /></.button>
+      <div
+        data-file-preview-content
+        class={["min-w-0", @file_detached && @preview_as == "thumbnail" && "h-full"]}
+      >
+        <div
+          :if={@stored != [] or @file_entries != []}
+          data-file-server-previews
+          class={@previews_class}
+        >
+          <.file_preview_item
+            :for={{url, index} <- Enum.with_index(@stored)}
+            input_id={@file_id}
+            url={url}
+            preview={@preview}
+            selection={@selection}
+            preview_as={@preview_as}
+            thumbnail_class={@thumbnail_class}
+            media_slot={@stored_preview}
+            caption_slot={@preview_caption}
+            editable={@upload != nil && @file_editable}
+            edit_enabled={@file_editor_enabled && @file_editable}
+            disabled={@rest[:disabled]}
+            text_look={@text_look}
+            hidden={
+              @selection != "multiple" &&
+                (index > 0 || (@selection == "single" && @file_entries != []))
+            }
+            target={@rest[:"phx-target"]}
+          />
+          <.file_preview_item
+            :for={{entry, index} <- Enum.with_index(@file_entries)}
+            input_id={@file_id}
+            entry={entry}
+            preview={@preview}
+            selection={@selection}
+            preview_as={@preview_as}
+            thumbnail_class={@thumbnail_class}
+            media_slot={@pending_preview}
+            caption_slot={@pending_caption}
+            editable={@file_editable}
+            edit_enabled={@file_editor_enabled && @file_editable}
+            disabled={@rest[:disabled]}
+            text_look={@text_look}
+            hidden={
+              @selection != "multiple" && (index > 0 || (@selection == "singles" && @stored != []))
+            }
+            target={@rest[:"phx-target"]}
+          />
+        </div>
+
+        <div
+          :if={@upload == nil && (@preview || @selection != "multiple")}
+          id={"#{@file_id}-file-preview-frame"}
+          data-file-preview-container
+          data-file-preview-as={@preview_as}
+          hidden
+          class={[
+            "relative rounded-default border border-outline",
+            !@file_detached && @selection != "singles" && "mt-3",
+            if(@preview_as == "thumbnail",
+              do: ["bg-transparent", @thumbnail_class],
+              else: [
+                "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1 bg-secondary p-1.5",
+                @selection == "singles" && "px-9"
+              ]
+            )
+          ]}
+        >
+          <div
+            id={"#{@file_id}-file-local-preview"}
+            phx-update="ignore"
+            data-file-preview-region
+            class="contents"
+          >
+            <img
+              data-file-preview-image
+              hidden
+              alt="Selected image"
+              class="size-full rounded-default object-contain"
+            />
+            <iframe
+              data-file-preview-pdf
+              hidden
+              title="Selected PDF"
+              class="size-full rounded-default border-0"
+            />
+            <a
+              data-file-preview-open
+              hidden
+              target="_blank"
+              rel="noopener noreferrer"
+              class="grid size-6 place-items-center rounded-default border border-outline bg-primary text-content hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+              aria-label="Open selected file"
+            ><.icon name="hero-arrow-top-right-on-square-micro" class="size-4" /></a>
+            <span data-file-preview-name hidden class="block truncate text-sm text-subcontent" />
+            <span data-file-preview-caption data-file-caption hidden class="block truncate text-sm" />
+            <.button
+              type="button"
+              data-file-edit
+              hidden
+              disabled={@rest[:disabled] || not @file_editable}
+              aria-label="Edit selected image"
+              class="grid min-h-7 place-items-center rounded-default border border-outline bg-primary px-2 text-sm text-content cursor-pointer hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed"
+            >Edit</.button>
+          </div>
+        </div>
+      </div>
+      <.button
+        :if={@selection == "singles" && @preview}
+        type="button"
+        data-file-cycle="next"
+        data-file-next
+        hidden={length(@stored) + length(@file_entries) < 2}
+        aria-label="Next file"
+        class="grid size-7 place-items-center text-content cursor-pointer focus-visible:text-brand focus-visible:outline-none"
+      ><.icon name="hero-chevron-right-mini" class="size-5" /></.button>
+      <span
+        :if={@selection == "singles" && @preview}
+        data-file-position
+        data-file-preview-position
+        class="text-sm"
+      >{@file_position}</span>
+    </div>
+    """
+  end
+
+  attr :input_id, :any, required: true
+  attr :url, :string, default: nil
+  attr :entry, :any, default: nil
+  attr :preview, :boolean, default: false
+  attr :selection, :string, required: true
+  attr :preview_as, :string, required: true
+  attr :thumbnail_class, :any, required: true
+  attr :media_slot, :any, default: []
+  attr :caption_slot, :any, default: []
+  attr :editable, :boolean, default: false
+  attr :edit_enabled, :boolean, default: false
+  attr :disabled, :any, default: false
+  attr :text_look, :boolean, default: false
+  attr :hidden, :boolean, default: false
+  attr :target, :any, default: nil
+
+  defp file_preview_item(assigns) do
+    {name, content_type, identity} =
+      if assigns.entry do
+        entry = assigns.entry
+
+        content_type =
+          if entry.client_type in [nil, ""],
+            do: MIME.from_path(entry.client_name),
+            else: entry.client_type
+
+        {entry.client_name, content_type, entry.ref}
+      else
+        url = assigns.url
+
+        content_type =
+          if String.starts_with?(url, "data:") do
+            url
+            |> String.trim_leading("data:")
+            |> String.split([";", ","], parts: 2)
+            |> List.first()
+          else
+            MIME.from_path(URI.parse(url).path || url)
+          end
+
+        name =
+          if String.starts_with?(url, "data:") do
+            cond do
+              String.starts_with?(content_type, "image/") -> "Image"
+              content_type == "application/pdf" -> "PDF"
+              true -> "File"
+            end
+          else
+            Path.basename(URI.parse(url).path || url)
+          end
+
+        {name, content_type, Base.url_encode64(:crypto.hash(:sha256, url), padding: false)}
+      end
+
+    media_available =
+      assigns.media_slot != [] or
+        ((assigns.preview || assigns.selection != "multiple") and
+           (String.starts_with?(content_type, "image/") or content_type == "application/pdf"))
+
+    assigns =
+      assigns
+      |> assign(:file_name, name)
+      |> assign(:content_type, content_type)
+      |> assign(:identity, identity)
+      |> assign(:media_available, media_available)
+      |> assign(:caption_value, assigns.entry || assigns.url)
+      |> assign(:caption_tag, if(assigns.text_look, do: "label", else: "span"))
+      |> assign(:caption_rest, if(assigns.text_look, do: %{for: assigns.input_id}, else: %{}))
+      |> assign(:caption_used, assigns.caption_slot != [] or assigns.media_slot == [])
+      |> assign(
+        :caption_hover,
+        assigns.selection in ["single", "singles"] && assigns.preview &&
+          assigns.preview_as == "thumbnail" &&
+          media_available
+      )
+
+    ~H"""
+    <div
+      id={"#{@input_id}-file-#{@identity}"}
+      data-file-item
+      data-file-key={(@entry && @entry.ref) || @url}
+      data-file-stored={@entry == nil}
+      data-file-entry-ref={@entry && @entry.ref}
+      data-file-url={@url}
+      data-file-content-type={@content_type}
+      data-file-item-name={@file_name}
+      hidden={@hidden}
+      class={["min-w-0", @hidden && "hidden"]}
+    >
+      <div
+        data-file-preview-as={@preview_as}
+        class={
+          if @preview_as == "thumbnail" do
+            [
+              "group/preview relative rounded-default border border-outline bg-transparent",
+              @thumbnail_class
+            ]
+          else
+            [
+              "group/preview relative grid items-center gap-1 rounded-default border border-outline bg-secondary p-1.5 text-sm text-content",
+              if(@selection == "singles", do: "px-9", else: "mr-1 mt-1"),
+              if(@preview && not @media_available,
+                do: "grid-cols-[minmax(0,1fr)_auto_auto]",
+                else: "grid-cols-[minmax(0,1fr)_auto]"
+              )
+            ]
+          end
+        }
+      >
+        <.dynamic_tag
+          :if={@caption_hover}
+          tag_name={@caption_tag}
+          {@caption_rest}
+          data-file-caption
+          data-file-filename
+          class="block truncate text-sm"
+        >
+          <%= if @caption_slot != [] do %>
+            {render_slot(@caption_slot, @caption_value)}
+          <% else %>
+            {@file_name}
+          <% end %>
+        </.dynamic_tag>
+        <.dynamic_tag
+          :if={@media_available}
+          tag_name={if @text_look, do: "label", else: "div"}
+          {@caption_rest}
+          class={[
+            @preview_as == "thumbnail" && "size-full",
+            @preview_as == "tag" && @caption_used && "hidden",
+            @text_look && "block group-has-[input:focus-visible]/upload:underline",
+            @text_look && if(@disabled, do: "cursor-not-allowed", else: "cursor-pointer")
+          ]}
+        >
+          <%= cond do %>
+            <% @media_slot != [] -> %>
+              {render_slot(@media_slot, @caption_value)}
+            <% @content_type == "application/pdf" -> %>
+              <div
+                id={"#{@input_id}-pdf-#{@identity}"}
+                phx-hook="UploadPdfPreview"
+                phx-update="ignore"
+                data-pdf-url={@url}
+                data-upload-ref={@entry && @entry.upload_ref}
+                data-entry-ref={@entry && @entry.ref}
+                class="relative size-full overflow-hidden rounded-default bg-transparent"
+              >
+                <iframe
+                  data-pdf-viewer
+                  title={"PDF preview of #{@file_name}"}
+                  hidden
+                  class="size-full border-0"
+                />
+                <p
+                  data-pdf-status
+                  role="status"
+                  class="pointer-events-none absolute inset-0 grid place-items-center px-2 text-center text-sm text-subcontent"
+                >
+                  Loading PDF preview...
+                </p>
+                <a
+                  data-pdf-open
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={"Open #{@file_name}"}
+                  data-tooltip={"Open #{@file_name}"}
+                  hidden
+                  class="absolute bottom-1 left-1 grid size-6 place-items-center rounded-default border border-outline bg-primary text-content hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+                ><.icon name="hero-arrow-top-right-on-square-micro" class="size-4" /></a>
+              </div>
+            <% @entry != nil -> %>
+              <.live_img_preview
+                entry={@entry}
+                alt={@file_name}
+                class="size-full rounded-default object-contain"
+              />
+            <% true -> %>
+              <img src={@url} alt={@file_name} class="size-full rounded-default object-contain" />
+          <% end %>
+        </.dynamic_tag>
+        <.dynamic_tag
+          :if={not @media_available or (@preview_as == "tag" && @caption_used)}
+          tag_name={@caption_tag}
+          {@caption_rest}
+          data-file-filename
+          class={[
+            "min-w-0 truncate",
+            @preview_as == "thumbnail" &&
+              "grid size-full place-items-center px-2 text-sm text-subcontent",
+            @text_look && "group-has-[input:focus-visible]/upload:underline",
+            @text_look && if(@disabled, do: "cursor-not-allowed", else: "cursor-pointer")
+          ]}
+        >
+          <%= if @caption_slot != [] do %>
+            {render_slot(@caption_slot, @caption_value)}
+          <% else %>
+            {@file_name}
+          <% end %>
+        </.dynamic_tag>
+        <a
+          :if={@preview && not @media_available}
+          href={@url}
+          data-file-open
+          data-upload-ref={@entry && @entry.upload_ref}
+          data-entry-ref={@entry && @entry.ref}
+          aria-label={"Open #{@file_name}"}
+          target="_blank"
+          rel="noopener noreferrer"
+          class={[
+            "grid size-6 place-items-center rounded-default border border-outline bg-primary text-content hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand",
+            @preview_as == "thumbnail" && "absolute bottom-1 left-1"
+          ]}
+        ><.icon name="hero-arrow-top-right-on-square-micro" class="size-4" /></a>
+        <.button
+          :if={@edit_enabled && @content_type in ~w(image/png image/jpeg image/gif image/webp)}
+          type="button"
+          data-file-edit={(@entry && @entry.ref) || @url}
+          disabled={@disabled}
+          aria-label={"Edit #{@file_name}"}
+          class="grid min-h-7 place-items-center rounded-default border border-outline bg-primary px-2 text-sm text-content cursor-pointer hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed"
+        >Edit</.button>
+        <.button
+          :if={@editable}
+          type="button"
+          data-file-remove
+          disabled={@disabled}
+          phx-click={if @entry, do: "cancel_upload", else: "remove_upload"}
+          phx-value-ref={@entry && @entry.ref}
+          phx-value-url={@url}
+          phx-target={@target}
+          aria-label={if @entry, do: "Cancel #{@file_name}", else: "Remove file"}
+          class={[
+            "min-h-5 min-w-5 text-error cursor-pointer opacity-0 pointer-events-none group-hover/preview:opacity-100 group-hover/preview:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto disabled:opacity-0!",
+            @preview_as == "thumbnail" && "absolute top-1 right-1"
+          ]}
+        ><.icon name="hero-x-mark-mini" class="size-5" /></.button>
+      </div>
+      <span
+        :if={@media_slot != [] && !@caption_used && !@caption_hover}
+        data-file-filename
+        class="sr-only"
+      >{@file_name}</span>
+      <.dynamic_tag
+        :if={!@caption_hover && @preview_as == "thumbnail" && @media_available && @caption_used}
+        tag_name={@caption_tag}
+        {@caption_rest}
+        data-file-filename
+        class={[
+          "mt-1 block truncate text-sm text-subcontent",
+          @text_look && if(@disabled, do: "cursor-not-allowed", else: "cursor-pointer")
+        ]}
+      >
+        <%= if @caption_slot != [] do %>
+          {render_slot(@caption_slot, @caption_value)}
+        <% else %>
+          {@file_name}
+        <% end %>
+      </.dynamic_tag>
+    </div>
+    """
   end
 
   attr :id, :any, required: true
@@ -2495,7 +3619,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   @doc """
   Renders a page section on a raised card surface.
 
-  Form sections, listings, and detail groups share this surface, with their own `<.header>` inside.
+  Form sections and detail groups share this surface, with their own `<.header>` inside.
 
   ## Examples
 
@@ -2547,7 +3671,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     ~H"""
     <div
       id={@id}
-      class={["rounded-default border border-outline bg-brand overlay-opacity-[0.15] p-4", @class]}
+      class={["rounded-default border border-outline bg-secondary text-content p-4", @class]}
       {@rest}
     >
       {render_slot(@inner_block)}

@@ -46,7 +46,14 @@ defmodule ElixirbitsWeb.Admin.UserLive.UploadsTest do
     render_upload(upload, "portrait.png")
 
     render_submit(view, "save", %{"form" => %{"sex" => "INVALID"}})
-    assert has_element?(view, "[phx-click='cancel_upload']")
+
+    preview =
+      view
+      |> element("#user-form template[data-phx-portal]")
+      |> render()
+      |> Floki.parse_document!()
+
+    assert Floki.find(preview, "[phx-click='cancel_upload']") != []
     assert File.ls!(Path.join(context.directory, "users")) == []
     assert is_nil(Ash.get!(User, user.id, actor: @system).display_pic_url)
 
@@ -111,7 +118,14 @@ defmodule ElixirbitsWeb.Admin.UserLive.UploadsTest do
     assert_receive {:upload_persisted_before_failure, "/uploads/users/" <> filename, true}
     assert html =~ "save rejected after upload storage"
     refute File.exists?(Path.join([directory, "users", filename]))
-    refute has_element?(view, "[phx-click='cancel_upload']")
+
+    preview =
+      view
+      |> element("#user-form template[data-phx-portal]")
+      |> render()
+      |> Floki.parse_document!()
+
+    assert Floki.find(preview, "[phx-click='cancel_upload']") == []
 
     assert has_element?(view, "#user-form")
     saved = Ash.get!(User, user.id, actor: @system)

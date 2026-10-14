@@ -4,7 +4,7 @@
     id="organization-form"
     phx-change="validate"
     phx-submit="save"
-    class="space-y-4"
+    class="space-y-6"
   >
     <.card>
       <.header>
@@ -14,7 +14,7 @@
           <.action_button :if={@editable?} action={:save} type="submit" tooltip="Save settings" />
         </:actions>
       </.header>
-      <div class="grid grid-cols-[2fr_1fr_1fr] subgap-2 mt-4">
+      <div class="grid grid-cols-[2fr_1fr_1fr] subgap-2">
         <.input
           field={@form[:name]}
           type="text"
@@ -34,7 +34,7 @@
           render_as={if @editable?, do: "enabled", else: "disabled"}
         />
       </div>
-      <div class="grid grid-cols-[1fr_1fr_2fr] subgap-2 mt-2">
+      <div class="grid grid-cols-[1fr_1fr_2fr] subgap-2">
         <.input
           field={@form[:base_currency]}
           type="text"
@@ -54,7 +54,7 @@
           render_as={if @editable?, do: "enabled", else: "disabled"}
         />
       </div>
-      <div class="grid grid-cols-[2fr_2fr] subgap-2 mt-2">
+      <div class="grid grid-cols-[2fr_2fr] subgap-2">
         <.input
           field={@form[:email]}
           type="email"
@@ -84,7 +84,7 @@
           />
         </:actions>
       </.header>
-      <div class="grid grid-cols-[1fr_1fr] gap-4 mt-4">
+      <div class="grid grid-cols-[1fr_1fr] gap-y-4">
         <.inputs_for :let={af} field={@form[:addresses]}>
           <.entry_panel label="Address" index={af.index} columns={2}>
             <:actions>

@@ -17,11 +17,38 @@ class Element extends EventTarget {
     this.isConnected = true
     this.offsetWidth = 80
     this.offsetHeight = 24
+    this.clientWidth = 80
+    this.clientHeight = 24
+    this.scrollWidth = 80
+    this.scrollHeight = 24
+    this.tagName = "DIV"
+    this.type = ""
+    this.value = ""
+    this.parentElement = null
+    this.children = []
+    this.computedStyle = {overflowX: "visible", overflowY: "visible", webkitLineClamp: "none", textTransform: "none"}
   }
   setAttribute(name, value) { this.attributes.set(name, String(value)) }
   getAttribute(name) { return this.attributes.get(name) ?? null }
   removeAttribute(name) { this.attributes.delete(name) }
-  closest() { return this }
+  get innerText() { return this.renderedText ?? this.textContent }
+  closest() {
+    for (let el = this; el; el = el.parentElement) {
+      if (el.dataset.tooltip !== undefined || el.getAttribute("title") !== null) return el
+    }
+    return null
+  }
+  matches(selector) {
+    const input = this.tagName === "INPUT"
+    if (selector === "input, textarea") return input || this.tagName === "TEXTAREA"
+    if (selector === "input[type=password], input[type=file]") return input && ["password", "file"].includes(this.type)
+    return false
+  }
+  querySelectorAll() { return this.children.flatMap(child => [child, ...child.querySelectorAll()]) }
+  contains(node) {
+    for (let el = node; el; el = el.parentElement) if (el === this) return true
+    return false
+  }
   getBoundingClientRect() { return {left: 20, bottom: 40} }
   remove() { this.isConnected = false }
   focus() { this.focused = true }
@@ -120,6 +147,7 @@ test("delegated tooltip describes focused controls across patches and restores n
   const originalDocument = globalThis.document
   const originalWindow = globalThis.window
   const originalObserver = globalThis.MutationObserver
+  const originalResizeObserver = globalThis.ResizeObserver
   const document = new EventTarget()
   const window = new EventTarget()
   const tip = new Element()
@@ -136,6 +164,10 @@ test("delegated tooltip describes focused controls across patches and restores n
     observe() {}
     disconnect() { disconnected = true }
   }
+  globalThis.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  }
 
   try {
     const initialize = await loadHook("tooltip")
@@ -150,10 +182,10 @@ test("delegated tooltip describes focused controls across patches and restores n
     assert.equal(tip.getAttribute("role"), "tooltip")
     assert.equal(control.getAttribute("aria-describedby"), "validation-help elixirbits-tooltip")
     control.dataset.tooltip = "Updated description"
-    observerCallback()
+    observerCallback([])
     assert.equal(tip.textContent, "Updated description")
     control.dataset.tooltip = ""
-    observerCallback()
+    observerCallback([])
     assert.equal(tip.hidden, true)
     control.dataset.tooltip = "Save changes"
     document.dispatchEvent(event("focusout"))
@@ -165,7 +197,7 @@ test("delegated tooltip describes focused controls across patches and restores n
     document.dispatchEvent(event("focusout"))
     document.dispatchEvent(focus)
     control.isConnected = false
-    observerCallback()
+    observerCallback([])
     assert.equal(tip.hidden, true)
 
     const wrapper = new Element()
@@ -181,15 +213,15 @@ test("delegated tooltip describes focused controls across patches and restores n
 
     input.setAttribute("aria-describedby", "updated-email-help")
     wrapper.dataset.tooltip = "Updated email description"
-    observerCallback()
+    observerCallback([])
     assert.equal(input.getAttribute("aria-describedby"), "updated-email-help elixirbits-tooltip")
     assert.equal(tip.textContent, "Updated email description")
     input.removeAttribute("aria-describedby")
-    observerCallback()
+    observerCallback([])
     assert.equal(input.getAttribute("aria-describedby"), "elixirbits-tooltip")
     document.dispatchEvent(event("keydown", {key: "Escape"}))
     input.isConnected = false
-    observerCallback()
+    observerCallback([])
 
     const native = new Element()
     native.setAttribute("title", "Open details")
@@ -202,7 +234,7 @@ test("delegated tooltip describes focused controls across patches and restores n
     assert.equal(native.getAttribute("aria-label"), "Open details")
     native.setAttribute("title", "Close details")
     native.removeAttribute("aria-describedby")
-    observerCallback()
+    observerCallback([])
     assert.equal(tip.textContent, "Close details")
     assert.equal(native.getAttribute("title"), null)
     assert.equal(native.getAttribute("aria-label"), "Close details")
@@ -221,6 +253,240 @@ test("delegated tooltip describes focused controls across patches and restores n
     globalThis.document = originalDocument
     globalThis.window = originalWindow
     globalThis.MutationObserver = originalObserver
+    globalThis.ResizeObserver = originalResizeObserver
+  }
+})
+
+test("clipped text tooltips follow rendered text, input values, patches, and element resizing", async () => {
+  const originals = {
+    document: globalThis.document,
+    window: globalThis.window,
+    MutationObserver: globalThis.MutationObserver,
+    ResizeObserver: globalThis.ResizeObserver,
+    getComputedStyle: globalThis.getComputedStyle,
+  }
+  const document = new EventTarget()
+  const window = new EventTarget()
+  const tip = new Element()
+  document.createElement = () => tip
+  document.body = new Element()
+  document.body.appendChild = () => {}
+  window.innerWidth = 500
+  window.innerHeight = 500
+  let mutationCallback
+  let resizeCallback
+  const observed = new Set()
+  let resizeDisconnected = false
+  globalThis.document = document
+  globalThis.window = window
+  globalThis.getComputedStyle = el => el.computedStyle
+  globalThis.MutationObserver = class {
+    constructor(callback) { mutationCallback = callback }
+    observe() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = class {
+    constructor(callback) { resizeCallback = callback }
+    observe(el) { observed.add(el) }
+    disconnect() { observed.clear(); resizeDisconnected = true }
+  }
+  const dispatch = (name, target, values = {}) => {
+    const next = event(name, values)
+    Object.defineProperty(next, "target", {value: target})
+    document.dispatchEvent(next)
+  }
+
+  try {
+    const initialize = await loadHook("tooltip")
+    const dispose = initialize()
+    const navigation = new Element()
+    navigation.textContent = "admin@elixirbits.dev"
+    navigation.renderedText = "ADMIN@ELIXIRBITS.DEV"
+    navigation.computedStyle.overflowX = "hidden"
+    navigation.scrollWidth = 240
+    navigation.setAttribute("aria-describedby", "account-help")
+    dispatch("mousemove", navigation, {clientX: 30, clientY: 50})
+    assert.equal(tip.hidden, false)
+    assert.equal(tip.textContent, "ADMIN@ELIXIRBITS.DEV")
+    assert.equal(navigation.getAttribute("aria-describedby"), "account-help elixirbits-tooltip")
+    assert.equal(navigation.dataset.tooltip, undefined)
+    assert.equal(navigation.getAttribute("title"), null)
+    assert.equal(observed.has(navigation), true)
+
+    navigation.clientWidth = 300
+    resizeCallback()
+    assert.equal(tip.hidden, true)
+    assert.equal(navigation.getAttribute("aria-describedby"), "account-help")
+    navigation.clientWidth = 80
+    resizeCallback()
+    assert.equal(tip.hidden, false)
+    navigation.renderedText = "OTHER@ELIXIRBITS.DEV"
+    mutationCallback([{target: navigation}])
+    assert.equal(tip.textContent, "OTHER@ELIXIRBITS.DEV")
+    navigation.computedStyle.overflowX = "visible"
+    mutationCallback([{target: navigation}])
+    assert.equal(tip.hidden, true)
+    navigation.computedStyle.overflowX = "clip"
+    mutationCallback([{target: navigation}])
+    assert.equal(tip.hidden, false)
+    document.dispatchEvent(event("keydown", {key: "Escape"}))
+    resizeCallback()
+    mutationCallback([{target: navigation}])
+    assert.equal(tip.hidden, true)
+    assert.equal(navigation.getAttribute("aria-describedby"), "account-help")
+    document.dispatchEvent(event("mouseleave"))
+    dispatch("mousemove", navigation, {clientX: 30, clientY: 50})
+    assert.equal(tip.hidden, false)
+
+    const button = new Element()
+    const label = new Element()
+    label.parentElement = button
+    button.children = [label]
+    label.textContent = "A long action label"
+    label.computedStyle.overflowX = "hidden"
+    label.scrollWidth = 200
+    dispatch("focusin", button)
+    assert.equal(tip.textContent, label.textContent)
+    assert.equal(button.getAttribute("aria-describedby"), "elixirbits-tooltip")
+    assert.equal(label.getAttribute("aria-describedby"), null)
+    assert.equal(observed.has(label), true)
+    document.dispatchEvent(event("focusout"))
+
+    const input = new Element()
+    input.tagName = "INPUT"
+    input.type = "text"
+    input.value = "long field value"
+    input.computedStyle.overflowX = "hidden"
+    input.computedStyle.textTransform = "uppercase"
+    input.scrollWidth = 240
+    dispatch("focusin", input)
+    assert.equal(tip.textContent, "LONG FIELD VALUE")
+    input.value = "patched value"
+    dispatch("input", input)
+    assert.equal(tip.textContent, "PATCHED VALUE")
+    input.value = "changed value"
+    dispatch("change", input)
+    assert.equal(tip.textContent, "CHANGED VALUE")
+    input.scrollWidth = input.clientWidth
+    window.dispatchEvent(event("resize"))
+    assert.equal(tip.hidden, true)
+    input.scrollWidth = 240
+    resizeCallback()
+    assert.equal(tip.hidden, false)
+    input.isConnected = false
+    mutationCallback([{target: document.body}])
+    assert.equal(tip.hidden, true)
+    assert.equal(input.getAttribute("aria-describedby"), null)
+
+    dispose()
+    assert.equal(resizeDisconnected, true)
+    assert.equal(observed.size, 0)
+    dispatch("mousemove", navigation, {clientX: 30, clientY: 50})
+    assert.equal(tip.hidden, true)
+  } finally {
+    Object.assign(globalThis, originals)
+  }
+})
+
+test("automatic tooltips require actual clipping and preserve explicit descriptions", async () => {
+  const originals = {
+    document: globalThis.document,
+    window: globalThis.window,
+    MutationObserver: globalThis.MutationObserver,
+    ResizeObserver: globalThis.ResizeObserver,
+    getComputedStyle: globalThis.getComputedStyle,
+  }
+  const document = new EventTarget()
+  const window = new EventTarget()
+  const tip = new Element()
+  document.createElement = () => tip
+  document.body = new Element()
+  document.body.appendChild = () => {}
+  window.innerWidth = 500
+  window.innerHeight = 500
+  let mutationCallback
+  globalThis.document = document
+  globalThis.window = window
+  globalThis.getComputedStyle = el => el.computedStyle
+  globalThis.MutationObserver = class {
+    constructor(callback) { mutationCallback = callback }
+    observe() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  }
+  const hover = target => {
+    const move = event("mousemove", {clientX: 30, clientY: 50})
+    Object.defineProperty(move, "target", {value: target})
+    document.dispatchEvent(move)
+  }
+
+  try {
+    const initialize = await loadHook("tooltip")
+    const dispose = initialize()
+    const fitting = new Element()
+    fitting.textContent = "Fits"
+    fitting.computedStyle.overflowX = "hidden"
+    hover(fitting)
+    assert.equal(tip.hidden, true)
+    fitting.scrollWidth = 240
+    fitting.computedStyle.overflowX = "visible"
+    hover(fitting)
+    assert.equal(tip.hidden, true)
+    fitting.computedStyle.overflowX = "hidden"
+    fitting.computedStyle.overflowY = "auto"
+    hover(fitting)
+    assert.equal(tip.hidden, true)
+
+    for (const type of ["password", "file"]) {
+      const input = new Element()
+      input.tagName = "INPUT"
+      input.type = type
+      input.value = "private field value"
+      input.computedStyle.overflowX = "hidden"
+      input.scrollWidth = 240
+      hover(input)
+      assert.equal(tip.hidden, true)
+    }
+
+    const clamped = new Element()
+    clamped.textContent = "A longer paragraph extending past the last visible line."
+    clamped.computedStyle.webkitLineClamp = "2"
+    clamped.scrollHeight = 96
+    hover(clamped)
+    assert.equal(tip.textContent, clamped.textContent)
+    assert.equal(tip.hidden, false)
+    clamped.scrollHeight = clamped.clientHeight
+    mutationCallback([{target: clamped}])
+    assert.equal(tip.hidden, true)
+    clamped.scrollHeight = 96
+    clamped.dataset.tooltip = "A separate help description"
+    hover(clamped)
+    assert.equal(tip.textContent, "A separate help description")
+    clamped.scrollHeight = clamped.clientHeight
+    mutationCallback([{target: clamped}])
+    assert.equal(tip.textContent, "A separate help description")
+    assert.equal(tip.hidden, false)
+    clamped.dataset.tooltip = ""
+    mutationCallback([{target: clamped}])
+    assert.equal(tip.hidden, true)
+
+    const describedButton = new Element()
+    const icon = new Element()
+    icon.parentElement = describedButton
+    describedButton.dataset.tooltip = "Open details"
+    hover(icon)
+    assert.equal(tip.textContent, "Open details")
+    assert.equal(describedButton.getAttribute("aria-describedby"), "elixirbits-tooltip")
+    assert.equal(icon.getAttribute("aria-describedby"), null)
+
+    hover(tip)
+    assert.equal(tip.hidden, true)
+    dispose()
+  } finally {
+    Object.assign(globalThis, originals)
   }
 })
 

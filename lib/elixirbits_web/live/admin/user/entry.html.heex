@@ -37,29 +37,36 @@
         </div>
 
         <div class="grid grid-cols-[2fr_2fr] subgap-2">
-          <.input
-            type="file"
-            name="display_pic"
-            label="Display Picture"
-            upload={@uploads.display_pic}
-            stored={List.wrap(@existing_display_pic)}
-            preview_as="thumbnail"
-            disabled={!can?(@permissions, @current_path, :update)}
-          >
-            <:preview :let={url}>
-              <img
-                src={url}
-                alt="Account display picture"
-                class="size-20 rounded-default object-cover border border-outline"
-              />
-            </:preview>
-            <:pending :let={entry}>
-              <.live_img_preview
-                entry={entry}
-                class="size-20 rounded-default object-cover border border-outline"
-              />
-            </:pending>
-          </.input>
+          <div class="space-y-3">
+            <.input
+              type="file"
+              name="display_pic"
+              label="Display Picture"
+              upload={@uploads.display_pic}
+              stored={List.wrap(@existing_display_pic)}
+              preview={true}
+              preview_id="user-display-picture-preview"
+              editor={%{width: 512, height: 512}}
+              preview_as="thumbnail"
+              thumbnail_class="h-full w-full"
+              disabled={!can?(@permissions, @current_path, :update)}
+            >
+              <:stored_preview :let={url}>
+                <img
+                  src={url}
+                  alt="Account display picture"
+                  class="size-full rounded-default object-cover"
+                />
+              </:stored_preview>
+              <:pending_preview :let={entry}>
+                <.live_img_preview
+                  entry={entry}
+                  class="size-full rounded-default object-cover"
+                />
+              </:pending_preview>
+            </.input>
+            <.file_preview id="user-display-picture-preview" class="size-20" />
+          </div>
         </div>
       </.card>
 

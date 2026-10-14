@@ -121,6 +121,7 @@ defmodule Elixirbits.MixProject do
       {:chromic_pdf, ">= 1.17.0"},
       {:cinder, ">= 0.12.0"},
       {:cloak, ">= 1.0.0"},
+      {:color, ">= 0.13.0"},
       {:dialyxir, ">= 1.4.0", only: [:dev, :test], runtime: false},
       {:dns_cluster, ">= 0.1.1"},
       {:ecto_sql, ">= 3.14.0"},

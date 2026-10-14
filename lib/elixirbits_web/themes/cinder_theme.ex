@@ -24,13 +24,13 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :filter_title_class, "text-lg font-semibold text-content"
 
   set :filter_toggle_class,
-      "cursor-pointer select-none inline-grid grid-cols-[1rem_max-content_max-content] items-center gap-1 hover:overlay-dark"
+      "cursor-pointer select-none inline-grid grid-cols-[1rem_max-content_max-content] items-center gap-1 min-h-11 px-4 py-2 rounded-default text-sm! font-medium! button-neutral transition-colors"
 
   set :filter_count_class,
       "inline-grid place-items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand text-content"
 
   set :filter_clear_all_class,
-      "inline-grid place-items-center px-2 py-1 rounded-default text-xs font-medium bg-transparent text-content hover:overlay-dark transition-colors"
+      "inline-grid place-items-center min-h-11 px-4 py-2 rounded-default text-sm font-medium button-neutral transition-colors focus:outline-none focus:ring-2 focus:ring-brand"
 
   set :filter_label_class, "text-sm font-medium text-content whitespace-nowrap pb-1"
 
@@ -43,16 +43,16 @@ defmodule ElixirbitsWeb.CinderTheme do
       "inline-grid place-items-center px-2 py-1 rounded-default text-xs font-medium bg-transparent text-content hover:overlay-dark transition-colors"
 
   set :filter_text_input_class,
-      "block w-full px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
+      "block w-full min-h-11 px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
 
   set :filter_date_input_class,
-      "block w-full px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
+      "block w-full min-h-11 px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
 
   set :filter_number_input_class,
-      "block w-full px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+      "block w-full min-h-11 px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
 
   set :filter_select_input_class,
-      "grid grid-cols-[1fr] w-full px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
+      "grid grid-cols-[1fr] w-full min-h-11 px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
 
   set :filter_select_container_class, "relative"
 
@@ -130,7 +130,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :page_size_label_class, "text-subcontent text-sm"
 
   set :page_size_dropdown_class,
-      "inline-grid grid-cols-[max-content_1rem] items-center gap-2 min-h-11 px-3 rounded-default text-sm font-medium border border-outline text-content hover:overlay-dark transition-colors cursor-pointer"
+      "inline-grid grid-cols-[max-content_1rem] items-center gap-2 min-h-11 px-3 rounded-default text-sm font-medium button-neutral transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand"
 
   set :page_size_dropdown_container_class,
       "bg-primary border border-outline rounded-default shadow-lg"
@@ -141,7 +141,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :page_size_selected_class, "bg-brand text-content"
 
   set :search_input_class,
-      "block w-full pl-10 px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
+      "block w-full min-h-11 pl-10 px-3 py-2 rounded-default border border-outline bg-transparent text-content disabled:overlay-dark disabled:text-subcontent focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand"
 
   set :search_icon_class, "w-4 h-4"
 
@@ -177,12 +177,11 @@ defmodule ElixirbitsWeb.CinderTheme do
       "grid grid-cols-[repeat(4,max-content)] items-center justify-start gap-2"
 
   set :sort_button_class,
-      "inline-grid grid-cols-[max-content_0.75rem] items-center gap-1 px-3 py-1.5 rounded-default text-sm font-medium hover:overlay-dark transition-colors"
+      "inline-grid grid-cols-[max-content_0.75rem] items-center gap-1 min-h-11 px-4 py-2 rounded-default text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand"
 
-  set :sort_button_active_class, "bg-brand text-content"
+  set :sort_button_active_class, "button-primary"
 
-  set :sort_button_inactive_class,
-      "bg-transparent text-content"
+  set :sort_button_inactive_class, "button-neutral"
 
   set :grid_container_class, "grid gap-4"
 

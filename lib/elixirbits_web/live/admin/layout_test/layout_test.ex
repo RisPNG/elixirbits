@@ -3,6 +3,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   alias LiveSelect.Component
   alias Elixirbits.CoreUtils.Calendar, as: CalendarUtils
+  alias Elixirbits.CoreUtils.Color
   alias Elixirbits.CoreUtils.Parse
 
   @dependency_pages [
@@ -54,6 +55,8 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   @input_fields ~w(project_name email password budget launch_date launch_time launch_week launch_month launch_at accent search website phone role notes enabled switch upload contact_method hidden_token)
 
+  @upload_options [accept: ~w(.png .jpg .jpeg .gif .webp .pdf .txt), max_file_size: 1_000_000]
+
   @showcase_defaults %{
     "header" => %{
       "variant" => "neutral",
@@ -77,7 +80,10 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
       "required" => false,
       "tooltip" => false,
       "stored" => true,
+      "selection" => "single",
       "preview_as" => "thumbnail",
+      "preview" => true,
+      "editor" => "false",
       "errors" => false
     },
     "actions" => %{
@@ -174,21 +180,11 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
     {:ok,
      socket
-     |> allow_upload(:demo_files,
-       accept: ~w(.png .jpg .jpeg .pdf .txt),
-       max_entries: 3,
-       max_file_size: 1_000_000
-     )
-     |> allow_upload(:demo_previews,
-       accept: ~w(.png .jpg .jpeg .pdf),
-       max_entries: 3,
-       max_file_size: 1_000_000
-     )
+     |> allow_upload(:demo_files, Keyword.put(@upload_options, :max_entries, 1))
      |> assign(:show_modal, false)
      |> assign(:upload_form, to_form(%{}, as: :upload))
      |> assign(:upload_mode, "enabled")
      |> assign(:stored_files, ["/images/logo.svg"])
-     |> assign(:stored_previews, ["/images/logo.svg"])
      |> assign(:preview_names, %{})
      |> assign(:uploaded_names, [])
      |> assign(:timer_start, now)
@@ -307,7 +303,13 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
         end
       end)
 
-    {:noreply, assign(socket, :local_form, to_form(params, as: :local))}
+    errors =
+      case Ash.Type.cast_input(Color, params["accent"]) do
+        {:ok, _color} -> []
+        {:error, message} -> [accent: {message, []}]
+      end
+
+    {:noreply, assign(socket, :local_form, to_form(params, as: :local, errors: errors))}
   end
 
   def handle_event("local_save", params, socket) do
@@ -330,35 +332,53 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
         end
       end)
 
-    case Parse.to_datetime(params["launch_at"],
-           source_timezone: socket.assigns.user_timezone,
-           on_invalid: :error
-         ) do
-      %DateTime{} = instant ->
+    errors =
+      case Ash.Type.cast_input(Color, params["accent"]) do
+        {:ok, _color} -> []
+        {:error, message} -> [accent: {message, []}]
+      end
+
+    instant =
+      Parse.to_datetime(params["launch_at"],
+        source_timezone: socket.assigns.user_timezone,
+        on_invalid: :error
+      )
+
+    errors =
+      case instant do
+        %DateTime{} ->
+          errors
+
+        invalid ->
+          message =
+            case invalid do
+              {:error, :ambiguous_datetime} ->
+                "This local time occurs twice. Choose another time."
+
+              {:error, :nonexistent_datetime} ->
+                "This local time does not exist. Choose another time."
+
+              _ ->
+                "Enter a valid date and time."
+            end
+
+          Keyword.put(errors, :launch_at, {message, []})
+      end
+
+    case errors do
+      [] ->
         {:noreply,
          socket
          |> assign(:local_form, to_form(params, as: :local))
          |> assign(:submitted_at, instant)
          |> put_flash(:info, "Example form submitted.")}
 
-      invalid ->
-        message =
-          case invalid do
-            {:error, :ambiguous_datetime} ->
-              "This local time occurs twice. Choose another time."
-
-            {:error, :nonexistent_datetime} ->
-              "This local time does not exist. Choose another time."
-
-            _ ->
-              "Enter a valid date and time."
-          end
-
+      errors ->
         {:noreply,
          assign(
            socket,
            :local_form,
-           to_form(params, as: :local, errors: [launch_at: {message, []}])
+           to_form(params, as: :local, errors: errors)
          )}
     end
   end
@@ -473,13 +493,9 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   def handle_event("toggle_showcase_option", %{"section" => section, "option" => option}, socket) do
     {:noreply,
-     update(
-       socket,
-       :showcase,
-       &Map.update!(&1, section, fn options ->
-         Map.update!(options, option, fn value -> not value end)
-       end)
-     )}
+     configure_showcase_preview(socket, section, %{
+       option => not socket.assigns.showcase[section][option]
+     })}
   end
 
   def handle_event("inspect_table_row", %{"section" => section}, socket) do
@@ -630,43 +646,56 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   def handle_event("upload_change", _params, socket), do: {:noreply, socket}
 
-  def handle_event("upload_save", _params, socket) do
-    names =
-      consume_uploaded_entries(socket, :demo_files, fn _meta, entry ->
-        {:ok, entry.client_name}
-      end)
+  def handle_event("upload_save", params, socket) do
+    replacements = Map.get(params, "demo_files_replacements", %{})
+    file_order = Map.new(Enum.with_index(Map.get(params, "demo_files_order", [])))
 
-    previews =
-      consume_uploaded_entries(socket, :demo_previews, fn %{path: path}, entry ->
+    files =
+      consume_uploaded_entries(socket, :demo_files, fn %{path: path}, entry ->
         url =
           "data:#{MIME.from_path(entry.client_name)};base64,#{Base.encode64(File.read!(path))}"
 
-        {:ok, {url, entry.client_name}}
+        {:ok,
+         {url, entry.client_name, Map.get(replacements, entry.ref),
+          Map.get(file_order, entry.ref, map_size(file_order))}}
       end)
+      |> Enum.sort_by(fn {_url, _name, _previous, index} -> index end)
+
+    stored_files =
+      if socket.assigns.showcase["uploads"]["selection"] == "single" and files != [] do
+        Enum.map(files, fn {url, _name, _previous, _index} -> url end)
+      else
+        Enum.reduce(files, socket.assigns.stored_files, fn {url, _name, previous, _index},
+                                                           stored ->
+          case Enum.find_index(stored, &(&1 == previous)) do
+            nil -> stored ++ [url]
+            index -> List.replace_at(stored, index, url)
+          end
+        end)
+        |> Enum.uniq()
+      end
 
     {:noreply,
      socket
-     |> update(:stored_files, &Enum.uniq(&1 ++ names))
-     |> update(:stored_previews, &Enum.uniq(&1 ++ Enum.map(previews, fn {url, _name} -> url end)))
-     |> update(:preview_names, &Map.merge(&1, Map.new(previews)))
-     |> assign(:uploaded_names, names ++ Enum.map(previews, fn {_url, name} -> name end))}
+     |> assign(:stored_files, stored_files)
+     |> assign(
+       :preview_names,
+       socket.assigns.preview_names
+       |> Map.merge(Map.new(files, fn {url, name, _previous, _index} -> {url, name} end))
+       |> Map.take(stored_files)
+     )
+     |> assign(:uploaded_names, Enum.map(files, fn {_url, name, _previous, _index} -> name end))}
   end
 
   def handle_event("remove_upload", %{"url" => url}, socket) do
     {:noreply,
      socket
      |> update(:stored_files, &List.delete(&1, url))
-     |> update(:stored_previews, &List.delete(&1, url))
      |> update(:preview_names, &Map.delete(&1, url))}
   end
 
   def handle_event("cancel_upload", %{"ref" => ref}, socket) do
-    upload =
-      Enum.find([:demo_files, :demo_previews], fn name ->
-        Enum.any?(socket.assigns.uploads[name].entries, &(&1.ref == ref))
-      end)
-
-    {:noreply, cancel_upload(socket, upload, ref)}
+    {:noreply, cancel_upload(socket, :demo_files, ref)}
   end
 
   def handle_event("calendar_change", %{"event" => id}, socket) do
@@ -755,16 +784,33 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   defp configure_showcase_preview(socket, section, options) do
     options =
-      if section == "ui_kit" and Map.has_key?(options, "progress") do
-        progress =
-          case Integer.parse(options["progress"]) do
-            {value, ""} -> value |> max(0) |> min(100) |> Integer.to_string()
-            _ -> socket.assigns.showcase["ui_kit"]["progress"]
-          end
+      cond do
+        section == "uploads" ->
+          options =
+            if socket.assigns.uploads.demo_files.entries != [],
+              do: Map.delete(options, "selection"),
+              else: options
 
-        Map.put(options, "progress", progress)
-      else
-        options
+          if Map.get(options, "selection", socket.assigns.showcase["uploads"]["selection"]) ==
+               "multiple" or
+               Map.get(options, "preview", socket.assigns.showcase["uploads"]["preview"]) not in [
+                 true,
+                 "true"
+               ],
+             do: Map.put(options, "editor", "false"),
+             else: options
+
+        section == "ui_kit" and Map.has_key?(options, "progress") ->
+          progress =
+            case Integer.parse(options["progress"]) do
+              {value, ""} -> value |> max(0) |> min(100) |> Integer.to_string()
+              _ -> socket.assigns.showcase["ui_kit"]["progress"]
+            end
+
+          Map.put(options, "progress", progress)
+
+        true ->
+          options
       end
 
     socket =
@@ -780,7 +826,28 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
           end
 
         "uploads" ->
-          assign(socket, :upload_mode, Map.get(options, "render_as", socket.assigns.upload_mode))
+          socket =
+            assign(
+              socket,
+              :upload_mode,
+              Map.get(options, "render_as", socket.assigns.upload_mode)
+            )
+
+          if options["selection"] &&
+               options["selection"] != socket.assigns.showcase["uploads"]["selection"] do
+            socket
+            |> disallow_upload(:demo_files)
+            |> allow_upload(
+              :demo_files,
+              Keyword.put(
+                @upload_options,
+                :max_entries,
+                if(options["selection"] == "single", do: 1, else: 3)
+              )
+            )
+          else
+            socket
+          end
 
         "actions" ->
           assign(socket,

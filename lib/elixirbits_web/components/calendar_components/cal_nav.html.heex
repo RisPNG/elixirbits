@@ -1,48 +1,45 @@
-<div class="grid grid-cols-[auto_auto_auto_1fr_auto] items-center gap-2">
-  <button
+<div class="grid grid-cols-[max-content_2.75rem_2.75rem_1fr_max-content] items-center gap-2">
+  <.button
     type="button"
     phx-click="calendar_change"
     phx-value-view={@view}
     phx-value-date={Date.to_iso8601(@today)}
-    class="rounded-default border border-outline px-3 py-1 text-sm text-content hover:overlay-dark"
+    variant={:neutral}
   >
     Today
-  </button>
-  <button
+  </.button>
+  <.button
     type="button"
     phx-click="calendar_change"
     phx-value-view={@view}
     phx-value-date={Date.to_iso8601(Cal.shift(@view, @cursor, -1))}
     aria-label="Previous calendar period"
-    class="rounded-default border border-outline p-1.5 text-content hover:overlay-dark"
+    class="size-11 button-neutral"
   >
     <.icon name="hero-chevron-left" class="size-4" />
-  </button>
-  <button
+  </.button>
+  <.button
     type="button"
     phx-click="calendar_change"
     phx-value-view={@view}
     phx-value-date={Date.to_iso8601(Cal.shift(@view, @cursor, 1))}
     aria-label="Next calendar period"
-    class="rounded-default border border-outline p-1.5 text-content hover:overlay-dark"
+    class="size-11 button-neutral"
   >
     <.icon name="hero-chevron-right" class="size-4" />
-  </button>
+  </.button>
   <h2 class="text-lg font-semibold text-content">{@period_title}</h2>
-  <div class="grid grid-cols-[auto_auto_auto_auto_auto_auto] gap-1">
-    <button
+  <div class="grid grid-cols-[repeat(6,max-content)] gap-2">
+    <.button
       :for={{value, label} <- Cal.views()}
       type="button"
       phx-click="calendar_change"
       phx-value-view={value}
       phx-value-date={Date.to_iso8601(@cursor)}
       aria-pressed={if @view == value, do: "true", else: "false"}
-      class={[
-        "rounded-default px-3 py-1 text-sm hover:overlay-dark",
-        if(@view == value, do: "bg-brand text-content", else: "bg-primary text-content")
-      ]}
+      variant={if @view == value, do: :primary, else: :neutral}
     >
       {label}
-    </button>
+    </.button>
   </div>
 </div>
