@@ -31,6 +31,7 @@ import UploadPdfPreview from "./upload_pdf_preview"
 import FileInput, {FilePreview} from "./file_input"
 import ColorInput from "./color_input"
 import NumberInput from "./number_input"
+import CinderPagination from "./cinder_pagination"
 import "vanilla-colorful/rgba-color-picker.js"
 import topbar from "topbar"
 
@@ -41,7 +42,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
     _csrf_token: csrfToken,
     user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }),
-  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, SelectDropdown, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput},
+  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, SelectDropdown, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput, CinderPagination},
 })
 
 // Show progress bar on live navigation and form submits

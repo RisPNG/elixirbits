@@ -95,15 +95,15 @@
           Background opacity
         </h2>
         <p class="text-sm text-subcontent">
-          Set the background alpha while text and icons stay opaque. The default is 25%. Nested layers add their alpha up to 100%. In light mode, brand backgrounds at 50% alpha or less use dark text and icons.
+          Set the background alpha while text and icons stay opaque. The default is 10%. Nested layers add their alpha up to 100%. In light mode, brand backgrounds at 50% alpha or less use dark text and icons.
         </p>
       </div>
       <ul aria-label="Background opacity examples" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
         <li
           :for={
             {alpha, opacity_class} <- [
-              {10, "overlay-opacity-[0.1]"},
-              {25, "overlay-opacity"},
+              {10, "overlay-opacity"},
+              {25, "overlay-opacity-[0.25]"},
               {50, "overlay-opacity-[0.5]"},
               {100, "overlay-opacity-[1]"}
             ]
@@ -128,26 +128,26 @@
         </li>
       </ul>
       <div
-        id="layout-test-opacity-stack-25"
+        id="layout-test-opacity-stack-10"
         class="rounded-default border border-outline bg-brand overlay-opacity p-3 text-content"
       >
-        <p class="text-sm font-medium">25% background alpha</p>
+        <p class="text-sm font-medium">10% background alpha</p>
         <div class="mt-3">
           <div
-            id="layout-test-opacity-stack-50"
+            id="layout-test-opacity-stack-20"
             class="rounded-default border border-outline overlay-opacity p-3"
           >
-            <p class="text-sm font-medium">50% background alpha</p>
+            <p class="text-sm font-medium">20% background alpha</p>
             <div
-              id="layout-test-opacity-stack-75"
-              class="mt-3 rounded-default border border-outline overlay-opacity p-3 text-content-inverse dark:text-content"
+              id="layout-test-opacity-stack-30"
+              class="mt-3 rounded-default border border-outline overlay-opacity p-3"
             >
-              <p class="text-sm font-medium">75% background alpha</p>
+              <p class="text-sm font-medium">30% background alpha</p>
               <div
-                id="layout-test-opacity-stack-100"
+                id="layout-test-opacity-stack-40"
                 class="mt-3 rounded-default border border-outline overlay-opacity p-3"
               >
-                <p class="text-sm font-medium">100% background alpha</p>
+                <p class="text-sm font-medium">40% background alpha</p>
               </div>
             </div>
           </div>
@@ -165,7 +165,7 @@
           Overlay strength
         </h2>
         <p class="text-sm text-subcontent">
-          Dark and light overlays move saturation toward 100% while moving lightness toward black or white, keeping hue unchanged. The default strength is 25%. Nested overlays of the same kind add their strength up to 100%. Light overlays on brand at 50% strength or more use dark text and icons in both modes.
+          Dark and light overlays move saturation toward 100% while moving lightness toward black or white, keeping hue unchanged. The default strength is 10%. Nested overlays of the same kind add their strength up to 100%. Light overlays on brand at 50% strength or more use dark text and icons in both modes.
         </p>
       </div>
       <div class="grid grid-cols-[1fr_1fr] gap-3">
@@ -174,16 +174,16 @@
             {kind, title, default_class, content_class, strengths} <- [
               {"dark", "Dark overlay", "overlay-dark", "text-content-inverse dark:text-content",
                [
-                 {10, "overlay-dark-[0.1]"},
-                 {25, "overlay-dark"},
+                 {10, "overlay-dark"},
+                 {25, "overlay-dark-[0.25]"},
                  {50, "overlay-dark-[0.5]"},
                  {100, "overlay-dark-[1]"}
                ]},
               {"light", "Light overlay", "overlay-light",
                "text-content-inverse dark:text-content",
                [
-                 {10, "overlay-light-[0.1]"},
-                 {25, "overlay-light"},
+                 {10, "overlay-light"},
+                 {25, "overlay-light-[0.25]"},
                  {50, "overlay-light-[0.5]"},
                  {100, "overlay-light-[1]"}
                ]}
@@ -215,40 +215,39 @@
             </li>
           </ul>
           <div
-            id={"layout-test-overlay-#{kind}-stack-25"}
+            id={"layout-test-overlay-#{kind}-stack-10"}
             class={[
               "rounded-default border border-outline bg-brand p-3",
               content_class,
               default_class
             ]}
           >
-            <p class="text-sm font-medium">25% combined strength</p>
+            <p class="text-sm font-medium">10% combined strength</p>
             <div class="mt-3">
               <div
-                id={"layout-test-overlay-#{kind}-stack-50"}
+                id={"layout-test-overlay-#{kind}-stack-20"}
                 class={[
                   "rounded-default border border-outline p-3",
-                  default_class,
-                  kind == "light" && "text-content dark:text-content-inverse"
+                  default_class
                 ]}
               >
-                <p class="text-sm font-medium">50% combined strength</p>
+                <p class="text-sm font-medium">20% combined strength</p>
                 <div
-                  id={"layout-test-overlay-#{kind}-stack-75"}
+                  id={"layout-test-overlay-#{kind}-stack-30"}
                   class={[
                     "mt-3 rounded-default border border-outline p-3",
                     default_class
                   ]}
                 >
-                  <p class="text-sm font-medium">75% combined strength</p>
+                  <p class="text-sm font-medium">30% combined strength</p>
                   <div
-                    id={"layout-test-overlay-#{kind}-stack-100"}
+                    id={"layout-test-overlay-#{kind}-stack-40"}
                     class={[
                       "mt-3 rounded-default border border-outline p-3",
                       default_class
                     ]}
                   >
-                    <p class="text-sm font-medium">100% combined strength</p>
+                    <p class="text-sm font-medium">40% combined strength</p>
                   </div>
                 </div>
               </div>
@@ -1710,7 +1709,11 @@
           >{label}</.button>
         </div>
       </div>
-      <div id="layout-test-cinder-collection" data-layout={@showcase["cinder"]["layout"]}>
+      <div
+        id="layout-test-cinder-collection"
+        phx-hook="CinderPagination"
+        data-layout={@showcase["cinder"]["layout"]}
+      >
         <Cinder.Collection.collection
           id={"layout-test-cinder-component-#{@showcase["cinder"]["layout"]}-#{@showcase["cinder"]["page_size"]}"}
           query={@showcase_query}

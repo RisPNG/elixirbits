@@ -195,7 +195,7 @@
 
   --color-outline: oklch(84% 0.012 254.09);
 
-  --overlay-opacity: 0.25;
+  --overlay-opacity: 0.1;
   --color-dark: oklch(0% 0 0 / var(--overlay-opacity));
   --color-light: oklch(100% 0 0 / var(--overlay-opacity));
 
@@ -923,6 +923,15 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 /* Cinder filters and pagination */
+
+.cinder-pagination-gap {
+  display: inline-grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  color: var(--color-subcontent);
+}
 
 [data-key="filter_clear_button_class"].invisible { display: none; }
 

@@ -43,6 +43,7 @@ test("page loading uses the current theme colors on every navigation", async () 
     FilePreview: {},
     ColorInput: {},
     NumberInput: {},
+    CinderPagination: {},
     initTooltips: () => {},
     process: {env: {NODE_ENV: "test"}},
   })
