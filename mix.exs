@@ -219,7 +219,6 @@ defmodule Elixirbits.MixProject do
         "compile --warnings-as-errors",
         "deps.unlock --unused",
         "ash.codegen --check",
-        "format",
         "test",
         "dialyzer"
       ]
