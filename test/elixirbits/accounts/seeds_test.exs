@@ -46,6 +46,22 @@ defmodule Elixirbits.Accounts.SeedsTest do
     :ok
   end
 
+  test "default navigation assigns icons to its top-level entries" do
+    Code.eval_file(@seeds_file)
+
+    for {code, icon} <- [
+          {"HOME", "hero-home"},
+          {"ADMIN", "hero-user-group"},
+          {"DP", "hero-squares-2x2"}
+        ] do
+      assert %{parent: nil, icon: ^icon} = Ash.get!(Sitenav, %{code: code}, actor: @system)
+    end
+
+    for code <- ["USERS", "ROLES", "ORG", "LT"] do
+      assert is_nil(Ash.get!(Sitenav, %{code: code}, actor: @system).icon)
+    end
+  end
+
   test "default accounts are confirmed, have empty profiles, and sign in with their seeded passwords",
        %{conn: conn} do
     Code.eval_file(@seeds_file)

@@ -6,14 +6,15 @@
     phx-submit="save"
     class="space-y-6"
   >
+    <.header level={1}>
+      Organization settings
+      <:subtitle>Application identity, regional defaults, and contact details.</:subtitle>
+      <:actions>
+        <.action_button :if={@editable?} action={:save} type="submit" tooltip="Save settings" />
+      </:actions>
+    </.header>
+
     <.card>
-      <.header>
-        Organization settings
-        <:subtitle>Application identity, regional defaults, and contact details.</:subtitle>
-        <:actions>
-          <.action_button :if={@editable?} action={:save} type="submit" tooltip="Save settings" />
-        </:actions>
-      </.header>
       <div class="grid grid-cols-[2fr_1fr_1fr] subgap-2">
         <.input
           field={@form[:name]}

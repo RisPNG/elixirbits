@@ -6,22 +6,20 @@
     phx-submit="save"
     class="space-y-6"
   >
-    <.card>
-      <.header>
-        {@page_title}
-        <:subtitle>Name the role and grant it access to each page.</:subtitle>
-        <:actions>
-          <div class="grid grid-cols-[auto_auto] items-center gap-2">
-            <.action_button action={:back} navigate={~p"/admin/roles"} />
-            <.action_button
-              :if={can?(@permissions, @current_path, @live_action)}
-              action={:save}
-              type="submit"
-            />
-          </div>
-        </:actions>
-      </.header>
-    </.card>
+    <.header level={1}>
+      {@page_title}
+      <:subtitle>Name the role and grant it access to each page.</:subtitle>
+      <:actions>
+        <div class="grid grid-cols-[auto_auto] items-center gap-2">
+          <.action_button action={:back} navigate={~p"/admin/roles"} />
+          <.action_button
+            :if={can?(@permissions, @current_path, @live_action)}
+            action={:save}
+            type="submit"
+          />
+        </div>
+      </:actions>
+    </.header>
 
     <.card>
       <.header>

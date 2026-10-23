@@ -59,7 +59,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
   @showcase_defaults %{
     "header" => %{
-      "variant" => "neutral",
+      "variant" => "default",
       "subtitle" => true,
       "actions" => true,
       "disabled" => false,
@@ -220,7 +220,6 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
          resource_id: "room-a"
        }
      ])
-     |> assign(:current_scope, nil)
      |> assign(:current_tab, "local")
      |> assign(:dependency_form, to_form(%{}, as: :dependency))
      |> assign(:dependency_pages, @dependency_pages)

@@ -20,6 +20,7 @@ Ash.create!(
   %{
     code: "HOME",
     name: "Home",
+    icon: "hero-home",
     description: "Open your application workspace.",
     level: 1,
     parent: nil,
@@ -32,6 +33,7 @@ Ash.create!(
   %{
     code: "ADMIN",
     name: "Administration",
+    icon: "hero-user-group",
     level: 1,
     parent: nil,
     url: nil,
@@ -71,6 +73,7 @@ Ash.create!(
   %{
     code: "DP",
     name: "Components",
+    icon: "hero-squares-2x2",
     description: "Explore the application components.",
     level: 1,
     parent: nil,
@@ -99,7 +102,7 @@ Ash.create!(
     actor: system,
     upsert?: true,
     upsert_identity: :unique_code,
-    upsert_fields: [:name, :description, :level, :parent, :url, :sequence]
+    upsert_fields: [:name, :description, :icon, :level, :parent, :url, :sequence]
   )
 end)
 

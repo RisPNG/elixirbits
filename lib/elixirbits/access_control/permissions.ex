@@ -5,10 +5,24 @@ defmodule Elixirbits.AccessControl.Permissions do
   alias Elixirbits.AccessControl.RolePerm
   alias Elixirbits.AccessControl.Sitenav
 
-  @levels [4, 5, 6, 7, 12, 13, 14, 15, 16]
+  @level_options [
+    {"None", 0},
+    {"Read", 4},
+    {"Read + Update", 5},
+    {"Read + Create", 6},
+    {"Read + Create + Update", 7},
+    {"Read + Delete", 12},
+    {"Read + Update + Delete", 13},
+    {"Read + Create + Delete", 14},
+    {"Read + Create + Update + Delete", 15},
+    {"Superuser Access", 16}
+  ]
+  @levels for {_label, level} <- @level_options, level != 0, do: level
   @capabilities %{read: 4, create: 2, update: 1, delete: 8, su: 16}
 
   defstruct user: nil, entries: [], by_code: %{}, levels: %{}
+
+  def level_options, do: @level_options
 
   def load(user) do
     user =

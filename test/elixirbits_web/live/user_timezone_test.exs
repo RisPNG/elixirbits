@@ -48,7 +48,13 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
     {:ok, view, _html} = live(conn, ~p"/")
     assert has_element?(view, "[data-user-timezone='Europe/London']")
-    refute has_element?(view, "#user-timezone-form")
+
+    assert has_element?(
+             view,
+             "button[popovertarget=account-menu][aria-label='Open account menu']"
+           )
+
+    assert has_element?(view, "#account-menu[popover=auto] #user-timezone-form[novalidate]")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
     assert has_element?(view, "#user-timezone-form[novalidate]")
 
@@ -244,7 +250,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
       |> log_in_user(user)
       |> put_connect_params(%{"user_timezone" => "America/New_York"})
 
-    path = ~p"/dev_panel/layout_test?#{%{scope: "timezone"}}"
+    path = ~p"/confirm_new_user/confirmation-token?#{%{scope: "timezone"}}"
     {:ok, view, _html} = live(conn, path)
     assert has_element?(view, "[data-user-timezone='America/New_York']")
     refute has_element?(view, "#user-timezone-form")
@@ -254,5 +260,14 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     assert Ash.get!(User, user.id, actor: @system).timezone == "Europe/London"
     {:ok, view, _html} = follow_redirect(result, conn, path)
     assert has_element?(view, "[data-user-timezone='Europe/London']")
+  end
+
+  test "the component showcase exposes the shared account preference form", %{conn: conn} do
+    conn = log_in_user(conn, create_user())
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    assert has_element?(view, "#app-navigation")
+    assert has_element?(view, "button[popovertarget=account-menu]")
+    assert has_element?(view, "#account-menu #user-timezone-form[phx-submit=change_timezone]")
   end
 end

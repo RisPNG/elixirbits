@@ -1,6 +1,6 @@
 <Layouts.app user_timezone={@user_timezone} flash={@flash} content_class="mx-auto w-full max-w-md">
   <.card>
-    <.header>
+    <.header level={1}>
       Sign In
       <:subtitle>Use your email and password, or request a magic link.</:subtitle>
     </.header>
@@ -27,10 +27,10 @@
           label="Remember me"
           tooltip="Keeps you signed in for a year."
         />
-        <.link
+        <.button
           navigate={~p"/reset"}
-          class="text-sm text-brand underline-offset-4 hover:underline focus-visible:underline"
-        >Forgot password?</.link>
+          variant={:text}
+        >Forgot password?</.button>
       </div>
 
       <div class="flex flex-col gap-2">
@@ -43,7 +43,8 @@
         </.button>
         <.button
           type="button"
-          class="self-center text-sm text-brand underline-offset-4 hover:underline focus-visible:underline"
+          variant={:text}
+          class="self-center"
           phx-click="request_magic_link"
         >
           Email me a magic link
@@ -52,10 +53,10 @@
     </.form>
 
     <p class="border-t border-outline pt-4 text-center text-sm text-subcontent">
-      <.link
+      <.button
         navigate={~p"/register"}
-        class="text-brand underline-offset-4 hover:underline focus-visible:underline"
-      >Create an account</.link>
+        variant={:text}
+      >Create an account</.button>
     </p>
   </.card>
 </Layouts.app>

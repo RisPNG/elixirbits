@@ -49,6 +49,18 @@
       "type": "text"
     },
     {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "icon",
+      "type": "text"
+    },
+    {
       "allow_nil?": false,
       "default": "nil",
       "generated?": false,
@@ -169,7 +181,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": false,
-  "hash": "FA16615AA26EAE03AA272CE4FE4A706FB4E3CE85104AFA4DD9309C53F02B96A1",
+  "hash": "59CD9E2C6984948F1753F370C2D4BEE4092F5E9BD68220965EDB706B1EB0A853",
   "identities": [
     {
       "all_tenants?": false,

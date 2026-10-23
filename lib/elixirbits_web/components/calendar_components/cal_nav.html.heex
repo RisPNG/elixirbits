@@ -14,7 +14,8 @@
     phx-value-view={@view}
     phx-value-date={Date.to_iso8601(Cal.shift(@view, @cursor, -1))}
     aria-label="Previous calendar period"
-    class="size-11 button-neutral"
+    variant={:neutral}
+    class="size-11 p-0!"
   >
     <.icon name="hero-chevron-left" class="size-4" />
   </.button>
@@ -24,7 +25,8 @@
     phx-value-view={@view}
     phx-value-date={Date.to_iso8601(Cal.shift(@view, @cursor, 1))}
     aria-label="Next calendar period"
-    class="size-11 button-neutral"
+    variant={:neutral}
+    class="size-11 p-0!"
   >
     <.icon name="hero-chevron-right" class="size-4" />
   </.button>
@@ -37,7 +39,6 @@
       phx-value-view={value}
       phx-value-date={Date.to_iso8601(@cursor)}
       aria-pressed={if @view == value, do: "true", else: "false"}
-      variant={if @view == value, do: :primary, else: :neutral}
     >
       {label}
     </.button>

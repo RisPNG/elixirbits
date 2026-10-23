@@ -6,6 +6,7 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
 
   alias Elixirbits.AccessControl.Role
   alias Elixirbits.AccessControl.RolePerm
+  alias Elixirbits.AccessControl.ResourcePolicy
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts
   alias Elixirbits.Accounts.User
@@ -35,6 +36,26 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
     end
 
     user
+  end
+
+  test "missing actors are denied and system actors bypass without loading permissions" do
+    handler = "resource-policy-#{System.unique_integer([:positive])}"
+    test_pid = self()
+
+    :telemetry.attach(
+      handler,
+      [:elixirbits, :repo, :query],
+      fn _, _, _, _ -> if self() == test_pid, do: send(test_pid, :query) end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+
+    opts = [paths: ["/admin/roles"], capability: :read]
+
+    refute ResourcePolicy.match?(nil, %{}, opts)
+    assert ResourcePolicy.match?(%{system: true}, %{}, opts)
+    refute_received :query
   end
 
   test "direct resource CRUD requires independent create, update, and delete flags" do

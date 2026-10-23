@@ -3,6 +3,22 @@ defmodule Elixirbits.CoreUtils.PhonesTest do
 
   alias Elixirbits.CoreUtils.Phones
 
+  test "browser dial codes cover the same countries as the selector" do
+    dial_codes = Jason.decode!(Phones.dial_codes_json())
+    options = Phones.options()
+
+    assert map_size(dial_codes) == length(options)
+
+    for option <- options do
+      assert dial_codes[option.value] == option.selected_label
+    end
+
+    assert dial_codes["MY"] == "+60"
+    assert dial_codes["CA"] == dial_codes["US"]
+    assert Phones.filter_options("") == options
+    assert Phones.filter_options("  ") == options
+  end
+
   test "country options separate their searchable label from the selected dial code" do
     malaysia = Enum.find(Phones.options(), &(&1.value == "MY"))
 

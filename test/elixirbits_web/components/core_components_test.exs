@@ -78,6 +78,152 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
   @endpoint ElixirbitsWeb.Endpoint
 
+  describe "button actions" do
+    test "default controls preserve toggle and tab states, events, and disabled behavior" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <CoreComponents.button
+          id="details-toggle"
+          type="button"
+          aria-pressed="true"
+          phx-click="toggle_details"
+          phx-value-section="details"
+        >Details</CoreComponents.button>
+        <CoreComponents.button
+          id="overview-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          disabled
+        >Overview</CoreComponents.button>
+        """)
+
+      document = Floki.parse_document!(html)
+
+      assert [_] =
+               Floki.find(
+                 document,
+                 "button#details-toggle[type=button][aria-pressed=true][phx-click=toggle_details][phx-value-section=details]"
+               )
+
+      assert document |> Floki.find("#details-toggle") |> Floki.text() |> String.trim() ==
+               "Details"
+
+      assert [_] =
+               Floki.find(
+                 document,
+                 "button#overview-tab[role=tab][aria-selected=false][disabled]"
+               )
+    end
+
+    test "text actions preserve navigation and event semantics" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <CoreComponents.button id="create-account" variant={:text} navigate="/register">
+          Create an account
+        </CoreComponents.button>
+        <CoreComponents.button
+          id="request-link"
+          variant={:text}
+          type="button"
+          phx-click="request_magic_link"
+          phx-disable-with="Sending..."
+        >Email me a magic link</CoreComponents.button>
+        """)
+
+      document = Floki.parse_document!(html)
+
+      assert [_] =
+               Floki.find(document, "a#create-account[href='/register'][data-phx-link=redirect]")
+
+      assert [_] =
+               Floki.find(
+                 document,
+                 "button#request-link[type=button][phx-click=request_magic_link][phx-disable-with='Sending...']"
+               )
+
+      assert Floki.find(document, "button#create-account, a#request-link") == []
+      assert Floki.text(Floki.find(document, "#create-account")) =~ "Create an account"
+
+      assert document |> Floki.find("#request-link") |> Floki.text() |> String.trim() ==
+               "Email me a magic link"
+    end
+  end
+
+  describe "collapse panels" do
+    test "rich summaries and interactive content remain inside one native panel" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <CoreComponents.collapse
+          id="billing-protection"
+          name="billing-settings"
+          data-purpose="protection"
+        >
+          <:summary>
+            <span id="protection-title">Billing protection</span>
+            <span id="protection-status">3 of 4 services active</span>
+            <.link href="/help/billing">Learn more</.link>
+          </:summary>
+          <CoreComponents.form for={nil} id="protection-settings" phx-submit="save_protection">
+            <CoreComponents.input
+              type="checkbox"
+              name="fraud_monitoring"
+              value={true}
+              label="Fraud monitoring"
+            />
+            <CoreComponents.button type="submit">Save settings</CoreComponents.button>
+          </CoreComponents.form>
+        </CoreComponents.collapse>
+        """)
+
+      document = Floki.parse_document!(html)
+
+      assert [panel] =
+               Floki.find(
+                 document,
+                 "details#billing-protection[name=billing-settings][data-purpose=protection]"
+               )
+
+      assert [summary] = Floki.find(panel, "summary")
+      assert Floki.text(summary) =~ "Billing protection"
+      assert Floki.text(summary) =~ "3 of 4 services active"
+      assert Floki.find(summary, "a[href='/help/billing']") != []
+      assert Floki.find(summary, "form") == []
+
+      assert Floki.find(panel, "form#protection-settings[phx-submit=save_protection]") != []
+      assert Floki.find(panel, "input[name=fraud_monitoring][checked]") != []
+
+      assert Floki.text(Floki.find(panel, "button[type=submit]")) |> String.trim() ==
+               "Save settings"
+
+      assert Floki.find(document, "details[open]") == []
+    end
+
+    test "initial expansion is explicit and native open state is preserved after mounting" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <CoreComponents.collapse id="expanded-settings" open>
+          <:summary>Settings</:summary>
+          <p>These settings start expanded.</p>
+        </CoreComponents.collapse>
+        """)
+
+      document = Floki.parse_document!(html)
+      assert [panel] = Floki.find(document, "details#expanded-settings[open]")
+      assert Floki.text(panel) =~ "These settings start expanded."
+      assert [mounted] = Floki.attribute(panel, "phx-mounted")
+      assert [["ignore_attrs", %{"attrs" => ["open"]}]] = Jason.decode!(mounted)
+    end
+  end
+
   describe "select option states" do
     test "shared selects keep one option surface layer and padding while keyboard selection stays usable" do
       {:ok, view, _html} =
@@ -89,11 +235,11 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         rows = Floki.find(document, "##{id} ul > li")
 
         assert length(rows) >= 2
-        assert Floki.find(document, "##{id} ul > li.bg-primary.overlay-dark.font-semibold") != []
+        assert Floki.find(document, "##{id} ul > li.option-surface.font-semibold") != []
 
         assert Floki.find(
                  document,
-                 "##{id} ul > li.cursor-pointer.text-content > div.overlay-light"
+                 "##{id} ul > li.cursor-pointer.text-content > div.option-surface"
                ) != []
 
         refute html =~ "hover:bg-gray-400"
@@ -103,11 +249,11 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           assert [outer_classes] = Floki.attribute(row, "class")
           refute outer_classes =~ "py-2"
           refute outer_classes =~ "px-3"
-          refute outer_classes =~ "hover:overlay-light"
+          refute outer_classes =~ "hover:option-surface"
           assert [inner_classes] = Floki.attribute(row, "div", "class")
           assert "py-2" in String.split(inner_classes)
           assert "px-3" in String.split(inner_classes)
-          assert "hover:overlay-light" in String.split(inner_classes)
+          assert "hover:option-surface" in String.split(inner_classes)
         end
       end
 
@@ -121,8 +267,8 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         render_hook(element(view, "##{id}"), "option_click", %{"idx" => "0"})
         assert has_element?(view, "##{id} input[type=hidden][name='#{field_name}'][value=editor]")
         render_hook(element(view, "##{id}"), "keydown", %{"key" => "ArrowDown"})
-        assert has_element?(view, "##{id} li.bg-primary.overlay-dark", "Editor")
-        assert has_element?(view, "##{id} li > div.overlay-light", "Viewer")
+        assert has_element?(view, "##{id} li.option-surface", "Editor")
+        assert has_element?(view, "##{id} li > div.option-surface", "Viewer")
       end
     end
   end

@@ -197,10 +197,10 @@ defmodule ElixirbitsWeb.CoreComponents do
       {@rest}
     >
       <div class={[
-        "flex items-start gap-3 p-4 rounded-default border w-80 max-w-80 text-wrap shadow-sm",
-        @kind == :info && "bg-info border-info text-content",
-        @kind == :error && "bg-error border-error text-content",
-        @kind == :warning && "bg-warning border-warning text-content"
+        "flex items-start gap-3 p-4 rounded-default border border-outline w-80 max-w-80 text-wrap shadow-sm overlay-opacity-[0.12] text-content",
+        @kind == :info && "bg-info",
+        @kind == :error && "bg-error",
+        @kind == :warning && "bg-warning"
       ]}>
         <.icon :if={@icon} name={@icon} class="size-5 shrink-0" />
         <div>
@@ -329,28 +329,32 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   @doc """
-  Renders a button with navigation support.
+  Renders an action with optional navigation and visual emphasis.
 
   ## Examples
 
-      <.button variant={:primary}>Send!</.button>
-      <.button variant={:neutral} phx-click="go">Send!</.button>
-      <.button variant={:neutral} navigate={~p"/"}>Home</.button>
+      <.button phx-click="toggle_details" aria-pressed={@show_details}>Details</.button>
+      <.button variant={:primary} type="submit">Sign in</.button>
+      <.button variant={:text} navigate={~p"/register"}>Create an account</.button>
 
   ## Variant
 
-  A labeled action that needs a filled button takes a `variant` instead of hand-rolled classes, so it matches the icon buttons in height and tone: `:primary` for the preferred action, `:neutral` for a secondary action that needs button emphasis, and `:danger` for destructive confirmations.
+  Without a variant, actions use the standard filled control appearance. `aria-pressed` for toggles and `aria-selected` for tabs give the default control its selected brand tint.
 
-      <.button variant={:primary} phx-click="complete">Complete &amp; post variances</.button>
-      <.button variant={:neutral} phx-click="cancel_delete">Cancel</.button>
+      <.button aria-pressed={@show_details} phx-click="toggle_details">Details</.button>
 
-  Section tabs use `:primary` when selected and `:neutral` otherwise. Leaving `variant` unset supports intentional text actions, such as the subordinate magic-link sign-in option, with contextual text and hover/focus styling. Controls with their own shape, such as square toolbar icons, also leave the variant unset and use the shared button color utilities. Inline and hierarchical navigation links keep their text presentation through `<.link>`.
+  Use `:text` for a text action, `:primary` for the preferred action, `:neutral` for an outlined secondary action, and `:danger` for destructive confirmations. These choices describe visual emphasis for both navigation and event actions.
+
+      <.button variant={:text} phx-click="request_magic_link">Email me a magic link</.button>
+      <.button variant={:text} navigate={~p"/register"}>Create an account</.button>
+
+  Navigation attributes render a link, while other actions render a button. Inline and hierarchical navigation links can use `<.link>` directly. Input-owned compact controls use native buttons with the shared base styling.
   """
   attr :rest, :global,
     include:
       ~w(href navigate patch method download name value disabled type target rel popovertarget popovertargetaction)
 
-  attr :variant, :atom, values: [nil, :primary, :neutral, :danger], default: nil
+  attr :variant, :atom, values: [nil, :text, :primary, :neutral, :danger], default: nil
 
   attr :tooltip, :string,
     default: nil,
@@ -362,15 +366,16 @@ defmodule ElixirbitsWeb.CoreComponents do
   def button(%{rest: rest} = assigns) do
     variant =
       case assigns.variant do
+        nil -> "min-h-11 px-4 py-2 text-sm whitespace-nowrap button-default"
+        :text -> "text-sm button-text"
         :primary -> "min-h-11 px-4 py-2 text-sm whitespace-nowrap button-primary"
         :neutral -> "min-h-11 px-4 py-2 text-sm whitespace-nowrap button-neutral"
         :danger -> "min-h-11 px-4 py-2 text-sm whitespace-nowrap button-danger"
-        nil -> nil
       end
 
     assigns =
       assign(assigns, :class, [
-        "inline-grid place-items-center rounded-default font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none",
+        "button-base",
         variant,
         assigns[:class]
       ])
@@ -454,16 +459,16 @@ defmodule ElixirbitsWeb.CoreComponents do
         :back -> {"hero-arrow-left", "Back"}
       end
 
-    tone =
+    variant =
       if assigns.action in [:archive, :delete],
-        do: "button-danger",
-        else: "button-neutral"
+        do: :danger,
+        else: :neutral
 
     assigns =
       assign(assigns,
         icon: assigns.icon || icon,
         tooltip: assigns.tooltip || tooltip,
-        tone: tone,
+        variant: variant,
         rest:
           assigns.rest
           |> Map.put_new(:type, "button")
@@ -475,7 +480,8 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     ~H"""
     <.button
-      class={["size-11", @tone, @class]}
+      variant={@variant}
+      class={["size-11 p-0!", @class]}
       tooltip={@tooltip}
       {@rest}
     >
@@ -668,26 +674,22 @@ defmodule ElixirbitsWeb.CoreComponents do
   slot :pending_caption,
     doc: "for a file field, renders a picked file's caption, given its upload entry"
 
-  @live_select_rest_global (if Code.ensure_loaded?(LiveSelect.Component) do
-                              LiveSelect.Component.default_opts()
-                              |> Keyword.keys()
-                              |> Kernel.++([
-                                :field,
-                                :id,
-                                :options,
-                                :"phx-target",
-                                :"phx-blur",
-                                :"phx-focus",
-                                :option,
-                                :tag,
-                                :clear_button,
-                                :hide_dropdown,
-                                :value_mapper,
-                                :form
-                              ])
-                            else
-                              []
-                            end)
+  @live_select_rest_global LiveSelect.Component.default_opts()
+                           |> Keyword.keys()
+                           |> Kernel.++([
+                             :field,
+                             :id,
+                             :options,
+                             :"phx-target",
+                             :"phx-blur",
+                             :"phx-focus",
+                             :option,
+                             :tag,
+                             :clear_button,
+                             :hide_dropdown,
+                             :value_mapper,
+                             :form
+                           ])
 
   attr :rest, :global,
     default: %{autocomplete: "off"},
@@ -1052,17 +1054,18 @@ defmodule ElixirbitsWeb.CoreComponents do
           :if={@upload == nil || (@file_inline && !@preview)}
           class={if @file_inline, do: "grid place-items-center", else: "contents"}
         >
-          <.button
+          <button
             type="button"
             data-file-clear
             hidden
             disabled={@rest[:disabled] || not @file_editable}
             aria-label="Clear selected file"
             class={[
+              "button-base",
               "grid size-7 place-items-center rounded-default text-error cursor-pointer focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
               !@file_inline && "absolute top-2 right-2 bg-primary"
             ]}
-          ><.icon name="hero-x-mark-mini" class="size-5" /></.button>
+          ><.icon name="hero-x-mark-mini" class="size-5" /></button>
         </div>
         <div
           :if={@file_steps}
@@ -1072,7 +1075,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               "opacity-0 pointer-events-none group-hover/file-control:opacity-100 group-hover/file-control:pointer-events-auto has-[:focus-visible]:opacity-100 has-[:focus-visible]:pointer-events-auto"
           ]}
         >
-          <.button
+          <button
             type="button"
             data-file-cycle-input="next"
             data-file-next
@@ -1080,11 +1083,12 @@ defmodule ElixirbitsWeb.CoreComponents do
             aria-controls={@file_id}
             disabled={length(@stored) + length(@file_entries) < 2}
             class={[
+              "button-base",
               "grid min-h-3.5 place-items-center rounded-none text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
               !@text_look && "rounded-tr-default hover:overlay-dark"
             ]}
-          ><.icon name="hero-chevron-up-micro" class="size-3" /></.button>
-          <.button
+          ><.icon name="hero-chevron-up-micro" class="size-3" /></button>
+          <button
             type="button"
             data-file-cycle-input="previous"
             data-file-previous
@@ -1092,10 +1096,11 @@ defmodule ElixirbitsWeb.CoreComponents do
             aria-controls={@file_id}
             disabled={length(@stored) + length(@file_entries) < 2}
             class={[
+              "button-base",
               "grid min-h-3.5 place-items-center rounded-none border-t border-outline text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
               !@text_look && "rounded-br-default hover:overlay-dark"
             ]}
-          ><.icon name="hero-chevron-down-micro" class="size-3" /></.button>
+          ><.icon name="hero-chevron-down-micro" class="size-3" /></button>
         </div>
       </div>
       <span
@@ -1229,32 +1234,34 @@ defmodule ElixirbitsWeb.CoreComponents do
             @text_look &&
               "opacity-0 pointer-events-none group-hover/number:opacity-100 group-hover/number:pointer-events-auto has-[:focus-visible]:opacity-100 has-[:focus-visible]:pointer-events-auto"
           ]}>
-            <.button
+            <button
               type="button"
               data-number-step="1"
               aria-label="Increase value"
               aria-controls={@id}
               disabled={@number_steps_disabled}
               class={[
+                "button-base",
                 "grid min-h-3.5 place-items-center rounded-none text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
                 !@text_look && "rounded-tr-default hover:overlay-dark"
               ]}
             >
               <.icon name="hero-chevron-up-micro" class="size-3" />
-            </.button>
-            <.button
+            </button>
+            <button
               type="button"
               data-number-step="-1"
               aria-label="Decrease value"
               aria-controls={@id}
               disabled={@number_steps_disabled}
               class={[
+                "button-base",
                 "grid min-h-3.5 place-items-center rounded-none border-t border-outline text-subcontent cursor-pointer hover:text-content focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed",
                 !@text_look && "rounded-br-default hover:overlay-dark"
               ]}
             >
               <.icon name="hero-chevron-down-micro" class="size-3" />
-            </.button>
+            </button>
           </div>
         </div>
         <label
@@ -1438,7 +1445,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           @text_look && if(@label, do: "min-h-6", else: "min-h-11"),
           (@disabled_look || @rest[:disabled]) && "overlay-dark cursor-not-allowed text-subcontent"
         ]}>
-          <.button
+          <button
             :if={@color_editable}
             type="button"
             aria-label="Choose color"
@@ -1446,7 +1453,7 @@ defmodule ElixirbitsWeb.CoreComponents do
             popovertarget={@color_popover_id}
             data-color-trigger
             disabled={@rest[:disabled] || @rest[:readonly]}
-            class="size-6 rounded-none cursor-pointer disabled:cursor-not-allowed"
+            class="button-base size-6 rounded-none cursor-pointer disabled:cursor-not-allowed"
           >
             <span
               data-color-swatch
@@ -1454,7 +1461,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               class="color-input-swatch block size-full border border-outline"
               style={if @color_swatch, do: "--input-color: #{@color_swatch}"}
             />
-          </.button>
+          </button>
           <span
             :if={!@color_editable}
             data-color-swatch
@@ -1529,12 +1536,12 @@ defmodule ElixirbitsWeb.CoreComponents do
                 )
               ]}
               text_input_selected_class=""
-              dropdown_class="select-dropdown rounded-default border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
-              option_class="select-none relative py-2 px-3 hover:overlay-light"
+              dropdown_class="select-dropdown rounded-default border border-outline bg-surface shadow-lg z-50 overflow-y-auto"
+              option_class="select-none relative py-2 px-3 hover:option-surface"
               available_option_class="cursor-pointer text-content"
               unavailable_option_class="cursor-not-allowed text-subcontent [&>div]:pointer-events-none"
-              selected_option_class="cursor-pointer text-content bg-primary overlay-dark font-semibold order-first"
-              active_option_class="overlay-light"
+              selected_option_class="cursor-pointer text-content option-surface font-semibold order-first"
+              active_option_class="option-surface"
               container_class={
                 if @text_look,
                   do: "input-text-wrapper relative flex flex-col w-full",
@@ -1569,7 +1576,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           role="dialog"
           aria-label="Choose color"
           data-color-popover
-          class="color-input-popover rounded-default border border-outline bg-primary text-content"
+          class="color-input-popover rounded-default border border-outline bg-surface text-content"
         >
           <rgba-color-picker
             id={@color_picker_id}
@@ -2570,12 +2577,12 @@ defmodule ElixirbitsWeb.CoreComponents do
                 (@error_class || "border-error focus:border-error focus:ring-error")
             ]}
             text_input_selected_class=""
-            dropdown_class="select-dropdown rounded-default border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
-            option_class="select-none relative py-2 px-3 hover:overlay-light"
+            dropdown_class="select-dropdown rounded-default border border-outline bg-surface shadow-lg z-50 overflow-y-auto"
+            option_class="select-none relative py-2 px-3 hover:option-surface"
             available_option_class="cursor-pointer text-content"
             unavailable_option_class="cursor-not-allowed text-subcontent [&>div]:pointer-events-none"
-            selected_option_class="cursor-pointer text-content bg-primary overlay-dark font-semibold order-first"
-            active_option_class="overlay-light"
+            selected_option_class="cursor-pointer text-content option-surface font-semibold order-first"
+            active_option_class="option-surface"
             container_class={@container_class}
             clear_button_extra_class="right-9! top-1/2! -translate-y-1/2! flex items-center cursor-pointer text-error"
             tag_class="group/tag mr-1 mt-1 p-1.5 text-sm rounded-default border border-outline bg-secondary text-content flex items-center gap-1"
@@ -2700,11 +2707,6 @@ defmodule ElixirbitsWeb.CoreComponents do
     country_field = %{parent_form[country_field_key] | value: iso || ""}
     wrapper_id = "#{assigns[:id] || assigns[:name]}_tel_wrapper"
 
-    countries_json =
-      Elixirbits.CoreUtils.Phones.list_countries()
-      |> Enum.into(%{}, fn c -> {c.iso, c.dial_code} end)
-      |> Jason.encode!()
-
     composite_value =
       cond do
         dial_code && number != "" -> "#{dial_code}#{number}"
@@ -2728,7 +2730,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:country_id, country_field.id)
       |> assign(:country_name, country_field.name)
       |> assign(:wrapper_id, wrapper_id)
-      |> assign(:countries_json, countries_json)
+      |> assign(:countries_json, Elixirbits.CoreUtils.Phones.dial_codes_json())
       |> assign(:country_options, Elixirbits.CoreUtils.Phones.options())
       |> assign(:number_value, number)
       |> assign(:composite_value, composite_value)
@@ -2798,12 +2800,12 @@ defmodule ElixirbitsWeb.CoreComponents do
                 )
               ]}
               text_input_selected_class=""
-              dropdown_class="select-dropdown rounded-default border border-outline bg-primary shadow-lg z-50 overflow-y-auto"
-              option_class="select-none relative py-2 px-3 hover:overlay-light"
+              dropdown_class="select-dropdown rounded-default border border-outline bg-surface shadow-lg z-50 overflow-y-auto"
+              option_class="select-none relative py-2 px-3 hover:option-surface"
               available_option_class="cursor-pointer text-content"
               unavailable_option_class="cursor-not-allowed text-subcontent [&>div]:pointer-events-none"
-              selected_option_class="cursor-pointer text-content bg-primary overlay-dark font-semibold order-first"
-              active_option_class="overlay-light"
+              selected_option_class="cursor-pointer text-content option-surface font-semibold order-first"
+              active_option_class="option-surface"
               container_class={
                 if @text_look,
                   do: "input-text-wrapper relative flex flex-col w-full",
@@ -3001,15 +3003,15 @@ defmodule ElixirbitsWeb.CoreComponents do
           if(@preview_as == "thumbnail", do: "mt-3", else: "mt-1")
       ]}
     >
-      <.button
+      <button
         :if={@selection == "singles" && @preview}
         type="button"
         data-file-cycle="previous"
         data-file-previous
         hidden={length(@stored) + length(@file_entries) < 2}
         aria-label="Previous file"
-        class="grid size-7 place-items-center text-content cursor-pointer focus-visible:text-brand focus-visible:outline-none"
-      ><.icon name="hero-chevron-left-mini" class="size-5" /></.button>
+        class="button-base grid size-7 place-items-center rounded-full text-content cursor-pointer hover:overlay-dark focus-visible:text-brand focus-visible:outline-none"
+      ><.icon name="hero-chevron-left-mini" class="size-5" /></button>
       <div
         data-file-preview-content
         class={["min-w-0", @file_detached && @preview_as == "thumbnail" && "h-full"]}
@@ -3106,26 +3108,26 @@ defmodule ElixirbitsWeb.CoreComponents do
             ><.icon name="hero-arrow-top-right-on-square-micro" class="size-4" /></a>
             <span data-file-preview-name hidden class="block truncate text-sm text-subcontent" />
             <span data-file-preview-caption data-file-caption hidden class="block truncate text-sm" />
-            <.button
+            <button
               type="button"
               data-file-edit
               hidden
               disabled={@rest[:disabled] || not @file_editable}
               aria-label="Edit selected image"
-              class="grid min-h-7 place-items-center rounded-default border border-outline bg-primary px-2 text-sm text-content cursor-pointer hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed"
-            >Edit</.button>
+              class="button-base grid min-h-7 place-items-center rounded-default border border-outline bg-primary px-2 text-sm text-content cursor-pointer hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed"
+            >Edit</button>
           </div>
         </div>
       </div>
-      <.button
+      <button
         :if={@selection == "singles" && @preview}
         type="button"
         data-file-cycle="next"
         data-file-next
         hidden={length(@stored) + length(@file_entries) < 2}
         aria-label="Next file"
-        class="grid size-7 place-items-center text-content cursor-pointer focus-visible:text-brand focus-visible:outline-none"
-      ><.icon name="hero-chevron-right-mini" class="size-5" /></.button>
+        class="button-base grid size-7 place-items-center rounded-full text-content cursor-pointer hover:overlay-dark focus-visible:text-brand focus-visible:outline-none"
+      ><.icon name="hero-chevron-right-mini" class="size-5" /></button>
       <span
         :if={@selection == "singles" && @preview}
         data-file-position
@@ -3349,15 +3351,15 @@ defmodule ElixirbitsWeb.CoreComponents do
             @preview_as == "thumbnail" && "absolute bottom-1 left-1"
           ]}
         ><.icon name="hero-arrow-top-right-on-square-micro" class="size-4" /></a>
-        <.button
+        <button
           :if={@edit_enabled && @content_type in ~w(image/png image/jpeg image/gif image/webp)}
           type="button"
           data-file-edit={(@entry && @entry.ref) || @url}
           disabled={@disabled}
           aria-label={"Edit #{@file_name}"}
-          class="grid min-h-7 place-items-center rounded-default border border-outline bg-primary px-2 text-sm text-content cursor-pointer hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed"
-        >Edit</.button>
-        <.button
+          class="button-base grid min-h-7 place-items-center rounded-default border border-outline bg-primary px-2 text-sm text-content cursor-pointer hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed"
+        >Edit</button>
+        <button
           :if={@editable}
           type="button"
           data-file-remove
@@ -3368,10 +3370,11 @@ defmodule ElixirbitsWeb.CoreComponents do
           phx-target={@target}
           aria-label={if @entry, do: "Cancel #{@file_name}", else: "Remove file"}
           class={[
+            "button-base",
             "min-h-5 min-w-5 text-error cursor-pointer opacity-0 pointer-events-none group-hover/preview:opacity-100 group-hover/preview:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto disabled:opacity-0!",
             @preview_as == "thumbnail" && "absolute top-1 right-1"
           ]}
-        ><.icon name="hero-x-mark-mini" class="size-5" /></.button>
+        ><.icon name="hero-x-mark-mini" class="size-5" /></button>
       </div>
       <span
         :if={@media_slot != [] && !@caption_used && !@caption_hover}
@@ -3653,7 +3656,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   @doc """
-  Renders a page section on a raised card surface.
+  Renders a page section on a quiet panel surface.
 
   Form sections and detail groups share this surface, with their own `<.header>` inside.
 
@@ -3677,12 +3680,12 @@ defmodule ElixirbitsWeb.CoreComponents do
     <section
       id={@id}
       class={[
-        "flex flex-col rounded-default border border-outline bg-primary shadow-sm",
+        "flex flex-col rounded-default panel-surface shadow-card",
         @class
       ]}
       {@rest}
     >
-      <div class="flex flex-col gap-4 p-6">
+      <div class="flex flex-col gap-5 p-6">
         {render_slot(@inner_block)}
       </div>
     </section>
@@ -3707,7 +3710,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     ~H"""
     <div
       id={@id}
-      class={["rounded-default border border-outline bg-secondary text-content p-4", @class]}
+      class={["rounded-default inset-surface text-content p-4", @class]}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -3716,24 +3719,63 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   @doc """
-  Renders a header with title.
+  Renders a collapsible panel with a summary and content inside one surface.
+
+  The summary accepts custom content beside a right-aligned chevron. Native details behavior provides mouse and keyboard interaction. `open` sets the initial state, and the browser retains subsequent changes across LiveView updates.
+
+  ## Examples
+
+      <.collapse id="billing-protection">
+        <:summary>
+          <span class="font-medium">Billing protection</span>
+          <span class="block text-subcontent">3 of 4 services active</span>
+        </:summary>
+        <p>Fraud and abuse monitoring is on.</p>
+      </.collapse>
   """
+  attr :id, :string, default: nil
+  attr :class, :any, default: nil
+  attr :open, :boolean, default: false
+  attr :rest, :global, include: ~w(name)
+  slot :summary, required: true
+  slot :inner_block, required: true
+
+  def collapse(assigns)
+
+  @doc """
+  Renders a section header, or a page header with `level={1}`.
+  """
+  attr :level, :integer, values: [1, 2, 3], default: 2
   slot :inner_block, required: true
   slot :subtitle
   slot :actions
 
   def header(assigns) do
     ~H"""
-    <header class={[@actions != [] && "grid grid-cols-[1fr_max-content] items-center gap-6", "pb-4"]}>
-      <div>
-        <h1 class="text-lg font-semibold leading-8">
+    <header class={[
+      "grid items-start gap-6",
+      if(@actions == [],
+        do: "grid-cols-[1fr]",
+        else: "grid-cols-[minmax(0,1fr)_max-content]"
+      )
+    ]}>
+      <div class="min-w-0 space-y-1">
+        <.dynamic_tag
+          tag_name={"h#{@level}"}
+          class={[
+            "font-medium text-content",
+            @level == 1 && "text-3xl leading-10 tracking-tight",
+            @level == 2 && "text-lg leading-7",
+            @level == 3 && "text-base leading-6"
+          ]}
+        >
           {render_slot(@inner_block)}
-        </h1>
-        <p :if={@subtitle != []} class="text-sm text-subcontent">
+        </.dynamic_tag>
+        <p :if={@subtitle != []} class="text-sm leading-6 text-subcontent">
           {render_slot(@subtitle)}
         </p>
       </div>
-      <div>{render_slot(@actions)}</div>
+      <div :if={@actions != []}>{render_slot(@actions)}</div>
     </header>
     """
   end

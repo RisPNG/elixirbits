@@ -554,8 +554,8 @@ test("ISO week input preserves year identity through boundaries and calendar nav
 
   try {
     const source = (await readFile(new URL("../js/vcalendar.js", import.meta.url), "utf8"))
-      .replace('import {Calendar, time, weeks} from "vanilla-calendar-pro"',
-        "const {Calendar, time, weeks} = globalThis.vcalendarTestDependencies")
+      .replace('await import("vanilla-calendar-pro")',
+        "await globalThis.vcalendarTestDependencies")
     const hook = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)).default
     const scenarios = [
       {value: "2020-W01", displayYear: 2019, displayMonth: 11, year: 2020, week: 1, neighborYear: 2019, neighborWeek: 52},
@@ -582,7 +582,7 @@ test("ISO week input preserves year identity through boundaries and calendar nav
       popover.weekButtons = [neighbor, selected]
       const context = {...hook, el: input}
       contexts.push(context)
-      context.mounted()
+      await context.mounted()
       const calendar = context.calendar
       assert.equal(calendar.options.inputMode, false)
       assert.equal(calendar.options.selectedTheme, "elixirbits")
@@ -632,6 +632,62 @@ test("ISO week input preserves year identity through boundaries and calendar nav
     globalThis.HTMLElement = originalElement
     globalThis.document = originalDocument
     globalThis.MutationObserver = originalObserver
+    globalThis.vcalendarTestDependencies = originalDependencies
+  }
+})
+
+test("calendar loading uses the latest patch and leaves removed inputs uninitialized", async () => {
+  const originalDocument = globalThis.document
+  const originalDependencies = globalThis.vcalendarTestDependencies
+  const popover = new Element()
+  const contexts = []
+  globalThis.document = {getElementById: () => popover}
+  let resolveLibrary
+  globalThis.vcalendarTestDependencies = new Promise(resolve => { resolveLibrary = resolve })
+  let created = 0
+  const dependencies = {
+    Calendar: class {
+      constructor(_element, options) { this.options = options; created++ }
+      init() {}
+      destroy() { this.destroyed = true }
+    },
+  }
+
+  try {
+    const source = (await readFile(new URL("../js/vcalendar.js", import.meta.url), "utf8"))
+      .replace('await import("vanilla-calendar-pro")', "await globalThis.vcalendarTestDependencies")
+    const hook = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#loading`)).default
+    const input = new Element()
+    input.dataset = {vcMode: "date", vcValue: "2026-04-23", vcToday: "2026-04-23"}
+    const context = {...hook, el: input}
+    contexts.push(context)
+    const mounting = context.mounted()
+    input.dataset.vcValue = "2026-05-24"
+    input.dataset.vcToday = "2026-04-24"
+    context.updated()
+    assert.equal(context.calendar, undefined)
+    resolveLibrary(dependencies)
+    await mounting
+    assert.equal(created, 1)
+    assert.equal(input.value, "2026-05-24")
+    assert.deepEqual(context.calendar.options.selectedDates, ["2026-05-24"])
+    assert.equal(context.calendar.options.dateToday, "2026-04-24")
+
+    globalThis.vcalendarTestDependencies = new Promise(resolve => { resolveLibrary = resolve })
+    const removedInput = new Element()
+    const removed = {...hook, el: removedInput}
+    contexts.push(removed)
+    const removedMounting = removed.mounted()
+    removed.destroyed()
+    resolveLibrary(dependencies)
+    await removedMounting
+    assert.equal(created, 1)
+    assert.equal(removed.calendar, undefined)
+    assert.equal(getEventListeners(removedInput, "click").length, 0)
+    assert.equal(getEventListeners(removedInput, "keydown").length, 0)
+  } finally {
+    for (const context of contexts) if (!context.disposed) context.destroyed()
+    globalThis.document = originalDocument
     globalThis.vcalendarTestDependencies = originalDependencies
   }
 })
@@ -694,8 +750,8 @@ test("calendar patches refresh native selections and preserve edits when server 
 
   try {
     const source = (await readFile(new URL("../js/vcalendar.js", import.meta.url), "utf8"))
-      .replace('import {Calendar, time, weeks} from "vanilla-calendar-pro"',
-        "const {Calendar, time, weeks} = globalThis.vcalendarTestDependencies")
+      .replace('await import("vanilla-calendar-pro")',
+        "await globalThis.vcalendarTestDependencies")
     const hook = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#patches`)).default
     const input = new CalendarElement()
     input.value = "2026-04-23T13:30:00"
@@ -709,7 +765,7 @@ test("calendar patches refresh native selections and preserve edits when server 
     input.addEventListener("change", () => changes++)
     const context = {...hook, el: input}
     contexts.push(context)
-    context.mounted()
+    await context.mounted()
     const calendar = context.calendar
     assert.equal(CalendarElement.prototype.focus, originalFocus)
     assert.equal(calendar.options.labels.application, "Appointment")
@@ -832,7 +888,7 @@ test("calendar patches refresh native selections and preserve edits when server 
       popover.setAttribute("aria-label", "Calendar")
       const instance = {...hook, el: control}
       contexts.push(instance)
-      instance.mounted()
+      await instance.mounted()
       control.dataset.vcValue = scenario.value
       instance.updated()
       const update = instance.calendar.updates.at(-1).options

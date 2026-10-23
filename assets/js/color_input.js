@@ -125,6 +125,11 @@ const ColorInput = {
     this.editable = this.el.dataset.colorEditable === "true"
     this.input = this.el.querySelector("[data-color-value]")
     this.picker = this.el.querySelector("[data-color-picker]")
+    if (this.picker && !customElements.get("rgba-color-picker") && !this.pickerLoading) {
+      this.pickerLoading = import("vanilla-colorful/rgba-color-picker.js").then(() => {
+        if (!this.destroyedInput) this.synchronize()
+      })
+    }
     this.picker?.shadowRoot?.querySelector("[part='alpha']")?.setAttribute("aria-valuemax", "100")
     this.trigger = this.el.querySelector("[data-color-trigger]")
     this.swatch = this.el.querySelector("[data-color-swatch]")

@@ -34,7 +34,10 @@ defmodule ElixirbitsWeb.Router do
     pipe_through :browser
 
     ash_authentication_live_session :authenticated_routes,
-      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
+      on_mount: [
+        {ElixirbitsWeb.LiveUserAuth, :live_user_optional},
+        {ElixirbitsWeb.LiveUserAuth, :app_nav}
+      ] do
       # in each liveview, add one of the following at the top of the module:
       #
       # If an authenticated user must be present:

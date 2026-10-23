@@ -6,15 +6,43 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLocalControlsTest do
   test "header options configure one preview and its action remains usable", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 
-    render_click(view, "set_showcase_option", %{
-      "section" => "header",
-      "option" => "variant",
-      "choice" => "danger"
-    })
+    assert has_element?(view, "#layout-test-header-card summary", "Button style: default")
+
+    for choice <- ~w(default text neutral primary danger) do
+      render_click(
+        element(
+          view,
+          "#layout-test-header-card button[phx-value-option=variant][phx-value-choice=#{choice}]"
+        )
+      )
+
+      assert has_element?(view, "#layout-test-header-card summary", "Button style: #{choice}")
+
+      assert has_element?(
+               view,
+               "#layout-test-header-card button[phx-value-choice=#{choice}][aria-pressed=true]"
+             )
+
+      assert has_element?(view, "button#layout-test-inline-action[phx-click=show_flash]")
+      render_click(element(view, "#layout-test-inline-action"))
+      assert has_element?(view, "#flash-info")
+
+      if choice == "text" do
+        render_click(view, "toggle_showcase_option", %{
+          "section" => "header",
+          "option" => "navigation"
+        })
+
+        assert has_element?(view, "a#layout-test-inline-action[href='/']", "Home")
+
+        render_click(view, "toggle_showcase_option", %{
+          "section" => "header",
+          "option" => "navigation"
+        })
+      end
+    end
 
     assert has_element?(view, "#layout-test-inline-action.button-danger")
-    render_click(element(view, "#layout-test-inline-action"))
-    assert has_element?(view, "#flash-info")
 
     render_click(view, "toggle_showcase_option", %{"section" => "header", "option" => "disabled"})
     assert has_element?(view, "#layout-test-inline-action[disabled]")

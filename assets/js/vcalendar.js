@@ -1,5 +1,3 @@
-import {Calendar, time, weeks} from "vanilla-calendar-pro"
-
 const pad = (n) => String(n).padStart(2, "0")
 
 const parseInitial = (mode, value) => {
@@ -44,9 +42,11 @@ const setValue = (input, value) => {
 }
 
 const VCalendar = {
-  mounted() {
+  async mounted() {
     const input = this.el
     this.popover = document.getElementById(`${input.id}-calendar`)
+    const {Calendar, time, weeks} = await import("vanilla-calendar-pro")
+    if (this.disposed) return
     input.value = input.dataset.vcValue ?? input.value
     input.setAttribute("value", input.value)
     const mode = input.dataset.vcMode
@@ -196,6 +196,7 @@ const VCalendar = {
     this.popover.addEventListener("beforetoggle", this.onBeforeToggle)
   },
   updated() {
+    if (!this.calendar) return
     const input = this.el
     if (input.disabled && this.popover.matches(":popover-open")) this.popover.hidePopover()
     const value = input.dataset.vcValue ?? input.value
@@ -226,6 +227,7 @@ const VCalendar = {
     }, {year: true, month: true, dates: true, time: true, locale: false})
   },
   destroyed() {
+    this.disposed = true
     this.el.removeEventListener("click", this.onClick)
     this.el.removeEventListener("keydown", this.onKeydown)
     this.popover.removeEventListener("beforetoggle", this.onBeforeToggle)

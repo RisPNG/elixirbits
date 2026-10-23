@@ -54,6 +54,7 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
 
     assert {:error, {:redirect, %{to: "/"}}} = live(conn, ~p"/admin/roles/create")
     {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
+    assert has_element?(view, "nav a[href='/admin/users'][aria-current=location]")
     refute has_element?(view, "#user-form button[type='submit']")
     assert has_element?(view, "#user-form fieldset[disabled] input[name='form[display_name]']")
     html = render_submit(view, "save", %{"form" => %{"display_name" => "Blocked"}})
@@ -62,6 +63,7 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
 
     role = Ash.create!(Role, %{code: "readonly", name: "Read only"}, actor: %{system: true})
     {:ok, role_view, _} = live(conn, ~p"/admin/roles/#{role.id}/update")
+    assert has_element?(role_view, "nav a[href='/admin/roles'][aria-current=location]")
     assert has_element?(role_view, "#role-form fieldset[disabled] input[name='form[name]']")
   end
 
@@ -484,8 +486,11 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
     assert html =~ to_string(target.email)
     assert html =~ "/admin/users/#{target.id}/update"
     refute html =~ "new-role"
-    render_click(view, "toggle_nav")
     assert has_element?(view, "nav a[href='/admin/users']")
     refute has_element?(view, "nav a[href='/admin/roles']")
+    render_click(view, "toggle_nav")
+    refute has_element?(view, "nav a[href='/admin/users']")
+    render_click(view, "toggle_nav")
+    assert has_element?(view, "nav a[href='/admin/users']")
   end
 end

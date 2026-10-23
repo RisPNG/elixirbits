@@ -257,17 +257,26 @@ defmodule Elixirbits.CoreUtils.Phones do
              end)
              |> Enum.sort_by(& &1.name)
 
+  @options Enum.map(@countries, fn country ->
+             %{
+               label: "#{country.dial_code} #{country.name} (#{country.iso})",
+               value: country.iso,
+               selected_label: country.dial_code
+             }
+           end)
+  @search_options Enum.zip(@countries, @options)
+  @dial_codes_json @countries |> Map.new(&{&1.iso, &1.dial_code}) |> Jason.encode!()
+
   @doc "Returns all countries sorted by name."
   def list_countries, do: @countries
 
   @doc """
   Returns LiveSelect-shaped options with the full country label for searching and the dial code as the selected label.
   """
-  def options do
-    Enum.map(@countries, fn c ->
-      %{label: label_for(c), value: c.iso, selected_label: c.dial_code}
-    end)
-  end
+  def options, do: @options
+
+  @doc "Returns the country-to-dial-code JSON used by telephone inputs."
+  def dial_codes_json, do: @dial_codes_json
 
   @doc """
   Filters options by `text`, matching against ISO code, country name, or dial code. Empty text returns the full list.
@@ -278,15 +287,13 @@ defmodule Elixirbits.CoreUtils.Phones do
     if needle == "" do
       options()
     else
-      @countries
-      |> Enum.filter(fn c ->
+      @search_options
+      |> Enum.filter(fn {c, _option} ->
         String.contains?(String.downcase(c.iso), needle) or
           String.contains?(String.downcase(c.name), needle) or
           String.contains?(String.trim_leading(c.dial_code, "+"), needle)
       end)
-      |> Enum.map(fn c ->
-        %{label: label_for(c), value: c.iso, selected_label: c.dial_code}
-      end)
+      |> Enum.map(&elem(&1, 1))
     end
   end
 
@@ -334,8 +341,4 @@ defmodule Elixirbits.CoreUtils.Phones do
   end
 
   def parse(_), do: {nil, "", nil}
-
-  defp label_for(%{iso: iso, name: name, dial_code: dial}) do
-    "#{dial} #{name} (#{iso})"
-  end
 end

@@ -2,10 +2,11 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import {readFile} from "node:fs/promises"
 
-const source = await readFile(new URL("../js/color_input.js", import.meta.url), "utf8")
+const source = (await readFile(new URL("../js/color_input.js", import.meta.url), "utf8"))
+  .replace('import("vanilla-colorful/rgba-color-picker.js")', "globalThis.colorInputTestLoad()")
 const ColorInput = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)).default
 
-const originalGlobals = Object.fromEntries(["document"].map(name => [name, globalThis[name]]))
+const originalGlobals = Object.fromEntries(["document", "customElements", "colorInputTestLoad"].map(name => [name, globalThis[name]]))
 const fields = new Set()
 let fieldId = 0
 
@@ -102,6 +103,7 @@ class Element extends EventTarget {
 }
 
 globalThis.document = new Element()
+globalThis.customElements = {get: () => Element}
 
 function nativeColor(value = "#c9822b", format = "hex", extra = {}) {
   return {valid: true, value, format, label: format === "oklab" ? "OKLab" : format === "lab" ? "Lab" : format.toUpperCase(), swatch: value ? "rgb(201 130 43)" : null, rgba: value ? {r: 201, g: 130, b: 43, a: 1} : null, ...extra}
@@ -214,6 +216,51 @@ test("native rendered metadata opens unchanged without browser parsing or server
   assert.equal(field.notifications.length, 0)
   field.context.updated()
   assert.equal(field.requests.length, 0)
+})
+
+test("picker loading preserves drafts and updates the upgraded picker from the latest native reply", async () => {
+  const originalRegistry = globalThis.customElements
+  let registered = false
+  let resolveLibrary
+  let loads = 0
+  globalThis.customElements = {get: () => registered ? Element : undefined}
+  globalThis.colorInputTestLoad = () => {
+    loads++
+    return new Promise(resolve => { resolveLibrary = resolve })
+  }
+
+  try {
+    const field = openInput()
+    assert.equal(loads, 1)
+    assert.deepEqual(field.controls.picker.color, nativeColor().rgba)
+    field.type("rgb(12 34 56 / .25)")
+    field.context.updated()
+    assert.equal(loads, 1)
+    field.blur()
+    const state = nativeColor("rgb(12 34 56 / .25)", "rgb", {rgba: {r: 12, g: 34, b: 56, a: .25}})
+    await field.reply(0, state)
+    assert.deepEqual(field.controls.picker.color, state.rgba)
+    registered = true
+    resolveLibrary()
+    await field.context.pickerLoading
+    assert.deepEqual(field.controls.picker.color, state.rgba)
+    assert.equal(field.controls.input.value, state.value)
+    assert.equal(field.requests.length, 1)
+
+    registered = false
+    const removed = openInput()
+    removed.context.destroyed()
+    let removedSynchronizations = 0
+    removed.context.synchronize = () => { removedSynchronizations++ }
+    registered = true
+    resolveLibrary()
+    await removed.context.pickerLoading
+    assert.equal(removedSynchronizations, 0)
+    assert.equal(removed.context.destroyedInput, true)
+  } finally {
+    globalThis.customElements = originalRegistry
+    delete globalThis.colorInputTestLoad
+  }
 })
 
 test("manual drafts validate on capture blur and use the native detected format without rewriting raw text", async () => {

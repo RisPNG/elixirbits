@@ -167,6 +167,7 @@
 @source "../css";
 @source "../js";
 @source "../../lib/elixirbits_web";
+@source "../../priv/repo";
 
 @plugin "../vendor/heroicons";
 @plugin "../vendor/tabler";
@@ -179,27 +180,27 @@
   --theme-dark-content: oklch(96% 0.003 252.42);
   --theme-dark-subcontent: oklch(78% 0.012 252.42);
 
-  --color-primary: oklch(98% 0.003 252.42);
-  --color-secondary: oklch(88% 0.018 257.287);
+  --color-primary: #ffffff;
+  --color-secondary: #e3e1e5;
   --color-content: var(--theme-light-content);
   --color-subcontent: var(--theme-light-subcontent);
   --color-content-inverse: var(--theme-dark-content);
   --color-subcontent-inverse: var(--theme-dark-subcontent);
-  --color-brand: oklch(58% 0.233 277.117);
-  --color-brand-dark: hsl(from var(--color-brand) h calc(s + (100 - s) * var(--overlay-opacity) * sign(s)) calc(l * (1 - var(--overlay-opacity))));
-  --color-subcontent-dark: hsl(from var(--color-subcontent) h calc(s + (100 - s) * var(--overlay-opacity) * sign(s)) calc(l * (1 - var(--overlay-opacity))));
-  --color-info: oklch(82% 0.09 241.966);
-  --color-success: oklch(82% 0.085 184.704);
-  --color-warning: oklch(84% 0.1 58.318);
-  --color-error: oklch(81% 0.105 17.585);
+  --color-brand: #7e49b3;
+  --color-info: #6b91b4;
+  --color-success: #659780;
+  --color-warning: #ad8340;
+  --color-error: #c37380;
 
-  --color-outline: oklch(84% 0.012 254.09);
+  --color-outline: #b7b7b7;
+  --outline-target: var(--color-dark);
 
   --overlay-opacity: 0.1;
   --color-dark: oklch(0% 0 0 / var(--overlay-opacity));
   --color-light: oklch(100% 0 0 / var(--overlay-opacity));
 
   --radius-default: 0.5rem;
+  --radius-workspace: 1.5rem;
   --radius-full: calc(infinity * 1px);
 
   /* Fill sources publish their color and alpha without referencing adaptive colors. */
@@ -219,46 +220,54 @@
   --surface-light--alpha: var(--overlay-opacity);
 }
 
-/* Adaptive outline background */
+/* Contextual backgrounds */
 
 @theme inline {
+  --background-color-surface: var(--surface-parent);
+  --background-color-control: var(--control-parent-surface, color-mix(in srgb, var(--surface-parent), hsl(from var(--outline-target) 0 0 l / 1) 3.5%));
   --background-color-outline: var(--outline-fill);
-  --background-color-outline--outline-fill: color-mix(in oklab, var(--surface-parent), oklch(from var(--color-dark) l c h / 1) var(--outline-strength));
+  --background-color-outline--outline-fill: color-mix(in oklab, var(--surface-parent), oklch(from var(--outline-target) l c h / 1) var(--outline-strength));
+  --shadow-card: 0 0 0 1px color-mix(in srgb, var(--outline-target), transparent 50%), 0 1px 2px var(--color-dark), 0 4px 12px -4px var(--color-dark);
+  --shadow-button: inset 0 1px 0 color-mix(in srgb, var(--color-light), transparent 50%), 0 1px 2px var(--color-dark);
 }
 
 /* Dark theme */
 
 [data-theme="dark"] {
-  --color-primary: oklch(30.33% 0.016 252.42);
-  --color-secondary: oklch(37% 0.044 257.287);
+  --color-primary: #141414;
+  --color-secondary: #28252d;
   --color-content: var(--theme-dark-content);
   --color-subcontent: var(--theme-dark-subcontent);
   --color-content-inverse: var(--theme-light-content);
   --color-subcontent-inverse: var(--theme-light-subcontent);
-  --color-info: oklch(54% 0.158 241.966);
-  --color-success: oklch(53% 0.118 184.704);
-  --color-warning: oklch(56% 0.179 58.318);
-  --color-error: oklch(58% 0.253 17.585);
+  --color-info: #35698f;
+  --color-success: #36745b;
+  --color-warning: #8c642b;
+  --color-error: #a24755;
 
-  --color-outline: oklch(25.26% 0.014 253.1);
+  --color-outline: #444444;
+  --outline-target: var(--color-light);
+  --outline-strength: 24%;
 }
 
 /* System dark theme */
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-primary: oklch(30.33% 0.016 252.42);
-    --color-secondary: oklch(37% 0.044 257.287);
+    --color-primary: #141414;
+    --color-secondary: #28252d;
     --color-content: var(--theme-dark-content);
     --color-subcontent: var(--theme-dark-subcontent);
     --color-content-inverse: var(--theme-light-content);
     --color-subcontent-inverse: var(--theme-light-subcontent);
-    --color-info: oklch(54% 0.158 241.966);
-    --color-success: oklch(53% 0.118 184.704);
-    --color-warning: oklch(56% 0.179 58.318);
-    --color-error: oklch(58% 0.253 17.585);
+    --color-info: #35698f;
+    --color-success: #36745b;
+    --color-warning: #8c642b;
+    --color-error: #a24755;
 
-    --color-outline: oklch(25.26% 0.014 253.1);
+    --color-outline: #444444;
+    --outline-target: var(--color-light);
+    --outline-strength: 24%;
   }
 }
 
@@ -433,14 +442,14 @@
     --surface-a: var(--color-primary);
     --surface-b: var(--color-primary);
     --surface-fill: var(--color-primary);
-    --outline-strength: 35%;
+    --outline-strength: 22%;
     --field-motion: 150ms;
   }
 }
 
 @utility adaptive-outline {
   @supports (color: color-mix(in oklab, white, oklch(from black l c h / 1))) {
-    --color-outline: color-mix(in oklab, var(--surface), oklch(from var(--color-dark) l c h / 1) var(--outline-strength));
+    --color-outline: color-mix(in oklab, var(--surface), oklch(from var(--outline-target) l c h / 1) var(--outline-strength));
   }
 }
 
@@ -652,6 +661,7 @@
 
 .select-dropdown,
 .color-input-popover,
+.account-popover,
 [data-calendar-popover][data-vc=calendar] {
   position: fixed;
   position-anchor: auto;
@@ -661,6 +671,13 @@
   inset: auto;
   margin: 0.25rem 0;
   max-width: calc(100vw - 1rem);
+}
+
+.account-popover {
+  position-area: block-end span-inline-start;
+  margin: 0.5rem 0;
+  max-height: calc(100vh - 5rem);
+  overflow-y: auto;
 }
 
 .select-dropdown {
@@ -1020,7 +1037,7 @@ body {
   }
 }
 [data-calendar-popover][data-vc=calendar] {
-  @apply rounded-default border border-outline bg-primary text-content shadow-lg;
+  @apply rounded-default border border-outline bg-surface text-content shadow-lg;
   width: max(anchor-size(width), 17.5rem);
   min-width: 0;
   max-height: calc(100% - 0.5rem);
@@ -1050,6 +1067,10 @@ body {
 [data-vc=calendar][data-vc-theme] [data-vc-arrow] {
   color: var(--color-content);
   border-radius: var(--radius-default);
+}
+[data-vc=calendar][data-vc-theme] [data-vc-arrow]::before {
+  @apply hero-chevron-down-micro size-full;
+  background-image: none;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-arrow]:hover {
   @apply overlay-dark;
@@ -1370,39 +1391,101 @@ input[type="file"]::file-selector-button {
 
 /* Shared component utilities */
 
+@utility shell-surface {
+  @apply bg-primary overlay-dark-[0.04] dark:overlay-light-[0.04];
+}
+
+@utility workspace-canvas {
+  @apply bg-primary;
+  anchor-name: --workspace;
+  --workspace-shell-surface: var(--surface-parent);
+
+  &::before {
+    content: "";
+    position: fixed;
+    position-anchor: --workspace;
+    top: 4rem;
+    left: anchor(left);
+    width: var(--radius-workspace);
+    height: var(--radius-workspace);
+    z-index: 20;
+    pointer-events: none;
+    background-color: var(--workspace-shell-surface);
+    mask-image: radial-gradient(circle at bottom right, transparent calc(var(--radius-workspace) - 0.5px), black var(--radius-workspace));
+  }
+}
+
+@utility panel-surface {
+  @apply bg-primary overlay-dark-[0.025] dark:overlay-light-[0.025];
+  --control-parent-surface: var(--surface-parent);
+}
+
+@utility inset-surface {
+  @apply bg-transparent overlay-dark-[0.035] dark:overlay-light-[0.035];
+  --control-parent-surface: var(--surface-parent);
+}
+
+@utility option-surface {
+  @apply overlay-dark dark:overlay-light;
+}
+
+@utility nav-item {
+  @apply rounded-full text-subcontent transition-colors hover:overlay-dark;
+}
+
 @utility listing-surface {
-  @apply rounded-default border border-outline;
+  @apply rounded-default border border-outline shadow-card;
 }
 
 @utility listing-table {
-  @apply w-full text-left;
-  & tbody tr:nth-child(even) {
-    @apply bg-primary overlay-dark;
+  @apply w-full text-left text-sm;
+  & tbody tr:nth-child(even):not(:has(input:checked)) {
+    @apply bg-primary overlay-dark-[0.02] dark:overlay-light-[0.02];
+  }
+  & tbody tr + tr {
+    @apply border-t border-outline;
   }
 }
 
 @utility listing-heading {
-  @apply bg-primary overlay-dark px-3 py-2 text-left font-semibold text-content whitespace-nowrap;
+  @apply bg-primary overlay-dark-[0.04] dark:overlay-light-[0.04] px-4 py-3 text-left font-medium text-subcontent whitespace-nowrap;
 }
 
 @utility listing-cell {
-  @apply px-3 py-2 text-content;
+  @apply px-4 py-2 text-content;
+}
+
+@utility button-base {
+  @apply inline-grid place-items-center rounded-default font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none;
+}
+
+@utility button-text {
+  @apply text-brand underline-offset-4 hover:underline focus-visible:underline;
 }
 
 @utility button-primary {
-  @apply border border-outline bg-brand text-content-inverse dark:text-content hover:overlay-dark focus:border-brand;
+  @apply border border-brand bg-brand text-content-inverse dark:text-content shadow-button hover:overlay-dark focus:border-brand active:shadow-none disabled:shadow-none;
 }
 
 @utility button-neutral {
-  @apply border border-outline bg-secondary text-content hover:overlay-dark focus:border-brand;
+  @apply border border-outline bg-transparent text-content shadow-button hover:overlay-dark focus:border-brand active:shadow-none disabled:shadow-none;
+}
+
+@utility button-default {
+  @apply border border-transparent bg-control text-subcontent hover:overlay-dark focus:border-brand;
+
+  &[aria-pressed="true"],
+  &[aria-selected="true"] {
+    @apply bg-brand overlay-opacity-[0.12] text-content;
+  }
 }
 
 @utility button-danger {
-  @apply border border-outline bg-error text-content hover:overlay-dark focus:border-brand;
+  @apply border border-error bg-error overlay-opacity-[0.12] text-content shadow-button hover:overlay-dark focus:border-error active:shadow-none disabled:shadow-none;
 }
 
 @utility status-pill {
-  @apply inline-grid place-items-center min-h-11 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap;
+  @apply inline-grid place-items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap overlay-opacity-[0.12];
 }
 
 @utility bg-control-radio {

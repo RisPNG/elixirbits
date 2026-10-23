@@ -5,6 +5,28 @@ defmodule Elixirbits.AccessControl.Sitenav do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events, AshPaperTrail.Resource]
 
+  @icon_sets [
+    {"hero-", Path.expand("../../../deps/heroicons/optimized/24/outline", __DIR__), ""},
+    {"hero-", Path.expand("../../../deps/heroicons/optimized/24/solid", __DIR__), "-solid"},
+    {"hero-", Path.expand("../../../deps/heroicons/optimized/20/solid", __DIR__), "-mini"},
+    {"hero-", Path.expand("../../../deps/heroicons/optimized/16/solid", __DIR__), "-micro"},
+    {"tabler-", Path.expand("../../../deps/tabler_icons/icons/outline", __DIR__), ""},
+    {"tabler-", Path.expand("../../../deps/tabler_icons/icons/filled", __DIR__), "-filled"}
+  ]
+  @icon_catalog for {prefix, directory, suffix} <- @icon_sets,
+                    file <- Path.wildcard(Path.join(directory, "*.svg")),
+                    do: {file, prefix <> Path.basename(file, ".svg") <> suffix}
+  @icon_files_hash @icon_catalog |> Enum.map(&elem(&1, 0)) |> :erlang.md5()
+  @navigation_icons Enum.map(@icon_catalog, &elem(&1, 1))
+
+  @doc false
+  def __mix_recompile__? do
+    @icon_sets
+    |> Enum.flat_map(fn {_, directory, _} -> Path.wildcard(Path.join(directory, "*.svg")) end)
+    |> :erlang.md5()
+    |> Kernel.!=(@icon_files_hash)
+  end
+
   postgres do
     table "sitenav"
     repo Elixirbits.Repo
@@ -33,6 +55,7 @@ defmodule Elixirbits.AccessControl.Sitenav do
         :code,
         :name,
         :description,
+        :icon,
         :level,
         :parent,
         :url,
@@ -50,6 +73,7 @@ defmodule Elixirbits.AccessControl.Sitenav do
         :code,
         :name,
         :description,
+        :icon,
         :level,
         :parent,
         :url,
@@ -77,6 +101,10 @@ defmodule Elixirbits.AccessControl.Sitenav do
     end
   end
 
+  validations do
+    validate one_of(:icon, @navigation_icons), message: "must be a supported navigation icon"
+  end
+
   attributes do
     uuid_v7_primary_key :id
 
@@ -89,6 +117,8 @@ defmodule Elixirbits.AccessControl.Sitenav do
     end
 
     attribute :description, :string
+
+    attribute :icon, :string
 
     attribute :level, :integer do
       allow_nil? false

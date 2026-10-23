@@ -1,103 +1,97 @@
 <Layouts.app
   flash={@flash}
-  current_scope={@current_scope}
+  nav={@nav}
   user_timezone={@user_timezone}
-  content_class="w-full space-y-6"
 >
-  <.card>
-    <.header>
-      Layout Test
-      <:subtitle>
-        Showcases local core components and dependency-powered frontend pieces.
-      </:subtitle>
-      <:actions>
-        <div id="layout-test-palette-theme-controls">
-          <Layouts.theme_toggle />
-        </div>
-      </:actions>
-    </.header>
+  <.header level={1}>
+    Layout Test
+    <:subtitle>
+      Showcases local core components and dependency-powered frontend pieces.
+    </:subtitle>
+  </.header>
 
-    <section
-      id="layout-test-colors"
-      aria-labelledby="layout-test-colors-title"
-      class="space-y-3"
-    >
-      <div>
-        <h2 id="layout-test-colors-title" class="text-base font-semibold">System colors</h2>
-        <p class="text-sm text-subcontent">
-          Main and muted text use fixed colors for each theme. Outlines adapt to each background. Dark and light increase saturation while adjusting surface lightness.
-        </p>
-      </div>
-      <ul aria-label="System color tokens" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
-        <li
-          :for={
-            {token, color_class} <- [
-              {"primary", "bg-primary"},
-              {"secondary", "bg-secondary"},
-              {"content", "bg-content"},
-              {"subcontent", "bg-subcontent"},
-              {"brand", "bg-brand"},
-              {"info", "bg-info"},
-              {"success", "bg-success"},
-              {"warning", "bg-warning"},
-              {"error", "bg-error"},
-              {"outline", "bg-transparent"},
-              {"dark", "bg-transparent overlay-dark"},
-              {"light", "bg-transparent overlay-light"}
-            ]
-          }
-          id={"layout-test-color-#{token}"}
-          data-color-token={"color-#{token}"}
-          class="rounded-default border border-outline bg-secondary text-content p-3"
+  <section
+    id="layout-test-colors"
+    aria-labelledby="layout-test-colors-title"
+    class="space-y-3"
+  >
+    <div>
+      <h2 id="layout-test-colors-title" class="text-base font-semibold">System colors</h2>
+      <p class="text-sm text-subcontent">
+        Main and muted text use fixed colors for each theme. Outlines adapt to each background. Dark and light increase saturation while adjusting surface lightness.
+      </p>
+    </div>
+    <ul aria-label="System color tokens" class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
+      <li
+        :for={
+          {token, color_class} <- [
+            {"primary", "bg-primary"},
+            {"secondary", "bg-secondary"},
+            {"content", "bg-content"},
+            {"subcontent", "bg-subcontent"},
+            {"brand", "bg-brand"},
+            {"info", "bg-info"},
+            {"success", "bg-success"},
+            {"warning", "bg-warning"},
+            {"error", "bg-error"},
+            {"outline", "bg-transparent"},
+            {"dark", "bg-transparent overlay-dark"},
+            {"light", "bg-transparent overlay-light"}
+          ]
+        }
+        id={"layout-test-color-#{token}"}
+        data-color-token={"color-#{token}"}
+        class="rounded-default inset-surface text-content p-3"
+      >
+        <div
+          aria-hidden="true"
+          class={[
+            "mx-auto grid size-11 grid-rows-[1fr_1fr] place-items-center rounded-default border border-outline",
+            color_class
+          ]}
         >
-          <div
-            aria-hidden="true"
+          <span
+            :if={token not in ["outline", "dark", "light"]}
             class={[
-              "mx-auto grid size-11 grid-rows-[1fr_1fr] place-items-center rounded-default border border-outline",
-              color_class
+              "text-sm font-semibold",
+              case token do
+                token when token in ["content", "subcontent"] -> "text-content-inverse"
+                "brand" -> "text-content-inverse dark:text-content"
+                _ -> "text-content"
+              end
             ]}
-          >
-            <span
-              :if={token not in ["outline", "dark", "light"]}
-              class={[
-                "text-sm font-semibold",
-                case token do
-                  token when token in ["content", "subcontent"] -> "text-content-inverse"
-                  "brand" -> "text-content-inverse dark:text-content"
-                  _ -> "text-content"
-                end
-              ]}
-            >Aa</span>
-            <span
-              :if={token not in ["outline", "dark", "light"]}
-              class={[
-                "text-xs",
-                case token do
-                  token when token in ["content", "subcontent"] -> "text-subcontent-inverse"
-                  "brand" -> "text-subcontent-inverse dark:text-subcontent"
-                  _ -> "text-subcontent"
-                end
-              ]}
-            >Aa</span>
-          </div>
-          <code class="mt-2 block text-center text-xs text-content">color-{token}</code>
-        </li>
-      </ul>
-    </section>
+          >Aa</span>
+          <span
+            :if={token not in ["outline", "dark", "light"]}
+            class={[
+              "text-xs",
+              case token do
+                token when token in ["content", "subcontent"] -> "text-subcontent-inverse"
+                "brand" -> "text-subcontent-inverse dark:text-subcontent"
+                _ -> "text-subcontent"
+              end
+            ]}
+          >Aa</span>
+        </div>
+        <code class="mt-2 block text-center text-xs text-content">color-{token}</code>
+      </li>
+    </ul>
+  </section>
 
+  <.collapse id="layout-test-background-opacity-panel">
+    <:summary>
+      <h2 id="layout-test-background-opacity-title" class="text-sm font-medium">
+        Background opacity
+      </h2>
+    </:summary>
     <section
       id="layout-test-background-opacity"
       aria-labelledby="layout-test-background-opacity-title"
       class="space-y-3"
     >
-      <div>
-        <h2 id="layout-test-background-opacity-title" class="text-base font-semibold">
-          Background opacity
-        </h2>
-        <p class="text-sm text-subcontent">
-          Set the background alpha while text and icons stay opaque. The default is 10%. Nested layers add their alpha up to 100%. In light mode, brand backgrounds at 50% alpha or less use dark text and icons.
-        </p>
-      </div>
+      <p class="text-sm text-subcontent">
+        Set the background alpha while text and icons stay opaque. The default is 10%. Nested layers add their alpha up to 100%. In light mode, brand backgrounds at 50% alpha or less use dark text and icons.
+      </p>
       <ul aria-label="Background opacity examples" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
         <li
           :for={
@@ -154,20 +148,22 @@
         </div>
       </div>
     </section>
+  </.collapse>
 
+  <.collapse id="layout-test-overlay-strength-panel">
+    <:summary>
+      <h2 id="layout-test-overlay-strength-title" class="text-sm font-medium">
+        Overlay strength
+      </h2>
+    </:summary>
     <section
       id="layout-test-overlay-strength"
       aria-labelledby="layout-test-overlay-strength-title"
       class="space-y-3"
     >
-      <div>
-        <h2 id="layout-test-overlay-strength-title" class="text-base font-semibold">
-          Overlay strength
-        </h2>
-        <p class="text-sm text-subcontent">
-          Dark and light overlays move saturation toward 100% while moving lightness toward black or white, keeping hue unchanged. The default strength is 10%. Nested overlays of the same kind add their strength up to 100%. Light overlays on brand at 50% strength or more use dark text and icons in both modes.
-        </p>
-      </div>
+      <p class="text-sm text-subcontent">
+        Dark and light overlays move saturation toward 100% while moving lightness toward black or white, keeping hue unchanged. The default strength is 10%. Nested overlays of the same kind add their strength up to 100%. Light overlays on brand at 50% strength or more use dark text and icons in both modes.
+      </p>
       <div class="grid grid-cols-[1fr_1fr] gap-3">
         <div
           :for={
@@ -194,14 +190,17 @@
           <h3 class="text-base font-semibold text-content">{title}</h3>
           <ul
             aria-label={"#{title} strength examples"}
-            class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3"
+            class="grid grid-cols-[1fr_1fr_1fr_1fr] grid-rows-[auto_auto] subgap-3 gap-y-2"
           >
-            <li :for={{strength, overlay_class} <- strengths}>
+            <li
+              :for={{strength, overlay_class} <- strengths}
+              class="row-span-2 grid grid-cols-[minmax(0,1fr)] grid-rows-subgrid"
+            >
               <code class="block min-h-8 text-xs text-content">{overlay_class}</code>
               <div
                 id={"layout-test-overlay-#{kind}-#{strength}"}
                 class={[
-                  "mt-2 grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3",
+                  "grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border border-outline bg-brand p-3",
                   if(kind == "light" and strength >= 50,
                     do: "text-content dark:text-content-inverse",
                     else: content_class
@@ -256,38 +255,36 @@
         </div>
       </div>
     </section>
+  </.collapse>
 
-    <div
-      id="layout-test-tabs"
-      role="tablist"
-      aria-label="Layout test sections"
-      class="grid grid-cols-[max-content_max-content] items-center gap-2"
+  <div
+    id="layout-test-tabs"
+    role="tablist"
+    aria-label="Layout test sections"
+    class="grid grid-cols-[max-content_max-content] items-center gap-2"
+  >
+    <.button
+      id="layout-test-local-tab"
+      type="button"
+      role="tab"
+      aria-selected={if(@current_tab == "local", do: "true", else: "false")}
+      phx-click="change_tab"
+      phx-value-tab="local"
     >
-      <.button
-        id="layout-test-local-tab"
-        type="button"
-        role="tab"
-        aria-selected={if(@current_tab == "local", do: "true", else: "false")}
-        variant={if @current_tab == "local", do: :primary, else: :neutral}
-        phx-click="change_tab"
-        phx-value-tab="local"
-      >
-        Local
-      </.button>
+      Local
+    </.button>
 
-      <.button
-        id="layout-test-ecosystem-tab"
-        type="button"
-        role="tab"
-        aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
-        variant={if @current_tab == "ecosystem", do: :primary, else: :neutral}
-        phx-click="change_tab"
-        phx-value-tab="ecosystem"
-      >
-        Ecosystem
-      </.button>
-    </div>
-  </.card>
+    <.button
+      id="layout-test-ecosystem-tab"
+      type="button"
+      role="tab"
+      aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
+      phx-click="change_tab"
+      phx-value-tab="ecosystem"
+    >
+      Ecosystem
+    </.button>
+  </div>
 
   <div
     id="layout-test-local-panel"
@@ -303,17 +300,14 @@
           </:subtitle>
         </.header>
         <div class="space-y-3">
-          <details phx-mounted={JS.ignore_attributes("open")}>
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          <.collapse>
+            <:summary>
               Button style: {@showcase["header"]["variant"]}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
-                :for={variant <- ~w(unstyled neutral primary danger)}
+                :for={variant <- ~w(default text neutral primary danger)}
                 type="button"
-                variant={
-                  if @showcase["header"]["variant"] == variant, do: :primary, else: :neutral
-                }
                 aria-pressed={to_string(@showcase["header"]["variant"] == variant)}
                 phx-click="set_showcase_option"
                 phx-value-section="header"
@@ -321,7 +315,7 @@
                 phx-value-choice={variant}
               >{Phoenix.Naming.humanize(variant)}</.button>
             </div>
-          </details>
+          </.collapse>
           <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
               :for={
@@ -334,7 +328,6 @@
                 ]
               }
               type="button"
-              variant={if @showcase["header"][option], do: :primary, else: :neutral}
               aria-pressed={to_string(@showcase["header"][option])}
               phx-click="toggle_showcase_option"
               phx-value-section="header"
@@ -342,7 +335,7 @@
             >{label}</.button>
           </div>
           <.card_inset id="layout-test-header-preview">
-            <.header>
+            <.header level={3}>
               Example title
               <:subtitle :if={@showcase["header"]["subtitle"]}>
                 An example subtitle below the title.
@@ -352,7 +345,7 @@
                   id="layout-test-inline-action"
                   type="button"
                   variant={
-                    if @showcase["header"]["variant"] == "unstyled",
+                    if @showcase["header"]["variant"] == "default",
                       do: nil,
                       else: String.to_existing_atom(@showcase["header"]["variant"])
                   }
@@ -380,7 +373,6 @@
               :for={kind <- ~w(info error warning)}
               id={"layout-test-flash-kind-#{kind}"}
               type="button"
-              variant={if @showcase["flash"]["kind"] == kind, do: :primary, else: :neutral}
               aria-pressed={to_string(@showcase["flash"]["kind"] == kind)}
               phx-click="set_showcase_option"
               phx-value-section="flash"
@@ -398,26 +390,22 @@
                 ]
               }
               type="button"
-              variant={if @showcase["flash"][option], do: :primary, else: :neutral}
               aria-pressed={to_string(@showcase["flash"][option])}
               phx-click="toggle_showcase_option"
               phx-value-section="flash"
               phx-value-option={option}
             >{label}</.button>
           </div>
-          <details phx-mounted={JS.ignore_attributes("open")}>
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          <.collapse>
+            <:summary>
               Duration: {@showcase["flash"]["duration"]}{if @showcase["flash"]["duration"] !=
                                                               "default",
                                                             do: "ms"}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={duration <- ~w(default 1000 5000 8000)}
                 type="button"
-                variant={
-                  if @showcase["flash"]["duration"] == duration, do: :primary, else: :neutral
-                }
                 aria-pressed={to_string(@showcase["flash"]["duration"] == duration)}
                 phx-click="set_showcase_option"
                 phx-value-section="flash"
@@ -425,7 +413,7 @@
                 phx-value-choice={duration}
               >{duration}</.button>
             </div>
-          </details>
+          </.collapse>
           <.button
             id="layout-test-flash-show"
             type="button"
@@ -446,7 +434,6 @@
         <Layouts.theme_toggle />
         <.button
           type="button"
-          variant={if @showcase["theme"]["inset"], do: :primary, else: :neutral}
           aria-pressed={to_string(@showcase["theme"]["inset"])}
           phx-click="toggle_showcase_option"
           phx-value-section="theme"
@@ -484,8 +471,8 @@
       </.header>
 
       <div id="layout-test-input-controls" class="space-y-3">
-        <details phx-mounted={JS.ignore_attributes("open")}>
-          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+        <.collapse>
+          <:summary>
             Input options: {@input_config["render_as"]} display, {@input_config["variant"]} controls, {@input_config[
               "select_mode"
             ]} select, and {case checked_state do
@@ -493,15 +480,14 @@
               "false" -> "unchecked"
               "mixed" -> "mixed checked states"
             end}
-          </summary>
-          <fieldset class="mt-2 space-y-2">
+          </:summary>
+          <fieldset class="space-y-2">
             <legend class="text-sm font-medium text-content">Display mode</legend>
             <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={mode <- @input_render_modes}
                 id={"layout-test-input-render-#{mode}"}
                 type="button"
-                variant={if @input_config["render_as"] == mode, do: :primary, else: :neutral}
                 aria-pressed={to_string(@input_config["render_as"] == mode)}
                 phx-click="set_input_config"
                 phx-value-option="render_as"
@@ -519,7 +505,6 @@
                   :for={variant <- ~w(default alt)}
                   id={"layout-test-input-variant-#{variant}"}
                   type="button"
-                  variant={if @input_config["variant"] == variant, do: :primary, else: :neutral}
                   aria-pressed={to_string(@input_config["variant"] == variant)}
                   phx-click="set_input_config"
                   phx-value-option="variant"
@@ -534,7 +519,6 @@
                   :for={{value, label} <- [{"false", "Unchecked"}, {"true", "Checked"}]}
                   id={"layout-test-input-checked-#{value}"}
                   type="button"
-                  variant={if checked_state == value, do: :primary, else: :neutral}
                   aria-pressed={to_string(checked_state == value)}
                   phx-click="set_input_config"
                   phx-value-option="checked"
@@ -549,7 +533,6 @@
                   :for={mode <- ~w(single tags quick_tags)}
                   id={"layout-test-input-select-mode-#{mode}"}
                   type="button"
-                  variant={if @input_config["select_mode"] == mode, do: :primary, else: :neutral}
                   aria-pressed={to_string(@input_config["select_mode"] == mode)}
                   phx-click="set_input_config"
                   phx-value-option="select_mode"
@@ -558,7 +541,7 @@
               </div>
             </fieldset>
           </div>
-        </details>
+        </.collapse>
         <div
           id="layout-test-input-states"
           class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-2 border-y border-outline py-3"
@@ -576,17 +559,16 @@
             }
             id={"layout-test-input-state-#{state}"}
             type="button"
-            variant={if @input_states[state], do: :primary, else: :neutral}
             aria-pressed={to_string(@input_states[state])}
             phx-click="toggle_input_state"
             phx-value-state={state}
           >{label}</.button>
         </div>
-        <details phx-mounted={JS.ignore_attributes("open")}>
-          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+        <.collapse>
+          <:summary>
             Input attributes
-          </summary>
-          <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
+          </:summary>
+          <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
             <.button
               :for={
                 {state, label} <- [
@@ -604,13 +586,12 @@
               }
               id={"layout-test-input-state-#{state}"}
               type="button"
-              variant={if @input_states[state], do: :primary, else: :neutral}
               aria-pressed={to_string(@input_states[state])}
               phx-click="toggle_input_state"
               phx-value-state={state}
             >{label}</.button>
           </div>
-        </details>
+        </.collapse>
       </div>
 
       <.form
@@ -819,16 +800,15 @@
       <div id="layout-test-upload-controls" class="space-y-3">
         <div class="grid grid-cols-[1fr_1fr] items-start subgap-3">
           <div>
-            <details phx-mounted={JS.ignore_attributes("open")} id="upload-render-modes">
-              <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+            <.collapse id="upload-render-modes">
+              <:summary>
                 Render as: {@upload_mode}
-              </summary>
-              <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+              </:summary>
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
                   :for={mode <- @input_render_modes}
                   id={"upload-mode-#{mode}"}
                   type="button"
-                  variant={if @upload_mode == mode, do: :primary, else: :neutral}
                   aria-pressed={to_string(@upload_mode == mode)}
                   phx-click="set_showcase_option"
                   phx-value-section="uploads"
@@ -838,21 +818,18 @@
                   {mode}
                 </.button>
               </div>
-            </details>
+            </.collapse>
           </div>
           <div>
-            <details phx-mounted={JS.ignore_attributes("open")} id="upload-preview-styles">
-              <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+            <.collapse id="upload-preview-styles">
+              <:summary>
                 Preview layout: {@showcase["uploads"]["preview_as"]}
-              </summary>
-              <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+              </:summary>
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
                   :for={style <- ["tag", "thumbnail"]}
                   id={"upload-preview-#{style}"}
                   type="button"
-                  variant={
-                    if @showcase["uploads"]["preview_as"] == style, do: :primary, else: :neutral
-                  }
                   aria-pressed={to_string(@showcase["uploads"]["preview_as"] == style)}
                   disabled={!@showcase["uploads"]["preview"]}
                   phx-click="set_showcase_option"
@@ -863,7 +840,7 @@
                   {Phoenix.Naming.humanize(style)}
                 </.button>
               </div>
-            </details>
+            </.collapse>
           </div>
         </div>
         <div class="grid grid-cols-[1fr_1fr] items-start subgap-3">
@@ -880,9 +857,6 @@
                 }
                 id={"upload-selection-#{choice}"}
                 type="button"
-                variant={
-                  if @showcase["uploads"]["selection"] == choice, do: :primary, else: :neutral
-                }
                 aria-pressed={to_string(@showcase["uploads"]["selection"] == choice)}
                 disabled={@uploads.demo_files.entries != []}
                 phx-click="set_showcase_option"
@@ -909,9 +883,6 @@
                 }
                 id={"upload-editor-#{choice}"}
                 type="button"
-                variant={
-                  if @showcase["uploads"]["editor"] == choice, do: :primary, else: :neutral
-                }
                 aria-pressed={to_string(@showcase["uploads"]["editor"] == choice)}
                 disabled={
                   @showcase["uploads"]["selection"] == "multiple" or
@@ -943,7 +914,6 @@
             }
             id={"showcase-uploads-#{option}"}
             type="button"
-            variant={if @showcase["uploads"][option], do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["uploads"][option])}
             phx-click="toggle_showcase_option"
             phx-value-section="uploads"
@@ -1071,16 +1041,15 @@
                [{"One", "1"}, {"Two", "2"}, {"Four", "4"}]}
             ]
           }>
-            <details phx-mounted={JS.ignore_attributes("open")} id={"record-options-#{option}"}>
-              <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+            <.collapse id={"record-options-#{option}"}>
+              <:summary>
                 {label}: {value}
-              </summary>
-              <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+              </:summary>
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
                   :for={{choice_label, choice} <- choices}
                   id={"record-option-#{option}-#{choice}"}
                   type="button"
-                  variant={if value == choice, do: :primary, else: :neutral}
                   aria-pressed={to_string(value == choice)}
                   phx-click="set_showcase_option"
                   phx-value-section="actions"
@@ -1090,20 +1059,19 @@
                   {choice_label}
                 </.button>
               </div>
-            </details>
+            </.collapse>
           </div>
         </div>
         <div class="grid grid-cols-[1fr_max-content_max-content_max-content] items-start gap-2">
-          <details phx-mounted={JS.ignore_attributes("open")} id="record-selected-entry">
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          <.collapse id="record-selected-entry">
+            <:summary>
               Selected entry: {if @record_selected, do: "##{@record_selected}", else: "None"}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr] gap-2">
               <.button
                 :for={entry <- @record_entries}
                 id={"record-select-#{entry["id"]}"}
                 type="button"
-                variant={if @record_selected == entry["id"], do: :primary, else: :neutral}
                 aria-pressed={to_string(@record_selected == entry["id"])}
                 phx-click="record_action"
                 phx-value-action="read"
@@ -1112,7 +1080,7 @@
                 #{entry["id"]}: {entry["name"]}
               </.button>
             </div>
-          </details>
+          </.collapse>
           <.button
             :for={
               {option, label} <- [
@@ -1123,7 +1091,6 @@
             }
             id={"showcase-actions-#{option}"}
             type="button"
-            variant={if @showcase["actions"][option], do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["actions"][option])}
             phx-click="toggle_showcase_option"
             phx-value-section="actions"
@@ -1264,23 +1231,19 @@
         <div class="grid grid-cols-[max-content_max-content_max-content] items-start gap-2">
           <.button
             type="button"
-            variant={if @showcase["calendar"]["events"], do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["calendar"]["events"])}
             phx-click="toggle_showcase_option"
             phx-value-section="calendar"
             phx-value-option="events"
           >Events</.button>
-          <details phx-mounted={JS.ignore_attributes("open")}>
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          <.collapse>
+            <:summary>
               Event style: {@showcase["calendar"]["variant"]}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr] gap-2">
               <.button
                 :for={variant <- ~w(solid outline)}
                 type="button"
-                variant={
-                  if @showcase["calendar"]["variant"] == variant, do: :primary, else: :neutral
-                }
                 aria-pressed={to_string(@showcase["calendar"]["variant"] == variant)}
                 phx-click="set_showcase_option"
                 phx-value-section="calendar"
@@ -1288,16 +1251,15 @@
                 phx-value-choice={variant}
               >{Phoenix.Naming.humanize(variant)}</.button>
             </div>
-          </details>
-          <details phx-mounted={JS.ignore_attributes("open")}>
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          </.collapse>
+          <.collapse>
+            <:summary>
               Event color: {@showcase["calendar"]["color"]}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={color <- ~w(brand info success warning error neutral)}
                 type="button"
-                variant={if @showcase["calendar"]["color"] == color, do: :primary, else: :neutral}
                 aria-pressed={to_string(@showcase["calendar"]["color"] == color)}
                 phx-click="set_showcase_option"
                 phx-value-section="calendar"
@@ -1305,14 +1267,13 @@
                 phx-value-choice={color}
               >{Phoenix.Naming.humanize(color)}</.button>
             </div>
-          </details>
+          </.collapse>
         </div>
         <div class="grid grid-cols-[max-content_max-content_max-content_1fr] items-center gap-2">
           <.button
             :for={mode <- ~w(elapsed countdown)}
             id={"timer-mode-#{mode}"}
             type="button"
-            variant={if @showcase["calendar"]["timer"] == mode, do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["calendar"]["timer"] == mode)}
             phx-click="set_showcase_option"
             phx-value-section="calendar"
@@ -1378,7 +1339,6 @@
             }
             id={"table-option-#{option}"}
             type="button"
-            variant={if @showcase["table"][option], do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["table"][option])}
             phx-click="toggle_showcase_option"
             phx-value-section="table"
@@ -1429,22 +1389,20 @@
           <.button
             id="list-option-titles"
             type="button"
-            variant={if @showcase["list"]["titles"], do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["list"]["titles"])}
             phx-click="toggle_showcase_option"
             phx-value-section="list"
             phx-value-option="titles"
           >Titles</.button>
-          <details phx-mounted={JS.ignore_attributes("open")}>
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          <.collapse>
+            <:summary>
               Items: {@showcase["list"]["count"]}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={count <- ~w(1 2 4)}
                 id={"list-count-#{count}"}
                 type="button"
-                variant={if @showcase["list"]["count"] == count, do: :primary, else: :neutral}
                 aria-pressed={to_string(@showcase["list"]["count"] == count)}
                 phx-click="set_showcase_option"
                 phx-value-section="list"
@@ -1452,7 +1410,7 @@
                 phx-value-choice={count}
               >{count}</.button>
             </div>
-          </details>
+          </.collapse>
         </div>
         <div id="layout-test-list-preview">
           <.list>
@@ -1483,11 +1441,11 @@
         Core Icons<:subtitle>Choose an icon, its size, and a shared theme color.</:subtitle>
       </.header>
       <div class="grid grid-cols-[max-content_max-content_max-content_max-content] items-start gap-3 mb-4">
-        <details phx-mounted={JS.ignore_attributes("open")}>
-          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+        <.collapse>
+          <:summary>
             Icon: {@showcase["icons"]["name"]}
-          </summary>
-          <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+          </:summary>
+          <div class="grid grid-cols-[1fr_1fr] gap-2">
             <.button
               :for={
                 name <-
@@ -1495,7 +1453,6 @@
               }
               id={"icon-name-#{name}"}
               type="button"
-              variant={if @showcase["icons"]["name"] == name, do: :primary, else: :neutral}
               aria-pressed={to_string(@showcase["icons"]["name"] == name)}
               phx-click="set_showcase_option"
               phx-value-section="icons"
@@ -1503,17 +1460,16 @@
               phx-value-choice={name}
             >{name}</.button>
           </div>
-        </details>
-        <details phx-mounted={JS.ignore_attributes("open")}>
-          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+        </.collapse>
+        <.collapse>
+          <:summary>
             Size: {@showcase["icons"]["size"]}
-          </summary>
-          <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+          </:summary>
+          <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
             <.button
               :for={size <- ~w(4 5 8 12)}
               id={"icon-size-#{size}"}
               type="button"
-              variant={if @showcase["icons"]["size"] == size, do: :primary, else: :neutral}
               aria-pressed={to_string(@showcase["icons"]["size"] == size)}
               phx-click="set_showcase_option"
               phx-value-section="icons"
@@ -1521,17 +1477,16 @@
               phx-value-choice={size}
             >{size}</.button>
           </div>
-        </details>
-        <details phx-mounted={JS.ignore_attributes("open")}>
-          <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+        </.collapse>
+        <.collapse>
+          <:summary>
             Color: {@showcase["icons"]["color"]}
-          </summary>
-          <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
+          </:summary>
+          <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
               :for={color <- ~w(content brand info success warning error)}
               id={"icon-color-#{color}"}
               type="button"
-              variant={if @showcase["icons"]["color"] == color, do: :primary, else: :neutral}
               aria-pressed={to_string(@showcase["icons"]["color"] == color)}
               phx-click="set_showcase_option"
               phx-value-section="icons"
@@ -1539,11 +1494,10 @@
               phx-value-choice={color}
             >{Phoenix.Naming.humanize(color)}</.button>
           </div>
-        </details>
+        </.collapse>
         <.button
           id="icon-option-label"
           type="button"
-          variant={if @showcase["icons"]["label"], do: :primary, else: :neutral}
           aria-pressed={to_string(@showcase["icons"]["label"])}
           phx-click="toggle_showcase_option"
           phx-value-section="icons"
@@ -1589,7 +1543,6 @@
           :for={{option, label} <- [{"title", "Title"}, {"actions", "Actions"}]}
           id={"dialog-option-#{option}"}
           type="button"
-          variant={if @showcase["dialog"][option], do: :primary, else: :neutral}
           aria-pressed={to_string(@showcase["dialog"][option])}
           phx-click="toggle_showcase_option"
           phx-value-section="dialog"
@@ -1619,20 +1572,16 @@
         </:subtitle>
       </.header>
       <div id="layout-test-cinder-controls" class="space-y-3">
-        <div class="grid grid-cols-[1fr_1fr_1fr] items-start subgap-4">
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            id="cinder-layout-choices"
-          >
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+        <div class="grid grid-cols-[1fr_1fr_1fr] items-start gap-4">
+          <.collapse id="cinder-layout-choices">
+            <:summary>
               Layout: {String.capitalize(@showcase["cinder"]["layout"])}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={layout <- ~w(table list grid)}
                 id={"cinder-layout-#{layout}"}
                 type="button"
-                variant={if @showcase["cinder"]["layout"] == layout, do: :primary, else: :neutral}
                 aria-pressed={to_string(@showcase["cinder"]["layout"] == layout)}
                 phx-click="set_showcase_option"
                 phx-value-section="cinder"
@@ -1640,22 +1589,16 @@
                 phx-value-choice={layout}
               >{String.capitalize(layout)}</.button>
             </div>
-          </details>
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            id="cinder-page-size-choices"
-          >
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          </.collapse>
+          <.collapse id="cinder-page-size-choices">
+            <:summary>
               Records per page: {@showcase["cinder"]["page_size"]}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={size <- ~w(6 12 24)}
                 id={"cinder-page-size-#{size}"}
                 type="button"
-                variant={
-                  if @showcase["cinder"]["page_size"] == size, do: :primary, else: :neutral
-                }
                 aria-pressed={to_string(@showcase["cinder"]["page_size"] == size)}
                 phx-click="set_showcase_option"
                 phx-value-section="cinder"
@@ -1663,22 +1606,16 @@
                 phx-value-choice={size}
               >{size}</.button>
             </div>
-          </details>
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            id="cinder-column-choices"
-          >
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          </.collapse>
+          <.collapse id="cinder-column-choices">
+            <:summary>
               Grid columns: {@showcase["cinder"]["columns"]}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={columns <- ~w(2 3 4)}
                 id={"cinder-columns-#{columns}"}
                 type="button"
-                variant={
-                  if @showcase["cinder"]["columns"] == columns, do: :primary, else: :neutral
-                }
                 aria-pressed={to_string(@showcase["cinder"]["columns"] == columns)}
                 phx-click="set_showcase_option"
                 phx-value-section="cinder"
@@ -1687,7 +1624,7 @@
                 disabled={@showcase["cinder"]["layout"] != "grid"}
               >{columns}</.button>
             </div>
-          </details>
+          </.collapse>
         </div>
         <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
           <.button
@@ -1701,7 +1638,6 @@
             }
             id={"cinder-option-#{option}"}
             type="button"
-            variant={if @showcase["cinder"][option], do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["cinder"][option])}
             phx-click="toggle_showcase_option"
             phx-value-section="cinder"
@@ -1775,7 +1711,7 @@
           </:col>
           <:item :let={entry}>
             <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
-              <span class="status-pill bg-primary overlay-dark text-brand">{entry.code}</span>
+              <span class="status-pill bg-primary overlay-dark text-content">{entry.code}</span>
               <span class="status-pill bg-primary overlay-dark text-content">{entry.state}</span>
             </div>
             <div class="mt-3 space-y-1">
@@ -1797,14 +1733,11 @@
           </:subtitle>
         </.header>
         <div id="layout-test-live-select-controls" class="space-y-3">
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            id="dependency-select-mode-choices"
-          >
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          <.collapse id="dependency-select-mode-choices">
+            <:summary>
               Selection mode: {@showcase["live_select"]["mode"]}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={
                   {mode, label} <- [
@@ -1815,9 +1748,6 @@
                 }
                 id={"dependency-select-mode-#{mode}"}
                 type="button"
-                variant={
-                  if @showcase["live_select"]["mode"] == mode, do: :primary, else: :neutral
-                }
                 aria-pressed={to_string(@showcase["live_select"]["mode"] == mode)}
                 phx-click="set_showcase_option"
                 phx-value-section="live_select"
@@ -1825,24 +1755,16 @@
                 phx-value-choice={mode}
               >{label}</.button>
             </div>
-          </details>
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            id="dependency-select-render-choices"
-          >
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          </.collapse>
+          <.collapse id="dependency-select-render-choices">
+            <:summary>
               Display mode: {@showcase["live_select"]["render_as"]}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr] gap-2">
               <.button
                 :for={render_as <- @input_render_modes}
                 id={"dependency-select-render-#{render_as}"}
                 type="button"
-                variant={
-                  if @showcase["live_select"]["render_as"] == render_as,
-                    do: :primary,
-                    else: :neutral
-                }
                 aria-pressed={to_string(@showcase["live_select"]["render_as"] == render_as)}
                 phx-click="set_showcase_option"
                 phx-value-section="live_select"
@@ -1850,7 +1772,7 @@
                 phx-value-choice={render_as}
               >{render_as}</.button>
             </div>
-          </details>
+          </.collapse>
           <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
               :for={
@@ -1862,7 +1784,6 @@
               }
               id={"dependency-select-option-#{option}"}
               type="button"
-              variant={if @showcase["live_select"][option], do: :primary, else: :neutral}
               aria-pressed={to_string(@showcase["live_select"][option])}
               disabled={
                 option == "keep_options" and @showcase["live_select"]["mode"] == "quick_tags"
@@ -1927,19 +1848,15 @@
           <:subtitle>Adjust each primitive and compare its preview below.</:subtitle>
         </.header>
         <div id="layout-test-ui-kit-controls" class="space-y-3">
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            id="ui-kit-alert-choices"
-          >
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          <.collapse id="ui-kit-alert-choices">
+            <:summary>
               Alert kind: {String.capitalize(@showcase["ui_kit"]["alert"])}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={kind <- ~w(info success warning error)}
                 id={"ui-kit-alert-#{kind}"}
                 type="button"
-                variant={if @showcase["ui_kit"]["alert"] == kind, do: :primary, else: :neutral}
                 aria-pressed={to_string(@showcase["ui_kit"]["alert"] == kind)}
                 phx-click="set_showcase_option"
                 phx-value-section="ui_kit"
@@ -1947,15 +1864,12 @@
                 phx-value-choice={kind}
               >{String.capitalize(kind)}</.button>
             </div>
-          </details>
-          <details
-            phx-mounted={JS.ignore_attributes("open")}
-            id="ui-kit-badge-choices"
-          >
-            <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          </.collapse>
+          <.collapse id="ui-kit-badge-choices">
+            <:summary>
               Badge style: {String.capitalize(@showcase["ui_kit"]["badge"])}
-            </summary>
-            <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+            </:summary>
+            <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={
                   {style, label} <- [
@@ -1967,7 +1881,6 @@
                 }
                 id={"ui-kit-badge-#{style}"}
                 type="button"
-                variant={if @showcase["ui_kit"]["badge"] == style, do: :primary, else: :neutral}
                 aria-pressed={to_string(@showcase["ui_kit"]["badge"] == style)}
                 phx-click="set_showcase_option"
                 phx-value-section="ui_kit"
@@ -1975,21 +1888,17 @@
                 phx-value-choice={style}
               >{label}</.button>
             </div>
-          </details>
-          <div class="grid grid-cols-[1fr_1fr] items-start subgap-4">
-            <details
-              phx-mounted={JS.ignore_attributes("open")}
-              id="ui-kit-step-choices"
-            >
-              <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+          </.collapse>
+          <div class="grid grid-cols-[1fr_1fr] items-start gap-4">
+            <.collapse id="ui-kit-step-choices">
+              <:summary>
                 Current step: {@showcase["ui_kit"]["step"]}
-              </summary>
-              <div class="mt-2 grid grid-cols-[1fr_1fr_1fr] gap-2">
+              </:summary>
+              <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
                 <.button
                   :for={step <- ~w(1 2 3)}
                   id={"ui-kit-step-#{step}"}
                   type="button"
-                  variant={if @showcase["ui_kit"]["step"] == step, do: :primary, else: :neutral}
                   aria-pressed={to_string(@showcase["ui_kit"]["step"] == step)}
                   phx-click="set_showcase_option"
                   phx-value-section="ui_kit"
@@ -1997,7 +1906,7 @@
                   phx-value-choice={step}
                 >{step}</.button>
               </div>
-            </details>
+            </.collapse>
             <.form
               for={to_form(@showcase["ui_kit"], as: :showcase)}
               id="ui-kit-progress-form"
@@ -2019,7 +1928,6 @@
           <.button
             id="ui-kit-option-menu"
             type="button"
-            variant={if @showcase["ui_kit"]["menu"], do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["ui_kit"]["menu"])}
             phx-click="toggle_showcase_option"
             phx-value-section="ui_kit"
@@ -2032,12 +1940,12 @@
             role="status"
             data-kind={@showcase["ui_kit"]["alert"]}
             class={[
-              "grid grid-cols-[1.25rem_1fr] items-center gap-2 p-4 rounded-default border bg-primary overlay-dark",
+              "grid grid-cols-[1.25rem_1fr] items-center gap-2 p-4 rounded-default border overlay-opacity-[0.12] text-content",
               case @showcase["ui_kit"]["alert"] do
-                "info" -> "border-info text-info"
-                "success" -> "border-success text-success"
-                "warning" -> "border-warning text-warning"
-                "error" -> "border-error text-error"
+                "info" -> "border-info bg-info"
+                "success" -> "border-success bg-success"
+                "warning" -> "border-warning bg-warning"
+                "error" -> "border-error bg-error"
               end
             ]}
           >
@@ -2058,12 +1966,12 @@
             id="ui-kit-badge-preview"
             data-style={@showcase["ui_kit"]["badge"]}
             class={[
-              "status-pill",
+              "status-pill text-content",
               case @showcase["ui_kit"]["badge"] do
-                "brand" -> "bg-brand text-content-inverse dark:text-content"
-                "outline" -> "border border-outline text-content"
-                "success" -> "bg-success text-content"
-                "warning" -> "bg-warning text-content"
+                "brand" -> "bg-brand"
+                "outline" -> "border border-outline"
+                "success" -> "bg-success"
+                "warning" -> "bg-warning"
               end
             ]}
           >{String.capitalize(@showcase["ui_kit"]["badge"])}</span>
@@ -2123,19 +2031,15 @@
         Dependency pages
         <:subtitle>Choose a route to inspect its availability and source package.</:subtitle>
       </.header>
-      <details
-        phx-mounted={JS.ignore_attributes("open")}
-        id="dependency-page-controls"
-      >
-        <summary class="hover:overlay-dark min-h-11 content-center cursor-pointer rounded-default border border-outline bg-secondary px-3 py-2 text-sm font-medium text-content">
+      <.collapse id="dependency-page-controls">
+        <:summary>
           Page: {Enum.find(@dependency_pages, &(&1.id == @showcase["pages"]["selected"])).name}
-        </summary>
-        <div class="mt-2 grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
+        </:summary>
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
           <.button
             :for={page <- @dependency_pages}
             id={"dependency-page-choice-#{page.id}"}
             type="button"
-            variant={if @showcase["pages"]["selected"] == page.id, do: :primary, else: :neutral}
             aria-pressed={to_string(@showcase["pages"]["selected"] == page.id)}
             phx-click="set_showcase_option"
             phx-value-section="pages"
@@ -2143,7 +2047,7 @@
             phx-value-choice={page.id}
           >{page.name}</.button>
         </div>
-      </details>
+      </.collapse>
       <.card_inset
         :for={page <- @dependency_pages}
         :if={page.id == @showcase["pages"]["selected"]}

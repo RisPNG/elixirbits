@@ -9,19 +9,6 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
 
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/roles"}}
 
-  @levels [
-    {"None", 0},
-    {"Read", 4},
-    {"Read + Update", 5},
-    {"Read + Create", 6},
-    {"Read + Create + Update", 7},
-    {"Read + Delete", 12},
-    {"Read + Update + Delete", 13},
-    {"Read + Create + Delete", 14},
-    {"Read + Create + Update + Delete", 15},
-    {"Superuser Access", 16}
-  ]
-
   @impl true
   def mount(_params, _session, socket) do
     entries = socket.assigns.permissions.entries
@@ -42,7 +29,7 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
         }
       end)
 
-    {:ok, socket |> assign(:pages, pages) |> assign(:levels, @levels)}
+    {:ok, socket |> assign(:pages, pages) |> assign(:levels, Permissions.level_options())}
   end
 
   @impl true

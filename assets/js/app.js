@@ -32,7 +32,6 @@ import FileInput, {FilePreview} from "./file_input"
 import ColorInput from "./color_input"
 import NumberInput from "./number_input"
 import CinderPagination from "./cinder_pagination"
-import "vanilla-colorful/rgba-color-picker.js"
 import topbar from "topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")

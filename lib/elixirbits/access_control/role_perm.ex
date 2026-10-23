@@ -50,7 +50,10 @@ defmodule Elixirbits.AccessControl.RolePerm do
   end
 
   validations do
-    validate one_of(:level, [0, 4, 5, 6, 7, 12, 13, 14, 15, 16])
+    validate one_of(
+               :level,
+               Enum.map(Elixirbits.AccessControl.Permissions.level_options(), &elem(&1, 1))
+             )
   end
 
   attributes do

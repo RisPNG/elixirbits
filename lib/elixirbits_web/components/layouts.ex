@@ -12,6 +12,7 @@ defmodule ElixirbitsWeb.Layouts do
     organization: nil,
     user: nil,
     timezone_form: nil,
+    timezone_options: [],
     path: nil,
     open?: false,
     open_codes: []
@@ -31,10 +32,6 @@ defmodule ElixirbitsWeb.Layouts do
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
 
-  attr :current_scope, :map,
-    default: nil,
-    doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
-
   attr :nav, :map,
     default: @no_nav,
     doc: "the navigation chrome state assigned by `LiveUserAuth`'s `:app_nav` hook"
@@ -52,123 +49,168 @@ defmodule ElixirbitsWeb.Layouts do
       assigns
       |> assign(:by_parent, Enum.group_by(assigns.nav.items, & &1.parent))
       |> assign(:show_nav?, assigns.nav.items != [] or not is_nil(assigns.nav.user))
-      |> assign(
-        :timezone_options,
-        if(assigns.nav.open? and not is_nil(assigns.nav.user),
-          do:
-            Tzdata.zone_list()
-            |> Enum.filter(&match?({:ok, _}, DateTime.now(&1)))
-            |> Enum.sort()
-            |> Enum.map(&{&1, &1})
-            |> then(&[{"Automatic (browser)", ""} | &1]),
-          else: []
-        )
-      )
 
     ~H"""
-    <div class="min-h-screen" data-user-timezone={@user_timezone}>
-      <header class="grid grid-cols-[1fr_auto] items-center w-full min-h-16 px-8 border-b border-outline">
-        <a
-          :if={!@show_nav?}
-          href="/"
-          class="grid grid-cols-[2.25rem_max-content] w-fit items-center gap-2"
-        >
-          <img src={~p"/images/logo.svg"} width="36" alt="" />
-          <span class="text-sm font-semibold">Elixirbits</span>
-        </a>
-        <.theme_toggle class="col-start-2" />
-      </header>
-
-      <main class="px-8 py-10">
-        <div class={@content_class}>
-          {render_slot(@inner_block)}
-        </div>
-      </main>
-    </div>
-
     <div
-      :if={@show_nav?}
-      class="fixed left-8 top-4 z-40 w-80 rounded-default border border-outline bg-primary overlay-dark shadow-xl"
+      class="shell-surface grid min-h-screen grid-rows-[4rem_minmax(0,1fr)]"
+      data-user-timezone={@user_timezone}
     >
-      <div class="grid grid-cols-[2.75rem_1fr] items-center">
+      <header class={[
+        "shell-surface sticky top-0 z-30 grid items-center gap-3 px-4",
+        (@show_nav? && "grid-cols-[2.75rem_minmax(0,1fr)_max-content]") ||
+          "grid-cols-[minmax(0,1fr)_max-content]"
+      ]}>
         <button
+          :if={@show_nav?}
           type="button"
           phx-click="toggle_nav"
           aria-label="Toggle navigation"
-          class="grid h-11 place-items-center cursor-pointer text-content hover:overlay-dark transition-colors"
+          aria-expanded={@nav.open?}
+          aria-controls="app-navigation"
+          class="grid size-11 place-items-center rounded-default text-subcontent transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand cursor-pointer"
         >
-          <.icon name={(@nav.open? && "hero-x-mark") || "hero-bars-3"} class="size-5" />
+          <.icon name="hero-bars-3" class="size-5" />
         </button>
 
-        <div class="grid grid-cols-[1.25rem_1fr] items-center gap-2 h-11 px-3 border-l border-dashed border-outline">
-          <img src={~p"/images/logo.svg"} width="20" alt="" />
-          <span class="truncate text-sm font-semibold uppercase tracking-wide text-content">
+        <a
+          href="/"
+          class="grid w-fit max-w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-2"
+        >
+          <img src={~p"/images/logo.svg"} width="32" alt="" />
+          <span class="truncate text-sm font-semibold">
             {(@nav.organization && @nav.organization.name) || "Elixirbits"}
           </span>
-        </div>
-      </div>
-
-      <div
-        :if={@nav.user}
-        class="grid grid-cols-[1fr_1fr_1fr] items-center border-t border-dashed border-outline text-xs uppercase tracking-wide"
-      >
-        <span class="truncate px-3 py-2 text-content">
-          {@nav.user.display_name || to_string(@nav.user.email)}
-        </span>
-        <span class="truncate px-3 py-2 text-subcontent border-l border-dashed border-outline">
-          {Enum.join(@nav.user.roles, ", ")}
-        </span>
-        <a
-          href={~p"/sign-out"}
-          class="truncate px-3 py-2 text-brand underline-offset-4 hover:underline focus-visible:underline border-l border-dashed border-outline"
-        >
-          Sign out
         </a>
-      </div>
+        <div class="grid grid-cols-[max-content_max-content] items-center gap-3">
+          <.theme_toggle />
+          <button
+            :if={@nav.user}
+            type="button"
+            popovertarget="account-menu"
+            aria-label="Open account menu"
+            aria-haspopup="dialog"
+            class="grid size-11 cursor-pointer place-items-center rounded-full bg-brand overlay-opacity-[0.14] text-content transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            <img
+              :if={@nav.user.display_pic_url}
+              src={@nav.user.display_pic_url}
+              alt=""
+              class="size-10 rounded-full object-cover"
+            />
+            <span :if={!@nav.user.display_pic_url} class="text-sm font-semibold">
+              {String.upcase(String.slice(@nav.user.display_name || to_string(@nav.user.email), 0, 1))}
+            </span>
+          </button>
+          <.button :if={is_nil(@nav.user)} variant={:neutral} navigate={~p"/sign-in"}>
+            Sign in
+          </.button>
+        </div>
 
-      <.link
-        :if={is_nil(@nav.user)}
-        navigate={~p"/sign-in"}
-        class="block border-t border-outline px-3 py-2 text-sm text-brand hover:overlay-dark underline-offset-4 focus-visible:underline"
-      >
-        Sign in
-      </.link>
-
-      <nav
-        :if={@nav.open?}
-        class="max-h-[calc(100vh-9rem)] overflow-y-auto border-t border-dashed border-outline px-3 py-3"
-      >
-        <.nav_branch
-          entries={Map.get(@by_parent, nil, [])}
-          by_parent={@by_parent}
-          open_codes={@nav.open_codes}
-          current_path={@nav.path}
-          depth={0}
-        />
-
-        <.form
-          :let={form}
+        <div
           :if={@nav.user}
-          for={@nav.timezone_form}
-          id="user-timezone-form"
-          phx-change="timezone_change"
-          phx-submit="change_timezone"
-          class="mt-4 space-y-2 border-t border-outline pt-4"
+          id="account-menu"
+          popover="auto"
+          role="dialog"
+          aria-label="Account"
+          class="account-popover panel-surface w-80 space-y-5 rounded-default border border-outline p-5 shadow-lg"
         >
-          <.input
-            id="user-timezone"
-            field={form[:timezone]}
-            type="select"
-            label="Timezone"
-            options={@timezone_options}
-            allow_clear={false}
-            update_min_len={0}
-            keep_options_on_select
-          />
-          <p class="text-xs text-subcontent">Currently using {@user_timezone}</p>
-          <.button type="submit" variant={:neutral}>Save timezone</.button>
-        </.form>
-      </nav>
+          <div class="space-y-1">
+            <p class="truncate text-sm font-semibold text-content">
+              {@nav.user.display_name || to_string(@nav.user.email)}
+            </p>
+            <p :if={@nav.user.display_name} class="truncate text-xs text-subcontent">
+              {@nav.user.email}
+            </p>
+            <p :if={@nav.user.roles != []} class="truncate text-xs text-subcontent">
+              {Enum.join(@nav.user.roles, ", ")}
+            </p>
+          </div>
+
+          <.form
+            :let={form}
+            for={@nav.timezone_form}
+            id="user-timezone-form"
+            phx-change="timezone_change"
+            phx-submit="change_timezone"
+            class="space-y-3 border-t border-outline pt-4"
+          >
+            <.input
+              id="user-timezone"
+              field={form[:timezone]}
+              type="select"
+              label="Timezone"
+              options={@nav.timezone_options}
+              allow_clear={false}
+              update_min_len={0}
+              keep_options_on_select
+            />
+            <p class="text-xs text-subcontent">Currently using {@user_timezone}</p>
+            <.button type="submit" variant={:neutral}>Save timezone</.button>
+          </.form>
+
+          <.link
+            href={~p"/sign-out"}
+            class="grid min-h-10 items-center border-t border-outline pt-3 text-sm text-content underline-offset-4 hover:underline focus-visible:underline"
+          >
+            Sign out
+          </.link>
+        </div>
+      </header>
+
+      <div class={[
+        "grid min-w-0",
+        cond do
+          @show_nav? and @nav.open? -> "grid-cols-[16rem_minmax(0,1fr)]"
+          @show_nav? -> "grid-cols-[4.5rem_minmax(0,1fr)]"
+          true -> "grid-cols-[minmax(0,1fr)]"
+        end
+      ]}>
+        <aside
+          :if={@show_nav?}
+          id="app-navigation"
+          aria-label="Application navigation"
+          class="shell-surface sticky top-16 h-[calc(100dvh-4rem)] min-h-0 self-start overflow-y-auto"
+        >
+          <nav :if={@nav.open?} class="px-3 py-4">
+            <.nav_branch
+              entries={Map.get(@by_parent, nil, [])}
+              by_parent={@by_parent}
+              open_codes={@nav.open_codes}
+              current_path={@nav.path}
+              depth={0}
+            />
+          </nav>
+
+          <nav :if={!@nav.open?} class="grid auto-rows-max justify-items-center gap-2 py-4">
+            <.link
+              navigate={~p"/"}
+              aria-label="Home"
+              title="Home"
+              class={[
+                "nav-item grid size-11 place-items-center focus-visible:outline-2 focus-visible:outline-brand",
+                @nav.path == "/" && "bg-brand overlay-opacity-[0.14] text-content"
+              ]}
+            >
+              <.icon
+                name={
+                  Enum.find_value(Map.get(@by_parent, nil, []), "hero-slash", fn entry ->
+                    entry.url == "" && entry.icon
+                  end)
+                }
+                class="size-5"
+              />
+            </.link>
+          </nav>
+        </aside>
+
+        <main class="workspace-canvas min-w-0 px-8 py-10">
+          <div class="mx-auto min-w-0 max-w-[80rem]">
+            <div class={@content_class}>
+              {render_slot(@inner_block)}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
 
     <.flash_group flash={@flash} />
@@ -184,26 +226,38 @@ defmodule ElixirbitsWeb.Layouts do
   defp nav_branch(assigns) do
     ~H"""
     <ul class="flex flex-col gap-1">
-      <li :for={{entry, position} <- Enum.with_index(@entries, 1)}>
+      <li :for={entry <- @entries}>
+        <% current? =
+          @current_path && not is_nil(entry.url) &&
+            (@current_path == "/" <> entry.url ||
+               (entry.url != "" && String.starts_with?(@current_path, "/" <> entry.url <> "/"))) %>
         <div class={[
-          "grid items-center gap-2",
-          (@depth == 0 && "grid-cols-[1.75rem_1fr_1.25rem]") || "grid-cols-[1fr_1.25rem]"
+          "nav-item grid items-center",
+          (Map.get(@by_parent, entry.code, []) != [] &&
+             "grid-cols-[minmax(0,1fr)_2.25rem]") || "grid-cols-[minmax(0,1fr)]",
+          current? && "bg-brand overlay-opacity-[0.14] text-content"
         ]}>
-          <span :if={@depth == 0} class="text-xs tabular-nums text-subcontent">
-            {String.pad_leading(to_string(position), 2, "0")}
-          </span>
-
           <.link
             :if={not is_nil(entry.url)}
             navigate={"/" <> entry.url}
+            aria-current={
+              if current?,
+                do: if(@current_path == "/" <> entry.url, do: "page", else: "location")
+            }
             class={[
-              "max-w-full justify-self-start truncate underline-offset-4 focus-visible:underline transition-colors",
-              (@depth == 0 && "text-base font-bold uppercase tracking-wide") || "text-sm",
-              (@current_path == "/" <> entry.url && "text-brand hover:text-brand-dark") ||
-                "text-subcontent hover:text-subcontent-dark"
+              "grid min-h-10 min-w-0 items-center truncate rounded-default px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-brand",
+              if(@depth == 0,
+                do: "grid-cols-[1.25rem_minmax(0,1fr)] gap-3 font-medium",
+                else: "grid-cols-[minmax(0,1fr)]"
+              )
             ]}
           >
-            {entry.name}
+            <.icon
+              :if={@depth == 0}
+              name={entry.icon || "hero-slash"}
+              class="size-5"
+            />
+            <span class="truncate">{entry.name}</span>
           </.link>
 
           <button
@@ -211,14 +265,22 @@ defmodule ElixirbitsWeb.Layouts do
             type="button"
             phx-click="toggle_nav_section"
             phx-value-code={entry.code}
+            aria-expanded={entry.code in @open_codes}
+            aria-controls={if Map.get(@by_parent, entry.code, []) != [], do: "nav-#{entry.code}"}
             class={[
-              "max-w-full justify-self-start truncate cursor-pointer text-left underline-offset-4 focus-visible:underline transition-colors",
-              (@depth == 0 && "text-base font-bold uppercase tracking-wide") || "text-sm",
-              (entry.code in @open_codes && "text-brand hover:text-brand-dark") ||
-                "text-subcontent hover:text-subcontent-dark"
+              "grid min-h-10 min-w-0 cursor-pointer items-center truncate rounded-default px-3 py-2 text-left text-sm focus-visible:outline-2 focus-visible:outline-brand",
+              if(@depth == 0,
+                do: "grid-cols-[1.25rem_minmax(0,1fr)] gap-3 font-medium",
+                else: "grid-cols-[minmax(0,1fr)]"
+              )
             ]}
           >
-            {entry.name}
+            <.icon
+              :if={@depth == 0}
+              name={entry.icon || "hero-slash"}
+              class="size-5"
+            />
+            <span class="truncate">{entry.name}</span>
           </button>
 
           <button
@@ -227,13 +289,15 @@ defmodule ElixirbitsWeb.Layouts do
             phx-click="toggle_nav_section"
             phx-value-code={entry.code}
             aria-label={"Toggle #{entry.name}"}
-            class="grid place-items-center cursor-pointer text-subcontent transition-colors"
+            aria-expanded={entry.code in @open_codes}
+            aria-controls={"nav-#{entry.code}"}
+            class="grid size-9 place-items-center cursor-pointer rounded-full text-subcontent hover:overlay-dark transition-colors"
           >
             <.icon
               name="hero-chevron-down-micro"
               class={[
                 "size-4 transition-transform",
-                entry.code in @open_codes && "rotate-180 text-brand"
+                entry.code in @open_codes && "rotate-180 text-content"
               ]}
             />
           </button>
@@ -241,7 +305,8 @@ defmodule ElixirbitsWeb.Layouts do
 
         <div
           :if={Map.get(@by_parent, entry.code, []) != [] and entry.code in @open_codes}
-          class={["mt-1", (@depth == 0 && "pl-[1.75rem]") || "pl-3"]}
+          id={"nav-#{entry.code}"}
+          class="ms-3 mt-1 border-l border-outline ps-2"
         >
           <.nav_branch
             entries={Map.get(@by_parent, entry.code, [])}
@@ -266,11 +331,13 @@ defmodule ElixirbitsWeb.Layouts do
   def theme_toggle(assigns) do
     ~H"""
     <div class={[
-      "grid grid-cols-[2rem_2rem_2rem] items-center border border-outline bg-secondary text-content rounded-full",
+      "inset-surface grid grid-cols-[2rem_2rem_2rem] items-center rounded-full p-1 text-subcontent",
       @class
     ]}>
       <button
-        class="grid place-items-center size-8 cursor-pointer rounded-full border border-transparent transition-colors hover:overlay-dark [:root:not([data-theme])_&]:border-outline [:root:not([data-theme])_&]:bg-brand [:root:not([data-theme])_&]:text-content-inverse dark:[:root:not([data-theme])_&]:text-content"
+        type="button"
+        aria-label="Use system theme"
+        class="grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand [:root:not([data-theme])_&]:bg-brand [:root:not([data-theme])_&]:overlay-opacity-[0.14] [:root:not([data-theme])_&]:text-content"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
       >
@@ -278,7 +345,9 @@ defmodule ElixirbitsWeb.Layouts do
       </button>
 
       <button
-        class="grid place-items-center size-8 cursor-pointer rounded-full border border-transparent transition-colors hover:overlay-dark [[data-theme=light]_&]:border-outline [[data-theme=light]_&]:bg-brand [[data-theme=light]_&]:text-content-inverse"
+        type="button"
+        aria-label="Use light theme"
+        class="grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand [[data-theme=light]_&]:bg-brand [[data-theme=light]_&]:overlay-opacity-[0.14] [[data-theme=light]_&]:text-content"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
       >
@@ -286,7 +355,9 @@ defmodule ElixirbitsWeb.Layouts do
       </button>
 
       <button
-        class="grid place-items-center size-8 cursor-pointer rounded-full border border-transparent transition-colors hover:overlay-dark [[data-theme=dark]_&]:border-outline [[data-theme=dark]_&]:bg-brand"
+        type="button"
+        aria-label="Use dark theme"
+        class="grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand [[data-theme=dark]_&]:bg-brand [[data-theme=dark]_&]:overlay-opacity-[0.14] [[data-theme=dark]_&]:text-content"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
       >

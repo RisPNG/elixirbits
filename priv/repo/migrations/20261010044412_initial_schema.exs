@@ -1123,6 +1123,7 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :code, :text, null: false
       add :name, :text, null: false
       add :description, :text
+      add :icon, :text
       add :level, :bigint, null: false
       add :parent, :text
       add :url, :text

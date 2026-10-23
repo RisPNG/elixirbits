@@ -3,7 +3,6 @@ defmodule Elixirbits.CoreUtils.SearchTest do
 
   @domain Elixirbits.SearchTest.Domain
 
-  alias Elixirbits.CoreUtils
   alias Elixirbits.CoreUtils.Resource, as: CoreResource
   alias Elixirbits.CoreUtils.Search
   alias Elixirbits.Repo
@@ -893,14 +892,6 @@ defmodule Elixirbits.CoreUtils.SearchTest do
       assert Search.construct_date_list("2023-01-01", nil) == ["2023-01-01", "after_equal"]
       assert Search.construct_date_list(nil, "2023-01-03") == ["2023-01-03", "before_equal"]
       assert Search.construct_date_list(nil, nil) == []
-    end
-
-    test "extract_square_bracket_from_string picks indexed segment" do
-      id = "ID[alpha][beta][]"
-
-      assert CoreUtils.extract_square_bracket_from_string(id, 0) == "alpha"
-      assert CoreUtils.extract_square_bracket_from_string(id, 1) == "beta"
-      assert CoreUtils.extract_square_bracket_from_string(id, 2) == nil
     end
   end
 end

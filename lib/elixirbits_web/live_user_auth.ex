@@ -31,18 +31,6 @@ defmodule ElixirbitsWeb.LiveUserAuth do
       end)
       |> assign(:current_url, "/")
       |> attach_hook(:user_timezone_preference, :handle_event, fn
-        "live_select_change", %{"id" => "user-timezone"} = params, socket ->
-          options =
-            Tzdata.zone_list()
-            |> Enum.filter(&match?({:ok, _}, DateTime.now(&1)))
-            |> Enum.sort()
-            |> Enum.map(&{&1, &1})
-            |> then(&[{"Automatic (browser)", ""} | &1])
-            |> Search.filter(Map.get(params, "text", ""))
-
-          send_update(Component, id: "user-timezone", options: options)
-          {:halt, socket}
-
         "change_timezone", %{"timezone" => timezone}, socket ->
           case socket.assigns[:current_user] do
             nil ->
@@ -99,8 +87,18 @@ defmodule ElixirbitsWeb.LiveUserAuth do
         user: permissions.user,
         timezone_form:
           to_form(%{"timezone" => (permissions.user && permissions.user.timezone) || ""}),
+        timezone_options:
+          if(permissions.user,
+            do:
+              Tzdata.zone_list()
+              |> Enum.filter(&match?({:ok, _}, DateTime.now(&1)))
+              |> Enum.sort()
+              |> Enum.map(&{&1, &1})
+              |> then(&[{"Automatic (browser)", ""} | &1]),
+            else: []
+          ),
         path: "/",
-        open?: false,
+        open?: true,
         open_codes: nil
       })
       |> attach_hook(:app_nav_path, :handle_params, fn _params, uri, socket ->
@@ -120,6 +118,13 @@ defmodule ElixirbitsWeb.LiveUserAuth do
          end)}
       end)
       |> attach_hook(:app_nav_events, :handle_event, fn
+        "live_select_change", %{"id" => "user-timezone"} = params, socket ->
+          options =
+            Search.filter(socket.assigns.nav.timezone_options, Map.get(params, "text", ""))
+
+          send_update(Component, id: "user-timezone", options: options)
+          {:halt, socket}
+
         "timezone_change", %{"timezone" => timezone}, socket ->
           {:halt,
            update(socket, :nav, fn nav ->
