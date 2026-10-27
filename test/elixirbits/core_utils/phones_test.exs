@@ -9,8 +9,8 @@ defmodule Elixirbits.CoreUtils.PhonesTest do
 
     assert map_size(dial_codes) == length(options)
 
-    for option <- options do
-      assert dial_codes[option.value] == option.selected_label
+    for {_label, iso, metadata} <- options do
+      assert dial_codes[iso] == metadata[:dial_code]
     end
 
     assert dial_codes["MY"] == "+60"
@@ -20,29 +20,25 @@ defmodule Elixirbits.CoreUtils.PhonesTest do
   end
 
   test "country options separate their searchable label from the selected dial code" do
-    malaysia = Enum.find(Phones.options(), &(&1.value == "MY"))
+    malaysia = Enum.find(Phones.options(), &(elem(&1, 1) == "MY"))
 
-    assert malaysia == %{
-             label: "+60 Malaysia (MY)",
-             selected_label: "+60",
-             value: "MY"
-           }
+    assert malaysia == {"+60 Malaysia (MY)", "MY", dial_code: "+60"}
   end
 
   test "country names and dial codes find the same compact selection metadata" do
     for query <- ["Malaysia", "+60", "MY"] do
-      assert %{selected_label: "+60", label: "+60 Malaysia (MY)"} =
-               Enum.find(Phones.filter_options(query), &(&1.value == "MY"))
+      assert {"+60 Malaysia (MY)", "MY", dial_code: "+60"} =
+               Enum.find(Phones.filter_options(query), &(elem(&1, 1) == "MY"))
     end
   end
 
   test "countries sharing a dial code keep distinct option labels and values" do
     options = Phones.filter_options("+1")
-    canada = Enum.find(options, &(&1.value == "CA"))
-    united_states = Enum.find(options, &(&1.value == "US"))
+    {canada_label, canada_iso, canada_metadata} = Enum.find(options, &(elem(&1, 1) == "CA"))
+    {us_label, us_iso, us_metadata} = Enum.find(options, &(elem(&1, 1) == "US"))
 
-    assert canada.selected_label == united_states.selected_label
-    assert canada.label != united_states.label
-    assert canada.value != united_states.value
+    assert canada_metadata[:dial_code] == us_metadata[:dial_code]
+    assert canada_label != us_label
+    assert canada_iso != us_iso
   end
 end

@@ -5,3 +5,6 @@ erlang = "latest"
 node = "latest"
 postgres = "latest"
 sops = "latest"
+
+[env]
+MIX_ARCHIVES = { value = '{{ tools.elixir.path | replace(from="\\", to="/") }}/.mix/archives', tools = true }

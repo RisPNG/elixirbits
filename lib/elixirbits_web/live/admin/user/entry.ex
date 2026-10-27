@@ -6,9 +6,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
   alias Elixirbits.CoreUtils.EnumTypes.AddressLabel
   alias Elixirbits.CoreUtils.EnumTypes.UserSex
   alias Elixirbits.CoreUtils.Resource
-  alias Elixirbits.CoreUtils.Search
   alias Elixirbits.CoreUtils.Upload
-  alias LiveSelect.Component
 
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/users"}}
 
@@ -145,31 +143,5 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
 
   def handle_event("remove_form", %{"path" => path}, socket) do
     {:noreply, assign(socket, :form, AshPhoenix.Form.remove_form(socket.assigns.form, path))}
-  end
-
-  def handle_event("live_select_change", %{"id" => id} = params, socket) do
-    text = Map.get(params, "text", "")
-
-    options =
-      cond do
-        String.ends_with?(id, "_roles-ls") ->
-          Search.filter(socket.assigns.role_options, text)
-
-        String.ends_with?(id, "_sex-ls") ->
-          UserSex.values()
-          |> Enum.map(&{Phoenix.Naming.humanize(&1), to_string(&1)})
-          |> Search.filter(text)
-
-        String.ends_with?(id, "_label_select") ->
-          AddressLabel.values()
-          |> Enum.map(&{Phoenix.Naming.humanize(&1), to_string(&1)})
-          |> Search.filter(text)
-
-        true ->
-          []
-      end
-
-    send_update(Component, id: id, options: options)
-    {:noreply, socket}
   end
 end

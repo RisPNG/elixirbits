@@ -1,5 +1,5 @@
 /*!
-cropperjs@2.3.0, @cropper/elements@2.3.0, @cropper/utils@2.3.0, @cropper/element@2.3.0, @cropper/element-canvas@2.3.0, @cropper/element-crosshair@2.3.0, @cropper/element-grid@2.3.0, @cropper/element-handle@2.3.0, @cropper/element-image@2.3.0, @cropper/element-selection@2.3.0, @cropper/element-shade@2.3.0, @cropper/element-viewer@2.3.0, super-image-cropper (RisPNG fork), gifuct-js@2.1.2, js-binary-schema-parser@2.0.3, image-type@4.1.0, file-type@10.11.0
+cropperjs@2.3.1, @cropper/elements@2.3.1, @cropper/utils@2.3.1, @cropper/element@2.3.1, @cropper/element-canvas@2.3.1, @cropper/element-crosshair@2.3.1, @cropper/element-grid@2.3.1, @cropper/element-handle@2.3.1, @cropper/element-image@2.3.1, @cropper/element-selection@2.3.1, @cropper/element-shade@2.3.1, @cropper/element-viewer@2.3.1, super-image-cropper (RisPNG fork), gifuct-js@2.1.2, js-binary-schema-parser@2.0.3, image-type@4.1.0, file-type@10.11.0
 
 The MIT License (MIT)
 

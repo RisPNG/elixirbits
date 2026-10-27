@@ -10,6 +10,7 @@
 >
   <summary class="grid min-h-11 cursor-pointer list-none grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-2 rounded-default ps-3 pe-1 text-sm focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
     <div class="min-w-0 py-2 font-medium">{render_slot(@summary)}</div>
+
     <span
       aria-hidden="true"
       class="grid size-9 place-items-center justify-self-center rounded-full hover:overlay-dark"
@@ -20,5 +21,6 @@
       />
     </span>
   </summary>
+
   <div class="px-3 pb-3 pt-2">{render_slot(@inner_block)}</div>
 </details>

@@ -42,7 +42,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
 
     assert has_element?(
              view,
-             "#local_accent_color_space_select[phx-hook=LiveSelect] input[type=hidden][name='local[accent_color_space]'][value=hex]"
+             "#local_accent_color_space_select[phx-hook=PetalComboBox] select[name='local[accent_color_space]'] option[value=hex][selected]"
            )
 
     refute has_element?(view, "#local_accent-color-input [data-color-cycle]")
@@ -168,17 +168,14 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     assert has_element?(view, "#flash-info", "Example form submitted.")
   end
 
-  test "color-space search offers only native output formats and selects matching spaces", %{
+  test "color-space combobox offers native output formats and keeps form selections", %{
     conn: conn
   } do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
     selector_id = "local_accent_color_space_select"
 
-    render_focus(element(view, "##{selector_id} input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => selector_id, "text" => ""})
-
     document = view |> render() |> Floki.parse_document!()
-    assert length(Floki.find(document, "##{selector_id} ul > li")) == 10
+    assert length(Floki.find(document, "##{selector_id} [role=option]")) == 10
 
     for label <- [
           "HEX",
@@ -192,33 +189,27 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
           "XYZ D65",
           "CMYK"
         ] do
-      assert has_element?(view, "##{selector_id} li", label)
+      assert has_element?(view, "##{selector_id} [role=option]", label)
     end
 
-    for {text, label, mode} <- [
-          {"r g b", "RGB", "rgb"},
-          {"h s l", "HSL", "hsl"},
-          {"d50", "XYZ D50", "xyz-d50"},
-          {"cmyk", "CMYK", "cmyk"}
+    for {label, mode} <- [
+          {"RGB", "rgb"},
+          {"HSL", "hsl"},
+          {"XYZ D50", "xyz-d50"},
+          {"CMYK", "cmyk"}
         ] do
-      render_focus(element(view, "##{selector_id} input[type=text]"))
-      render_hook(element(view, "##{selector_id}"), "change", %{"text" => text})
-      render_hook(view, "live_select_change", %{"id" => selector_id, "text" => text})
-
-      document = view |> render() |> Floki.parse_document!()
-      assert length(Floki.find(document, "##{selector_id} ul > li")) == 1
-      assert has_element?(view, "##{selector_id} li", label)
-
-      render_hook(element(view, "##{selector_id}"), "option_click", %{"idx" => "0"})
+      view
+      |> form("#layout-test-form", local: %{accent: "", accent_color_space: mode})
+      |> render_change()
 
       assert has_element?(
                view,
-               "##{selector_id} input[type=hidden][name='local[accent_color_space]'][value=#{mode}]"
+               "##{selector_id} select[name='local[accent_color_space]'] option[value=#{mode}][selected]"
              )
 
       document = view |> render() |> Floki.parse_document!()
       assert Floki.attribute(document, "##{selector_id} input[type=text]", "value") == [label]
-      assert Floki.attribute(document, "#local_accent[data-color-value]", "value") == ["#c9822b"]
+      assert Floki.attribute(document, "#local_accent[data-color-value]", "value") == [""]
       assert length(Floki.find(document, "[name='local[accent]']")) == 1
     end
   end
@@ -236,7 +227,11 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
 
     document = view |> render() |> Floki.parse_document!()
     assert Floki.attribute(document, "#local_accent", "value") == [value]
-    assert Floki.attribute(document, "#{selector} input[type=hidden]", "value") == ["xyz-d50"]
+
+    assert Floki.attribute(document, "#{selector} select option[selected]", "value") == [
+             "xyz-d50"
+           ]
+
     assert Floki.attribute(document, "#{selector} input[type=text]", "value") == ["XYZ D50"]
 
     render_change(view, "local_change", %{
@@ -245,7 +240,11 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
 
     document = view |> render() |> Floki.parse_document!()
     assert Floki.attribute(document, "#local_accent", "value") == ["oklch("]
-    assert Floki.attribute(document, "#{selector} input[type=hidden]", "value") == ["xyz-d50"]
+
+    assert Floki.attribute(document, "#{selector} select option[selected]", "value") == [
+             "xyz-d50"
+           ]
+
     assert Floki.attribute(document, "#{selector} input[type=text]", "value") == ["XYZ D50"]
     assert has_element?(view, "#local_accent[aria-invalid=true]")
 
@@ -255,7 +254,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
 
     document = view |> render() |> Floki.parse_document!()
     assert Floki.attribute(document, "#local_accent", "value") == [""]
-    assert Floki.attribute(document, "#{selector} input[type=hidden]", "value") == ["hex"]
+    assert Floki.attribute(document, "#{selector} select option[selected]", "value") == ["hex"]
     assert Floki.attribute(document, "#{selector} input[type=text]", "value") == ["HEX"]
   end
 
@@ -286,8 +285,11 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     assert_in_delta alpha, 0.3756789, 1.0e-10
     document = view |> render() |> Floki.parse_document!()
 
-    assert Floki.attribute(document, "##{selector_id} input[type=hidden]", "value") == ["oklch"]
-    assert Floki.attribute(document, "##{selector_id} input[type=text]", "value") == ["OKLCH"]
+    assert Floki.attribute(document, "##{selector_id} select option[selected]", "value") == [
+             "hex"
+           ]
+
+    assert Floki.attribute(document, "##{selector_id} input[type=text]", "value") == ["HEX"]
     assert Floki.attribute(document, "#local_accent", "value") == ["#c9822b"]
 
     for {input, format} <- [{"oklch(", "oklch"}, {value, "unsupported"}] do
@@ -302,8 +304,11 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
       assert_reply view, %{valid: false, error: "Enter a supported color value."}
       document = view |> render() |> Floki.parse_document!()
 
-      assert Floki.attribute(document, "##{selector_id} input[type=hidden]", "value") == ["oklch"]
-      assert Floki.attribute(document, "##{selector_id} input[type=text]", "value") == ["OKLCH"]
+      assert Floki.attribute(document, "##{selector_id} select option[selected]", "value") == [
+               "hex"
+             ]
+
+      assert Floki.attribute(document, "##{selector_id} input[type=text]", "value") == ["HEX"]
       assert Floki.attribute(document, "#local_accent", "value") == ["#c9822b"]
     end
   end
@@ -337,7 +342,6 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     {:ok, source} = Color.CSS.parse(value)
     assert converted == Color.CSS.to_css(source)
     assert_in_delta alpha, 0.3756789, 1.0e-10
-    assert has_element?(view, "#local_accent_color_space_select input[type=hidden][value=oklch]")
     assert has_element?(view, "#local_accent[value='#c9822b']")
   end
 
@@ -356,11 +360,6 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
       })
 
       assert_reply view, %{valid: true, value: "", format: ^format, swatch: nil, rgba: nil}
-
-      assert has_element?(
-               view,
-               "##{selector_id} input[type=hidden][value=#{format}]"
-             )
 
       assert has_element?(view, "#local_accent[value='']")
     end
@@ -430,11 +429,6 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
 
       assert_reply view, %{valid: true, value: ^expected, format: "rgb", rgba: %{a: actual_alpha}}
       assert actual_alpha == alpha
-
-      assert has_element?(
-               view,
-               "#local_accent_color_space_select input[type=hidden][value=rgb]"
-             )
 
       assert has_element?(view, "#local_accent[value='']")
     end
@@ -606,62 +600,41 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
     assert html =~ ~s(id="demo-modal-server-error")
   end
 
-  test "dependency LiveSelect refreshes backend options after selection", %{conn: conn} do
+  test "dependency combobox keeps all choices available after a form selection", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 
-    render_click(element(view, "#layout-test-ecosystem-tab"))
+    assert has_element?(view, "#layout-test-form-section #layout-test-dependency-combobox")
 
-    assert has_element?(view, "#layout-test-dependency-live-select")
+    view
+    |> form("#layout-test-dependency-form", dependency: %{component_search: "/dev/dashboard"})
+    |> render_change()
 
-    render_focus(element(view, "#layout-test-dependency-live-select input[type=\"text\"]"))
-
-    render_hook(view, "live_select_change", %{
-      "id" => "layout-test-dependency-live-select",
-      "text" => "dashboard"
-    })
-
-    assert has_element?(view, "#layout-test-dependency-live-select ul li div[data-idx=\"0\"]")
-
-    render_hook(element(view, "#layout-test-dependency-live-select"), "option_click", %{
-      "idx" => "0"
-    })
-
-    refute has_element?(view, "#layout-test-dependency-live-select ul")
-
-    render_focus(element(view, "#layout-test-dependency-live-select input[type=\"text\"]"))
-
-    render_hook(view, "live_select_change", %{
-      "id" => "layout-test-dependency-live-select",
-      "text" => ""
-    })
-
-    assert has_element?(view, "#layout-test-dependency-live-select ul li div[data-idx=\"0\"]")
-  end
-
-  test "core selectors retain their explicit IDs and refresh the matching options", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
-    assert has_element?(view, "#layout-test-local-role")
-
-    render_focus(element(view, "#layout-test-local-role input[type=text]"))
-
-    render_hook(element(view, "#layout-test-local-role"), "change", %{
-      "text" => "viewer"
-    })
-
-    render_hook(view, "live_select_change", %{
-      "id" => "layout-test-local-role",
-      "text" => "viewer"
-    })
-
-    assert has_element?(view, "#layout-test-local-role li", "Viewer")
-    refute has_element?(view, "#layout-test-local-role li", "Administrator")
-    refute has_element?(view, "#layout-test-local-role li", "Scalar")
-
-    render_hook(element(view, "#layout-test-local-role"), "option_click", %{"idx" => "0"})
+    assert has_element?(view, "#selected-dependency-dashboard")
 
     assert has_element?(
              view,
-             "#layout-test-local-role input[type=hidden][name='local[role]'][value=viewer]"
+             "#layout-test-dependency-combobox select option[value='/dev/dashboard'][selected]"
+           )
+
+    document = view |> render() |> Floki.parse_document!()
+    assert length(Floki.find(document, "#layout-test-dependency-combobox [role=option]")) == 4
+  end
+
+  test "core combobox retains its explicit ID and updates the matching form field", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+    assert has_element?(view, "#layout-test-local-role")
+
+    view
+    |> form("#layout-test-form", local: %{role: "viewer"})
+    |> render_change()
+
+    assert has_element?(view, "#layout-test-local-role [role=option]", "Viewer")
+    assert has_element?(view, "#layout-test-local-role [role=option]", "Administrator")
+    refute has_element?(view, "#layout-test-local-role [role=option]", "Scalar")
+
+    assert has_element?(
+             view,
+             "#layout-test-local-role select[name='local[role]'] option[value=viewer][selected]"
            )
 
     assert has_element?(view, "#layout-test-local-role input[type=text][value=Viewer]")

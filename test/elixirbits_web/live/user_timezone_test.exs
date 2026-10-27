@@ -60,7 +60,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
     assert has_element?(
              view,
-             "#user-timezone input[type=hidden][name=timezone][value='Europe/London']"
+             "#user-timezone-select[name=timezone] option[selected][value='Europe/London']"
            )
 
     assert has_element?(view, "#user-timezone input[type=text][value='Europe/London']")
@@ -73,18 +73,15 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
       |> Floki.find("#user-timezone-form [name]")
       |> Floki.attribute("name")
 
-    assert names == ["timezone_text_input", "timezone"]
-
-    render_focus(element(view, "#user-timezone input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "user-timezone"})
+    assert names == ["timezone"]
 
     zones =
       view
       |> render()
       |> Floki.parse_document!()
-      |> Floki.find("#user-timezone ul li > div")
-      |> Enum.map(&(Floki.text(&1) |> String.trim()))
-      |> Enum.reject(&(&1 == "Automatic (browser)"))
+      |> Floki.find("#user-timezone-select option")
+      |> Floki.attribute("value")
+      |> Enum.reject(&(&1 == ""))
 
     assert "Europe/London" in zones
 
@@ -127,20 +124,19 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     assert has_element?(view, "[data-user-timezone='America/New_York']")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
     assert has_element?(view, "#user-timezone input[type=text][value='Automatic (browser)']")
-    assert has_element?(view, "#user-timezone input[type=hidden][name=timezone][value='']")
+    assert has_element?(view, "#user-timezone-input[placeholder='Automatic (browser)']")
+    assert has_element?(view, "#user-timezone-select[name=timezone] option[selected][value='']")
+    assert has_element?(view, "#user-timezone-select option[value='Europe/London']")
+    assert has_element?(view, "#user-timezone-select option[value='America/New_York']")
 
-    render_focus(element(view, "#user-timezone input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "user-timezone", "text" => "london"})
-    assert has_element?(view, "#user-timezone ul li", "Europe/London")
-    refute has_element?(view, "#user-timezone ul li", "America/New_York")
-    render_hook(element(view, "#user-timezone"), "option_click", %{"idx" => "0"})
+    view |> form("#user-timezone-form", timezone: "Europe/London") |> render_change()
 
     assert has_element?(
              view,
-             "#user-timezone input[type=hidden][name=timezone][value='Europe/London']"
+             "#user-timezone-select[name=timezone] option[selected][value='Europe/London']"
            )
 
-    refute has_element?(view, "#user-timezone button[phx-click=clear]")
+    refute has_element?(view, "#user-timezone [data-pc-combo-clear]")
 
     result = view |> form("#user-timezone-form", timezone: "Europe/London") |> render_submit()
     assert {:error, {:live_redirect, %{to: "/"}}} = result
@@ -152,14 +148,12 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
     assert has_element?(
              view,
-             "#user-timezone input[type=hidden][name=timezone][value='Europe/London']"
+             "#user-timezone-select[name=timezone] option[selected][value='Europe/London']"
            )
 
-    render_focus(element(view, "#user-timezone input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "user-timezone", "text" => "automatic"})
-    assert has_element?(view, "#user-timezone ul li", "Automatic (browser)")
-    render_hook(element(view, "#user-timezone"), "option_click", %{"idx" => "0"})
-    assert has_element?(view, "#user-timezone input[type=hidden][name=timezone][value='']")
+    assert has_element?(view, "#user-timezone-select option[value='']", "Automatic (browser)")
+    view |> form("#user-timezone-form", timezone: "") |> render_change()
+    assert has_element?(view, "#user-timezone-select[name=timezone] option[selected][value='']")
 
     result = view |> form("#user-timezone-form", timezone: "") |> render_submit()
     assert {:error, {:live_redirect, %{to: "/"}}} = result
@@ -203,7 +197,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     assert Ash.get!(User, target.id, actor: @system).timezone == "Pacific/Auckland"
   end
 
-  test "navigation timezone search stays separate from a page's own selectors", %{conn: conn} do
+  test "navigation timezone choices stay separate from a page's own comboboxes", %{conn: conn} do
     Ash.create!(Sitenav, %{code: "USERS", name: "Users", url: "admin/users", level: 1},
       actor: @system
     )
@@ -212,31 +206,17 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     {:ok, view, _html} = conn |> log_in_user(user) |> live(~p"/admin/users/#{user.id}/update")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
 
-    render_focus(element(view, "#user-timezone input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "user-timezone", "text" => "london"})
-    assert has_element?(view, "#user-timezone ul li", "Europe/London")
-    refute has_element?(view, "#user-timezone ul li", "Home")
+    assert has_element?(view, "#user-timezone-select option[value='Europe/London']")
+    refute has_element?(view, "#user-timezone-select option", "Home")
+    assert has_element?(view, "#user-timezone-select option[value='America/New_York']")
+    assert has_element?(view, "#user-timezone-select option[value='']", "Automatic (browser)")
+    assert has_element?(view, "#form_sex-select option", "Female")
+    refute has_element?(view, "#form_sex-select option", "Europe/London")
 
-    render_hook(view, "live_select_change", %{"id" => "user-timezone", "text" => ""})
-    assert has_element?(view, "#user-timezone ul li", "America/New_York")
-    assert has_element?(view, "#user-timezone ul li", "Automatic (browser)")
-
-    render_focus(element(view, "#form_sex-ls input[type=text]"))
-
-    render_hook(view, "live_select_change", %{
-      "id" => "form_sex-ls",
-      "text" => "female"
-    })
-
-    assert has_element?(view, "#form_sex-ls ul li", "Female")
-    refute has_element?(view, "#form_sex-ls ul li", "Europe/London")
-
-    render_hook(view, "live_select_change", %{"id" => "user-timezone", "text" => "london"})
-    render_hook(element(view, "#user-timezone"), "option_click", %{"idx" => "0"})
-    view |> form("#user-timezone-form") |> render_change()
+    view |> form("#user-timezone-form", timezone: "Europe/London") |> render_change()
     view |> form("#user-form", form: %{display_name: "Updated name"}) |> render_change()
 
-    assert has_element?(view, "#user-timezone input[type=hidden][value='Europe/London']")
+    assert has_element?(view, "#user-timezone-select option[selected][value='Europe/London']")
     assert Ash.get!(User, user.id, actor: @system).timezone == nil
   end
 

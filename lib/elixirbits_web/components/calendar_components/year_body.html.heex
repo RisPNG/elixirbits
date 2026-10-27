@@ -3,6 +3,7 @@
     <p class="mb-1 text-center text-sm font-semibold text-content">
       {Calendar.strftime(Date.new!(2000, month, 1), "%B")}
     </p>
+
     <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr]">
       <div
         :for={label <- ~w(M T W T F S S)}
@@ -11,6 +12,7 @@
         {label}
       </div>
     </div>
+
     <div
       :for={week <- Cal.month_grid(Date.new!(@cursor.year, month, 1))}
       class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr]"

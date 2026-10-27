@@ -14,6 +14,7 @@
       >
         {col.sublabel}
       </text>
+
       <text
         x={@gutter + i * @col_w + @col_w / 2}
         y={@header / 2 + 12}
@@ -66,7 +67,6 @@
         class="stroke-outline"
         stroke-width="0.5"
       />
-
       <g :for={{col, i} <- Enum.with_index(@columns)}>
         <g :for={event <- col.events} class={[event.fill_class, "hover:overlay-dark"]}>
           <% box = event_box(event, i, @col_w) %>
@@ -87,6 +87,7 @@
           >
             {String.slice(event.title, 0, trunc(box.w / 7))}
           </text>
+
           <text
             :if={box.h > 34}
             x={box.x + 6}
@@ -96,6 +97,7 @@
           >
             {Calendar.strftime(event.start, "%-I:%M %p")}
           </text>
+
           <foreignObject x={box.x} y={box.y} width={box.w} height={box.h}>
             <button
               id={"#{@id}-event-#{i}-#{event.id}"}
@@ -121,8 +123,7 @@
           y2={@now_minutes}
           class="stroke-error"
           stroke-width="1.5"
-        />
-        <circle cx={@now_x1} cy={@now_minutes} r="4" class="fill-error" />
+        /> <circle cx={@now_x1} cy={@now_minutes} r="4" class="fill-error" />
       </g>
     </svg>
   </div>

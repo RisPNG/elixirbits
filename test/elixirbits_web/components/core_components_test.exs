@@ -15,37 +15,41 @@ defmodule ElixirbitsWeb.CoreComponentsTest.SelectPreview do
        options: [
          {"Editor", "editor"},
          {"Viewer", "viewer"},
-         %{label: "Unavailable", value: "unavailable", disabled: true}
+         {"Unavailable", "unavailable", disabled: true}
        ]
      )}
   end
 
+  def handle_event("change", %{"choices" => params}, socket) do
+    {:noreply, assign(socket, :form, to_form(params, as: :choices))}
+  end
+
   def render(assigns) do
     ~H"""
-    <CoreComponents.input
-      field={@form[:labeled_role]}
-      id="labeled-role"
-      type="select"
-      label="Role"
-      render_as={@render_as}
-      options={@options}
-      keep_options_on_select
-    />
-    <CoreComponents.input
-      field={@form[:unlabeled_role]}
-      id="unlabeled-role"
-      type="select"
-      render_as={@render_as}
-      options={@options}
-      keep_options_on_select
-    />
-    <CoreComponents.input
-      field={@form[:phone]}
-      id="phone"
-      type="tel"
-      label="Phone"
-      render_as={@render_as}
-    />
+    <CoreComponents.form for={@form} id="choices-form" phx-change="change">
+      <CoreComponents.input
+        field={@form[:labeled_role]}
+        id="labeled-role"
+        type="combobox"
+        label="Role"
+        render_as={@render_as}
+        options={@options}
+      />
+      <CoreComponents.input
+        field={@form[:unlabeled_role]}
+        id="unlabeled-role"
+        type="combobox"
+        render_as={@render_as}
+        options={@options}
+      />
+      <CoreComponents.input
+        field={@form[:phone]}
+        id="phone"
+        type="tel"
+        label="Phone"
+        render_as={@render_as}
+      />
+    </CoreComponents.form>
     """
   end
 end
@@ -126,6 +130,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         <CoreComponents.button id="create-account" variant={:text} navigate="/register">
           Create an account
         </CoreComponents.button>
+
         <CoreComponents.button
           id="request-link"
           variant={:text}
@@ -170,14 +175,14 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             <span id="protection-status">3 of 4 services active</span>
             <.link href="/help/billing">Learn more</.link>
           </:summary>
+
           <CoreComponents.form for={nil} id="protection-settings" phx-submit="save_protection">
             <CoreComponents.input
               type="checkbox"
               name="fraud_monitoring"
               value={true}
               label="Fraud monitoring"
-            />
-            <CoreComponents.button type="submit">Save settings</CoreComponents.button>
+            /> <CoreComponents.button type="submit">Save settings</CoreComponents.button>
           </CoreComponents.form>
         </CoreComponents.collapse>
         """)
@@ -212,6 +217,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         rendered_to_string(~H"""
         <CoreComponents.collapse id="expanded-settings" open>
           <:summary>Settings</:summary>
+
           <p>These settings start expanded.</p>
         </CoreComponents.collapse>
         """)
@@ -224,51 +230,41 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
     end
   end
 
-  describe "select option states" do
-    test "shared selects keep one option surface layer and padding while keyboard selection stays usable" do
-      {:ok, view, _html} =
+  describe "combobox option states" do
+    test "comboboxes expose selected and disabled options and follow native form changes" do
+      {:ok, view, html} =
         live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.SelectPreview)
 
+      document = Floki.parse_document!(html)
+
       for id <- ["labeled-role", "unlabeled-role", "choices_phone_country_code_country_select"] do
-        html = render_hook(element(view, "##{id}"), "keydown", %{"key" => "ArrowDown"})
-        document = Floki.parse_document!(html)
-        rows = Floki.find(document, "##{id} ul > li")
-
+        rows = Floki.find(document, "##{id} [role=option]")
         assert length(rows) >= 2
-        assert Floki.find(document, "##{id} ul > li.option-surface.font-semibold") != []
-
-        assert Floki.find(
-                 document,
-                 "##{id} ul > li.cursor-pointer.text-content > div.option-surface"
-               ) != []
-
-        refute html =~ "hover:bg-gray-400"
-        refute html =~ "text-gray-400"
-
-        for row <- rows do
-          assert [outer_classes] = Floki.attribute(row, "class")
-          refute outer_classes =~ "py-2"
-          refute outer_classes =~ "px-3"
-          refute outer_classes =~ "hover:option-surface"
-          assert [inner_classes] = Floki.attribute(row, "div", "class")
-          assert "py-2" in String.split(inner_classes)
-          assert "px-3" in String.split(inner_classes)
-          assert "hover:option-surface" in String.split(inner_classes)
-        end
+        assert length(Floki.find(document, "##{id} [role=option][aria-selected=true]")) == 1
+        assert Floki.find(document, "##{id}-select option[selected]") != []
       end
 
       for {id, field_name} <- [
             {"labeled-role", "choices[labeled_role]"},
             {"unlabeled-role", "choices[unlabeled_role]"}
           ] do
-        assert has_element?(view, "##{id} li.cursor-not-allowed.text-subcontent", "Unavailable")
-        render_hook(element(view, "##{id}"), "option_click", %{"idx" => "2"})
-        assert has_element?(view, "##{id} input[type=hidden][name='#{field_name}'][value=viewer]")
-        render_hook(element(view, "##{id}"), "option_click", %{"idx" => "0"})
-        assert has_element?(view, "##{id} input[type=hidden][name='#{field_name}'][value=editor]")
-        render_hook(element(view, "##{id}"), "keydown", %{"key" => "ArrowDown"})
-        assert has_element?(view, "##{id} li.option-surface", "Editor")
-        assert has_element?(view, "##{id} li > div.option-surface", "Viewer")
+        assert has_element?(view, "##{id} [role=option][aria-disabled=true]", "Unavailable")
+        assert has_element?(view, "##{id}-select option[value=unavailable][disabled]")
+
+        assert has_element?(
+                 view,
+                 "##{id}-select[name='#{field_name}'] option[value=viewer][selected]"
+               )
+      end
+
+      view
+      |> form("#choices-form", choices: %{labeled_role: "editor", unlabeled_role: "editor"})
+      |> render_change()
+
+      for id <- ["labeled-role", "unlabeled-role"] do
+        assert has_element?(view, "##{id}-select option[value=editor][selected]")
+        assert has_element?(view, "##{id} [role=option][data-value=editor][aria-selected=true]")
+        assert has_element?(view, "##{id} [role=option][data-value=viewer][aria-selected=false]")
       end
     end
   end
@@ -442,7 +438,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(
                  document,
-                 "#accent_color_space_select[phx-hook=LiveSelect] input[type=text]"
+                 "#accent_color_space_select[phx-hook=PetalComboBox] input[type=text]"
                ) != []
 
         assert Floki.find(
@@ -708,7 +704,9 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           phx-target="#profile"
         >
           <:stored_preview :let={url}><img src={url} alt="Custom portrait" /></:stored_preview>
+
           <:preview_caption>saved-portrait.png</:preview_caption>
+
           <:pending_caption :let={pending_entry}>{pending_entry.client_name}</:pending_caption>
         </CoreComponents.input>
         <CoreComponents.file_preview id={@destination} class="size-20" />
@@ -1254,6 +1252,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         rendered_to_string(~H"""
         <CoreComponents.input type="file" upload={@upload} selection="singles" preview stored={[@saved]}>
           <:preview_caption>saved-portrait.png</:preview_caption>
+
           <:pending_caption :let={entry}>{entry.client_name}</:pending_caption>
         </CoreComponents.input>
         """)
@@ -1406,7 +1405,9 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             preview_id={@preview_id}
           >
             <:stored_preview :let={url}><img src={url} alt="Custom portrait" /></:stored_preview>
+
             <:preview_caption>saved-portrait.png</:preview_caption>
+
             <:pending_caption :let={pending_entry}>{pending_entry.client_name}</:pending_caption>
           </CoreComponents.input>
           """)
@@ -1502,6 +1503,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           rendered_to_string(~H"""
           <CoreComponents.input type="file" upload={@upload} selection={@selection} stored={[@saved]}>
             <:preview_caption>saved-portrait.png</:preview_caption>
+
             <:pending_caption :let={pending_entry}>{pending_entry.client_name}</:pending_caption>
           </CoreComponents.input>
           """)
@@ -1690,6 +1692,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             preview_as="thumbnail"
           >
             <:stored_preview :let={url}><img src={url} alt="Stored portrait" /></:stored_preview>
+
             <:pending_preview :let={pending_entry}>
               <.live_img_preview entry={pending_entry} alt="Pending portrait" />
             </:pending_preview>
@@ -1803,7 +1806,8 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         ~w(email file number password search text url textarea date datetime-local time week month checkbox switch radio)
 
       for {type, variant} <-
-            Enum.map(types, &{&1, "default"}) ++ [{"checkbox", "alt"}, {"switch", "alt"}] do
+            Enum.map(types, &{&1, "default"}) ++
+              [{"checkbox", "alt"}, {"switch", "alt"}, {"radio", "card"}] do
         value =
           case type do
             "number" -> 7
@@ -1959,7 +1963,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       assert Floki.find(document, ".input-floating-label-hidden span[aria-hidden=true]") != []
     end
 
-    test "disabled selects keep one required label and their submitted option values" do
+    test "disabled comboboxes keep one required label and their submitted option values" do
       assigns = %{}
 
       html =
@@ -1967,7 +1971,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         <CoreComponents.input
           id="role"
           name="role"
-          type="select"
+          type="combobox"
           value="viewer"
           label="Role"
           options={[{"Viewer", "viewer"}]}
@@ -2303,6 +2307,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           disabled
         >
           <:stored_preview :let={url}>{url}</:stored_preview>
+
           <:pending_preview>{@entry.client_name}</:pending_preview>
         </CoreComponents.input>
         """)
@@ -2452,13 +2457,13 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       assert String.trim(html) == ""
     end
 
-    test "select span shows the option label instead of the raw value" do
+    test "combobox span shows the option label instead of the raw value" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
         <CoreComponents.input
-          type="select"
+          type="combobox"
           name="state"
           value="prk"
           label="State"
@@ -2547,7 +2552,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       assert Floki.find(Floki.parse_document!(html), "button[data-number-step][disabled]") == []
     end
 
-    test "text select and telephone modes preserve picker selection and composite submission" do
+    test "text combobox and telephone modes preserve picker selection and composite submission" do
       for render_as <- ~w(text text-enabled) do
         {:ok, view, html} =
           live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.SelectPreview,
@@ -2556,16 +2561,16 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         document = Floki.parse_document!(html)
 
-        for id <- ["labeled-role", "unlabeled-role", "choices_phone_country_code_country_select"] do
+        for id <- ["labeled-role", "unlabeled-role"] do
           assert Floki.find(
                    document,
-                   "##{id}[phx-hook=LiveSelect].input-text-wrapper input[type=text].border-0"
+                   "##{id}[phx-hook=PetalComboBox].input-text-wrapper input[type=text]"
                  ) != []
         end
 
         assert Floki.find(
                  document,
-                 "input[type=hidden][name='choices[labeled_role]'][value=viewer]"
+                 "select[name='choices[labeled_role]'] option[value=viewer][selected]"
                ) != []
 
         assert Floki.find(
@@ -2575,8 +2580,13 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(document, "[phx-hook=TelInput] input[data-tel-number].border-0") != []
 
-        assert [country_label] =
-                 Floki.attribute(document, "#choices_phone_country_code_text_input", "value")
+        country_label =
+          document
+          |> Floki.find(
+            "#choices_phone_country_code_country_select-trigger [data-pc-combo-trigger-label]"
+          )
+          |> Floki.text()
+          |> String.trim()
 
         assert country_label == "+60"
 
@@ -2585,24 +2595,23 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
                  ".input-floating-wrapper, .input-floating-control, .input-floating-label"
                ) == []
 
-        render_hook(element(view, "#labeled-role"), "keydown", %{"key" => "ArrowDown"})
-        assert has_element?(view, "#labeled-role ul > li", "Editor")
-        render_hook(element(view, "#labeled-role"), "keydown", %{"key" => "Enter"})
+        assert has_element?(view, "#labeled-role [role=option]", "Editor")
+        view |> form("#choices-form", choices: %{labeled_role: "editor"}) |> render_change()
 
         assert has_element?(
                  view,
-                 "input[type=hidden][name='choices[labeled_role]'][value=editor]"
+                 "select[name='choices[labeled_role]'] option[value=editor][selected]"
                )
       end
     end
 
-    test "disabled text selects retain their selected submission value without a floating label" do
+    test "disabled text comboboxes retain their selected submission value without a floating label" do
       for render_as <- ~w(text text-enabled) do
         document =
           render_component(&CoreComponents.input/1,
             id: "role",
             name: "role",
-            type: "select",
+            type: "combobox",
             value: "viewer",
             label: "Role",
             options: [{"Viewer", "viewer"}],
@@ -2938,12 +2947,13 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
     end
 
     test "text radio modes show only the selected value and preserve hidden native choices" do
-      for render_as <- ~w(text text-enabled text-disabled) do
+      for render_as <- ~w(text text-enabled text-disabled), variant <- ~w(default card) do
         document =
           render_component(&CoreComponents.input/1,
             id: "contact",
             name: "contact",
             type: "radio",
+            variant: variant,
             value: "email",
             label: "Contact",
             options: [{"Email", "email"}, {"Phone", "phone"}],

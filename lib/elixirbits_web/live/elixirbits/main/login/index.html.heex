@@ -17,8 +17,7 @@
         type="email"
         label="Email"
         required
-      />
-      <.input field={@form[:password]} type="password" label="Password" required />
+      /> <.input field={@form[:password]} type="password" label="Password" required />
       <div class="grid grid-cols-[1fr_max-content] items-center gap-4">
         <.input
           field={@form[:remember_me]}
@@ -41,6 +40,7 @@
         >
           Sign in
         </.button>
+
         <.button
           type="button"
           variant={:text}

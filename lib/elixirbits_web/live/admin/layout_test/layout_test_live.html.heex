@@ -17,10 +17,12 @@
   >
     <div>
       <h2 id="layout-test-colors-title" class="text-base font-semibold">System colors</h2>
+
       <p class="text-sm text-subcontent">
         Main and muted text use fixed colors for each theme. Outlines adapt to each background. Dark and light increase saturation while adjusting surface lightness.
       </p>
     </div>
+
     <ul aria-label="System color tokens" class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
       <li
         :for={
@@ -84,6 +86,7 @@
         Background opacity
       </h2>
     </:summary>
+
     <section
       id="layout-test-background-opacity"
       aria-labelledby="layout-test-background-opacity-title"
@@ -92,6 +95,7 @@
       <p class="text-sm text-subcontent">
         Set the background alpha while text and icons stay opaque. The default is 10%. Nested layers add their alpha up to 100%. In light mode, brand backgrounds at 50% alpha or less use dark text and icons.
       </p>
+
       <ul aria-label="Background opacity examples" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
         <li
           :for={
@@ -121,22 +125,26 @@
           </div>
         </li>
       </ul>
+
       <div
         id="layout-test-opacity-stack-10"
         class="rounded-default border border-outline bg-brand overlay-opacity p-3 text-content"
       >
         <p class="text-sm font-medium">10% background alpha</p>
+
         <div class="mt-3">
           <div
             id="layout-test-opacity-stack-20"
             class="rounded-default border border-outline overlay-opacity p-3"
           >
             <p class="text-sm font-medium">20% background alpha</p>
+
             <div
               id="layout-test-opacity-stack-30"
               class="mt-3 rounded-default border border-outline overlay-opacity p-3"
             >
               <p class="text-sm font-medium">30% background alpha</p>
+
               <div
                 id="layout-test-opacity-stack-40"
                 class="mt-3 rounded-default border border-outline overlay-opacity p-3"
@@ -156,6 +164,7 @@
         Overlay strength
       </h2>
     </:summary>
+
     <section
       id="layout-test-overlay-strength"
       aria-labelledby="layout-test-overlay-strength-title"
@@ -164,6 +173,7 @@
       <p class="text-sm text-subcontent">
         Dark and light overlays move saturation toward 100% while moving lightness toward black or white, keeping hue unchanged. The default strength is 10%. Nested overlays of the same kind add their strength up to 100%. Light overlays on brand at 50% strength or more use dark text and icons in both modes.
       </p>
+
       <div class="grid grid-cols-[1fr_1fr] gap-3">
         <div
           :for={
@@ -188,6 +198,7 @@
           class="space-y-3 rounded-default border border-outline bg-primary p-3"
         >
           <h3 class="text-base font-semibold text-content">{title}</h3>
+
           <ul
             aria-label={"#{title} strength examples"}
             class="grid grid-cols-[1fr_1fr_1fr_1fr] grid-rows-[auto_auto] subgap-3 gap-y-2"
@@ -213,6 +224,7 @@
               </div>
             </li>
           </ul>
+
           <div
             id={"layout-test-overlay-#{kind}-stack-10"}
             class={[
@@ -222,6 +234,7 @@
             ]}
           >
             <p class="text-sm font-medium">10% combined strength</p>
+
             <div class="mt-3">
               <div
                 id={"layout-test-overlay-#{kind}-stack-20"}
@@ -231,6 +244,7 @@
                 ]}
               >
                 <p class="text-sm font-medium">20% combined strength</p>
+
                 <div
                   id={"layout-test-overlay-#{kind}-stack-30"}
                   class={[
@@ -239,6 +253,7 @@
                   ]}
                 >
                   <p class="text-sm font-medium">30% combined strength</p>
+
                   <div
                     id={"layout-test-overlay-#{kind}-stack-40"}
                     class={[
@@ -299,11 +314,13 @@
             Choose a button style and combine the header options.
           </:subtitle>
         </.header>
+
         <div class="space-y-3">
           <.collapse>
             <:summary>
               Button style: {@showcase["header"]["variant"]}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={variant <- ~w(default text neutral primary danger)}
@@ -316,6 +333,7 @@
               >{Phoenix.Naming.humanize(variant)}</.button>
             </div>
           </.collapse>
+
           <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
               :for={
@@ -334,12 +352,14 @@
               phx-value-option={option}
             >{label}</.button>
           </div>
+
           <.card_inset id="layout-test-header-preview">
             <.header level={3}>
               Example title
               <:subtitle :if={@showcase["header"]["subtitle"]}>
                 An example subtitle below the title.
               </:subtitle>
+
               <:actions :if={@showcase["header"]["actions"]}>
                 <.button
                   id="layout-test-inline-action"
@@ -367,6 +387,7 @@
             Configure one flash, then trigger it in the shared toast area.
           </:subtitle>
         </.header>
+
         <div class="space-y-3">
           <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
@@ -380,6 +401,7 @@
               phx-value-choice={kind}
             >{Phoenix.Naming.humanize(kind)}</.button>
           </div>
+
           <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
               :for={
@@ -396,12 +418,14 @@
               phx-value-option={option}
             >{label}</.button>
           </div>
+
           <.collapse>
             <:summary>
               Duration: {@showcase["flash"]["duration"]}{if @showcase["flash"]["duration"] !=
                                                               "default",
                                                             do: "ms"}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={duration <- ~w(default 1000 5000 8000)}
@@ -414,6 +438,7 @@
               >{duration}</.button>
             </div>
           </.collapse>
+
           <.button
             id="layout-test-flash-show"
             type="button"
@@ -430,6 +455,7 @@
           Switch the shared site theme and watch the same preview change.
         </:subtitle>
       </.header>
+
       <div class="grid grid-cols-[max-content_max-content] items-center gap-3 mb-4">
         <Layouts.theme_toggle />
         <.button
@@ -440,6 +466,7 @@
           phx-value-option="inset"
         >Inset card</.button>
       </div>
+
       <div
         id="layout-test-theme-preview"
         class={[
@@ -448,6 +475,7 @@
         ]}
       >
         <p class="font-medium">Shared theme preview</p>
+
         <p class="text-sm text-subcontent">
           The page, controls, and cards use the same light and dark theme.
         </p>
@@ -475,14 +503,16 @@
           <:summary>
             Input options: {@input_config["render_as"]} display, {@input_config["variant"]} controls, {@input_config[
               "select_mode"
-            ]} select, and {case checked_state do
+            ]} select, {@input_config["combobox_mode"]} combobox, and {case checked_state do
               "true" -> "checked"
               "false" -> "unchecked"
               "mixed" -> "mixed checked states"
             end}
           </:summary>
+
           <fieldset class="space-y-2">
             <legend class="text-sm font-medium text-content">Display mode</legend>
+
             <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={mode <- @input_render_modes}
@@ -495,11 +525,13 @@
               >{mode}</.button>
             </div>
           </fieldset>
-          <div class="mt-3 grid grid-cols-[1fr_1fr_2fr] subgap-4">
+
+          <div class="mt-3 grid grid-cols-[1fr_1fr_1fr_1fr] subgap-4">
             <fieldset class="space-y-2">
               <legend class="text-sm font-medium text-content">
                 Checkbox and switch variant
               </legend>
+
               <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
                   :for={variant <- ~w(default alt)}
@@ -512,8 +544,10 @@
                 >{variant}</.button>
               </div>
             </fieldset>
+
             <fieldset class="space-y-2">
               <legend class="text-sm font-medium text-content">Checked state</legend>
+
               <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
                   :for={{value, label} <- [{"false", "Unchecked"}, {"true", "Checked"}]}
@@ -526,11 +560,15 @@
                 >{label}</.button>
               </div>
             </fieldset>
+
             <fieldset class="space-y-2">
-              <legend class="text-sm font-medium text-content">Select mode</legend>
-              <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+              <legend class="text-sm font-medium text-content">
+                Select mode
+              </legend>
+
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
-                  :for={mode <- ~w(single tags quick_tags)}
+                  :for={mode <- ~w(single multiple)}
                   id={"layout-test-input-select-mode-#{mode}"}
                   type="button"
                   aria-pressed={to_string(@input_config["select_mode"] == mode)}
@@ -540,8 +578,25 @@
                 >{mode}</.button>
               </div>
             </fieldset>
+
+            <fieldset class="space-y-2">
+              <legend class="text-sm font-medium text-content">Combobox mode</legend>
+
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
+                <.button
+                  :for={mode <- ~w(single multiple)}
+                  id={"layout-test-input-combobox-mode-#{mode}"}
+                  type="button"
+                  aria-pressed={to_string(@input_config["combobox_mode"] == mode)}
+                  phx-click="set_input_config"
+                  phx-value-option="combobox_mode"
+                  phx-value-choice={mode}
+                >{mode}</.button>
+              </div>
+            </fieldset>
           </div>
         </.collapse>
+
         <div
           id="layout-test-input-states"
           class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-2 border-y border-outline py-3"
@@ -564,10 +619,12 @@
             phx-value-state={state}
           >{label}</.button>
         </div>
+
         <.collapse>
           <:summary>
             Input attributes
           </:summary>
+
           <div class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr] gap-2">
             <.button
               :for={
@@ -601,177 +658,210 @@
         phx-submit="local_save"
         class="space-y-4"
       >
-        <div id="layout-test-input-examples" class="grid grid-cols-[1fr_1fr_1fr_1fr] subgap-4">
+        <div id="layout-test-input-examples" class="space-y-4">
           <div
             :for={
-              {field_name, type, label} <- [
-                {:project_name, "text", "Text"},
-                {:email, "email", "Email"},
-                {:password, "password", "Password"},
-                {:budget, "number", "Number"},
-                {:launch_date, "date", "Date"},
-                {:launch_time, "time", "Time"},
-                {:launch_week, "week", "Week"},
-                {:launch_month, "month", "Month"},
-                {:launch_at, "datetime-local", "Datetime"},
-                {:accent, "color", "Color"},
-                {:search, "search", "Search"},
-                {:website, "url", "URL"},
-                {:phone, "tel", "Telephone"},
-                {:role, "select", "Select"},
-                {:notes, "textarea", "Textarea"},
-                {:enabled, "checkbox", "Checkbox"},
-                {:switch, "switch", "Switch"},
-                {:upload, "file", "File"},
-                {:contact_method, "radio", "Radio"},
-                {:hidden_token, "hidden", "Hidden"}
+              {columns, fields} <- [
+                {"grid-cols-[1fr_1fr_1fr_1fr]",
+                 [
+                   {:project_name, "text", "Text"},
+                   {:email, "email", "Email"},
+                   {:password, "password", "Password"},
+                   {:budget, "number", "Number"},
+                   {:launch_date, "date", "Date"},
+                   {:launch_time, "time", "Time"},
+                   {:launch_week, "week", "Week"},
+                   {:launch_month, "month", "Month"},
+                   {:launch_at, "datetime-local", "Datetime"},
+                   {:accent, "color", "Color"},
+                   {:search, "search", "Search"},
+                   {:website, "url", "URL"},
+                   {:phone, "tel", "Telephone"},
+                   {:native_role, "select", "Select"},
+                   {:role, "combobox", "Combobox"},
+                   {:notes, "textarea", "Textarea"},
+                   {:enabled, "checkbox", "Checkbox"},
+                   {:switch, "switch", "Switch"},
+                   {:upload, "file", "File"},
+                   {:contact_method, "radio", "Radio"}
+                 ]},
+                {"grid-cols-[3fr_1fr]",
+                 [
+                   {:compute_plan, "radio-card", "Radio card"},
+                   {:hidden_token, "hidden", "Hidden"}
+                 ]}
               ]
             }
-            id={"layout-test-input-example-#{type}"}
-            data-input-type={type}
-            data-input-mode={@input_config["render_as"]}
-            data-input-variant={@input_config["variant"]}
-            data-select-mode={@input_config["select_mode"]}
-            class="space-y-2"
+            class={["grid", columns, "subgap-4"]}
           >
-            <% field = @local_form[field_name] %>
-            <p
-              :if={
-                @input_states["unlabeled"] or type == "hidden" or
-                  @input_config["render_as"] in ~w(hidden hidden-enabled hidden-disabled)
+            <div
+              :for={{field_name, type, label} <- fields}
+              id={"layout-test-input-example-#{type}"}
+              data-input-type={type}
+              data-input-mode={@input_config["render_as"]}
+              data-input-variant={
+                if type == "radio-card", do: "card", else: @input_config["variant"]
               }
-              class="text-xs font-medium text-subcontent"
-            >
-              {label}
-            </p>
-            <.input
-              field={
-                if @input_states["errors"] do
-                  %{
-                    field
-                    | errors: [{"Example validation error", []}],
-                      form: %{
-                        field.form
-                        | params: Map.delete(field.form.params, "_unused_#{field.field}")
-                      }
-                  }
-                else
-                  field
-                end
-              }
-              id={if type == "select", do: "layout-test-local-role", else: field.id}
-              type={type}
-              label={
-                if @input_states["unlabeled"] or (type == "select" and @input_states["prompt"]),
-                  do: nil,
-                  else: label
-              }
-              value={field.value}
-              mode={
-                if type == "select",
-                  do: String.to_existing_atom(@input_config["select_mode"]),
-                  else: :single
-              }
-              options={
+              data-selection-mode={
                 case type do
-                  "select" ->
-                    [{"Administrator", "admin"}, {"Designer", "designer"}, {"Viewer", "viewer"}]
-
-                  "radio" ->
-                    [{"Email", "email"}, {"Telephone", "phone"}]
-
-                  _ ->
-                    []
+                  "select" -> @input_config["select_mode"]
+                  "combobox" -> @input_config["combobox_mode"]
+                  _ -> nil
                 end
               }
-              variant={@input_config["variant"]}
-              render_as={@input_config["render_as"]}
-              timezone={@user_timezone}
-              placeholder={if @input_states["placeholder"], do: "Example #{label}"}
-              prompt={if type == "select" and @input_states["prompt"], do: "Choose a role"}
-              tooltip={
-                if @input_states["tooltip"],
-                  do: "#{label} input in #{@input_config["render_as"]} mode"
-              }
-              required={@input_states["required"]}
-              disabled={@input_states["disabled"]}
-              readonly={
-                @input_states["readonly"] and
-                  type in ~w(text email password number search url tel textarea)
-              }
-              min={if type == "number" and @input_states["constraints"], do: 0}
-              max={if type == "number" and @input_states["constraints"], do: 100_000}
-              step={if type == "number" and @input_states["constraints"], do: 5}
-              minlength={
-                if type in ~w(text email password search url tel textarea) and
-                     @input_states["constraints"],
-                   do: 3
-              }
-              maxlength={
-                if type in ~w(text email password search url tel textarea) and
-                     @input_states["constraints"],
-                   do: 200
-              }
-              pattern={if type == "text" and @input_states["constraints"], do: "[^<>]+"}
-              size={if type == "text" and @input_states["constraints"], do: 12}
-              list={
-                if type == "text" and @input_states["datalist"], do: "layout-test-input-cities"
-              }
-              multiple={type == "file" and @input_states["multiple"]}
-              capture={if type == "file" and @input_states["capture"], do: "environment"}
-              accept={
-                cond do
-                  type == "file" and @input_states["capture"] ->
-                    "image/*"
-
-                  type == "file" and (@input_states["multiple"] or @input_states["constraints"]) ->
-                    "image/*,.pdf"
-
-                  true ->
-                    nil
-                end
-              }
-              rows={if type == "textarea", do: if(@input_states["textarea_size"], do: 6, else: 4)}
-              cols={if type == "textarea" and @input_states["textarea_size"], do: 60}
-              class={
-                if @input_states["custom_class"] and type not in ~w(checkbox switch radio hidden) do
-                  [
-                    "input-floating-control block w-full min-h-11 rounded-default border border-brand bg-transparent px-3 text-content disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
-                    (@input_states["disabled"] or
-                       @input_config["render_as"] in ~w(disabled like-disabled)) and
-                      "overlay-dark text-subcontent cursor-not-allowed",
-                    type == "textarea" and "input-floating-textarea",
-                    type == "password" and "pr-12"
-                  ]
-                end
-              }
-              error_class={
-                if @input_states["custom_error_class"], do: "border-error bg-transparent"
-              }
-              aria-label={"#{label}, #{@input_config["render_as"]}"}
-            />
-            <p
-              :if={
-                type == "hidden" or
-                  @input_config["render_as"] in ~w(hidden hidden-enabled hidden-disabled)
-              }
-              class="text-xs text-subcontent"
+              class="space-y-2"
             >
-              <%= cond do %>
-                <% @input_config["render_as"] == "hidden-disabled" -> %>
-                  The control and its value are omitted.
-                <% @input_config["render_as"] in ~w(hidden hidden-enabled) or (type == "hidden" and @input_config["render_as"] in ~w(enabled text text-enabled)) -> %>
-                  The control is hidden and its value submits unless disabled.
-                <% true -> %>
-                  This hidden input is shown using the selected display mode.
-              <% end %>
-            </p>
+              <% field = @local_form[field_name] %>
+              <p
+                :if={
+                  @input_states["unlabeled"] or type == "hidden" or
+                    @input_config["render_as"] in ~w(hidden hidden-enabled hidden-disabled)
+                }
+                class="text-xs font-medium text-subcontent"
+              >
+                {label}
+              </p>
+
+              <.input
+                field={
+                  if @input_states["errors"] do
+                    %{
+                      field
+                      | errors: [{"Example validation error", []}],
+                        form: %{
+                          field.form
+                          | params: Map.delete(field.form.params, "_unused_#{field.field}")
+                        }
+                    }
+                  else
+                    field
+                  end
+                }
+                id={if type == "combobox", do: "layout-test-local-role", else: field.id}
+                type={if type == "radio-card", do: "radio", else: type}
+                label={
+                  if @input_states["unlabeled"] or
+                       (type in ~w(select combobox) and @input_states["prompt"]),
+                     do: nil,
+                     else: label
+                }
+                value={field.value}
+                options={
+                  case type do
+                    type when type in ~w(select combobox) ->
+                      [{"Administrator", "admin"}, {"Designer", "designer"}, {"Viewer", "viewer"}]
+
+                    "radio" ->
+                      [{"Email", "email"}, {"Telephone", "phone"}]
+
+                    "radio-card" ->
+                      [
+                        {"8-core CPU", "8-core", description: "32 GB RAM"},
+                        {"6-core CPU", "6-core", description: "24 GB RAM"},
+                        {"4-core CPU", "4-core", description: "16 GB RAM", disabled: true}
+                      ]
+
+                    _ ->
+                      []
+                  end
+                }
+                variant={if type == "radio-card", do: "card", else: @input_config["variant"]}
+                render_as={@input_config["render_as"]}
+                timezone={@user_timezone}
+                placeholder={if @input_states["placeholder"], do: "Example #{label}"}
+                prompt={
+                  if type in ~w(select combobox) and @input_states["prompt"], do: "Choose a role"
+                }
+                tooltip={
+                  if @input_states["tooltip"],
+                    do: "#{label} input in #{@input_config["render_as"]} mode"
+                }
+                required={@input_states["required"]}
+                disabled={@input_states["disabled"]}
+                readonly={
+                  @input_states["readonly"] and
+                    type in ~w(text email password number search url tel textarea)
+                }
+                min={if type == "number" and @input_states["constraints"], do: 0}
+                max={if type == "number" and @input_states["constraints"], do: 100_000}
+                step={if type == "number" and @input_states["constraints"], do: 5}
+                minlength={
+                  if type in ~w(text email password search url tel textarea) and
+                       @input_states["constraints"],
+                     do: 3
+                }
+                maxlength={
+                  if type in ~w(text email password search url tel textarea) and
+                       @input_states["constraints"],
+                     do: 200
+                }
+                pattern={if type == "text" and @input_states["constraints"], do: "[^<>]+"}
+                size={if type == "text" and @input_states["constraints"], do: 12}
+                list={
+                  if type == "text" and @input_states["datalist"], do: "layout-test-input-cities"
+                }
+                multiple={
+                  (type == "file" and @input_states["multiple"]) or
+                    (type == "select" and @input_config["select_mode"] == "multiple") or
+                    (type == "combobox" and @input_config["combobox_mode"] == "multiple")
+                }
+                capture={if type == "file" and @input_states["capture"], do: "environment"}
+                accept={
+                  cond do
+                    type == "file" and @input_states["capture"] ->
+                      "image/*"
+
+                    type == "file" and (@input_states["multiple"] or @input_states["constraints"]) ->
+                      "image/*,.pdf"
+
+                    true ->
+                      nil
+                  end
+                }
+                rows={
+                  if type == "textarea", do: if(@input_states["textarea_size"], do: 6, else: 4)
+                }
+                cols={if type == "textarea" and @input_states["textarea_size"], do: 60}
+                class={
+                  if @input_states["custom_class"] and
+                       type not in ~w(checkbox switch radio radio-card hidden) do
+                    [
+                      "input-floating-control block w-full min-h-11 rounded-default border border-brand bg-transparent px-3 text-content disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                      (@input_states["disabled"] or
+                         @input_config["render_as"] in ~w(disabled like-disabled)) and
+                        "overlay-dark text-subcontent cursor-not-allowed",
+                      type == "textarea" and "input-floating-textarea",
+                      type == "password" and "pr-12"
+                    ]
+                  end
+                }
+                error_class={
+                  if @input_states["custom_error_class"], do: "border-error bg-transparent"
+                }
+                aria-label={"#{label}, #{@input_config["render_as"]}"}
+              />
+              <p
+                :if={
+                  type == "hidden" or
+                    @input_config["render_as"] in ~w(hidden hidden-enabled hidden-disabled)
+                }
+                class="text-xs text-subcontent"
+              >
+                <%= cond do %>
+                  <% @input_config["render_as"] == "hidden-disabled" -> %>
+                    The control and its value are omitted.
+                  <% @input_config["render_as"] in ~w(hidden hidden-enabled) or (type == "hidden" and @input_config["render_as"] in ~w(enabled text text-enabled)) -> %>
+                    The control is hidden and its value submits unless disabled.
+                  <% true -> %>
+                    This hidden input is shown using the selected display mode.
+                <% end %>
+              </p>
+            </div>
           </div>
         </div>
+
         <datalist :if={@input_states["datalist"]} id="layout-test-input-cities">
-          <option value="Ipoh" />
-          <option value="Kuala Lumpur" />
-          <option value="George Town" />
+          <option value="Ipoh" /> <option value="Kuala Lumpur" /> <option value="George Town" />
         </datalist>
         <.action_button action={:save} type="submit" />
       </.form>
@@ -784,10 +874,128 @@
             "%-d %b %Y, %H:%M %Z"
           )}
         </time>
+
         <span id="submitted-at-utc" class="block text-subcontent">Submitted UTC: {DateTime.to_iso8601(
           @submitted_at
         )}</span>
       </p>
+
+      <.card_inset id="layout-test-combobox-card">
+        <.header>
+          Combobox
+          <:subtitle>
+            Choose a select mode and display state, then pick dependency pages.
+          </:subtitle>
+        </.header>
+
+        <div id="layout-test-combobox-controls" class="space-y-3">
+          <.collapse id="dependency-select-mode-choices">
+            <:summary>
+              Selection mode: {@showcase["combobox"]["mode"]}
+            </:summary>
+
+            <div class="grid grid-cols-[1fr_1fr] gap-2">
+              <.button
+                :for={
+                  {mode, label} <- [
+                    {"single", "Single"},
+                    {"multiple", "Multiple"}
+                  ]
+                }
+                id={"dependency-select-mode-#{mode}"}
+                type="button"
+                aria-pressed={to_string(@showcase["combobox"]["mode"] == mode)}
+                phx-click="set_showcase_option"
+                phx-value-section="combobox"
+                phx-value-option="mode"
+                phx-value-choice={mode}
+              >{label}</.button>
+            </div>
+          </.collapse>
+
+          <.collapse id="dependency-select-render-choices">
+            <:summary>
+              Display mode: {@showcase["combobox"]["render_as"]}
+            </:summary>
+
+            <div class="grid grid-cols-[1fr_1fr] gap-2">
+              <.button
+                :for={render_as <- @input_render_modes}
+                id={"dependency-select-render-#{render_as}"}
+                type="button"
+                aria-pressed={to_string(@showcase["combobox"]["render_as"] == render_as)}
+                phx-click="set_showcase_option"
+                phx-value-section="combobox"
+                phx-value-option="render_as"
+                phx-value-choice={render_as}
+              >{render_as}</.button>
+            </div>
+          </.collapse>
+
+          <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+            <.button
+              :for={
+                {option, label} <- [
+                  {"prompt", "Prompt"},
+                  {"clearable", "Clearable"},
+                  {"disabled", "Disabled"}
+                ]
+              }
+              id={"dependency-select-option-#{option}"}
+              type="button"
+              aria-pressed={to_string(@showcase["combobox"][option])}
+              phx-click="toggle_showcase_option"
+              phx-value-section="combobox"
+              phx-value-option={option}
+            >{label}</.button>
+          </div>
+        </div>
+
+        <.form
+          for={@dependency_form}
+          id="layout-test-dependency-form"
+          phx-change="dependency_change"
+        >
+          <.input
+            type="combobox"
+            field={@dependency_form[:component_search]}
+            id="layout-test-dependency-combobox"
+            options={@dependency_options}
+            multiple={@showcase["combobox"]["mode"] == "multiple"}
+            render_as={@showcase["combobox"]["render_as"]}
+            prompt={if @showcase["combobox"]["prompt"], do: "Search dependency pages"}
+            clearable={@showcase["combobox"]["clearable"]}
+            disabled={@showcase["combobox"]["disabled"]}
+          />
+        </.form>
+
+        <.card_inset id="layout-test-selected-dependency">
+          <%= if @selected_dependencies == [] do %>
+            <p class="text-sm text-subcontent">
+              Pick a dependency page to inspect its route and source package.
+            </p>
+          <% else %>
+            <div class="space-y-4">
+              <div
+                :for={page <- @selected_dependencies}
+                id={"selected-dependency-#{page.id}"}
+                class="space-y-2"
+              >
+                <div class="grid grid-cols-[1fr_max-content] items-center gap-2">
+                  <p class="font-semibold">{page.name}</p>
+
+                  <span class="status-pill bg-primary overlay-dark text-content">{page.availability}</span>
+                </div>
+
+                <p class="text-sm text-subcontent">{page.description}</p>
+
+                <p class="text-xs text-subcontent">{page.source} · {page.path}</p>
+                <.button href={page.path} variant={:neutral}>Open {page.name}</.button>
+              </div>
+            </div>
+          <% end %>
+        </.card_inset>
+      </.card_inset>
     </.card>
 
     <.card id="layout-test-uploads">
@@ -797,6 +1005,7 @@
           Choose one file, add files one at a time, or select up to three files together. Each file can be up to 1MB.
         </:subtitle>
       </.header>
+
       <div id="layout-test-upload-controls" class="space-y-3">
         <div class="grid grid-cols-[1fr_1fr] items-start subgap-3">
           <div>
@@ -804,6 +1013,7 @@
               <:summary>
                 Render as: {@upload_mode}
               </:summary>
+
               <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
                   :for={mode <- @input_render_modes}
@@ -820,11 +1030,13 @@
               </div>
             </.collapse>
           </div>
+
           <div>
             <.collapse id="upload-preview-styles">
               <:summary>
                 Preview layout: {@showcase["uploads"]["preview_as"]}
               </:summary>
+
               <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
                   :for={style <- ["tag", "thumbnail"]}
@@ -843,9 +1055,11 @@
             </.collapse>
           </div>
         </div>
+
         <div class="grid grid-cols-[1fr_1fr] items-start subgap-3">
           <section id="layout-test-upload-selection-controls" class="flex flex-col gap-3">
             <h3 class="font-medium text-content">File selection</h3>
+
             <div class="grid grid-cols-[1fr_1fr_2fr] gap-2">
               <.button
                 :for={
@@ -865,12 +1079,15 @@
                 phx-value-choice={choice}
               >{label}</.button>
             </div>
+
             <p class="text-sm text-subcontent">
               Save or cancel selected files before changing selection mode.
             </p>
           </section>
+
           <section id="layout-test-upload-editor-controls" class="flex flex-col gap-3">
             <h3 class="font-medium text-content">Image editor</h3>
+
             <div class="grid grid-cols-[1fr_1fr] gap-2">
               <.button
                 :for={
@@ -894,11 +1111,13 @@
                 phx-value-choice={choice}
               >{label}</.button>
             </div>
+
             <p class="text-sm text-subcontent">
               Editing requires Preview in Single file or Singles mode. Hover over an image to edit it again. PDFs use the browser's document viewer.
             </p>
           </section>
         </div>
+
         <div class="grid grid-cols-[repeat(7,max-content)] gap-2">
           <.button
             :for={
@@ -923,6 +1142,7 @@
           </.button>
         </div>
       </div>
+
       <div class={[
         "grid items-start",
         if(@showcase["uploads"]["selection"] == "multiple",
@@ -991,11 +1211,13 @@
                   {Map.get(@preview_names, url, Path.basename(url))}
                 </span>
               </:preview_caption>
+
               <:pending_caption :let={entry}>
                 <span class="truncate">{entry.client_name}</span>
               </:pending_caption>
             </.input>
           </div>
+
           <.button
             :if={@upload_mode == "enabled"}
             type="submit"
@@ -1003,6 +1225,7 @@
             disabled={@showcase["uploads"]["disabled"]}
           >Save files</.button>
         </.form>
+
         <div :if={@showcase["uploads"]["selection"] != "multiple"}>
           <.file_preview
             id="layout-test-upload-preview"
@@ -1014,6 +1237,7 @@
           />
         </div>
       </div>
+
       <p :if={@uploaded_names != []} id="uploaded-names" class="text-sm text-content">
         {Enum.join(@uploaded_names, ", ")}
       </p>
@@ -1026,6 +1250,7 @@
           Add, edit, save, send, archive, and delete sample entries for this session.
         </:subtitle>
       </.header>
+
       <div id="layout-test-action-controls" class="space-y-3">
         <div class="grid grid-cols-[1fr_1fr_1fr_1fr] items-start subgap-3">
           <div :for={
@@ -1045,6 +1270,7 @@
               <:summary>
                 {label}: {value}
               </:summary>
+
               <div class="grid grid-cols-[1fr_1fr] gap-2">
                 <.button
                   :for={{choice_label, choice} <- choices}
@@ -1062,11 +1288,13 @@
             </.collapse>
           </div>
         </div>
+
         <div class="grid grid-cols-[1fr_max-content_max-content_max-content] items-start gap-2">
           <.collapse id="record-selected-entry">
             <:summary>
               Selected entry: {if @record_selected, do: "##{@record_selected}", else: "None"}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr] gap-2">
               <.button
                 :for={entry <- @record_entries}
@@ -1081,6 +1309,7 @@
               </.button>
             </div>
           </.collapse>
+
           <.button
             :for={
               {option, label} <- [
@@ -1100,6 +1329,7 @@
           </.button>
         </div>
       </div>
+
       <div class="grid grid-cols-[2.75rem_1fr] items-center gap-3">
         <.action_button
           id={"record-action-#{@showcase["actions"]["selected"]}"}
@@ -1119,11 +1349,9 @@
           {@record_message}
         </p>
       </div>
-      <% record_count = String.to_integer(@showcase["actions"]["count"]) %>
-      <% visible_entries = Enum.take(@record_entries, record_count) %>
-      <% selected_entry =
-        Enum.find(@record_entries, fn entry -> entry["id"] == @record_selected end) %>
-      <% visible_entries =
+      <% record_count = String.to_integer(@showcase["actions"]["count"]) %> <% visible_entries =
+        Enum.take(@record_entries, record_count) %> <% selected_entry =
+        Enum.find(@record_entries, fn entry -> entry["id"] == @record_selected end) %> <% visible_entries =
         if selected_entry &&
              not Enum.any?(visible_entries, fn entry -> entry["id"] == @record_selected end) do
           Enum.take(visible_entries, record_count - 1) ++ [selected_entry]
@@ -1160,6 +1388,7 @@
                 phx-value-id={entry["id"]}
               />
             </:actions>
+
             <div
               id={"record-entry-#{entry["id"]}"}
               data-status={entry["status"]}
@@ -1190,6 +1419,7 @@
                   min="1"
                 />
               </div>
+
               <.input
                 id={"record-notes-#{entry["id"]}"}
                 name={"records[#{entry["id"]}][notes]"}
@@ -1215,6 +1445,7 @@
             </div>
           </.entry_panel>
         </div>
+
         <p :if={@record_entries == []} id="record-empty" class="text-sm text-subcontent">
           No entries. Use Add new to create one, or Back to restore the saved entries.
         </p>
@@ -1227,6 +1458,7 @@
           Change the calendar view with its own toolbar, then compare event styles and timer modes.
         </:subtitle>
       </.header>
+
       <div class="space-y-3 mb-4">
         <div class="grid grid-cols-[max-content_max-content_max-content] items-start gap-2">
           <.button
@@ -1240,6 +1472,7 @@
             <:summary>
               Event style: {@showcase["calendar"]["variant"]}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr] gap-2">
               <.button
                 :for={variant <- ~w(solid outline)}
@@ -1252,10 +1485,12 @@
               >{Phoenix.Naming.humanize(variant)}</.button>
             </div>
           </.collapse>
+
           <.collapse>
             <:summary>
               Event color: {@showcase["calendar"]["color"]}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={color <- ~w(brand info success warning error neutral)}
@@ -1269,6 +1504,7 @@
             </div>
           </.collapse>
         </div>
+
         <div class="grid grid-cols-[max-content_max-content_max-content_1fr] items-center gap-2">
           <.button
             :for={mode <- ~w(elapsed countdown)}
@@ -1298,6 +1534,7 @@
           </p>
         </div>
       </div>
+
       <ElixirbitsWeb.CalendarComponents.calendar
         id="calendar-showcase"
         events={
@@ -1327,6 +1564,7 @@
         <.header>
           Core Table<:subtitle>Compare row interaction, action slots, and empty data.</:subtitle>
         </.header>
+
         <div class="grid grid-cols-[1fr_1fr] gap-2">
           <.button
             :for={
@@ -1345,6 +1583,7 @@
             phx-value-option={option}
           >{label}</.button>
         </div>
+
         <.table
           id="layout-test-core-table"
           rows={
@@ -1353,7 +1592,7 @@
               else: [
                 %{section: "Header", scope: "Page framing", status: "Ready"},
                 %{section: "Inputs", scope: "Form states", status: "Ready"},
-                %{section: "Dependencies", scope: "LiveSelect + pages", status: "Ready"}
+                %{section: "Dependencies", scope: "Combobox + pages", status: "Ready"}
               ]
           }
           row_click={
@@ -1362,10 +1601,13 @@
           }
         >
           <:col :let={row} label="Section">{row.section}</:col>
+
           <:col :let={row} label="Scope">{row.scope}</:col>
+
           <:col :let={row} :if={@showcase["table"]["status"]} label="Status">
             <span class="status-pill bg-success text-content">{row.status}</span>
           </:col>
+
           <:action :let={row} :if={@showcase["table"]["actions"]}>
             <.button
               type="button"
@@ -1375,16 +1617,19 @@
             >Inspect</.button>
           </:action>
         </.table>
+
         <p :if={@table_selection} id="table-selection" role="status" class="text-sm text-content">
           Selected row: {@table_selection}
         </p>
       </section>
+
       <.card id="layout-test-list-card">
         <.header>
           Core List<:subtitle>
             Change the number of details and their title presentation.
           </:subtitle>
         </.header>
+
         <div class="grid grid-cols-[max-content_max-content] items-start gap-2 mb-4">
           <.button
             id="list-option-titles"
@@ -1398,6 +1643,7 @@
             <:summary>
               Items: {@showcase["list"]["count"]}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={count <- ~w(1 2 4)}
@@ -1412,6 +1658,7 @@
             </div>
           </.collapse>
         </div>
+
         <div id="layout-test-list-preview">
           <.list>
             <:item
@@ -1440,11 +1687,13 @@
       <.header>
         Core Icons<:subtitle>Choose an icon, its size, and a shared theme color.</:subtitle>
       </.header>
+
       <div class="grid grid-cols-[max-content_max-content_max-content_max-content] items-start gap-3 mb-4">
         <.collapse>
           <:summary>
             Icon: {@showcase["icons"]["name"]}
           </:summary>
+
           <div class="grid grid-cols-[1fr_1fr] gap-2">
             <.button
               :for={
@@ -1461,10 +1710,12 @@
             >{name}</.button>
           </div>
         </.collapse>
+
         <.collapse>
           <:summary>
             Size: {@showcase["icons"]["size"]}
           </:summary>
+
           <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
             <.button
               :for={size <- ~w(4 5 8 12)}
@@ -1478,10 +1729,12 @@
             >{size}</.button>
           </div>
         </.collapse>
+
         <.collapse>
           <:summary>
             Color: {@showcase["icons"]["color"]}
           </:summary>
+
           <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
             <.button
               :for={color <- ~w(content brand info success warning error)}
@@ -1495,6 +1748,7 @@
             >{Phoenix.Naming.humanize(color)}</.button>
           </div>
         </.collapse>
+
         <.button
           id="icon-option-label"
           type="button"
@@ -1504,6 +1758,7 @@
           phx-value-option="label"
         >Label</.button>
       </div>
+
       <.card_inset id="layout-test-icon-preview">
         <div class="grid grid-cols-[max-content_1fr] items-center gap-3">
           <.icon
@@ -1538,6 +1793,7 @@
           Configure the title and action slots before opening the preview.
         </:subtitle>
       </.header>
+
       <div class="grid grid-cols-[max-content_max-content_max-content] gap-2">
         <.button
           :for={{option, label} <- [{"title", "Title"}, {"actions", "Actions"}]}
@@ -1571,12 +1827,14 @@
           120 sample records. Choose a layout and adjust the collection controls.
         </:subtitle>
       </.header>
+
       <div id="layout-test-cinder-controls" class="space-y-3">
         <div class="grid grid-cols-[1fr_1fr_1fr] items-start gap-4">
           <.collapse id="cinder-layout-choices">
             <:summary>
               Layout: {String.capitalize(@showcase["cinder"]["layout"])}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={layout <- ~w(table list grid)}
@@ -1590,10 +1848,12 @@
               >{String.capitalize(layout)}</.button>
             </div>
           </.collapse>
+
           <.collapse id="cinder-page-size-choices">
             <:summary>
               Records per page: {@showcase["cinder"]["page_size"]}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={size <- ~w(6 12 24)}
@@ -1607,10 +1867,12 @@
               >{size}</.button>
             </div>
           </.collapse>
+
           <.collapse id="cinder-column-choices">
             <:summary>
               Grid columns: {@showcase["cinder"]["columns"]}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
               <.button
                 :for={columns <- ~w(2 3 4)}
@@ -1626,6 +1888,7 @@
             </div>
           </.collapse>
         </div>
+
         <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
           <.button
             :for={
@@ -1645,6 +1908,7 @@
           >{label}</.button>
         </div>
       </div>
+
       <div
         id="layout-test-cinder-collection"
         phx-hook="CinderPagination"
@@ -1687,6 +1951,7 @@
           >
             {entry.code}
           </:col>
+
           <:col
             :let={entry}
             field="name"
@@ -1697,6 +1962,7 @@
           >
             {entry.name}
           </:col>
+
           <:col
             :let={entry}
             field="state"
@@ -1706,17 +1972,22 @@
           >
             {entry.state}
           </:col>
+
           <:col :let={entry} field="sequence" label="#" sort={@showcase["cinder"]["sort"]}>
             {entry.sequence}
           </:col>
+
           <:item :let={entry}>
             <div class="grid grid-cols-[max-content_max-content] items-center gap-2">
               <span class="status-pill bg-primary overlay-dark text-content">{entry.code}</span>
               <span class="status-pill bg-primary overlay-dark text-content">{entry.state}</span>
             </div>
+
             <div class="mt-3 space-y-1">
               <p class="font-semibold">{entry.name}</p>
+
               <p class="text-sm text-subcontent">{entry.description}</p>
+
               <p class="text-xs text-subcontent">{entry.url}</p>
             </div>
           </:item>
@@ -1724,134 +1995,19 @@
       </div>
     </section>
 
-    <section class="grid grid-cols-[1fr_1fr] gap-4">
-      <.card id="layout-test-live-select-card">
-        <.header>
-          LiveSelect
-          <:subtitle>
-            Choose a select mode and display state, then pick dependency pages.
-          </:subtitle>
-        </.header>
-        <div id="layout-test-live-select-controls" class="space-y-3">
-          <.collapse id="dependency-select-mode-choices">
-            <:summary>
-              Selection mode: {@showcase["live_select"]["mode"]}
-            </:summary>
-            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
-              <.button
-                :for={
-                  {mode, label} <- [
-                    {"single", "Single"},
-                    {"tags", "Tags"},
-                    {"quick_tags", "Quick tags"}
-                  ]
-                }
-                id={"dependency-select-mode-#{mode}"}
-                type="button"
-                aria-pressed={to_string(@showcase["live_select"]["mode"] == mode)}
-                phx-click="set_showcase_option"
-                phx-value-section="live_select"
-                phx-value-option="mode"
-                phx-value-choice={mode}
-              >{label}</.button>
-            </div>
-          </.collapse>
-          <.collapse id="dependency-select-render-choices">
-            <:summary>
-              Display mode: {@showcase["live_select"]["render_as"]}
-            </:summary>
-            <div class="grid grid-cols-[1fr_1fr] gap-2">
-              <.button
-                :for={render_as <- @input_render_modes}
-                id={"dependency-select-render-#{render_as}"}
-                type="button"
-                aria-pressed={to_string(@showcase["live_select"]["render_as"] == render_as)}
-                phx-click="set_showcase_option"
-                phx-value-section="live_select"
-                phx-value-option="render_as"
-                phx-value-choice={render_as}
-              >{render_as}</.button>
-            </div>
-          </.collapse>
-          <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
-            <.button
-              :for={
-                {option, label} <- [
-                  {"prompt", "Prompt"},
-                  {"keep_options", "Keep options"},
-                  {"disabled", "Disabled"}
-                ]
-              }
-              id={"dependency-select-option-#{option}"}
-              type="button"
-              aria-pressed={to_string(@showcase["live_select"][option])}
-              disabled={
-                option == "keep_options" and @showcase["live_select"]["mode"] == "quick_tags"
-              }
-              phx-click="toggle_showcase_option"
-              phx-value-section="live_select"
-              phx-value-option={option}
-            >{label}</.button>
-          </div>
-          <p
-            :if={@showcase["live_select"]["mode"] == "quick_tags"}
-            class="text-sm text-subcontent"
-          >
-            Quick tags always keeps selected options available.
-          </p>
-        </div>
-        <.form
-          for={@dependency_form}
-          id="layout-test-dependency-form"
-          phx-change="dependency_change"
-        >
-          <.input
-            type="select"
-            field={@dependency_form[:component_search]}
-            id="layout-test-dependency-live-select"
-            options={@dependency_options}
-            mode={String.to_existing_atom(@showcase["live_select"]["mode"])}
-            render_as={@showcase["live_select"]["render_as"]}
-            prompt={if @showcase["live_select"]["prompt"], do: "Search dependency pages"}
-            keep_options_on_select={@showcase["live_select"]["keep_options"]}
-            disabled={@showcase["live_select"]["disabled"]}
-          />
-        </.form>
-        <.card_inset id="layout-test-selected-dependency">
-          <%= if @selected_dependencies == [] do %>
-            <p class="text-sm text-subcontent">
-              Pick a dependency page to inspect its route and source package.
-            </p>
-          <% else %>
-            <div class="space-y-4">
-              <div
-                :for={page <- @selected_dependencies}
-                id={"selected-dependency-#{page.id}"}
-                class="space-y-2"
-              >
-                <div class="grid grid-cols-[1fr_max-content] items-center gap-2">
-                  <p class="font-semibold">{page.name}</p>
-                  <span class="status-pill bg-primary overlay-dark text-content">{page.availability}</span>
-                </div>
-                <p class="text-sm text-subcontent">{page.description}</p>
-                <p class="text-xs text-subcontent">{page.source} · {page.path}</p>
-                <.button href={page.path} variant={:neutral}>Open {page.name}</.button>
-              </div>
-            </div>
-          <% end %>
-        </.card_inset>
-      </.card>
-
+    <section>
       <.card id="layout-test-ui-kit-card">
         <.header>
           UI kit
           <:subtitle>Adjust each primitive and compare its preview below.</:subtitle>
         </.header>
+
         <div id="layout-test-ui-kit-controls" class="space-y-3">
           <.collapse id="ui-kit-alert-choices">
             <:summary>
               Alert kind: {String.capitalize(@showcase["ui_kit"]["alert"])}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={kind <- ~w(info success warning error)}
@@ -1865,10 +2021,12 @@
               >{String.capitalize(kind)}</.button>
             </div>
           </.collapse>
+
           <.collapse id="ui-kit-badge-choices">
             <:summary>
               Badge style: {String.capitalize(@showcase["ui_kit"]["badge"])}
             </:summary>
+
             <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
               <.button
                 :for={
@@ -1889,11 +2047,13 @@
               >{label}</.button>
             </div>
           </.collapse>
+
           <div class="grid grid-cols-[1fr_1fr] items-start gap-4">
             <.collapse id="ui-kit-step-choices">
               <:summary>
                 Current step: {@showcase["ui_kit"]["step"]}
               </:summary>
+
               <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
                 <.button
                   :for={step <- ~w(1 2 3)}
@@ -1907,6 +2067,7 @@
                 >{step}</.button>
               </div>
             </.collapse>
+
             <.form
               for={to_form(@showcase["ui_kit"], as: :showcase)}
               id="ui-kit-progress-form"
@@ -1925,6 +2086,7 @@
               />
             </.form>
           </div>
+
           <.button
             id="ui-kit-option-menu"
             type="button"
@@ -1934,6 +2096,7 @@
             phx-value-option="menu"
           >Show menu</.button>
         </div>
+
         <div id="layout-test-ui-kit-preview" class="space-y-3">
           <div
             id="ui-kit-alert-preview"
@@ -1959,9 +2122,9 @@
                 end
               }
               class="size-5"
-            />
-            <span>{String.capitalize(@showcase["ui_kit"]["alert"])} alert surface</span>
+            /> <span>{String.capitalize(@showcase["ui_kit"]["alert"])} alert surface</span>
           </div>
+
           <span
             id="ui-kit-badge-preview"
             data-style={@showcase["ui_kit"]["badge"]}
@@ -1987,6 +2150,7 @@
             <div class="h-full bg-brand" style={"width: #{@showcase["ui_kit"]["progress"]}%"}>
             </div>
           </div>
+
           <ol id="ui-kit-steps-preview" class="grid grid-cols-[1fr_1fr_1fr] items-center gap-2">
             <li
               :for={{label, index} <- Enum.with_index(["Tokens", "Hooks", "Routes"], 1)}
@@ -2004,6 +2168,7 @@
               {label}
             </li>
           </ol>
+
           <ul
             :if={@showcase["ui_kit"]["menu"]}
             id="ui-kit-menu-preview"
@@ -2012,12 +2177,14 @@
             <li>
               <.link href="/sign-in" class="block px-3 py-2 rounded-default hover:overlay-dark">Auth flow</.link>
             </li>
+
             <li>
               <.link
                 href="/api/json/scalar"
                 class="block px-3 py-2 rounded-default hover:overlay-dark"
               >API browser</.link>
             </li>
+
             <li>
               <.link href="/admin" class="block px-3 py-2 rounded-default hover:overlay-dark">Admin surface</.link>
             </li>
@@ -2031,10 +2198,12 @@
         Dependency pages
         <:subtitle>Choose a route to inspect its availability and source package.</:subtitle>
       </.header>
+
       <.collapse id="dependency-page-controls">
         <:summary>
           Page: {Enum.find(@dependency_pages, &(&1.id == @showcase["pages"]["selected"])).name}
         </:summary>
+
         <div class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2">
           <.button
             :for={page <- @dependency_pages}
@@ -2048,6 +2217,7 @@
           >{page.name}</.button>
         </div>
       </.collapse>
+
       <.card_inset
         :for={page <- @dependency_pages}
         :if={page.id == @showcase["pages"]["selected"]}
@@ -2056,20 +2226,26 @@
         <div class="space-y-3">
           <div class="grid grid-cols-[1fr_max-content] items-center gap-2">
             <h3 class="font-semibold">{page.name}</h3>
+
             <span class="status-pill bg-primary overlay-dark text-content">{page.availability}</span>
           </div>
+
           <p class="text-sm text-subcontent">{page.description}</p>
+
           <p class="text-xs text-subcontent">{page.source} · {page.path}</p>
           <.button href={page.path} variant={:neutral}>Open page</.button>
         </div>
       </.card_inset>
     </.card>
   </div>
+
   <.modal :if={@show_modal} id="layout-test-modal" on_cancel={JS.push("hide_modal")}>
     <:title :if={@showcase["dialog"]["title"]}>Example dialog</:title>
+
     <p class="text-sm text-content">
       Focus stays in this dialog. Escape closes it and returns focus to the opening control.
     </p>
+
     <div :if={@showcase["dialog"]["actions"]} class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
       <.button id="dialog-cancel" type="button" variant={:neutral} phx-click="hide_modal">Cancel</.button>
       <.button id="dialog-confirm" type="button" variant={:primary} phx-click="hide_modal">Confirm</.button>

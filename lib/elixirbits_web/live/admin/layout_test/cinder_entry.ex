@@ -23,7 +23,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.CinderEntry do
           "Cinder collection",
           "Cinder table",
           "Cinder grid",
-          "LiveSelect",
+          "Combobox",
           "Buttons",
           "Tables",
           "Dialogs"

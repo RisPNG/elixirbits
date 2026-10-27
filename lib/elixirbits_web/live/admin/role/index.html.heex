@@ -5,6 +5,7 @@
       <:subtitle>
         Roles assignable to users, and the pages each role may see and act on.
       </:subtitle>
+
       <:actions>
         <.action_button
           :if={can?(@permissions, @current_path, :create)}
@@ -25,8 +26,11 @@
       search={[placeholder: "Code, Name"]}
     >
       <:col :let={r} field="code" label="Code" sort filter search>{r.code}</:col>
+
       <:col :let={r} field="name" label="Name" sort filter search>{r.name}</:col>
+
       <:col :let={r} field="description" label="Description">{r.description}</:col>
+
       <:col :let={r} label="Actions">
         <.action_button
           :if={can?(@permissions, @current_path, :update)}

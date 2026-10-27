@@ -3,7 +3,7 @@ const TelInput = {
     this.countries = JSON.parse(this.el.dataset.countries)
     this.onInput = event => {
       if (event.target.name !== this.el.dataset.countryName && !event.target.hasAttribute("data-tel-number")) return
-      const iso = this.el.querySelector(`input[name='${this.el.dataset.countryName}']`).value.toUpperCase()
+      const iso = this.el.querySelector(`select[name='${this.el.dataset.countryName}']`).value.toUpperCase()
       const number = this.el.querySelector("[data-tel-number]").value.trim()
       this.el.querySelector("[data-tel-composite]").value = `${this.countries[iso] || ""}${number}`
     }

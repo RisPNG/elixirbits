@@ -8,6 +8,7 @@
   >
     Today
   </.button>
+
   <.button
     type="button"
     phx-click="calendar_change"
@@ -19,6 +20,7 @@
   >
     <.icon name="hero-chevron-left" class="size-4" />
   </.button>
+
   <.button
     type="button"
     phx-click="calendar_change"
@@ -30,7 +32,9 @@
   >
     <.icon name="hero-chevron-right" class="size-4" />
   </.button>
+
   <h2 class="text-lg font-semibold text-content">{@period_title}</h2>
+
   <div class="grid grid-cols-[repeat(6,max-content)] gap-2">
     <.button
       :for={{value, label} <- Cal.views()}

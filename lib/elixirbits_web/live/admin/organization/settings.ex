@@ -4,12 +4,9 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/organization"}}
 
   alias Elixirbits.CoreUtils.EnumTypes.AddressLabel
-  alias Elixirbits.CoreUtils.Phones
   alias Elixirbits.CoreUtils.Resource
-  alias Elixirbits.CoreUtils.Search
   alias Elixirbits.Organizations
   alias Elixirbits.Organizations.Organization
-  alias LiveSelect.Component
 
   @impl true
   def mount(_params, _session, socket) do
@@ -99,22 +96,5 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
 
   def handle_event("remove_form", %{"path" => path}, socket) do
     {:noreply, assign(socket, :form, AshPhoenix.Form.remove_form(socket.assigns.form, path))}
-  end
-
-  def handle_event("live_select_change", %{"id" => id} = params, socket) do
-    text = Map.get(params, "text", "")
-
-    if String.ends_with?(id, "_country_select") do
-      send_update(Component, id: id, options: Phones.filter_options(text))
-    else
-      options =
-        AddressLabel.values()
-        |> Enum.map(&{Phoenix.Naming.humanize(&1), to_string(&1)})
-        |> Search.filter(text)
-
-      send_update(Component, id: id, options: options)
-    end
-
-    {:noreply, socket}
   end
 end

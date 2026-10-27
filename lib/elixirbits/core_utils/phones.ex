@@ -258,11 +258,8 @@ defmodule Elixirbits.CoreUtils.Phones do
              |> Enum.sort_by(& &1.name)
 
   @options Enum.map(@countries, fn country ->
-             %{
-               label: "#{country.dial_code} #{country.name} (#{country.iso})",
-               value: country.iso,
-               selected_label: country.dial_code
-             }
+             {"#{country.dial_code} #{country.name} (#{country.iso})", country.iso,
+              dial_code: country.dial_code}
            end)
   @search_options Enum.zip(@countries, @options)
   @dial_codes_json @countries |> Map.new(&{&1.iso, &1.dial_code}) |> Jason.encode!()
@@ -271,7 +268,7 @@ defmodule Elixirbits.CoreUtils.Phones do
   def list_countries, do: @countries
 
   @doc """
-  Returns LiveSelect-shaped options with the full country label for searching and the dial code as the selected label.
+  Returns combobox options with full country labels for searching and dial codes in their metadata for the selected display.
   """
   def options, do: @options
 

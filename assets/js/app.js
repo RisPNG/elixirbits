@@ -18,7 +18,7 @@ import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
-import live_select from "live_select"
+import {PetalComboBox} from "../../deps/petal_components/assets/js/petal_components"
 import {hooks as colocatedHooks} from "phoenix-colocated/elixirbits"
 import FlashAutoDismiss from "./flash_auto_dismiss"
 import VCalendar from "./vcalendar"
@@ -26,7 +26,6 @@ import TelInput from "./tel_input"
 import initTooltips from "./tooltip"
 import PasswordVisibility from "./password_visibility"
 import LiveTimer from "./live_timer"
-import SelectDropdown from "./select_dropdown"
 import UploadPdfPreview from "./upload_pdf_preview"
 import FileInput, {FilePreview} from "./file_input"
 import ColorInput from "./color_input"
@@ -41,7 +40,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
     _csrf_token: csrfToken,
     user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }),
-  hooks: {...live_select, ...colocatedHooks, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, SelectDropdown, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput, CinderPagination},
+  hooks: {...colocatedHooks, PetalComboBox, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput, CinderPagination},
 })
 
 // Show progress bar on live navigation and form submits

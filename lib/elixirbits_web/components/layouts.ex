@@ -81,6 +81,7 @@ defmodule ElixirbitsWeb.Layouts do
             {(@nav.organization && @nav.organization.name) || "Elixirbits"}
           </span>
         </a>
+
         <div class="grid grid-cols-[max-content_max-content] items-center gap-3">
           <.theme_toggle />
           <button
@@ -101,6 +102,7 @@ defmodule ElixirbitsWeb.Layouts do
               {String.upcase(String.slice(@nav.user.display_name || to_string(@nav.user.email), 0, 1))}
             </span>
           </button>
+
           <.button :if={is_nil(@nav.user)} variant={:neutral} navigate={~p"/sign-in"}>
             Sign in
           </.button>
@@ -118,9 +120,11 @@ defmodule ElixirbitsWeb.Layouts do
             <p class="truncate text-sm font-semibold text-content">
               {@nav.user.display_name || to_string(@nav.user.email)}
             </p>
+
             <p :if={@nav.user.display_name} class="truncate text-xs text-subcontent">
               {@nav.user.email}
             </p>
+
             <p :if={@nav.user.roles != []} class="truncate text-xs text-subcontent">
               {Enum.join(@nav.user.roles, ", ")}
             </p>
@@ -137,12 +141,11 @@ defmodule ElixirbitsWeb.Layouts do
             <.input
               id="user-timezone"
               field={form[:timezone]}
-              type="select"
+              type="combobox"
               label="Timezone"
               options={@nav.timezone_options}
-              allow_clear={false}
-              update_min_len={0}
-              keep_options_on_select
+              placeholder="Automatic (browser)"
+              clearable={false}
             />
             <p class="text-xs text-subcontent">Currently using {@user_timezone}</p>
             <.button type="submit" variant={:neutral}>Save timezone</.button>
@@ -212,7 +215,6 @@ defmodule ElixirbitsWeb.Layouts do
         </main>
       </div>
     </div>
-
     <.flash_group flash={@flash} />
     """
   end
@@ -256,8 +258,7 @@ defmodule ElixirbitsWeb.Layouts do
               :if={@depth == 0}
               name={entry.icon || "hero-slash"}
               class="size-5"
-            />
-            <span class="truncate">{entry.name}</span>
+            /> <span class="truncate">{entry.name}</span>
           </.link>
 
           <button
@@ -279,8 +280,7 @@ defmodule ElixirbitsWeb.Layouts do
               :if={@depth == 0}
               name={entry.icon || "hero-slash"}
               class="size-5"
-            />
-            <span class="truncate">{entry.name}</span>
+            /> <span class="truncate">{entry.name}</span>
           </button>
 
           <button

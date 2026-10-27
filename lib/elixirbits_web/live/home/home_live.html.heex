@@ -9,6 +9,7 @@
       Open your workspace
       <:subtitle>Sign in to access the pages available to your account.</:subtitle>
     </.header>
+
     <div>
       <.button navigate={~p"/sign-in"} variant={:primary}>Sign in</.button>
     </div>
@@ -42,6 +43,7 @@
               class="size-5"
             />
           </span>
+
           <span class="min-w-0 space-y-1">
             <span class="block font-medium">{item.name}</span>
             <span :if={item.description} class="block text-sm leading-6 text-subcontent">
@@ -55,19 +57,25 @@
 
     <.card class="min-w-0">
       <.header>Your account</.header>
+
       <dl class="space-y-5 text-sm">
         <div class="space-y-1">
           <dt class="text-subcontent">Signed in as</dt>
+
           <dd class="break-words font-medium text-content">
             {@nav.user.display_name || to_string(@nav.user.email)}
           </dd>
         </div>
+
         <div :if={@nav.user.roles != []} class="space-y-1">
           <dt class="text-subcontent">Roles</dt>
+
           <dd class="text-content">{Enum.join(@nav.user.roles, ", ")}</dd>
         </div>
+
         <div class="space-y-1">
           <dt class="text-subcontent">Timezone</dt>
+
           <dd class="break-words text-content">{@user_timezone}</dd>
         </div>
       </dl>

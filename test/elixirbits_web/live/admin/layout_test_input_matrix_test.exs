@@ -27,7 +27,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
            )
   end
 
-  test "one specimen per supported type exposes the complete finite option vocabulary", %{
+  test "supported types and the radio card specimen expose their selection controls", %{
     conn: conn
   } do
     {:ok, _view, html} = live(conn, ~p"/dev_panel/layout_test")
@@ -36,21 +36,40 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
     types = Enum.find(attributes, &(&1.name == :type)).opts[:values]
 
     specimens = Floki.find(document, "#layout-test-input-examples [data-input-type]")
-    assert length(specimens) == length(types)
-    assert Enum.sort(Floki.attribute(specimens, "data-input-type")) == Enum.sort(types)
+    assert length(specimens) == length(types) + 1
+
+    assert specimens
+           |> Floki.attribute("data-input-type")
+           |> Enum.reject(&(&1 == "radio-card"))
+           |> Enum.sort() == Enum.sort(types)
+
+    assert Floki.find(document, "#layout-test-input-example-radio-card[data-input-variant=card]") !=
+             []
+
+    specimen_ids = Floki.attribute(specimens, "id")
+    radio_index = Enum.find_index(specimen_ids, &(&1 == "layout-test-input-example-radio"))
+    assert Enum.at(specimen_ids, radio_index + 1) == "layout-test-input-example-radio-card"
 
     for {attribute, option} <- [
           {:render_as, "render_as"},
-          {:variant, "variant"},
-          {:mode, "select_mode"}
+          {:variant, "variant"}
         ] do
       values = Enum.find(attributes, &(&1.name == attribute)).opts[:values]
+      values = if attribute == :variant, do: Enum.reject(values, &(&1 == "card")), else: values
 
       controls =
         Floki.find(document, "#layout-test-input-controls button[phx-value-option='#{option}']")
 
       assert Enum.sort(Floki.attribute(controls, "phx-value-choice")) ==
                Enum.sort(Enum.map(values, &to_string/1))
+    end
+
+    for option <- ~w(select_mode combobox_mode) do
+      assert Floki.attribute(
+               document,
+               "#layout-test-input-controls button[phx-value-option='#{option}']",
+               "phx-value-choice"
+             ) == ["single", "multiple"]
     end
 
     assert Floki.attribute(
@@ -108,6 +127,56 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
                  )
       end
     end
+  end
+
+  test "radio cards select and submit independently of the normal radio group", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    assert has_element?(
+             view,
+             "#local_compute_plan input[name='local[compute_plan]'][value='6-core'][checked]"
+           )
+
+    assert has_element?(view, "#local_compute_plan input[value='4-core'][disabled]")
+    assert has_element?(view, "#local_compute_plan", "24 GB RAM")
+    assert has_element?(view, "#local_contact_method input[value=email][checked]")
+
+    view
+    |> form("#layout-test-form", local: %{compute_plan: "8-core"})
+    |> render_change()
+
+    assert has_element?(view, "#local_compute_plan input[value='8-core'][checked]")
+    refute has_element?(view, "#local_compute_plan input[value='6-core'][checked]")
+    assert has_element?(view, "#local_contact_method input[value=email][checked]")
+
+    view
+    |> form("#layout-test-form", local: %{compute_plan: "6-core", contact_method: "phone"})
+    |> render_submit()
+
+    assert has_element?(view, "#local_compute_plan input[value='6-core'][checked]")
+    assert has_element?(view, "#local_contact_method input[value=phone][checked]")
+  end
+
+  test "radio cards share required, error, empty, and disabled showcase states", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    for state <- ~w(required errors) do
+      render_click(element(view, "#layout-test-input-state-#{state}"))
+    end
+
+    assert has_element?(view, "#local_compute_plan input[type=radio][required]")
+    assert has_element?(view, "#layout-test-input-example-radio-card", "Example validation error")
+
+    render_click(element(view, "#layout-test-input-state-empty"))
+    refute has_element?(view, "#local_compute_plan input[checked]")
+    render_click(element(view, "#layout-test-input-state-empty"))
+    assert has_element?(view, "#local_compute_plan input[value='6-core'][checked]")
+
+    render_click(element(view, "#layout-test-input-state-disabled"))
+    refute has_element?(view, "#local_compute_plan input[type=radio]:not([disabled])")
+
+    render_submit(view, "local_save", %{"local" => %{"project_name" => "Saved plan"}})
+    assert has_element?(view, "#local_compute_plan input[value='6-core'][checked][disabled]")
   end
 
   test "checkbox and switch variants and checked states change the actual controls", %{conn: conn} do
@@ -296,7 +365,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
              "#layout-test-local-role input[type=text][placeholder='Choose a role']"
            )
 
-    refute has_element?(view, "#layout-test-input-example-select .input-floating-label")
+    refute has_element?(view, "#layout-test-input-example-combobox .input-floating-label")
     refute has_element?(view, "#local_enabled[readonly]")
 
     render_click(element(view, "#layout-test-input-state-capture"))
@@ -332,44 +401,116 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
     assert has_element?(view, "#local_project_name[value=Updated]")
   end
 
-  test "select modes preserve selected roles and keep the matching form field names", %{
+  test "select and combobox selection modes preserve their values independently", %{
     conn: conn
   } do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 
     assert has_element?(
              view,
-             "#layout-test-local-role input[type=hidden][name='local[role]'][value=admin]"
+             "#layout-test-local-role select[name='local[role]'] option[value=admin][selected]"
            )
 
-    for mode <- ~w(tags quick_tags) do
-      render_click(element(view, "#layout-test-input-select-mode-#{mode}"))
+    assert has_element?(
+             view,
+             "#layout-test-form-section select#local_native_role[name='local[native_role]'] option[value=admin][selected]"
+           )
 
+    assert has_element?(
+             view,
+             "#layout-test-form-section #layout-test-local-role[phx-hook=PetalComboBox]"
+           )
+
+    render_click(element(view, "#layout-test-input-combobox-mode-multiple"))
+
+    assert has_element?(
+             view,
+             "#layout-test-local-role select[multiple][name='local[role][]'] option[value=admin][selected]"
+           )
+
+    assert has_element?(
+             view,
+             "select#local_native_role:not([multiple])[name='local[native_role]'] option[value=admin][selected]"
+           )
+
+    view
+    |> form("#layout-test-form",
+      local: %{role: ["designer", "viewer"], native_role: "viewer"}
+    )
+    |> render_change()
+
+    render_click(element(view, "#layout-test-input-select-mode-multiple"))
+
+    assert has_element?(
+             view,
+             "select#local_native_role-select[multiple][name='local[native_role][]'] option[value=viewer][selected]"
+           )
+
+    assert has_element?(view, "#local_native_role[phx-hook=PetalComboBox]")
+
+    assert has_element?(
+             view,
+             "#local_native_role-chips [data-pc-combo-chip][data-value=viewer]",
+             "Viewer"
+           )
+
+    assert has_element?(view, "label[for=local_native_role-input]", "Select")
+    refute has_element?(view, "select#local_native_role")
+
+    for role <- ~w(designer viewer) do
       assert has_element?(
                view,
-               "#layout-test-local-role input[type=hidden][name='local[role][]'][value=admin]"
+               "#layout-test-local-role select[multiple][name='local[role][]'] option[value=#{role}][selected]"
              )
-
-      render_focus(element(view, "#layout-test-local-role input[type=text]"))
-
-      render_hook(view, "live_select_change", %{
-        "id" => "layout-test-local-role",
-        "text" => "Viewer"
-      })
-
-      assert has_element?(view, "#layout-test-local-role li", "Viewer")
-      refute has_element?(view, "#layout-test-local-role li", "Designer")
     end
 
-    render_change(view, "local_change", %{"local" => %{"role" => ["designer", "viewer"]}})
+    view
+    |> form("#layout-test-form",
+      local: %{role: ["designer", "viewer"], native_role: ["admin", "viewer"]}
+    )
+    |> render_change()
+
+    render_click(element(view, "#layout-test-input-combobox-mode-single"))
+
+    assert has_element?(
+             view,
+             "#layout-test-local-role select[name='local[role]'] option[value=designer][selected]"
+           )
+
+    for role <- ~w(admin viewer) do
+      assert has_element?(
+               view,
+               "select#local_native_role-select[multiple][name='local[native_role][]'] option[value=#{role}][selected]"
+             )
+    end
+
+    refute has_element?(view, "#layout-test-local-role select[multiple]")
+
     render_click(element(view, "#layout-test-input-select-mode-single"))
 
     assert has_element?(
              view,
-             "#layout-test-local-role input[type=hidden][name='local[role]'][value=designer]"
+             "select#local_native_role:not([multiple])[name='local[native_role]'] option[value=admin][selected]"
            )
 
-    refute has_element?(view, "#layout-test-local-role input[name='local[role][]']")
+    assert has_element?(
+             view,
+             "#layout-test-local-role select:not([multiple])[name='local[role]'] option[value=designer][selected]"
+           )
+
+    render_click(element(view, "#layout-test-input-select-mode-multiple"))
+
+    assert has_element?(
+             view,
+             "select#local_native_role-select[multiple][name='local[native_role][]']"
+           )
+
+    assert has_element?(view, "#local_native_role[phx-hook=PetalComboBox]")
+
+    assert has_element?(
+             view,
+             "#layout-test-local-role select:not([multiple])[name='local[role]'] option[value=designer][selected]"
+           )
   end
 
   test "disabled forms handle omitted fields on change and submission without losing retained values",
@@ -400,21 +541,31 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
     assert has_element?(view, "#local_email[disabled][value='new@example.com']")
   end
 
-  test "clearing the final role tag discards merged values on change and submission", %{
+  test "empty multiple selection markers clear merged values on change and submission", %{
     conn: conn
   } do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 
-    for {mode, event} <- [{"tags", "local_change"}, {"quick_tags", "local_save"}] do
-      render_click(element(view, "#layout-test-input-select-mode-#{mode}"))
-      render_change(view, "local_change", %{"local" => %{"role" => ["admin"]}})
+    for control <- ~w(select combobox) do
+      render_click(element(view, "#layout-test-input-#{control}-mode-multiple"))
+    end
+
+    for {field, selector} <- [
+          {"role", "#layout-test-local-role select"},
+          {"native_role", "select#local_native_role-select"}
+        ],
+        event <- ~w(local_change local_save) do
+      render_change(view, "local_change", %{"local" => %{field => ["admin"]}})
 
       assert has_element?(
                view,
-               "#layout-test-local-role input[name='local[role][]'][value=admin]"
+               "#{selector}[name='local[#{field}][]'] option[value=admin][selected]"
              )
 
-      params = %{"local" => %{"role_empty_selection" => "", "launch_at" => "2026-10-10T09:30"}}
+      params = %{
+        "_target" => ["local", field],
+        "local" => %{field => [""], "launch_at" => "2026-10-10T09:30"}
+      }
 
       if event == "local_change" do
         render_change(view, event, params)
@@ -422,11 +573,39 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
         render_submit(view, event, params)
       end
 
-      assert has_element?(view, "#layout-test-local-role input[data-live-select-empty]")
-      refute has_element?(view, "#layout-test-local-role input[name='local[role][]']")
+      assert has_element?(view, "#{selector}[name='local[#{field}][]']")
+      refute has_element?(view, "#{selector} option[selected]")
     end
 
     assert has_element?(view, "#submitted-at")
+  end
+
+  test "omitted multiple choices retain values when their controls cannot be edited", %{
+    conn: conn
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    for control <- ~w(select combobox) do
+      render_click(element(view, "#layout-test-input-#{control}-mode-multiple"))
+    end
+
+    for mode <- ~w(disabled like-enabled like-disabled text-disabled hidden-disabled) do
+      render_click(element(view, "#layout-test-input-render-#{mode}"))
+      render_change(view, "local_change", %{"_target" => ["local", "role"]})
+      render_submit(view, "local_save", %{"local" => %{"launch_at" => "2026-10-10T09:30"}})
+      render_click(element(view, "#layout-test-input-render-enabled"))
+
+      assert has_element?(view, "#layout-test-local-role select option[value=admin][selected]")
+      assert has_element?(view, "select#local_native_role-select option[value=admin][selected]")
+    end
+
+    render_click(element(view, "#layout-test-input-state-disabled"))
+    render_change(view, "local_change", %{"_target" => ["local", "native_role"]})
+    render_submit(view, "local_save", %{"local" => %{"launch_at" => "2026-10-10T09:30"}})
+    render_click(element(view, "#layout-test-input-state-disabled"))
+
+    assert has_element?(view, "#layout-test-local-role select option[value=admin][selected]")
+    assert has_element?(view, "select#local_native_role-select option[value=admin][selected]")
   end
 
   test "submission shows validation errors after earlier unused field metadata", %{conn: conn} do

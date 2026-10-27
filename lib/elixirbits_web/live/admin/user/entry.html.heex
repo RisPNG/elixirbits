@@ -9,6 +9,7 @@
     <.header level={1}>
       {@page_title}
       <:subtitle>Account identity, personal details, and addresses.</:subtitle>
+
       <:actions>
         <div class="grid grid-cols-[auto_auto] items-center gap-2">
           <.action_button action={:back} navigate={~p"/admin/users"} />
@@ -56,6 +57,7 @@
                   class="size-full rounded-default object-cover"
                 />
               </:stored_preview>
+
               <:pending_preview :let={entry}>
                 <.live_img_preview
                   entry={entry}
@@ -84,12 +86,11 @@
           <.input field={@form[:tel_no]} type="text" label="Phone" />
           <.input
             field={@form[:sex]}
-            type="select"
+            type="combobox"
             label="Sex"
             options={@sex_options}
             prompt="None"
-          />
-          <.input field={@form[:dob]} type="date" label="Date of Birth" />
+          /> <.input field={@form[:dob]} type="date" label="Date of Birth" />
         </div>
 
         <div class="grid grid-cols-[1fr_3fr] subgap-2">
@@ -108,6 +109,7 @@
         <.header>
           Addresses
           <:subtitle>Delivery and correspondence addresses for this account.</:subtitle>
+
           <:actions>
             <.action_button
               :if={
@@ -143,12 +145,11 @@
                 <.input
                   id={"#{af.id}_label_select"}
                   field={af[:label]}
-                  type="select"
+                  type="combobox"
                   label="Label"
                   options={@label_options}
                   prompt="None"
-                />
-                <.input field={af[:other_label]} type="text" label="Nickname" />
+                /> <.input field={af[:other_label]} type="text" label="Nickname" />
               </div>
 
               <div class="grid grid-cols-[2fr_2fr] subgap-2">
@@ -199,8 +200,8 @@
       <div class="grid grid-cols-[1fr] subgap-2">
         <.input
           field={@roles_form[:roles]}
-          type="select"
-          mode={:quick_tags}
+          type="combobox"
+          multiple
           label="Roles"
           options={@role_options}
         />

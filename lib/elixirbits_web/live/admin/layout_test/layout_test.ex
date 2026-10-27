@@ -1,7 +1,6 @@
 defmodule ElixirbitsWeb.Admin.LayoutTestLive do
   use ElixirbitsWeb, :live_view
 
-  alias LiveSelect.Component
   alias Elixirbits.CoreUtils.Calendar, as: CalendarUtils
   alias Elixirbits.CoreUtils.Color
   alias Elixirbits.CoreUtils.Parse
@@ -45,15 +44,9 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
                         {"#{page.name} (#{page.source})", page.path}
                       end)
 
-  @role_options [
-    {"Administrator", "admin"},
-    {"Designer", "designer"},
-    {"Viewer", "viewer"}
-  ]
-
   @input_render_modes ~w(enabled disabled like-enabled like-disabled hidden hidden-enabled hidden-disabled text text-enabled text-disabled)
 
-  @input_fields ~w(project_name email password budget launch_date launch_time launch_week launch_month launch_at accent search website phone role notes enabled switch upload contact_method hidden_token)
+  @input_fields ~w(project_name email password budget launch_date launch_time launch_week launch_month launch_at accent search website phone native_role role notes enabled switch upload contact_method compute_plan hidden_token)
 
   @upload_options [accept: ~w(.png .jpg .jpeg .gif .webp .pdf .txt), max_file_size: 1_000_000]
 
@@ -112,11 +105,11 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
       "page_size" => "6",
       "columns" => "3"
     },
-    "live_select" => %{
+    "combobox" => %{
       "mode" => "single",
       "render_as" => "enabled",
       "prompt" => true,
-      "keep_options" => true,
+      "clearable" => true,
       "disabled" => false
     },
     "ui_kit" => %{
@@ -244,9 +237,11 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
            "phone" => "+60 123456789",
            "notes" => "Core components, layout flow, dependency surfaces.",
            "role" => "admin",
+           "native_role" => "admin",
            "enabled" => true,
            "switch" => true,
            "contact_method" => "email",
+           "compute_plan" => "6-core",
            "upload" => nil
          },
          as: :local
@@ -257,7 +252,8 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
      |> assign(:input_config, %{
        "render_as" => "enabled",
        "variant" => "default",
-       "select_mode" => "single"
+       "select_mode" => "single",
+       "combobox_mode" => "single"
      })
      |> assign(:showcase, @showcase_defaults)
      |> assign(:cinder_preview_state, %{})
@@ -292,15 +288,16 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
         String.starts_with?(field, "_unused_")
       end)
 
-    params =
-      Enum.reduce(Map.get(params, "local", %{}), previous, fn {field, value}, values ->
-        if String.ends_with?(field, "_empty_selection") and
-             not String.starts_with?(field, "_unused_") do
-          Map.put(values, String.replace_suffix(field, "_empty_selection", ""), [])
-        else
-          Map.put(values, field, value)
-        end
+    incoming =
+      params
+      |> Map.get("local", %{})
+      |> Map.new(fn {field, value} ->
+        if field in ~w(native_role role) and is_list(value),
+          do: {field, Enum.reject(value, &(&1 == ""))},
+          else: {field, value}
       end)
+
+    params = Map.merge(previous, incoming)
 
     errors =
       case Ash.Type.cast_input(Color, params["accent"]) do
@@ -317,19 +314,18 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
         String.starts_with?(field, "_unused_")
       end)
 
-    params =
+    incoming =
       params
       |> Map.get("local", %{})
       |> Map.put_new("launch_at", "")
       |> Map.reject(fn {field, _value} -> String.starts_with?(field, "_unused_") end)
-      |> Enum.reduce(previous, fn {field, value}, values ->
-        if String.ends_with?(field, "_empty_selection") and
-             not String.starts_with?(field, "_unused_") do
-          Map.put(values, String.replace_suffix(field, "_empty_selection", ""), [])
-        else
-          Map.put(values, field, value)
-        end
+      |> Map.new(fn {field, value} ->
+        if field in ~w(native_role role) and is_list(value),
+          do: {field, Enum.reject(value, &(&1 == ""))},
+          else: {field, value}
       end)
+
+    params = Map.merge(previous, incoming)
 
     errors =
       case Ash.Type.cast_input(Color, params["accent"]) do
@@ -417,33 +413,30 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
     socket =
       case option do
-        "select_mode" ->
+        option when option in ~w(select_mode combobox_mode) ->
+          field = if option == "select_mode", do: "native_role", else: "role"
           params = socket.assigns.local_form.params
-
-          role =
-            if value == "single",
-              do: List.first(List.wrap(params["role"])),
-              else: List.wrap(params["role"])
-
           populated = socket.assigns.input_populated_values
 
+          selected =
+            if value == "single",
+              do: List.first(List.wrap(params[field])),
+              else: List.wrap(params[field])
+
+          populated =
+            if Map.has_key?(populated, field) do
+              Map.update!(populated, field, fn selected ->
+                if value == "single",
+                  do: List.first(List.wrap(selected)),
+                  else: List.wrap(selected)
+              end)
+            else
+              populated
+            end
+
           socket
-          |> assign(:local_form, to_form(Map.put(params, "role", role), as: :local))
-          |> assign(
-            :input_populated_values,
-            if(Map.has_key?(populated, "role"),
-              do:
-                Map.put(
-                  populated,
-                  "role",
-                  if(value == "single",
-                    do: List.first(List.wrap(populated["role"])),
-                    else: List.wrap(populated["role"])
-                  )
-                ),
-              else: populated
-            )
-          )
+          |> assign(:local_form, to_form(Map.put(params, field, selected), as: :local))
+          |> assign(:input_populated_values, populated)
 
         "checked" ->
           checked = value == "true"
@@ -728,10 +721,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
   def handle_event("dependency_change", params, socket) do
     dependency_params = Map.get(params, "dependency", %{})
 
-    value =
-      if Map.has_key?(dependency_params, "component_search_empty_selection"),
-        do: [],
-        else: dependency_params["component_search"]
+    value = dependency_params["component_search"]
 
     paths = List.wrap(value)
 
@@ -745,40 +735,6 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
        :selected_dependencies,
        Enum.filter(@dependency_pages, &(&1.path in paths))
      )}
-  end
-
-  @impl true
-  def handle_event("live_select_change", %{"id" => id} = params, socket) do
-    raw_text = Map.get(params, "text", "")
-    text = String.downcase(raw_text)
-
-    options =
-      cond do
-        id == "layout-test-local-role" ->
-          Enum.filter(@role_options, fn {label, _} ->
-            String.contains?(String.downcase(label), text)
-          end)
-
-        String.ends_with?(id, "_country_select") ->
-          Elixirbits.CoreUtils.Phones.filter_options(raw_text)
-
-        true ->
-          if text == "" do
-            @dependency_options
-          else
-            @dependency_pages
-            |> Enum.filter(fn page ->
-              String.contains?(String.downcase(page.name), text) or
-                String.contains?(String.downcase(page.source), text) or
-                String.contains?(String.downcase(page.path), text)
-            end)
-            |> Enum.map(fn page -> {"#{page.name} (#{page.source})", page.path} end)
-          end
-      end
-
-    send_update(Component, id: id, options: options)
-
-    {:noreply, socket}
   end
 
   defp configure_showcase_preview(socket, section, options) do
@@ -857,7 +813,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
               )
           )
 
-        "live_select" ->
+        "combobox" ->
           if options["mode"] do
             params = socket.assigns.dependency_form.params
 

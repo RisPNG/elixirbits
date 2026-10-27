@@ -15,11 +15,14 @@
       search={[placeholder: "Email, Name"]}
     >
       <:col :let={user} field="email" label="Email" sort filter search>{user.email}</:col>
+
       <:col :let={user} field="display_name" label="Name" sort filter search>
         {user.display_name ||
           Enum.join(Enum.reject([user.first_name, user.last_name], &is_nil/1), " ")}
       </:col>
+
       <:col :let={user} label="Roles">{Enum.join(user.roles, ", ")}</:col>
+
       <:col :let={user} label="Actions">
         <.action_button
           :if={can?(@permissions, @current_path, :update)}

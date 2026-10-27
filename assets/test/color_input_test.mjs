@@ -127,7 +127,7 @@ function openInput(state = nativeColor(), options = {}) {
     "[data-color-swatch]": "swatch",
     "[data-color-format]": "format",
     "[data-color-error]": "error",
-    [`input[name='${wrapper.dataset.colorSpaceName}']`]: "spaceInput",
+    [`select[name='${wrapper.dataset.colorSpaceName}']`]: "spaceInput",
     "[data-color-space-select]": "spaceSelect",
   }
   controls.input.value = state.value
@@ -138,7 +138,6 @@ function openInput(state = nativeColor(), options = {}) {
   controls.spaceInput.name = wrapper.dataset.colorSpaceName
   controls.spaceInput.value = state.format
   controls.spaceText.value = state.format.toUpperCase()
-  controls.option.setAttribute("data-idx", "0")
   for (const control of Object.values(controls)) control.parentElement = wrapper
   controls.picker.parentElement = controls.popover
   controls.spaceText.parentElement = controls.spaceSelect
@@ -166,14 +165,11 @@ function openInput(state = nativeColor(), options = {}) {
     echoSpace(value) {
       controls.spaceInput.value = value
       controls.spaceText.value = value.toUpperCase()
-      controls.spaceInput.dispatchEvent(new Event("input", {bubbles: true}))
     },
-    selectSpace(value, keyboard = false) {
-      const interaction = Object.assign(new Event(keyboard ? "keydown" : "mousedown", {bubbles: true}), {key: keyboard ? "Enter" : undefined})
-      const target = keyboard ? controls.spaceText : controls.option
-      Object.defineProperty(interaction, "composedPath", {value: () => [target, controls.spaceSelect, wrapper]})
-      target.dispatchEvent(interaction)
+    selectSpace(value) {
       this.echoSpace(value)
+      controls.spaceInput.dispatchEvent(new Event("input", {bubbles: true}))
+      controls.spaceInput.dispatchEvent(new Event("change", {bubbles: true}))
     },
     type(value) {
       controls.input.value = value
@@ -294,7 +290,7 @@ test("server conversion updates both named fields before dispatching input and b
   assert.deepEqual(field.notifications.map(event => event.type), ["input", "blur"])
   assert.equal(field.notifications[0].color, "hsl(33 65% 48%)")
   assert.equal(field.notifications[0].format, "hsl")
-  field.selectSpace("lab", true)
+  field.selectSpace("lab")
   assert.equal(field.requests[1].payload.format, "lab")
 })
 
@@ -602,6 +598,7 @@ test("disabled, read-only and text-only displays neither request conversion nor 
     assert.equal(field.controls.popover.popoverOpen, false)
     assert.equal(field.controls.trigger.disabled, true)
     assert.equal(field.controls.spaceText.disabled, true)
+    assert.equal(field.controls.spaceInput.disabled, true)
   }
   const display = openInput(nativeColor("cmyk(.1 .2 .3 .4)", "cmyk"), {editable: false})
   assert.equal(display.controls.format.textContent, "CMYK")

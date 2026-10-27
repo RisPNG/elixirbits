@@ -1,2 +1,5 @@
+*.ex text eol=lf
+*.exs text eol=lf
+*.heex text eol=lf
 assets/js/ash_rpc.ts text eol=lf
 assets/js/ash_types.ts text eol=lf

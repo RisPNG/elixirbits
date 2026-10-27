@@ -10,21 +10,48 @@ Write each prose paragraph on one physical source line and let the editor wrap i
 
 ## Local setup
 
-`mise.toml` actively selects the latest tool releases. `.tool-versions` records exact known toolchain versions for reference and does not override that selection. Install the tools with mise and make sure PostgreSQL is running before setting up the application:
+`mise.toml` actively selects the latest tool releases. `.tool-versions` records exact known toolchain versions for reference and does not override that selection. Install the tools with mise:
 
 ```sh
 mise install
+```
+
+Run project commands through `mise exec --` so they use the selected tools and project environment. The `MIX_ARCHIVES` setting in `mise.toml` follows the selected Elixir installation and normalises its path to forward slashes. Mix uses that path to discover and update Hex archives correctly on Windows.
+
+PostgreSQL must be running on `localhost:5432` with username and password `postgres`, matching the local configuration. The PostgreSQL package installed by mise on Windows does not start a database server automatically. If there is no existing local server, create a development cluster once, provided `var/postgres` does not already exist:
+
+```sh
+mise exec -- initdb -D var/postgres --username=postgres --encoding=UTF8 --locale=C --auth=scram-sha-256 --pwprompt
+```
+
+Enter `postgres` at both password prompts. The ignored `var/postgres` directory holds the development databases between runs. Start this cluster whenever it is stopped:
+
+```sh
+mise exec -- pg_ctl start -D var/postgres -l var/postgres/server.log -o "-h 127.0.0.1 -p 5432" -w
+```
+
+Run the initial application setup once, then start Phoenix. Later runs only need the server command after PostgreSQL has started:
+
+```sh
 mise exec -- mix setup
 mise exec -- mix phx.server
 ```
 
-Node and npm manage the JavaScript dependencies. `mix assets.setup` installs them and updates `assets/package-lock.json` through npm. For a clean installation of the locked versions, run `mise exec -- npm ci --prefix assets` after fetching the Mix dependencies.
+Press `Ctrl+C` to stop Phoenix. To stop the local PostgreSQL cluster while retaining its databases:
+
+```sh
+mise exec -- pg_ctl stop -D var/postgres -m fast -w
+```
+
+Node and npm manage the JavaScript dependencies. `mix assets.setup` installs them and updates `assets/package-lock.json` through npm. Its `cmd --cd assets --shell npm install` task uses the shell so Windows can resolve `npm.cmd`. For a clean installation of the locked versions, run `mise exec -- npm ci --prefix assets` after fetching the Mix dependencies.
 
 Chart.js, Pretext, and Web Haptics remain available for future development. Import them when an application feature needs them; the current entry bundle does not load them.
 
 The date/time picker library loads when a `VCalendar` input mounts, and the RGBA picker library loads when a colour input renders its editable picker. Pages without those controls do not download either library. The hooks retain current field state when loading finishes and ignore removed controls.
 
 `assets/package.json` installs `super-image-cropper` from the `ris` branch of `RisPNG/super-image-cropper`, and `assets/package-lock.json` records the exact Git revision. npm prepares the package and its internal worker during installation, so the application does not require a sibling checkout. Update the dependency deliberately when adopting a newer fork revision. Keep the fork's `master` branch as the clean upstream reference and implement fixes on `ris`.
+
+npm 12 reads `allow-git=root` from `assets/.npmrc`, permitting Git dependencies directly declared by the project. The `allowScripts` entry for `github:RisPNG/super-image-cropper` in `assets/package.json` approves that source's preparation script, which builds its worker. These project permissions apply to the existing `npm install` and `npm ci` commands.
 
 Open [localhost:4000](http://localhost:4000). The component showcase is at `/dev_panel/layout_test`.
 
@@ -99,11 +126,11 @@ Leave the plug's `configuration` at its empty-map default for now. The 0.3.0 ren
 
 ## Shared components and utilities
 
-`CoreComponents` provides forms, actions, cards, collapse panels, entry panels, tables, and inputs, including searchable selects, radios, switches, password visibility, and upload previews. Its imported `<.form>` disables browser submission validation by default and delegates native form behaviour to Phoenix. Colours live in `assets/css/app.css`. Fixed form grids use explicit tracks and `subgap` for aligned transparent fields. The showcase demonstrates the supported input modes and interactions.
+`CoreComponents` provides forms, actions, cards, collapse panels, entry panels, tables, and inputs, including native selects, searchable comboboxes, radios, switches, password visibility, and upload previews. Its imported `<.form>` disables browser submission validation by default and delegates native form behaviour to Phoenix. Colours live in `assets/css/app.css`. Fixed form grids use explicit tracks and `subgap` for aligned transparent fields. The showcase demonstrates the supported input modes and interactions, with select and combobox examples together under Core Inputs. Separate selection controls let the combobox show multiple tags while the native select remains a single-choice dropdown.
 
-Client controls target current Chromium, Firefox, and Safari releases. Select, colour, and themed calendar popovers share one native CSS anchor positioning rule for placement and viewport width constraints, with a 0.25rem vertical gap and no horizontal offset from their triggers. Each control retains its own width and height limits. Their hooks connect the existing widgets to native popovers without measuring layout or adding JavaScript positioning fallbacks. Calendars retain the themed Vanilla Calendar interface, with native outside-click and Escape dismissal. Keyboard arrows enter the calendar, and Tab follows the browser's focus order. Calendar focus never changes `HTMLElement.prototype`.
+Client controls target current Chromium, Firefox, and Safari releases. Colour and themed calendar popovers share one native CSS anchor positioning rule for placement and viewport width constraints, with a 0.25rem vertical gap and no horizontal offset from their triggers. Each control retains its own width and height limits. Their hooks connect the existing widgets to native popovers without measuring layout or adding JavaScript positioning fallbacks. Combobox panels use scoped CSS anchors and fixed positioning to escape scrolling containers, including the account menu. Petal's hook chooses whether to open above or below and caps the list height, while CSS handles horizontal placement and viewport width limits. Their appearance stays in the central theme. Native selects use the browser's customisable picker where supported and retain its standard picker elsewhere. Calendars retain the themed Vanilla Calendar interface, with native outside-click and Escape dismissal. Keyboard arrows enter the calendar, and Tab follows the browser's focus order. Calendar focus never changes `HTMLElement.prototype`.
 
-Telephone inputs keep separate country and national-number controls. LiveSelect's selected-label option displays only the dial code in the field, while its full dropdown labels and the existing server search match dial codes, country names, and ISO codes. The small telephone hook only composes the submitted number. Theme animation, clipped-text tooltips, the timer demonstration, and AshTypescript RPC support remain part of the template. Timers share one second-based scheduler and refresh when the page becomes visible.
+Telephone inputs keep separate country and national-number controls. The country combobox uses Petal's trigger variant and selected-content slot to show only the dial code. Its panel contains the searchable country labels, including dial codes, country names, and ISO codes. The small telephone hook reads the combobox's native select and composes the submitted number. Theme animation, clipped-text tooltips, the timer demonstration, and AshTypescript RPC support remain part of the template. Timers share one second-based scheduler and refresh when the page becomes visible.
 
 ### Interface patterns
 
@@ -136,15 +163,35 @@ Page titles use `<.header level={1}>` directly on the canvas, section headings u
 
 Wrap each Cinder collection in an element with a unique `id` and `phx-hook="CinderPagination"`. The hook adds ellipses for omitted page ranges and mirrors Cinder's page information and navigation beneath its filter and sort controls. Both navigation bars use Cinder's existing events and page state. The optional page-size selector stays below the results. This application hook depends on Cinder's rendered markup, so check it when upgrading Cinder.
 
-Every application form and input must use the imported `<.form>` and `<.input>` from `CoreComponents`, including selects, textareas, hidden fields, and file uploads. Call the core component by its qualified name in isolated component tests. Keep native form controls, Phoenix form rendering, LiveSelect, and LiveView upload rendering inside the core implementation. If the shared API cannot preserve a field's behaviour or accessibility, discuss the missing capability and proposed core change before implementing a workaround.
+Every application form and input must use the imported `<.form>` and `<.input>` from `CoreComponents`, including selects, comboboxes, textareas, hidden fields, and file uploads. Call the core component by its qualified name in isolated component tests. Keep native form controls, Phoenix form rendering, Petal's combobox, and LiveView upload rendering inside the core implementation. If the shared API cannot preserve a field's behaviour or accessibility, discuss the missing capability and proposed core change before implementing a workaround.
 
 This rule covers application-owned forms and inputs. Cinder filters and selection controls, AshAdmin, LiveDashboard, and the development mailbox remain owned by their installed packages. Core's native controls and framework-generated hidden fields are also part of their owning renderer. The source boundary test checks application templates and component calls to prevent new bypasses without changing dependency internals.
 
-Searchable selects use real Phoenix form fields, such as `<.input field={@form[:choice]} type="select" options={@options} />`. LiveSelect derives submitted names and textbox IDs from the field's form, so create a form with `to_form/2` for independent groups of fields instead of relying on a select's `name` override. An explicit input `id` identifies the LiveSelect component. The textbox keeps `field.id <> "_text_input"`, which an external label must target.
+Use `type="radio" variant="card"` for compact radio cards with an optional description below each title. Radio options accept `{label, value}` or `{label, value, description: "Details", disabled: true}` tuples in either variant. Each card remains a label for a native radio, preserving single selection within its group, keyboard navigation, required validation, and disabled behaviour. The shared input display modes still apply, and the card appearance comes from the project's CSS. The Core Inputs showcase places radio cards immediately after the ordinary radio group.
 
-Selections trigger the enclosing form's `phx-change` event. Handle `live_select_change` for focus and search, filter the available options with `Search.filter/2`, and use native `send_update(LiveSelect.Component, id: id, options: options)`. Static permission and timezone choices use `update_min_len={0}` to restore all options when search text is cleared and `allow_clear={false}` to retain an explicit choice. Permission changes are processed alongside role form validation and restricted to the current superuser grant. The shared timezone hook handles only the account selector's exact ID, leaving page-specific selectors to their LiveView.
+```heex
+<.input
+  field={@form[:compute_plan]}
+  type="radio"
+  variant="card"
+  label="Compute plan"
+  options={[
+    {"8-core CPU", "8-core", description: "32 GB RAM"},
+    {"6-core CPU", "6-core", description: "24 GB RAM"},
+    {"4-core CPU", "4-core", description: "16 GB RAM", disabled: true}
+  ]}
+/>
+```
 
-Select `aria-labelledby`, `aria-label`, and `aria-describedby` describe the core field group, including its disabled display. Labels still target the actual textbox. Installed LiveSelect does not expose arbitrary textbox attributes, so these associations describe the surrounding group rather than adding textbox-level ARIA or full combobox semantics.
+Use `<.input field={@form[:choice]} type="select" options={@options} />` for a native single select and `type="combobox"` for a searchable combobox. Both accept normal label/value option tuples and `multiple` for multiple selections. Multiple selects and comboboxes share Petal's searchable combobox renderer and hook. Multiple selections appear as removable tags below either field through the project's CSS. Comboboxes and multiple selects also accept `clearable` and `max_items`. Create independent field groups with `to_form/2`. The Petal wrapper uses the explicit input `id`, or the form field's ID by default. Its visible control uses that ID plus `"-input"`, and its submitted native select uses the same ID plus `"-select"`. External labels must target the visible control.
+
+Single native select styling uses `.input-native-select` in `assets/css/app.css`. Its font, height, padding, border, and chevron match the combobox. CSS `appearance: base-select` and `::picker(select)` give the native dropdown the same theme colours, option spacing, hover and selected surfaces, and selected-option checkmark. The browser handles opening, keyboard selection, dismissal, and form submission. Browsers without these customisation features keep their standard option picker, so the single-select dropdown appearance depends on browser support. Multiple selects use the shared Petal dropdown and tags. See the [MDN customisable select guide](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select).
+
+Selections trigger the enclosing form's `phx-change` event through the native select. Combobox filtering and keyboard navigation run in Petal's hook against the supplied options, so static choices require no search event handler or component update. Permission and timezone choices use `clearable={false}` to retain an explicit choice. Permission changes are processed alongside role form validation and restricted to the current superuser grant. Core includes an empty hidden value before each multiple select, so clearing every choice submits `[""]` instead of omitting the field. AshPhoenix removes empty array values natively. Map-backed forms strip those empty strings before merging selection lists, while omitted disabled fields retain their previous values.
+
+Petal supplies the combobox, listbox, and option roles, along with the visible control's expanded state and active option. Core's label targets the actual textbox, and `label` or `aria-label` supplies its accessible name. Combobox `aria-labelledby` and `aria-describedby` describe the core field group, including its disabled display. Native select attributes apply to the select itself.
+
+The Petal integration uses the qualified `PetalComponents.ComboBox.combo_box` component and imports the named `PetalComboBox` JavaScript hook directly from `deps/petal_components/assets/js/petal_components.js`. Only that Petal hook is registered with LiveView. Selection, keyboard, and disabled-state behaviour come from the upstream hook without local modifications. The upstream module also initialises a global accordion listener, including when using a named import. This side effect is accepted so the application uses the dependency's own JavaScript. The `>= 4.17.1` dependency constraint allows newer releases, with the installed version recorded in `mix.lock`. Combobox styles live in `assets/css/app.css` and use the existing theme colours. The application does not import Petal's component collection or global stylesheet.
 
 Use `rounded-default` for ordinary controls and panels, and `rounded-full` for pills and circles. The shared `--radius-default` is 0.5rem, while `--radius-workspace` is 1.5rem for the working canvas's connection to the shared header and sidebar. The shared `workspace-canvas` anchors that corner beneath the header using CSS positioning and the surrounding shell colour, so it remains visible while the document scrolls and follows the expanded or collapsed sidebar. Document scrolling retains Phoenix's navigation history restoration. Both rounding classes also support SVG rectangles. SVG full rounding reads the rectangle's numeric `width` and `height` attributes and uses half the shorter dimension, capped by `--radius-full`, so its corners match HTML pills instead of stretching into an ellipse. Omit rounding classes for ordinary square elements. Central calendar styles still reset selected corners to zero where a range joins an already rounded date button.
 
@@ -218,13 +265,13 @@ The `text` and `text-enabled` input modes use plain values with stacked labels. 
 
 ### Colour inputs
 
-`CoreComponents.input` with `type="color"` renders a square colour swatch beside an editable value and searchable colour-space selection. Elixir's `Color` library supplies parsing, conversion, gamut mapping, and serialisation. The ten native output formats are HEX, RGB, HSL, Lab, LCH, OKLab, OKLCH, XYZ D50, XYZ D65, and CMYK. RGB and HSL include transparency and accept pasted RGBA and HSLA aliases. `CoreUtils.Color.options/0` supplies the shared choices. The named text field submits the selected syntax. LiveSelect's auxiliary space field records form selection state, while the colour string remains the stored value. The picker has no submitted name. Existing stored strings display in their own format first. Text modes keep their stacked labels, and read-only modes show the converted swatch, value, and current space while retaining their existing submission rules.
+`CoreComponents.input` with `type="color"` renders a square colour swatch beside an editable value and searchable colour-space selection. Elixir's `Color` library supplies parsing, conversion, gamut mapping, and serialisation. The ten native output formats are HEX, RGB, HSL, Lab, LCH, OKLab, OKLCH, XYZ D50, XYZ D65, and CMYK. RGB and HSL include transparency and accept pasted RGBA and HSLA aliases. `CoreUtils.Color.options/0` supplies the shared choices. The named text field submits the selected syntax. The combobox's auxiliary native select records form selection state, while the colour string remains the stored value. The picker has no submitted name. Existing stored strings display in their own format first. Text modes keep their stacked labels, and read-only modes show the converted swatch, value, and current space while retaining their existing submission rules.
 
 The text value can be edited or replaced with any supported format. On blur, a shared LiveView event validates that value and selects its detected format without rewriting the text. For example, pasting an OKLCH value while RGB is selected changes the format to OKLCH when the field loses focus. Native formats use their CSS function or `color()` notation, such as `lab(65 20 30)`, `color(xyz-d50 0.2 0.3 0.4 / 0.5)`, and `device-cmyk(0% 50% 100% 0%)`. Elixir produces the sRGB swatch and picker projection while preserving the original source. Incomplete drafts keep their current format while typing, and invalid values remain visible with a field error. Submission waits for pending validation or conversion, and explicit space choices also validate the pending value. A vertical divider separates the boxed value from the selector.
 
 Only the square swatch opens the vanilla-colorful RGBA picker. It appears in a native auto popover beside the swatch, with saturation, hue, and alpha controls. Escape and outside clicks dismiss it. Opening or synchronising the picker does not change the value. The picker operates in sRGB and emits integer RGB channels when edited, so deliberately selecting a colour there replaces an out-of-sRGB source with the chosen sRGB colour. Picker interaction and its swatch update locally while Elixir converts the chosen RGBA value into the selected text format. Alpha stays precise during hue or saturation edits and changes when the alpha control is edited. Central CSS styles the picker frame, checkerboard, pointers, and keyboard focus with the shared theme; the library supplies the intrinsic colour ramps.
 
-The space selector uses the same LiveSelect and SelectDropdown combination as the telephone input, including its 4rem selector width, searchable options, keyboard selection, and the core dropdown theme. Opening or clearing its search shows every space; typing filters the labels. The selected field uses normal core-select text styling, with the text cursor and an unchanged background on hover. Disabled and read-only entries expose no selection actions. `CoreComponents`' shared input mount hook handles option searches, validation, conversion, and detected-format selection for every application LiveView, so callers need no extra event handlers. These operations require a server round trip. The browser hook ignores obsolete replies and retains newer drafts. Native LiveSelect updates keep its selected value, displayed label, and dropdown options consistent without overriding the text input's value setter.
+The space selector uses Petal's searchable combobox with a 4rem selector width, keyboard selection, and the core dropdown theme. Opening or clearing its search shows every space, and typing filters the labels locally. The selected field uses normal core combobox text styling, with the text cursor and an unchanged background on hover. Disabled and read-only entries expose no selection actions. `CoreComponents`' shared input mount hook handles colour validation, conversion, and detected-format selection for every application LiveView, so callers need no extra event handlers. These colour operations require a server round trip. The browser hook ignores obsolete replies, retains newer drafts, and applies each accepted reply's format to the combobox's native select and displayed label.
 
 Format changes use Elixir's native converter and serializer. The shared mount hook retains each field's precise source separately from its latest formatted text, so changing formats does not compound serialisation rounding. Lab and LCH use native D50 white-point adaptation, and bounded sRGB formats use native OKLCH gamut mapping. The native serializer rounds decimal output to four places and RGB output to whole channel bytes. HEX uses 8-bit channels, so selecting it can round transparency or map colours outside sRGB into that smaller colour range. For example, transparency `0.5` becomes hex alpha `80`, equivalent to `128/255`. Saving stores the selected text representation, including any conversion loss in that representation.
 
@@ -358,13 +405,17 @@ mise exec -- mix hex.audit
 mise exec -- npm audit --prefix assets
 ```
 
-Node follows the same `latest` selection in `mise.toml`. `mix precommit` runs the native `ash.codegen --check`, the test suite, and Dialyzer. The migration test requires exactly one migration file. Hex audit reports dependency advisories independently of application tests.
+Node follows the same `latest` selection in `mise.toml`. Registry dependency requirements retain open-ended `>=` minimums, while the lockfiles record the installed releases. Update and check the lockfiles when adopting newer releases. `mix precommit` runs the native `ash.codegen --check`, the test suite, and Dialyzer. The migration test requires exactly one migration file. Hex audit reports dependency advisories independently of application tests.
 
 Dialyzer has one exact exception for AshAuthenticationPhoenix 2.17.4's reference to `Ash.Resource.record/0`, which Ash omits on OTP 29. Remove it when the corrected type reaches a stable release. Unused filters fail the check so the exception cannot silently outlive the upstream fix.
 
 Money uses the native Localize packages supplied by ExMoney. The existing CLDR backend supplies locale, currency, and territory metadata. The exchange-rate service stays disabled until the application needs it. Add its native retriever to the application supervision tree when enabling it. CLDR Calendar and Units currently use their newest compatible releases: their newer patches require DigitalToken 1, while Money 6 requires DigitalToken 2. Dependency updates must resolve that upstream constraint before advancing those packages together.
 
 Assent, Makeup, Unicode, UnicodeSet, and UnicodeString also retain the newest versions allowed by authentication, Faker, and CLDR requirements.
+
+PetalComponents 4.17.1 requires `websock_adapter ~> 0.5.7`, so dependency resolution retains WebSockAdapter 0.5.9 while 0.6.0 is available. The project follows that declared dependency range.
+
+Cloak remains a declared template dependency for future encryption, and the application configures no encryption vault or encrypted resource attributes. Its newest published release, 1.1.4, still carries [CVE-2026-95105](https://cna.erlef.org/cves/CVE-2026-95105.html), which affects its unauthenticated AES-CTR ciphers. The package advisory remains open and is reported by `mix hex.audit`. When introducing encryption, configure `Cloak.Ciphers.AES.GCM` and exclude both CTR implementations. Any existing CTR ciphertext must be re-encrypted with GCM before removing CTR support, as described in the advisory.
 
 Ash string-length constraints count Unicode codepoints, matching PostgreSQL's length checks.
 

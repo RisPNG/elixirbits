@@ -3,9 +3,13 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.EcosystemControlsTest do
 
   import Phoenix.LiveViewTest
 
-  test "LiveSelect modes preserve selections and support multiple dependency pages", %{conn: conn} do
+  test "core combobox preserves single and multiple dependency selections", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
-    render_click(element(view, "#layout-test-ecosystem-tab"))
+
+    assert has_element?(
+             view,
+             "#layout-test-form-section #layout-test-dependency-combobox[phx-hook=PetalComboBox]"
+           )
 
     render_change(view, "dependency_change", %{
       "dependency" => %{"component_search" => "/api/json/scalar"}
@@ -13,54 +17,53 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.EcosystemControlsTest do
 
     assert has_element?(view, "#selected-dependency-scalar")
 
-    for mode <- ~w(tags quick_tags) do
-      render_click(element(view, "#dependency-select-mode-#{mode}"))
+    render_click(element(view, "#dependency-select-mode-multiple"))
 
-      assert has_element?(
-               view,
-               "#layout-test-dependency-live-select input[name='dependency[component_search][]'][value='/api/json/scalar']"
-             )
+    assert has_element?(
+             view,
+             "#layout-test-dependency-combobox select[multiple][name='dependency[component_search][]'] option[value='/api/json/scalar'][selected]"
+           )
 
-      render_change(view, "dependency_change", %{
-        "dependency" => %{"component_search" => ["/api/json/scalar", "/dev/dashboard"]}
-      })
+    render_change(view, "dependency_change", %{
+      "dependency" => %{"component_search" => ["/api/json/scalar", "/dev/dashboard"]}
+    })
 
-      assert has_element?(view, "#selected-dependency-scalar")
-      assert has_element?(view, "#selected-dependency-dashboard")
-    end
+    assert has_element?(view, "#selected-dependency-scalar")
+    assert has_element?(view, "#selected-dependency-dashboard")
 
     render_click(element(view, "#dependency-select-mode-single"))
     assert has_element?(view, "#selected-dependency-scalar")
     refute has_element?(view, "#selected-dependency-dashboard")
 
-    render_click(element(view, "#dependency-select-mode-tags"))
+    render_click(element(view, "#dependency-select-mode-multiple"))
 
     render_change(view, "dependency_change", %{
-      "dependency" => %{"component_search_empty_selection" => ""}
+      "_target" => ["dependency", "component_search"],
+      "dependency" => %{"component_search" => [""]}
     })
 
     refute has_element?(view, "#selected-dependency-scalar")
     assert has_element?(view, "#layout-test-selected-dependency", "Pick a dependency page")
   end
 
-  test "LiveSelect display and disabled controls keep the selected preview", %{conn: conn} do
+  test "core combobox display and disabled controls keep the selected preview", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
-    render_click(element(view, "#layout-test-ecosystem-tab"))
 
     assert has_element?(
              view,
-             "#layout-test-dependency-live-select input[placeholder='Search dependency pages']"
+             "#layout-test-dependency-combobox input[placeholder='Search dependency pages']"
            )
 
     render_click(element(view, "#dependency-select-option-prompt"))
 
     refute has_element?(
              view,
-             "#layout-test-dependency-live-select input[placeholder='Search dependency pages']"
+             "#layout-test-dependency-combobox input[placeholder='Search dependency pages']"
            )
 
-    render_click(element(view, "#dependency-select-option-keep_options"))
-    assert has_element?(view, "#dependency-select-option-keep_options[aria-pressed=false]")
+    render_click(element(view, "#dependency-select-option-clearable"))
+    assert has_element?(view, "#dependency-select-option-clearable[aria-pressed=false]")
+    refute has_element?(view, "#layout-test-dependency-combobox [data-pc-combo-clear]")
 
     render_change(view, "dependency_change", %{
       "dependency" => %{"component_search" => "/api/json/scalar"}
@@ -81,7 +84,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.EcosystemControlsTest do
 
     assert has_element?(
              view,
-             "#layout-test-dependency-live-select input[type=hidden][value='/api/json/scalar']"
+             "#layout-test-dependency-combobox select option[value='/api/json/scalar'][selected]"
            )
   end
 

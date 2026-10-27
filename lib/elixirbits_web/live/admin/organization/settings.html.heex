@@ -9,6 +9,7 @@
     <.header level={1}>
       Organization settings
       <:subtitle>Application identity, regional defaults, and contact details.</:subtitle>
+
       <:actions>
         <.action_button :if={@editable?} action={:save} type="submit" tooltip="Save settings" />
       </:actions>
@@ -35,6 +36,7 @@
           render_as={if @editable?, do: "enabled", else: "disabled"}
         />
       </div>
+
       <div class="grid grid-cols-[1fr_1fr_2fr] subgap-2">
         <.input
           field={@form[:base_currency]}
@@ -55,6 +57,7 @@
           render_as={if @editable?, do: "enabled", else: "disabled"}
         />
       </div>
+
       <div class="grid grid-cols-[2fr_2fr] subgap-2">
         <.input
           field={@form[:email]}
@@ -75,6 +78,7 @@
       <.header>
         Addresses
         <:subtitle>Business and correspondence addresses.</:subtitle>
+
         <:actions>
           <.action_button
             :if={@editable? and can?(@permissions, @current_path, :create)}
@@ -85,6 +89,7 @@
           />
         </:actions>
       </.header>
+
       <div class="grid grid-cols-[1fr_1fr] gap-y-4">
         <.inputs_for :let={af} field={@form[:addresses]}>
           <.entry_panel label="Address" index={af.index} columns={2}>
@@ -101,11 +106,12 @@
                 tooltip="Remove address"
               />
             </:actions>
+
             <div class="grid grid-cols-[1fr_3fr] subgap-2">
               <.input
                 id={"#{af.id}_label_select"}
                 field={af[:label]}
-                type="select"
+                type="combobox"
                 label="Label"
                 options={@label_options}
                 prompt="None"
@@ -118,6 +124,7 @@
                 render_as={if @editable?, do: "enabled", else: "disabled"}
               />
             </div>
+
             <div class="grid grid-cols-[2fr_2fr] subgap-2">
               <.input
                 field={af[:contact_name]}
@@ -132,6 +139,7 @@
                 render_as={if @editable?, do: "enabled", else: "disabled"}
               />
             </div>
+
             <div class="grid grid-cols-[4fr] subgap-2">
               <.input
                 field={af[:line_1]}
@@ -140,6 +148,7 @@
                 render_as={if @editable?, do: "enabled", else: "disabled"}
               />
             </div>
+
             <div class="grid grid-cols-[4fr] subgap-2">
               <.input
                 field={af[:line_2]}
@@ -148,6 +157,7 @@
                 render_as={if @editable?, do: "enabled", else: "disabled"}
               />
             </div>
+
             <div class="grid grid-cols-[4fr] subgap-2">
               <.input
                 field={af[:line_3]}
@@ -156,6 +166,7 @@
                 render_as={if @editable?, do: "enabled", else: "disabled"}
               />
             </div>
+
             <div class="grid grid-cols-[1fr_3fr] subgap-2">
               <.input
                 field={af[:postal_code]}
@@ -170,6 +181,7 @@
                 render_as={if @editable?, do: "enabled", else: "disabled"}
               />
             </div>
+
             <div class="grid grid-cols-[2fr_2fr] subgap-2">
               <.input
                 field={af[:state]}

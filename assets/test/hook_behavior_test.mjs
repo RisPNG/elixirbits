@@ -914,113 +914,7 @@ test("calendar patches refresh native selections and preserve edits when server 
   }
 })
 
-async function withSelectDropdownHarness(run) {
-  const names = ["document", "MutationObserver"]
-  const originals = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]))
-  const document = new EventTarget()
-  const mutations = []
-  const contexts = new Set()
-
-  class SelectElement extends Element {
-    constructor() {
-      super()
-      this.open = false
-      this.promotions = []
-    }
-    get popover() { return this.getAttribute("popover") }
-    set popover(value) { this.setAttribute("popover", value) }
-    removeAttribute(name) {
-      super.removeAttribute(name)
-      if (name === "popover") this.open = false
-    }
-    matches(selector) { return selector === ":popover-open" && this.open }
-    showPopover(options) { this.open = true; this.promotions.push(options) }
-    hidePopover() { this.open = false }
-  }
-
-  Object.assign(globalThis, {
-    document,
-    MutationObserver: class {
-      constructor(callback) { this.callback = callback; this.connected = false; mutations.push(this) }
-      observe(target, options) { this.connected = true; this.target = target; this.options = options }
-      disconnect() { this.connected = false }
-    },
-  })
-
-  try {
-    const hook = await loadHook("select_dropdown")
-    const input = new SelectElement()
-    const wrapper = new SelectElement()
-    let dropdown = new SelectElement()
-    input.parentElement = wrapper
-    dropdown.parentElement = wrapper
-    wrapper.querySelector = selector => ({"input[type=text]": input, "ul.select-dropdown": dropdown})[selector] ?? null
-    document.activeElement = input
-    const context = {...hook, el: wrapper}
-    contexts.add(context)
-    const destroy = () => { context.destroyed(); contexts.delete(context) }
-    await run({
-      context, input, wrapper, document, mutations, SelectElement, destroy,
-      getDropdown: () => dropdown,
-      replaceDropdown: replacement => { dropdown = replacement; if (replacement) replacement.parentElement = wrapper },
-    })
-  } finally {
-    for (const context of contexts) context.destroyed()
-    for (const [name, descriptor] of originals) {
-      if (descriptor) Object.defineProperty(globalThis, name, descriptor)
-      else delete globalThis[name]
-    }
-  }
-}
-
-test("select overlays preserve the input and native anchor across filtering and component patches", async () => {
-  await withSelectDropdownHarness(async ({context, input, wrapper, document, mutations, SelectElement, getDropdown, replaceDropdown}) => {
-    context.mounted()
-    const first = getDropdown()
-    assert.equal(first.popover, "manual")
-    assert.equal(first.open, true)
-    assert.deepEqual(first.promotions, [{source: input}])
-    assert.equal(first.parentElement, wrapper)
-    assert.equal(wrapper.querySelector("ul.select-dropdown"), first)
-    assert.equal(document.activeElement, input)
-
-    first.scrollTop = 90
-    context.updated()
-    assert.equal(first.promotions.length, 1)
-    first.removeAttribute("popover")
-    mutations[0].callback([{type: "attributes", attributeName: "popover"}])
-    assert.equal(first.popover, "manual")
-    assert.equal(first.open, true)
-    assert.equal(first.scrollTop, 90)
-    assert.equal(document.activeElement, input)
-
-    replaceDropdown(null)
-    mutations[0].callback([{type: "childList"}])
-    assert.equal(mutations[0].connected, true)
-
-    const replacement = new SelectElement()
-    replaceDropdown(replacement)
-    mutations[0].callback([{type: "childList"}])
-    assert.equal(replacement.popover, "manual")
-    assert.equal(replacement.open, true)
-    assert.equal(replacement.parentElement, wrapper)
-    assert.deepEqual(replacement.promotions, [{source: input}])
-    assert.equal(document.activeElement, input)
-  })
-})
-
-test("select overlay destruction closes the popover and releases its patch observer", async () => {
-  await withSelectDropdownHarness(async ({context, mutations, destroy, getDropdown}) => {
-    context.mounted()
-    const dropdown = getDropdown()
-    assert.equal(mutations[0].connected, true)
-    destroy()
-    assert.equal(dropdown.open, false)
-    assert.equal(mutations[0].connected, false)
-  })
-})
-
-test("telephone composition follows country and number edits while LiveSelect owns its label", async () => {
+test("telephone composition follows country and number edits while the combobox owns its label", async () => {
   const hook = await loadHook("tel_input")
   const wrapper = new Element()
   wrapper.dataset.countries = JSON.stringify({MY: "+60", US: "+1"})
@@ -1035,10 +929,9 @@ test("telephone composition follows country and number edits while LiveSelect ow
   number.hasAttribute = name => number.getAttribute(name) !== null
   number.value = "123456789"
   const label = new Element()
-  label.name = "form[phone_country_code_text_input]"
   label.value = "+60"
   label.hasAttribute = name => label.getAttribute(name) !== null
-  wrapper.querySelector = selector => selector.startsWith("input[name=") ? country : ({"[data-tel-number]": number, "[data-tel-composite]": composite})[selector] ?? null
+  wrapper.querySelector = selector => selector.startsWith("select[name=") ? country : ({"[data-tel-number]": number, "[data-tel-composite]": composite})[selector] ?? null
   const context = {...hook, el: wrapper}
   const emit = (type, target) => wrapper.dispatchEvent(Object.defineProperty(event(type), "target", {value: target}))
 

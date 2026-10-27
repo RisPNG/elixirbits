@@ -5,9 +5,9 @@ defmodule ElixirbitsWeb.CoreComponentBoundaryTest do
 
   @core_file "lib/elixirbits_web/components/core_components.ex"
   @control_tags ~w(form input select textarea)
-  @local_renderers ~w(live_select live_file_input)
+  @local_renderers ~w(combo_box live_file_input)
   @native_renderers ~w(
-    Phoenix.Component.form Phoenix.Component.live_file_input LiveSelect.live_select
+    Phoenix.Component.form Phoenix.Component.live_file_input PetalComponents.ComboBox.combo_box
     Phoenix.HTML.Tag.form_tag PhoenixHTMLHelpers.Tag.form_tag
   ) ++
                       Enum.flat_map(~w(Phoenix.HTML.Form PhoenixHTMLHelpers.Form), fn module ->
@@ -52,7 +52,7 @@ defmodule ElixirbitsWeb.CoreComponentBoundaryTest do
         <%!-- <input /> --%>
         <form><input /><select></select><textarea></textarea></form>
         <Phoenix.Component.form for={nil} />
-        <LiveSelect.live_select field={@field} />
+        <PetalComponents.ComboBox.combo_box field={@field} />
         <.live_file_input upload={@upload} />
         <.form for={nil}><.input name="email" value="" /></.form>
         {Phoenix.Component.live_file_input(@upload)}
@@ -60,7 +60,7 @@ defmodule ElixirbitsWeb.CoreComponentBoundaryTest do
       end
 
       def native_form(assigns), do: Phoenix.Component.form(assigns)
-      def native_select(assigns), do: LiveSelect.live_select(assigns)
+      def native_select(assigns), do: PetalComponents.ComboBox.combo_box(assigns)
       def assertion(html), do: html =~ "<input />"
     end
     '''

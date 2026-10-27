@@ -18,12 +18,12 @@ const ColorInput = {
     this.onSpaceSelection = event => {
       if (!this.editable || event.target.name !== this.el.dataset.colorSpaceName) return
       event.stopPropagation()
-      if (!this.selectionIntent || this.input.disabled || this.input.readOnly) {
+      if (event.type !== "change") return
+      if (this.input.disabled || this.input.readOnly) {
         event.target.value = this.format
         if (this.state.format === this.format && document.activeElement !== this.spaceText) this.spaceText.value = this.state.label
         return
       }
-      this.selectionIntent = false
       const format = event.target.value
       if (!format) return
       this.format = format
@@ -46,10 +46,6 @@ const ColorInput = {
       const path = event.composedPath()
       if (path.includes(this.picker)) {
         this.editingAlpha = path.some(node => node.getAttribute?.("part") === "alpha")
-      } else if (this.spaceSelect?.contains(event.target)) {
-        if (path.some(node => node.hasAttribute?.("data-idx")) || (event.type === "keydown" && event.key === "Enter")) {
-          this.selectionIntent = true
-        }
       }
     }
     this.onBlur = event => {
@@ -81,6 +77,7 @@ const ColorInput = {
     this.el.addEventListener("input", this.onInput)
     this.el.addEventListener("input", this.onSpaceSelection, true)
     this.el.addEventListener("change", this.onInput)
+    this.el.addEventListener("change", this.onSpaceSelection, true)
     this.el.addEventListener("color-changed", this.onColorChanged)
     this.el.addEventListener("blur", this.onBlur, true)
     this.el.addEventListener("mousedown", this.onInteraction, true)
@@ -103,6 +100,7 @@ const ColorInput = {
     this.el.removeEventListener("input", this.onInput)
     this.el.removeEventListener("input", this.onSpaceSelection, true)
     this.el.removeEventListener("change", this.onInput)
+    this.el.removeEventListener("change", this.onSpaceSelection, true)
     this.el.removeEventListener("color-changed", this.onColorChanged)
     this.el.removeEventListener("blur", this.onBlur, true)
     this.el.removeEventListener("mousedown", this.onInteraction, true)
@@ -134,7 +132,7 @@ const ColorInput = {
     this.trigger = this.el.querySelector("[data-color-trigger]")
     this.swatch = this.el.querySelector("[data-color-swatch]")
     this.formatLabel = this.el.querySelector("[data-color-format]")
-    this.spaceInput = this.editable ? this.el.querySelector(`input[name='${this.el.dataset.colorSpaceName}']`) : null
+    this.spaceInput = this.editable ? this.el.querySelector(`select[name='${this.el.dataset.colorSpaceName}']`) : null
     this.spaceSelect = this.el.querySelector("[data-color-space-select]")
     this.spaceText = this.spaceSelect?.querySelector("input[type=text]")
     this.errorText = this.el.querySelector("[data-color-error]")
@@ -309,6 +307,7 @@ const ColorInput = {
     const unavailable = this.input.disabled || this.input.readOnly
     this.trigger.disabled = unavailable
     this.spaceText.disabled = unavailable
+    this.spaceInput.disabled = unavailable
     if (unavailable && this.popover.matches(":popover-open")) this.popover.hidePopover()
     if (preview?.rgba) {
       this.updatingPicker = true

@@ -5,8 +5,6 @@ defmodule ElixirbitsWeb.LiveUserAuth do
 
   alias Elixirbits.AccessControl.Permissions
   alias Elixirbits.Accounts
-  alias Elixirbits.CoreUtils.Search
-  alias LiveSelect.Component
 
   def on_mount(:timezone, _params, _session, socket) do
     socket =
@@ -118,13 +116,6 @@ defmodule ElixirbitsWeb.LiveUserAuth do
          end)}
       end)
       |> attach_hook(:app_nav_events, :handle_event, fn
-        "live_select_change", %{"id" => "user-timezone"} = params, socket ->
-          options =
-            Search.filter(socket.assigns.nav.timezone_options, Map.get(params, "text", ""))
-
-          send_update(Component, id: "user-timezone", options: options)
-          {:halt, socket}
-
         "timezone_change", %{"timezone" => timezone}, socket ->
           {:halt,
            update(socket, :nav, fn nav ->

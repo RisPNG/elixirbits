@@ -4,8 +4,6 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
   alias Elixirbits.AccessControl.Permissions
   alias Elixirbits.AccessControl.Role
   alias Elixirbits.CoreUtils.Resource
-  alias Elixirbits.CoreUtils.Search
-  alias LiveSelect.Component
 
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/roles"}}
 
@@ -114,12 +112,6 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
      |> assign(:form, AshPhoenix.Form.validate(socket.assigns.form, params))
      |> assign(:perm_levels, levels)
      |> assign(:permission_form, to_form(levels, as: "page_levels", id: "permission-level"))}
-  end
-
-  def handle_event("live_select_change", %{"id" => id} = params, socket) do
-    options = Search.filter(socket.assigns.levels, Map.get(params, "text", ""))
-    send_update(Component, id: id, options: options)
-    {:noreply, socket}
   end
 
   def handle_event("save", %{"form" => params}, socket) do

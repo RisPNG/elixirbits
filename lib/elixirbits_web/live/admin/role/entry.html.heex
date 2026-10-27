@@ -9,6 +9,7 @@
     <.header level={1}>
       {@page_title}
       <:subtitle>Name the role and grant it access to each page.</:subtitle>
+
       <:actions>
         <div class="grid grid-cols-[auto_auto] items-center gap-2">
           <.action_button action={:back} navigate={~p"/admin/roles"} />
@@ -40,8 +41,7 @@
             type="text"
             label="Code"
             disabled
-          />
-          <.input field={@form[:name]} type="text" label="Name" />
+          /> <.input field={@form[:name]} type="text" label="Name" />
         </div>
 
         <div class="grid grid-cols-[1fr] subgap-2">
@@ -61,21 +61,21 @@
       <.card_inset>
         <ul class="text-xs text-subcontent list-disc list-inside space-y-1">
           <li class="grid grid-cols-[9rem_1fr] gap-2">
-            <span>Read</span>
-            <span>View the page and its records.</span>
+            <span>Read</span> <span>View the page and its records.</span>
           </li>
+
           <li class="grid grid-cols-[9rem_1fr] gap-2">
-            <span>Create</span>
-            <span>Create a record.</span>
+            <span>Create</span> <span>Create a record.</span>
           </li>
+
           <li class="grid grid-cols-[9rem_1fr] gap-2">
-            <span>Update</span>
-            <span>Change an existing record.</span>
+            <span>Update</span> <span>Change an existing record.</span>
           </li>
+
           <li class="grid grid-cols-[9rem_1fr] gap-2">
-            <span>Delete</span>
-            <span>Delete an existing record.</span>
+            <span>Delete</span> <span>Delete an existing record.</span>
           </li>
+
           <li class="grid grid-cols-[9rem_1fr] gap-2">
             <span>Superuser Access</span>
             <span>Allow all standard actions and explicitly protected operations.</span>
@@ -86,6 +86,7 @@
       <div class="listing-surface">
         <div class="grid grid-cols-[2fr_3fr] gap-2 listing-heading rounded-t-default">
           <div class="listing-cell">Page</div>
+
           <div class="listing-cell">Access level</div>
         </div>
 
@@ -95,17 +96,19 @@
         >
           <div class="listing-cell">
             <p :if={page.group} class="text-xs text-subcontent">{page.group}</p>
+
             <label
               id={"permission-label-#{page.code}"}
               for={
                 if can?(@permissions, @current_path, :su),
-                  do: "#{@permission_form[page.code].id}_text_input",
+                  do: "permission-level-#{page.code}-input",
                   else: "permission-level-#{page.code}"
               }
               class="block text-content"
             >
               {page.name}
             </label>
+
             <p
               :if={page.public?}
               id={"permission-hint-#{page.code}"}
@@ -114,18 +117,17 @@
               Public read access
             </p>
           </div>
+
           <div class="listing-cell">
             <.input
               field={@permission_form[page.code]}
-              type="select"
+              type="combobox"
               id={"permission-level-#{page.code}"}
               options={@levels}
               role="group"
               aria-labelledby={"permission-label-#{page.code}"}
               aria-describedby={if page.public?, do: "permission-hint-#{page.code}"}
-              allow_clear={false}
-              keep_options_on_select
-              update_min_len={0}
+              clearable={false}
               disabled={!can?(@permissions, @current_path, :su)}
             />
           </div>

@@ -85,6 +85,36 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
     assert Ash.get!(User, target.id, actor: %{system: true}).display_name == "Updated"
   end
 
+  test "role combobox submissions assign roles and clear the final selection", %{conn: conn} do
+    target = create_user()
+    Ash.create!(Role, %{code: "member", name: "Member"}, actor: %{system: true})
+    conn = grant(conn, %{"USERS" => 5, "ROLES" => 16})
+    {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
+
+    assert has_element?(view, "#roles-form select[name='roles_form[roles][]'][multiple]")
+
+    assert has_element?(
+             view,
+             "#roles-form input[type=hidden][name='roles_form[roles][]'][value='']"
+           )
+
+    assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
+             view
+             |> form("#roles-form", roles_form: %{roles: ["", "member"]})
+             |> render_submit()
+
+    assert Ash.get!(User, target.id, actor: %{system: true}).roles == ["member"]
+    {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
+    assert has_element?(view, "#roles-form select option[value=member][selected]")
+
+    assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
+             view
+             |> form("#roles-form", roles_form: %{roles: [""]})
+             |> render_submit()
+
+    assert Ash.get!(User, target.id, actor: %{system: true}).roles == []
+  end
+
   test "user birthdays remain dates while timezone preferences validate and reset", %{conn: conn} do
     target = create_user(dob: ~D[1990-01-01], timezone: "America/New_York")
     conn = grant(conn, %{"USERS" => 5})
@@ -125,16 +155,16 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
     conn = grant(conn, %{"ROLES" => 16})
     {:ok, view, _} = live(conn, ~p"/admin/roles/create")
     assert has_element?(view, "#role-form[novalidate]")
-    assert has_element?(view, "#permission-level-USERS[phx-hook=LiveSelect]")
+    assert has_element?(view, "#permission-level-USERS[phx-hook=PetalComboBox]")
 
     assert has_element?(
              view,
-             "label#permission-label-USERS[for=permission-level_USERS_text_input]",
+             "label#permission-label-USERS[for=permission-level-USERS-input]",
              "USERS"
            )
 
-    for {{level, label}, index} <-
-          Enum.with_index([
+    for {level, label} <-
+          [
             {0, "None"},
             {4, "Read"},
             {5, "Read + Update"},
@@ -145,37 +175,23 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
             {14, "Read + Create + Delete"},
             {15, "Read + Create + Update + Delete"},
             {16, "Superuser Access"}
-          ]) do
-      render_focus(element(view, "#permission-level-USERS input[type=text]"))
-      render_hook(view, "live_select_change", %{"id" => "permission-level-USERS"})
-      assert has_element?(view, "#permission-level-USERS li", label)
+          ] do
+      assert has_element?(view, "#permission-level-USERS-select option[value='#{level}']", label)
 
-      if level != 0 do
-        render_hook(element(view, "#permission-level-USERS"), "option_click", %{
-          "idx" => to_string(index)
-        })
-      end
-
-      view |> form("#role-form") |> render_change()
+      view |> form("#role-form", page_levels: %{"USERS" => to_string(level)}) |> render_change()
 
       assert has_element?(
                view,
-               "#permission-level-USERS input[type=hidden][name='page_levels[USERS]'][value='#{level}']"
+               "#permission-level-USERS-select[name='page_levels[USERS]'] option[selected][value='#{level}']"
              )
 
       assert has_element?(view, "#permission-level-USERS input[type=text][value='#{label}']")
-      refute has_element?(view, "#permission-level-USERS button[phx-click=clear]")
+      refute has_element?(view, "#permission-level-USERS [data-pc-combo-clear]")
     end
 
-    render_focus(element(view, "#permission-level-USERS input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "permission-level-USERS"})
-    render_hook(element(view, "#permission-level-USERS"), "option_click", %{"idx" => "8"})
-    view |> form("#role-form") |> render_change()
-
-    render_focus(element(view, "#permission-level-ROLES input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "permission-level-ROLES"})
-    render_hook(element(view, "#permission-level-ROLES"), "option_click", %{"idx" => "5"})
-    view |> form("#role-form") |> render_change()
+    view
+    |> form("#role-form", page_levels: %{"USERS" => "15", "ROLES" => "12"})
+    |> render_change()
 
     view |> form("#role-form", form: %{code: "viewer", name: "Viewer"}) |> render_submit()
 
@@ -184,47 +200,43 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
     assert Enum.find(role.role_perms, &(&1.sitenav_code == "ROLES")).level == 12
   end
 
-  test "permission selects search, restore options, and save an explicit zero grant", %{
+  test "permission comboboxes retain all choices and save an explicit zero grant", %{
     conn: conn
   } do
     conn = grant(conn, %{"ROLES" => 16})
     {:ok, view, _} = live(conn, ~p"/admin/roles/create")
-    assert has_element?(view, "#permission-level-USERS[data-update-min-len='0']")
+    assert has_element?(view, "#permission-level-USERS[phx-hook=PetalComboBox]")
     assert has_element?(view, "#permission-level-USERS input[type=text][value=None]")
 
     assert has_element?(
              view,
-             "#permission-level-USERS input[type=hidden][name='page_levels[USERS]'][value='0']"
+             "#permission-level-USERS-select[name='page_levels[USERS]'] option[selected][value='0']"
            )
 
-    render_focus(element(view, "#permission-level-USERS input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "permission-level-USERS"})
-    render_hook(element(view, "#permission-level-USERS"), "change", %{"text" => "superuser"})
+    assert has_element?(
+             view,
+             "#permission-level-USERS-select option[value='16']",
+             "Superuser Access"
+           )
 
-    render_hook(view, "live_select_change", %{
-      "id" => "permission-level-USERS",
-      "text" => "superuser"
-    })
-
-    assert has_element?(view, "#permission-level-USERS li", "Superuser Access")
-    refute has_element?(view, "#permission-level-USERS li", "Read")
-    render_hook(element(view, "#permission-level-USERS"), "option_click", %{"idx" => "0"})
-    view |> form("#role-form") |> render_change()
+    assert has_element?(view, "#permission-level-USERS-select option[value='4']", "Read")
+    view |> form("#role-form", page_levels: %{"USERS" => "16"}) |> render_change()
 
     assert has_element?(
              view,
              "#permission-level-USERS input[type=text][value='Superuser Access']"
            )
 
-    refute has_element?(view, "#permission-level-USERS button[phx-click=clear]")
+    refute has_element?(view, "#permission-level-USERS [data-pc-combo-clear]")
+    assert has_element?(view, "#permission-level-USERS-select option[value='0']", "None")
 
-    render_focus(element(view, "#permission-level-USERS input[type=text]"))
-    render_hook(element(view, "#permission-level-USERS"), "change", %{"text" => ""})
-    render_hook(view, "live_select_change", %{"id" => "permission-level-USERS", "text" => ""})
-    assert has_element?(view, "#permission-level-USERS li", "None")
-    assert has_element?(view, "#permission-level-USERS li", "Read + Create + Update + Delete")
-    render_hook(element(view, "#permission-level-USERS"), "option_click", %{"idx" => "0"})
-    view |> form("#role-form") |> render_change()
+    assert has_element?(
+             view,
+             "#permission-level-USERS-select option[value='15']",
+             "Read + Create + Update + Delete"
+           )
+
+    view |> form("#role-form", page_levels: %{"USERS" => "0"}) |> render_change()
     assert has_element?(view, "#permission-level-USERS input[type=text][value=None]")
 
     view |> form("#role-form", form: %{code: "no-access", name: "No access"}) |> render_submit()
@@ -257,7 +269,7 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
 
     {:ok, view, _} = live(conn, ~p"/admin/roles/create")
     assert has_element?(view, "input#permission-level-USERS[type=text][disabled][value=None]")
-    refute has_element?(view, "#permission-level-USERS[phx-hook=LiveSelect]")
+    refute has_element?(view, "#permission-level-USERS[phx-hook=PetalComboBox]")
     view |> form("#role-form", form: %{code: "metadata", name: "Metadata"}) |> render_submit()
     role = Ash.get!(Role, %{code: "metadata"}, actor: %{system: true}, load: [:role_perms])
     assert role.role_perms == []
@@ -284,13 +296,10 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
 
     assert has_element?(
              view,
-             "[role=group][aria-labelledby=permission-label-PUBLIC][aria-describedby=permission-hint-PUBLIC] #permission-level-PUBLIC input[type=hidden][name='page_levels[PUBLIC]'][value='0']"
+             "[role=group][aria-labelledby=permission-label-PUBLIC][aria-describedby=permission-hint-PUBLIC] #permission-level-PUBLIC-select[name='page_levels[PUBLIC]'] option[selected][value='0']"
            )
 
-    render_focus(element(view, "#permission-level-PUBLIC input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "permission-level-PUBLIC"})
-    render_hook(element(view, "#permission-level-PUBLIC"), "option_click", %{"idx" => "3"})
-    view |> form("#role-form") |> render_change()
+    view |> form("#role-form", page_levels: %{"PUBLIC" => "6"}) |> render_change()
 
     view
     |> form("#role-form", form: %{code: "public-creator", name: "Public creator"})
@@ -305,13 +314,10 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
 
     assert has_element?(
              view,
-             "#permission-level-PUBLIC input[type=hidden][name='page_levels[PUBLIC]'][value='6']"
+             "#permission-level-PUBLIC-select[name='page_levels[PUBLIC]'] option[selected][value='6']"
            )
 
-    render_focus(element(view, "#permission-level-PUBLIC input[type=text]"))
-    render_hook(view, "live_select_change", %{"id" => "permission-level-PUBLIC"})
-    render_hook(element(view, "#permission-level-PUBLIC"), "option_click", %{"idx" => "0"})
-    view |> form("#role-form") |> render_change()
+    view |> form("#role-form", page_levels: %{"PUBLIC" => "0"}) |> render_change()
 
     view |> form("#role-form") |> render_submit()
     cleared = Ash.get!(Role, role.id, actor: %{system: true}, load: [:role_perms])
@@ -392,7 +398,7 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
       )
 
     {:ok, view, _} = live(log_in_user(conn, user), ~p"/admin/roles/#{target.id}/update")
-    assert has_element?(view, "#permission-level-USERS[phx-hook=LiveSelect]")
+    assert has_element?(view, "#permission-level-USERS[phx-hook=PetalComboBox]")
     Ash.update!(grant, %{level: 15}, actor: %{system: true})
 
     render_change(view, "validate", %{
