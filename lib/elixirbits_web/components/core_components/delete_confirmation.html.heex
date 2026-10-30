@@ -1,0 +1,34 @@
+<.modal
+  :if={!@remove_assignments?}
+  id="confirm-delete"
+  on_cancel={JS.push("cancel_delete")}
+>
+  <:title>Delete {@label}</:title>
+  <p class="text-sm text-content">Delete {@name}?</p>
+  <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+    <.button type="button" variant={:neutral} phx-click="cancel_delete">Cancel</.button>
+    <.button type="button" variant={:danger} phx-click="confirm_delete">Delete</.button>
+  </div>
+</.modal>
+
+<.modal
+  :if={@remove_assignments?}
+  id="confirm-role-removal"
+  on_cancel={JS.push("cancel_delete")}
+>
+  <:title>Remove role from users?</:title>
+  <p class="text-sm text-content">
+    Deleting {@name} will also remove this role from every user who has it. Continue?
+  </p>
+  <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+    <.button type="button" variant={:neutral} phx-click="cancel_delete">Cancel</.button>
+    <.button
+      type="button"
+      variant={:danger}
+      phx-click="confirm_delete"
+      phx-value-remove-assignments="true"
+    >
+      Delete role
+    </.button>
+  </div>
+</.modal>

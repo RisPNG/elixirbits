@@ -7,8 +7,10 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
   alias Elixirbits.CoreUtils.EnumTypes.UserSex
   alias Elixirbits.CoreUtils.Resource
   alias Elixirbits.CoreUtils.Upload
+  alias ElixirbitsWeb.Admin.UserLive.Deletion
 
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/users"}}
+  on_mount {Deletion, :entry}
 
   @impl true
   def mount(_params, _session, socket) do

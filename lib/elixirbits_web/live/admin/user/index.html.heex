@@ -65,14 +65,9 @@
     </Cinder.Collection.collection>
   </.page>
 
-  <.modal :if={@to_delete} id="confirm-delete" on_cancel={JS.push("cancel_delete")}>
-    <:title>Delete user</:title>
-    <p class="text-sm text-content">
-      Delete {@to_delete.display_name || to_string(@to_delete.email)}?
-    </p>
-    <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
-      <.button type="button" variant={:neutral} phx-click="cancel_delete">Cancel</.button>
-      <.button type="button" variant={:danger} phx-click="confirm_delete">Delete</.button>
-    </div>
-  </.modal>
+  <.delete_confirmation
+    :if={@to_delete}
+    label="user"
+    name={@to_delete.display_name || to_string(@to_delete.email)}
+  />
 </Layouts.app>

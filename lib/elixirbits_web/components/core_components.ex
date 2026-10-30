@@ -3807,6 +3807,15 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   @doc """
+  Renders the deletion confirmation and the additional role-assignment warning when needed.
+  """
+  attr :label, :string, required: true
+  attr :name, :string, required: true
+  attr :remove_assignments?, :boolean, default: false
+
+  def delete_confirmation(assigns)
+
+  @doc """
   Renders a server-driven modal, shown only while `show` is true.
 
   ## Examples

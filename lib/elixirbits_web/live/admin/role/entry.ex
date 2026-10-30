@@ -4,8 +4,10 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
   alias Elixirbits.AccessControl.Permissions
   alias Elixirbits.AccessControl.Role
   alias Elixirbits.CoreUtils.Resource
+  alias ElixirbitsWeb.Admin.RoleLive.Deletion
 
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/roles"}}
+  on_mount {Deletion, :entry}
 
   @impl true
   def mount(_params, _session, socket) do

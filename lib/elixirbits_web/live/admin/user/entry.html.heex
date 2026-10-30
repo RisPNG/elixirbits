@@ -10,12 +10,28 @@
       <:title>{@page_title}</:title>
 
       <:actions>
-        <div class="grid grid-cols-[auto_auto] items-center gap-2">
+        <div class={[
+          "grid items-center gap-2",
+          case {
+            can?(@permissions, @current_path, @live_action),
+            @live_action == :update and can?(@permissions, @current_path, :delete)
+          } do
+            {true, true} -> "grid-cols-[auto_auto_auto]"
+            {false, false} -> "grid-cols-[auto]"
+            _ -> "grid-cols-[auto_auto]"
+          end
+        ]}>
           <.action_button action={:back} navigate={~p"/admin/users"} />
           <.action_button
             :if={can?(@permissions, @current_path, @live_action)}
             action={:save}
             type="submit"
+          />
+          <.action_button
+            :if={@live_action == :update and can?(@permissions, @current_path, :delete)}
+            action={:delete}
+            type="button"
+            phx-click="request_delete"
           />
         </div>
       </:actions>
@@ -283,4 +299,9 @@
       </.card>
     </.page>
   </.form>
+  <.delete_confirmation
+    :if={@to_delete}
+    label="user"
+    name={@to_delete.display_name || to_string(@to_delete.email)}
+  />
 </Layouts.app>
