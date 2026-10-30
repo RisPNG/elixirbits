@@ -40,7 +40,7 @@ const CinderPagination = {
         for (const [side, omitted] of [["before", firstPage > 1], ["after", lastTarget > lastPage]]) {
           if (!omitted) continue
           const gap = document.createElement("span")
-          gap.className = "cinder-pagination-gap"
+          gap.className = "inline-grid grid-cols-[1fr] place-items-center min-h-11 min-w-11 text-subcontent"
           gap.dataset.cinderPaginationGap = side
           const dots = document.createElement("span")
           dots.setAttribute("aria-hidden", "true")

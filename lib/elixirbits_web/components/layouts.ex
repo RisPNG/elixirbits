@@ -114,7 +114,7 @@ defmodule ElixirbitsWeb.Layouts do
           popover="auto"
           role="dialog"
           aria-label="Account"
-          class="account-popover panel-surface w-80 space-y-5 rounded-default border border-outline p-5 shadow-lg"
+          class="panel-surface fixed inset-auto mx-0 my-2 w-80 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-5rem)] space-y-5 overflow-y-auto rounded-default border border-outline p-5 shadow-lg [position-anchor:auto] [position-area:block-end_span-inline-start] [position-try-fallbacks:flip-inline,flip-block,flip-block_flip-inline] [position-try-order:most-block-size]"
         >
           <div class="space-y-1">
             <p class="truncate text-sm font-semibold text-content">

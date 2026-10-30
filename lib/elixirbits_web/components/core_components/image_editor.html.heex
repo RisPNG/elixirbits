@@ -1,10 +1,13 @@
 <template data-file-editor-template>
-  <dialog class="file-editor" aria-label="Edit image">
-    <h2>Edit image</h2>
+  <dialog
+    class="file-editor m-auto w-[min(56rem,calc(100vw-2rem))] max-h-[calc(100vh-2rem)] grid-cols-[1fr] gap-4 overflow-auto rounded-default border border-outline bg-primary p-4 text-content shadow-lg open:grid backdrop:[background:var(--color-dark)]"
+    aria-label="Edit image"
+  >
+    <h2 class="text-lg font-semibold">Edit image</h2>
 
-    <div class="file-editor-canvas">
+    <div class="file-editor-canvas h-[min(60vh,28rem)] min-h-48">
       <img data-editor-source hidden alt="Image to edit" />
-      <cropper-canvas>
+      <cropper-canvas class="size-full bg-primary bg-transparency-grid bg-size-[1rem_1rem]">
         <cropper-image alt="Image to edit" rotatable scalable translatable initial-fit="contain">
         </cropper-image>
 
@@ -46,7 +49,7 @@
       </cropper-canvas>
     </div>
 
-    <div class="file-editor-actions">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-2">
       <.button type="button" variant={:neutral} data-editor-action="rotate-left" disabled>Rotate left</.button>
       <.button type="button" variant={:neutral} data-editor-action="rotate-right" disabled>Rotate right</.button>
       <.button type="button" variant={:neutral} data-editor-action="flip-horizontal" disabled>Flip horizontally</.button>
@@ -54,13 +57,13 @@
       <.button type="button" variant={:neutral} data-editor-action="reset" disabled>Reset</.button>
     </div>
 
-    <p class="file-editor-status" data-editor-status role="status" aria-live="polite">
+    <p class="min-h-5 text-sm text-subcontent" data-editor-status role="status" aria-live="polite">
       Loading image...
     </p>
 
-    <p class="file-editor-error" data-editor-error role="alert" hidden></p>
+    <p class="text-sm text-error" data-editor-error role="alert" hidden></p>
 
-    <div class="file-editor-actions">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-2">
       <.button type="button" variant={:neutral} data-editor-action="cancel">Cancel</.button>
       <.button type="button" variant={:primary} data-editor-action="confirm" disabled>Use image</.button>
     </div>

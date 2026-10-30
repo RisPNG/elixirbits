@@ -4,59 +4,6 @@
 @import "vanilla-calendar-pro/styles/index.css";
 @import "./subgap.css";
 
-.file-editor {
-  @apply rounded-default border border-outline bg-primary text-content p-4 shadow-lg;
-  margin: auto;
-  width: min(56rem, calc(100vw - 2rem));
-  max-height: calc(100vh - 2rem);
-  overflow: auto;
-}
-
-.file-editor[open] {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-.file-editor::backdrop {
-  background: var(--color-dark);
-}
-
-.file-editor h2 {
-  @apply text-lg font-semibold;
-}
-
-.file-editor-canvas {
-  height: min(60vh, 28rem);
-  min-height: 12rem;
-}
-
-.file-editor-canvas cropper-canvas {
-  width: 100%;
-  height: 100%;
-  background: var(--surface-primary);
-  background-image: repeating-conic-gradient(var(--color-outline) 0 25%, var(--surface-primary) 0 50%);
-  background-size: 1rem 1rem;
-}
-
-.file-editor-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
-  gap: 0.5rem;
-}
-
-.file-editor-actions button {
-  @apply inline-grid place-items-center min-h-11 px-4 py-2 text-sm rounded-default font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none;
-}
-
-.file-editor-status {
-  @apply min-h-5 text-sm text-subcontent;
-}
-
-.file-editor-error {
-  @apply text-sm text-error;
-}
-
 [data-file-preview-outlet]:not(:has([data-file-collection]:not([hidden]) [data-file-item]:not([hidden]), [data-file-collection]:not([hidden]) [data-file-preview-container]:not([hidden]))) {
   display: none;
 }
@@ -223,6 +170,7 @@
 /* Contextual backgrounds */
 
 @theme inline {
+  --background-image-transparency-grid: repeating-conic-gradient(var(--color-outline) 0 25%, var(--surface-primary) 0 50%);
   --background-color-surface: var(--surface-parent);
   --background-color-control: var(--control-parent-surface, color-mix(in srgb, var(--surface-parent), hsl(from var(--outline-target) 0 0 l / 1) 3.5%));
   --background-color-outline: var(--outline-fill);
@@ -660,7 +608,6 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 .color-input-popover,
-.account-popover,
 [data-calendar-popover][data-vc=calendar] {
   position: fixed;
   position-anchor: auto;
@@ -670,28 +617,6 @@
   inset: auto;
   margin: 0.25rem 0;
   max-width: calc(100vw - 1rem);
-}
-
-.account-popover {
-  position-area: block-end span-inline-start;
-  margin: 0.5rem 0;
-  max-height: calc(100vh - 5rem);
-  overflow-y: auto;
-}
-
-.tooltip-floating {
-  @apply bg-secondary;
-  position: fixed;
-  z-index: 50;
-  pointer-events: none;
-  max-width: 20rem;
-  width: max-content;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-default);
-  border: 1px solid var(--color-outline);
-  color: var(--color-content);
-  font-size: 0.75rem;
-  line-height: 1rem;
 }
 
 /* Input clear controls */
@@ -1300,15 +1225,6 @@ input[type="search"]::-webkit-search-cancel-button {
 
 /* Cinder filters and pagination */
 
-.cinder-pagination-gap {
-  display: inline-grid;
-  grid-template-columns: 1fr;
-  place-items: center;
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-  color: var(--color-subcontent);
-}
-
 [data-key="filter_clear_button_class"].invisible { display: none; }
 
 [data-key="filter_input_wrapper_class"] > .flex.items-center {
@@ -1362,13 +1278,6 @@ input[type="search"]::-webkit-search-cancel-button {
 [data-key="filter_input_wrapper_class"] [data-key="filter_select_input_class"],
 [data-key="filter_input_wrapper_class"] [data-key="search_input_class"] {
   padding-right: 2rem;
-}
-
-/* Page colors */
-
-body {
-  @apply bg-primary;
-  color: var(--color-content);
 }
 
 /* Calendar surfaces and layout */

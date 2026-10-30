@@ -3,7 +3,7 @@ const OFFSET = 14
 export default function initTooltips() {
   const tip = document.createElement("div")
   tip.id = "elixirbits-tooltip"
-  tip.className = "tooltip-floating"
+  tip.className = "bg-secondary fixed z-50 pointer-events-none max-w-80 w-max px-2 py-1 rounded-default border border-outline text-content text-xs"
   tip.setAttribute("role", "tooltip")
   tip.hidden = true
   document.body.appendChild(tip)
