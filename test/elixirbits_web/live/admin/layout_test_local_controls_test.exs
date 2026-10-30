@@ -46,8 +46,6 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLocalControlsTest do
 
     render_click(view, "toggle_showcase_option", %{"section" => "header", "option" => "disabled"})
     assert has_element?(view, "#layout-test-inline-action[disabled]")
-    render_click(view, "toggle_showcase_option", %{"section" => "header", "option" => "subtitle"})
-    refute has_element?(view, "#layout-test-header-preview", "An example subtitle")
     render_click(view, "toggle_showcase_option", %{"section" => "header", "option" => "actions"})
     refute has_element?(view, "#layout-test-inline-action")
   end

@@ -33,6 +33,12 @@ defmodule Elixirbits.AccessControl.Role do
     destroy :destroy do
       primary? true
       require_atomic? false
+      touches_resources [Elixirbits.Accounts.User]
+
+      argument :remove_assignments?, :boolean, allow_nil?: false, default: false
+
+      validate attribute_does_not_equal(:code, "superuser"),
+        message: "cannot delete the superuser role"
 
       change before_action(fn changeset, _context ->
                Ash.get!(__MODULE__, changeset.data.id, lock: :for_update, authorize?: false)
@@ -40,16 +46,59 @@ defmodule Elixirbits.AccessControl.Role do
 
                assigned? =
                  Elixirbits.Accounts.User
+                 |> Ash.Query.new(base_filter?: false)
                  |> Ash.Query.filter(^code in roles)
-                 |> Ash.exists?(authorize?: false)
+                 |> Ash.Query.select([])
+                 |> Ash.Query.limit(1)
+                 |> Ash.read!(authorize?: false)
+                 |> Enum.any?()
 
-               if assigned? do
-                 Ash.Changeset.add_error(changeset,
-                   field: :code,
-                   message: "cannot delete a role assigned to an account"
+               if assigned? and not Ash.Changeset.get_argument(changeset, :remove_assignments?) do
+                 Ash.Changeset.add_error(
+                   changeset,
+                   Ash.Error.Changes.InvalidArgument.exception(
+                     field: :remove_assignments?,
+                     value: false,
+                     message: "must confirm removing this role from assigned accounts"
+                   )
                  )
                else
                  changeset
+               end
+             end)
+
+      change after_action(fn changeset, role, context ->
+               if Ash.Changeset.get_argument(changeset, :remove_assignments?) do
+                 code = role.code
+
+                 users =
+                   Elixirbits.Accounts.User
+                   |> Ash.Query.new(base_filter?: false)
+                   |> Ash.Query.filter(^code in roles)
+                   |> Ash.Query.select([:roles])
+                   |> Ash.Query.sort(id: :asc)
+                   |> Ash.Query.lock(:for_update)
+                   |> Ash.read!(authorize?: false)
+
+                 case users do
+                   [] ->
+                     {:ok, role}
+
+                   users ->
+                     result =
+                       Ash.bulk_update!(users, :remove_deleted_role, %{role_code: code},
+                         actor: context.actor,
+                         authorize?: false,
+                         strategy: [:stream],
+                         transaction: false,
+                         return_errors?: true,
+                         return_notifications?: true
+                       )
+
+                     {:ok, role, result.notifications}
+                 end
+               else
+                 {:ok, role}
                end
              end)
     end

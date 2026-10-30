@@ -11,32 +11,28 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
       name: "Scalar",
       source: "scalar_api_plug",
       path: "/api/json/scalar",
-      availability: "always",
-      description: "JSON API explorer and schema browser."
+      availability: "always"
     },
     %{
       id: "dashboard",
       name: "Live Dashboard",
       source: "Phoenix LiveDashboard",
       path: "/dev/dashboard",
-      availability: "dev only",
-      description: "Runtime metrics, request log, processes, sockets."
+      availability: "dev only"
     },
     %{
       id: "mailbox",
       name: "Mailbox Preview",
       source: "Swoosh",
       path: "/dev/mailbox",
-      availability: "dev only",
-      description: "Inspect local and test emails in the browser."
+      availability: "dev only"
     },
     %{
       id: "ash-admin",
       name: "Ash Admin",
       source: "AshAdmin",
       path: "/admin",
-      availability: "dev only",
-      description: "Generated admin UI for resources and actions."
+      availability: "dev only"
     }
   ]
 
@@ -53,7 +49,6 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
   @showcase_defaults %{
     "header" => %{
       "variant" => "default",
-      "subtitle" => true,
       "actions" => true,
       "disabled" => false,
       "tooltip" => false,

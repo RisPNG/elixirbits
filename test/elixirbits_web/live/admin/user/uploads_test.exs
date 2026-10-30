@@ -34,6 +34,162 @@ defmodule ElixirbitsWeb.Admin.UserLive.UploadsTest do
     %{conn: log_in_user(conn, actor), directory: directory}
   end
 
+  test "profile pictures use a square editor and restore the saved preview after canceling",
+       context do
+    user =
+      create_user(
+        display_pic_url: "/uploads/users/previous.png",
+        display_pic_name: "previous.png"
+      )
+
+    {:ok, view, html} = live(context.conn, ~p"/admin/users/#{user.id}/update")
+    document = Floki.parse_document!(html)
+
+    assert has_element?(view, "#user-profile-picture-preview.size-32")
+    assert Floki.text(Floki.find(document, "#user-form label")) =~ "Profile Picture"
+
+    [editor] = Floki.attribute(document, "#user-form [phx-hook=FileInput]", "data-file-editor")
+    assert Jason.decode!(editor) == %{"width" => 128, "height" => 128}
+
+    [accept] = Floki.attribute(document, "#user-form input[type=file]", "accept")
+    assert MapSet.new(String.split(accept, ",")) == MapSet.new(~w(.jpg .jpeg .png .gif .webp))
+
+    [tooltip] =
+      Floki.attribute(
+        document,
+        "#user-form [aria-label='Supported profile picture formats']",
+        "data-tooltip"
+      )
+
+    for extension <- ~w(.jpg .jpeg .png .gif .webp),
+        do: assert(String.downcase(tooltip) =~ extension)
+
+    preview =
+      view
+      |> element("#user-form template[data-phx-portal]")
+      |> render()
+      |> Floki.parse_document!()
+
+    assert Floki.find(
+             preview,
+             "[data-file-item]:not([hidden]) img[src='/uploads/users/previous.png']"
+           ) != []
+
+    upload =
+      file_input(view, "#user-form", :display_pic, [
+        %{name: "portrait.png", content: @portrait, type: "image/png"}
+      ])
+
+    render_upload(upload, "portrait.png")
+
+    preview =
+      view
+      |> element("#user-form template[data-phx-portal]")
+      |> render()
+      |> Floki.parse_document!()
+
+    assert Floki.find(preview, "[data-file-entry-ref]:not([hidden]) img") != []
+
+    assert Floki.find(preview, "[data-file-item][hidden] img[src='/uploads/users/previous.png']") !=
+             []
+
+    view |> element("#user-profile-picture-cancel") |> render_click()
+
+    preview =
+      view
+      |> element("#user-form template[data-phx-portal]")
+      |> render()
+      |> Floki.parse_document!()
+
+    assert Floki.find(
+             preview,
+             "[data-file-item]:not([hidden]) img[src='/uploads/users/previous.png']"
+           ) != []
+
+    assert Floki.find(preview, "[data-file-entry-ref]") == []
+
+    assert Ash.get!(User, user.id, actor: @system).display_pic_url ==
+             "/uploads/users/previous.png"
+  end
+
+  test "removing the saved profile picture clears its preview and deletes the file after saving",
+       context do
+    previous = Path.join(context.directory, "users/previous.png")
+    File.write!(previous, @portrait)
+
+    user =
+      create_user(
+        display_pic_url: "/uploads/users/previous.png",
+        display_pic_name: "previous.png"
+      )
+
+    {:ok, view, _html} = live(context.conn, ~p"/admin/users/#{user.id}/update")
+
+    view |> element("#user-profile-picture-remove") |> render_click()
+
+    preview =
+      view
+      |> element("#user-form template[data-phx-portal]")
+      |> render()
+      |> Floki.parse_document!()
+
+    assert Floki.find(preview, "img") == []
+    assert has_element?(view, "[aria-label='No profile picture']")
+    assert has_element?(view, "#user-profile-picture-remove[disabled]")
+    assert File.exists?(previous)
+
+    view |> form("#user-form") |> render_submit()
+    assert_redirect(view, "/admin/users")
+    saved = Ash.get!(User, user.id, actor: @system)
+    assert is_nil(saved.display_pic_url)
+    assert is_nil(saved.display_pic_name)
+    refute File.exists?(previous)
+  end
+
+  test "accepted GIF and WebP uploads retain their file type and bytes in storage", context do
+    for {name, type, content} <- [
+          {"portrait.gif", "image/gif",
+           Base.decode64!("R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==")},
+          {"portrait.webp", "image/webp",
+           Base.decode64!("UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=")}
+        ] do
+      user = create_user()
+      {:ok, view, _html} = live(context.conn, ~p"/admin/users/#{user.id}/update")
+      assert has_element?(view, "[aria-label='No profile picture']")
+      assert has_element?(view, "#user-profile-picture-picker", "Upload picture")
+
+      upload =
+        file_input(view, "#user-form", :display_pic, [%{name: name, content: content, type: type}])
+
+      render_upload(upload, name)
+      refute has_element?(view, "[aria-label='No profile picture']")
+      assert has_element?(view, "#user-profile-picture-picker", "Change picture")
+
+      preview =
+        view
+        |> element("#user-form template[data-phx-portal]")
+        |> render()
+        |> Floki.parse_document!()
+
+      assert Floki.find(preview, "[data-file-entry-ref][data-file-content-type='#{type}'] img") !=
+               []
+
+      view |> form("#user-form") |> render_submit()
+      assert_redirect(view, "/admin/users")
+      saved = Ash.get!(User, user.id, actor: @system)
+      assert saved.display_pic_name == name
+      assert Path.extname(saved.display_pic_url) == Path.extname(name)
+
+      stored_path =
+        Path.join(
+          context.directory,
+          String.replace_prefix(saved.display_pic_url, "/uploads/", "")
+        )
+
+      assert File.read!(stored_path) == content
+    end
+  end
+
   test "invalid profile submission retains its completed upload for correction", context do
     user = create_user()
     {:ok, view, _html} = live(context.conn, ~p"/admin/users/#{user.id}/update")

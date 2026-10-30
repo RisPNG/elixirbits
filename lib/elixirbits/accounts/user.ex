@@ -107,11 +107,53 @@ defmodule Elixirbits.Accounts.User do
   actions do
     defaults [:read]
 
+    create :create do
+      primary? true
+
+      accept [
+        :email,
+        :username,
+        :display_name,
+        :display_pic_url,
+        :display_pic_name,
+        :first_name,
+        :middle_name,
+        :last_name,
+        :tel_no,
+        :weight_kg,
+        :height_cm,
+        :dob,
+        :sex,
+        :locale,
+        :timezone
+      ]
+
+      argument :password, :string,
+        sensitive?: true,
+        allow_nil?: false,
+        constraints: [min_length: 8]
+
+      argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
+      argument :addresses, {:array, :map}
+
+      validate {AshAuthentication.Strategy.Password.PasswordConfirmationValidation,
+                strategy_name: :password}
+
+      change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+      change manage_relationship(:addresses, type: :direct_control)
+    end
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+    end
+
     update :update do
       primary? true
       require_atomic? false
 
       accept [
+        :roles,
         :username,
         :display_name,
         :display_pic_url,
@@ -140,27 +182,23 @@ defmodule Elixirbits.Accounts.User do
     update :assign_roles do
       require_atomic? false
       accept [:roles]
+    end
 
-      change before_action(fn changeset, _context ->
-               roles = Ash.Changeset.get_attribute(changeset, :roles)
+    update :remove_deleted_role do
+      public? false
+      require_atomic? false
+      skip_global_validations? true
+      accept []
 
-               assigned_roles =
-                 Elixirbits.AccessControl.Role
-                 |> Ash.Query.filter(code in ^roles)
-                 |> Ash.Query.sort(code: :asc)
-                 |> Ash.Query.lock("FOR KEY SHARE")
-                 |> Ash.read!(authorize?: false)
-                 |> Enum.map(& &1.code)
+      argument :role_code, :string, allow_nil?: false
 
-               if Enum.all?(roles, &(&1 in assigned_roles)) do
-                 changeset
-               else
-                 Ash.Changeset.add_error(changeset,
-                   field: :roles,
-                   message: "must contain existing role codes"
-                 )
-               end
-             end)
+      validate argument_does_not_equal(:role_code, "superuser")
+
+      change fn changeset, _context ->
+        code = Ash.Changeset.get_argument(changeset, :role_code)
+        roles = Ash.Changeset.get_attribute(changeset, :roles)
+        Ash.Changeset.change_attribute(changeset, :roles, Enum.reject(roles, &(&1 == code)))
+      end
     end
 
     read :get_by_subject do
@@ -403,6 +441,39 @@ defmodule Elixirbits.Accounts.User do
   end
 
   policies do
+    policy action(:remove_deleted_role) do
+      authorize_if never()
+    end
+
+    policy action_type(:update) do
+      authorize_if actor_attribute_equals(:system, true)
+
+      authorize_if matches("actor can assign the requested roles", fn actor,
+                                                                      %{changeset: changeset} ->
+                     if changeset.action.name == :assign_roles or
+                          Map.has_key?(changeset.casted_attributes, :roles) or
+                          Ash.Changeset.changing_attribute?(changeset, :roles) do
+                       permissions = Elixirbits.AccessControl.Permissions.load(actor)
+
+                       Elixirbits.AccessControl.Permissions.can?(
+                         permissions,
+                         "/admin/roles",
+                         :su
+                       ) and
+                         ("superuser" not in Ash.Changeset.get_attribute(changeset, :roles) or
+                            Elixirbits.AccessControl.Permissions.superuser?(permissions.user) or
+                            Elixirbits.AccessControl.Permissions.superuser?(
+                              Ash.get!(__MODULE__, changeset.data.id,
+                                authorize?: false,
+                                not_found_error?: false
+                              )
+                            ))
+                     else
+                       true
+                     end
+                   end)
+    end
+
     policy action(:seed_with_password) do
       authorize_if actor_attribute_equals(:system, true)
     end
@@ -421,16 +492,33 @@ defmodule Elixirbits.Accounts.User do
       authorize_if actor_attribute_equals(:system, true)
       authorize_if expr(id == ^actor(:id) and is_nil(archived_at))
     end
-
-    policy action(:assign_roles) do
-      authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/roles"], capability: :su}
-    end
   end
 
   use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/users"
 
   validations do
+    validate fn changeset, _context ->
+               roles = Ash.Changeset.get_attribute(changeset, :roles)
+
+               assigned_roles =
+                 Elixirbits.AccessControl.Role
+                 |> Ash.Query.filter(code in ^roles)
+                 |> Ash.Query.sort(code: :asc)
+                 |> Ash.Query.lock("FOR KEY SHARE")
+                 |> Ash.read!(authorize?: false)
+                 |> Enum.map(& &1.code)
+
+               if Enum.all?(roles, &(&1 in assigned_roles)) do
+                 :ok
+               else
+                 {:error, field: :roles, message: "must contain existing role codes"}
+               end
+             end,
+             on: :update,
+             where: changing(:roles, touching?: true),
+             before_action?: true,
+             only_when_valid?: true
+
     validate match(:email, @email_format),
       where: changing(:email),
       message: "must be a valid email address"

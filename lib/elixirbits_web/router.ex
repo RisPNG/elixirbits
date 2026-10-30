@@ -83,6 +83,7 @@ defmodule ElixirbitsWeb.Router do
       ] do
       scope "/admin", Admin do
         live "/users", UserLive.Index, :index
+        live "/users/create", UserLive.Entry, :create
         live "/users/:id/update", UserLive.Entry, :update
         live "/roles", RoleLive.Index, :index
         live "/roles/create", RoleLive.Entry, :create

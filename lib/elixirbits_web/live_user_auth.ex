@@ -166,9 +166,6 @@ defmodule ElixirbitsWeb.LiveUserAuth do
 
                   [{socket.assigns.current_path, capability}]
 
-                "assign_roles" ->
-                  [{socket.assigns.current_path, :update}, {"/admin/roles", :su}]
-
                 "confirm_delete" ->
                   [{socket.assigns.current_path, :delete}]
 

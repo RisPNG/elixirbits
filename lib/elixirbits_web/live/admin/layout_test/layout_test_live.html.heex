@@ -5,9 +5,6 @@
 >
   <.header level={1}>
     Layout Test
-    <:subtitle>
-      Showcases local core components and dependency-powered frontend pieces.
-    </:subtitle>
   </.header>
 
   <section
@@ -15,13 +12,7 @@
     aria-labelledby="layout-test-colors-title"
     class="space-y-3"
   >
-    <div>
-      <h2 id="layout-test-colors-title" class="text-base font-semibold">System colors</h2>
-
-      <p class="text-sm text-subcontent">
-        Main and muted text use fixed colors for each theme. Outlines adapt to each background. Dark and light increase saturation while adjusting surface lightness.
-      </p>
-    </div>
+    <h2 id="layout-test-colors-title" class="text-base font-semibold">System colors</h2>
 
     <ul aria-label="System color tokens" class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
       <li
@@ -92,10 +83,6 @@
       aria-labelledby="layout-test-background-opacity-title"
       class="space-y-3"
     >
-      <p class="text-sm text-subcontent">
-        Set the background alpha while text and icons stay opaque. The default is 10%. Nested layers add their alpha up to 100%. In light mode, brand backgrounds at 50% alpha or less use dark text and icons.
-      </p>
-
       <ul aria-label="Background opacity examples" class="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3">
         <li
           :for={
@@ -170,10 +157,6 @@
       aria-labelledby="layout-test-overlay-strength-title"
       class="space-y-3"
     >
-      <p class="text-sm text-subcontent">
-        Dark and light overlays move saturation toward 100% while moving lightness toward black or white, keeping hue unchanged. The default strength is 10%. Nested overlays of the same kind add their strength up to 100%. Light overlays on brand at 50% strength or more use dark text and icons in both modes.
-      </p>
-
       <div class="grid grid-cols-[1fr_1fr] gap-3">
         <div
           :for={
@@ -310,9 +293,7 @@
     <section class="grid grid-cols-[1fr_1fr] gap-4">
       <.card id="layout-test-header-card">
         <.header>
-          Core Header and Button<:subtitle>
-            Choose a button style and combine the header options.
-          </:subtitle>
+          Core Header and Button
         </.header>
 
         <div class="space-y-3">
@@ -338,7 +319,6 @@
             <.button
               :for={
                 {option, label} <- [
-                  {"subtitle", "Subtitle"},
                   {"actions", "Action slot"},
                   {"disabled", "Disabled"},
                   {"tooltip", "Tooltip"},
@@ -356,10 +336,6 @@
           <.card_inset id="layout-test-header-preview">
             <.header level={3}>
               Example title
-              <:subtitle :if={@showcase["header"]["subtitle"]}>
-                An example subtitle below the title.
-              </:subtitle>
-
               <:actions :if={@showcase["header"]["actions"]}>
                 <.button
                   id="layout-test-inline-action"
@@ -383,9 +359,7 @@
 
       <.card id="layout-test-flash-card">
         <.header>
-          Flashes<:subtitle>
-            Configure one flash, then trigger it in the shared toast area.
-          </:subtitle>
+          Flashes
         </.header>
 
         <div class="space-y-3">
@@ -451,9 +425,7 @@
 
     <.card id="layout-test-theme-card">
       <.header>
-        Theme Toggle<:subtitle>
-          Switch the shared site theme and watch the same preview change.
-        </:subtitle>
+        Theme Toggle
       </.header>
 
       <div class="grid grid-cols-[max-content_max-content] items-center gap-3 mb-4">
@@ -477,7 +449,7 @@
         <p class="font-medium">Shared theme preview</p>
 
         <p class="text-sm text-subcontent">
-          The page, controls, and cards use the same light and dark theme.
+          Secondary text
         </p>
       </div>
     </.card>
@@ -493,9 +465,6 @@
         end %>
       <.header>
         Core Inputs
-        <:subtitle>
-          One example of each input type. Use the controls to combine display modes, variants, and input attributes.
-        </:subtitle>
       </.header>
 
       <div id="layout-test-input-controls" class="space-y-3">
@@ -883,9 +852,6 @@
       <.card_inset id="layout-test-combobox-card">
         <.header>
           Combobox
-          <:subtitle>
-            Choose a select mode and display state, then pick dependency pages.
-          </:subtitle>
         </.header>
 
         <div id="layout-test-combobox-controls" class="space-y-3">
@@ -987,8 +953,6 @@
                   <span class="status-pill bg-primary overlay-dark text-content">{page.availability}</span>
                 </div>
 
-                <p class="text-sm text-subcontent">{page.description}</p>
-
                 <p class="text-xs text-subcontent">{page.source} · {page.path}</p>
                 <.button href={page.path} variant={:neutral}>Open {page.name}</.button>
               </div>
@@ -1001,9 +965,6 @@
     <.card id="layout-test-uploads">
       <.header>
         Live uploads
-        <:subtitle>
-          Choose one file, add files one at a time, or select up to three files together. Each file can be up to 1MB.
-        </:subtitle>
       </.header>
 
       <div id="layout-test-upload-controls" class="space-y-3">
@@ -1246,9 +1207,6 @@
     <.card id="layout-test-actions">
       <.header>
         Record actions
-        <:subtitle>
-          Add, edit, save, send, archive, and delete sample entries for this session.
-        </:subtitle>
       </.header>
 
       <div id="layout-test-action-controls" class="space-y-3">
@@ -1454,9 +1412,7 @@
 
     <.card id="layout-test-calendar">
       <.header>
-        Calendar and timers<:subtitle>
-          Change the calendar view with its own toolbar, then compare event styles and timer modes.
-        </:subtitle>
+        Calendar and timers
       </.header>
 
       <div class="space-y-3 mb-4">
@@ -1562,7 +1518,7 @@
     <section class="grid grid-cols-[1fr_1fr] gap-4">
       <section id="layout-test-table-card" class="space-y-4 pt-6">
         <.header>
-          Core Table<:subtitle>Compare row interaction, action slots, and empty data.</:subtitle>
+          Core Table
         </.header>
 
         <div class="grid grid-cols-[1fr_1fr] gap-2">
@@ -1625,9 +1581,7 @@
 
       <.card id="layout-test-list-card">
         <.header>
-          Core List<:subtitle>
-            Change the number of details and their title presentation.
-          </:subtitle>
+          Core List
         </.header>
 
         <div class="grid grid-cols-[max-content_max-content] items-start gap-2 mb-4">
@@ -1685,7 +1639,7 @@
 
     <.card id="layout-test-icons-card">
       <.header>
-        Core Icons<:subtitle>Choose an icon, its size, and a shared theme color.</:subtitle>
+        Core Icons
       </.header>
 
       <div class="grid grid-cols-[max-content_max-content_max-content_max-content] items-start gap-3 mb-4">
@@ -1789,9 +1743,7 @@
 
     <.card id="layout-test-dialog-card">
       <.header>
-        Dialog<:subtitle>
-          Configure the title and action slots before opening the preview.
-        </:subtitle>
+        Dialog
       </.header>
 
       <div class="grid grid-cols-[max-content_max-content_max-content] gap-2">
@@ -1823,9 +1775,6 @@
     <section id="layout-test-cinder-collection-card" class="space-y-4">
       <.header>
         Cinder collection
-        <:subtitle>
-          120 sample records. Choose a layout and adjust the collection controls.
-        </:subtitle>
       </.header>
 
       <div id="layout-test-cinder-controls" class="space-y-3">
@@ -1999,7 +1948,6 @@
       <.card id="layout-test-ui-kit-card">
         <.header>
           UI kit
-          <:subtitle>Adjust each primitive and compare its preview below.</:subtitle>
         </.header>
 
         <div id="layout-test-ui-kit-controls" class="space-y-3">
@@ -2196,7 +2144,6 @@
     <.card id="layout-test-dependency-pages">
       <.header>
         Dependency pages
-        <:subtitle>Choose a route to inspect its availability and source package.</:subtitle>
       </.header>
 
       <.collapse id="dependency-page-controls">
@@ -2229,8 +2176,6 @@
 
             <span class="status-pill bg-primary overlay-dark text-content">{page.availability}</span>
           </div>
-
-          <p class="text-sm text-subcontent">{page.description}</p>
 
           <p class="text-xs text-subcontent">{page.source} · {page.path}</p>
           <.button href={page.path} variant={:neutral}>Open page</.button>

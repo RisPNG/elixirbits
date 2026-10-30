@@ -1,9 +1,14 @@
 <Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
-  <section id="users-collection" phx-hook="CinderPagination" class="space-y-4">
-    <.header level={1}>
-      Users
-      <:subtitle>Registered accounts and their roles.</:subtitle>
-    </.header>
+  <.page id="users-collection" phx-hook="CinderPagination" class="space-y-4">
+    <:title>Users</:title>
+
+    <:actions :let={position} :if={can?(@permissions, @current_path, :create)}>
+      <.action_button
+        navigate={~p"/admin/users/create"}
+        id={if position == :top, do: "new-user", else: "new-user-bottom"}
+        action={:create}
+      />
+    </:actions>
 
     <Cinder.Collection.collection
       id="users-table"
@@ -14,6 +19,25 @@
       show_filters={true}
       search={[placeholder: "Email, Name"]}
     >
+      <:col :let={user} field="display_pic_url" label="Profile Picture">
+        <img
+          :if={user.display_pic_url}
+          src={user.display_pic_url}
+          alt=""
+          width="40"
+          height="40"
+          class="size-10 rounded-full object-cover"
+        />
+        <span
+          :if={!user.display_pic_url}
+          role="img"
+          aria-label="No profile picture"
+          class="grid size-10 place-items-center rounded-full bg-secondary text-sm font-medium text-brand"
+        >
+          {String.upcase(String.slice(user.display_name || to_string(user.email), 0, 1))}
+        </span>
+      </:col>
+
       <:col :let={user} field="email" label="Email" sort filter search>{user.email}</:col>
 
       <:col :let={user} field="display_name" label="Name" sort filter search>
@@ -24,12 +48,31 @@
       <:col :let={user} label="Roles">{Enum.join(user.roles, ", ")}</:col>
 
       <:col :let={user} label="Actions">
-        <.action_button
-          :if={can?(@permissions, @current_path, :update)}
-          action={:update}
-          navigate={~p"/admin/users/#{user.id}/update"}
-        />
+        <div class="grid grid-cols-[auto_auto] justify-start gap-2">
+          <.action_button
+            :if={can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/admin/users/#{user.id}/update"}
+          />
+          <.action_button
+            :if={can?(@permissions, @current_path, :delete)}
+            action={:delete}
+            phx-click="request_delete"
+            phx-value-id={user.id}
+          />
+        </div>
       </:col>
     </Cinder.Collection.collection>
-  </section>
+  </.page>
+
+  <.modal :if={@to_delete} id="confirm-delete" on_cancel={JS.push("cancel_delete")}>
+    <:title>Delete user</:title>
+    <p class="text-sm text-content">
+      Delete {@to_delete.display_name || to_string(@to_delete.email)}?
+    </p>
+    <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+      <.button type="button" variant={:neutral} phx-click="cancel_delete">Cancel</.button>
+      <.button type="button" variant={:danger} phx-click="confirm_delete">Delete</.button>
+    </div>
+  </.modal>
 </Layouts.app>

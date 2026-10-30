@@ -1,20 +1,14 @@
 <Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
-  <section id="roles-collection" phx-hook="CinderPagination" class="space-y-4">
-    <.header level={1}>
-      Roles
-      <:subtitle>
-        Roles assignable to users, and the pages each role may see and act on.
-      </:subtitle>
+  <.page id="roles-collection" phx-hook="CinderPagination" class="space-y-4">
+    <:title>Roles</:title>
 
-      <:actions>
-        <.action_button
-          :if={can?(@permissions, @current_path, :create)}
-          navigate={~p"/admin/roles/create"}
-          id="new-role"
-          action={:create}
-        />
-      </:actions>
-    </.header>
+    <:actions :let={position} :if={can?(@permissions, @current_path, :create)}>
+      <.action_button
+        navigate={~p"/admin/roles/create"}
+        id={if position == :top, do: "new-role", else: "new-role-bottom"}
+        action={:create}
+      />
+    </:actions>
 
     <Cinder.Collection.collection
       id="roles-table"
@@ -32,12 +26,55 @@
       <:col :let={r} field="description" label="Description">{r.description}</:col>
 
       <:col :let={r} label="Actions">
-        <.action_button
-          :if={can?(@permissions, @current_path, :update)}
-          action={:update}
-          navigate={~p"/admin/roles/#{r.id}/update"}
-        />
+        <div class="grid grid-cols-[auto_auto] justify-start gap-2">
+          <.action_button
+            :if={can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/admin/roles/#{r.id}/update"}
+          />
+          <.action_button
+            :if={r.code != "superuser" and can?(@permissions, @current_path, :delete)}
+            action={:delete}
+            phx-click="request_delete"
+            phx-value-id={r.id}
+          />
+        </div>
       </:col>
     </Cinder.Collection.collection>
-  </section>
+  </.page>
+
+  <.modal
+    :if={@to_delete && !@remove_assignments?}
+    id="confirm-delete"
+    on_cancel={JS.push("cancel_delete")}
+  >
+    <:title>Delete role</:title>
+    <p class="text-sm text-content">Delete {@to_delete.name}?</p>
+    <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+      <.button type="button" variant={:neutral} phx-click="cancel_delete">Cancel</.button>
+      <.button type="button" variant={:danger} phx-click="confirm_delete">Delete</.button>
+    </div>
+  </.modal>
+
+  <.modal
+    :if={@to_delete && @remove_assignments?}
+    id="confirm-role-removal"
+    on_cancel={JS.push("cancel_delete")}
+  >
+    <:title>Remove role from users?</:title>
+    <p class="text-sm text-content">
+      Deleting {@to_delete.name} will also remove this role from every user who has it. Continue?
+    </p>
+    <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+      <.button type="button" variant={:neutral} phx-click="cancel_delete">Cancel</.button>
+      <.button
+        type="button"
+        variant={:danger}
+        phx-click="confirm_delete"
+        phx-value-remove-assignments="true"
+      >
+        Delete role
+      </.button>
+    </div>
+  </.modal>
 </Layouts.app>

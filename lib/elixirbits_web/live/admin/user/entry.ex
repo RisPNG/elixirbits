@@ -21,35 +21,53 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
   end
 
   @impl true
-  def handle_params(%{"id" => id}, _uri, socket) do
-    user = Accounts.get_user!(id, actor: socket.assigns.current_user, load: [:addresses])
+  def handle_params(params, _uri, socket) do
+    {user, form, title} =
+      case socket.assigns.live_action do
+        :create ->
+          form =
+            AshPhoenix.Form.for_create(Elixirbits.Accounts.User, :create,
+              actor: socket.assigns.current_user,
+              context: %{shared: %{user_timezone: socket.assigns.user_timezone}},
+              transform_params: &Resource.convert_form_datetimes/3,
+              post_process_errors: &Resource.local_datetime_errors/3,
+              forms: [auto?: true]
+            )
 
-    form =
-      AshPhoenix.Form.for_update(user, :update,
-        actor: socket.assigns.current_user,
-        context: %{shared: %{user_timezone: socket.assigns.user_timezone}},
-        transform_params: &Resource.convert_form_datetimes/3,
-        post_process_errors: &Resource.local_datetime_errors/3,
-        forms: [auto?: true]
-      )
+          {nil, form, "New User"}
 
-    roles_form =
-      if Permissions.can?(socket.assigns.permissions, "/admin/roles", :su) and
-           Permissions.can?(socket.assigns.permissions, "/admin/users", :update) do
-        AshPhoenix.Form.for_update(user, :assign_roles,
-          actor: socket.assigns.current_user,
-          context: %{shared: %{user_timezone: socket.assigns.user_timezone}},
-          transform_params: &Resource.convert_form_datetimes/3,
-          post_process_errors: &Resource.local_datetime_errors/3,
-          as: "roles_form"
-        )
-        |> to_form()
+        :update ->
+          user =
+            Accounts.get_user!(params["id"],
+              actor: socket.assigns.current_user,
+              load: [:addresses]
+            )
+
+          form =
+            AshPhoenix.Form.for_update(user, :update,
+              actor: socket.assigns.current_user,
+              context: %{shared: %{user_timezone: socket.assigns.user_timezone}},
+              transform_params: &Resource.convert_form_datetimes/3,
+              post_process_errors: &Resource.local_datetime_errors/3,
+              forms: [auto?: true]
+            )
+
+          {user, form, "Update #{user.display_name || to_string(user.email)}"}
       end
 
+    can_assign_roles? =
+      socket.assigns.live_action == :update and
+        Permissions.can?(socket.assigns.permissions, "/admin/roles", :su) and
+        Permissions.can?(socket.assigns.permissions, "/admin/users", :update)
+
     roles =
-      if roles_form do
+      if can_assign_roles? do
         Elixirbits.AccessControl.Role
         |> Ash.read!(actor: socket.assigns.current_user)
+        |> Enum.filter(fn role ->
+          role.code != "superuser" or Permissions.superuser?(socket.assigns.permissions.user) or
+            "superuser" in user.roles
+        end)
         |> Enum.sort_by(& &1.name)
         |> Enum.map(&{&1.name, &1.code})
       else
@@ -58,11 +76,11 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
 
     {:noreply,
      socket
-     |> assign(:page_title, "Update #{user.display_name || to_string(user.email)}")
+     |> assign(:page_title, title)
      |> assign(:user, user)
-     |> assign(:existing_display_pic, user.display_pic_url)
+     |> assign(:existing_display_pic, user && user.display_pic_url)
      |> assign(:form, to_form(form))
-     |> assign(:roles_form, roles_form)
+     |> assign(:can_assign_roles?, can_assign_roles?)
      |> assign(:role_options, roles)
      |> assign(
        :sex_options,
@@ -82,50 +100,53 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
   def handle_event("save", %{"form" => params}, socket) do
     form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
 
-    if form.valid? do
-      picked_name =
-        case socket.assigns.uploads.display_pic.entries do
-          [entry] -> entry.client_name
-          [] -> nil
+    cond do
+      not form.valid? ->
+        {:noreply, assign(socket, :form, to_form(form))}
+
+      not Ash.can?(form.source, socket.assigns.current_user) ->
+        {:noreply, put_flash(socket, :error, "You do not have permission to save these changes.")}
+
+      true ->
+        picked_name =
+          case socket.assigns.uploads.display_pic.entries do
+            [entry] -> entry.client_name
+            [] -> nil
+          end
+
+        new_display_pic = List.first(Upload.consume(socket, :display_pic, "users"))
+        display_pic_url = new_display_pic || socket.assigns.existing_display_pic
+
+        params =
+          Map.merge(params, %{
+            "display_pic_url" => display_pic_url,
+            "display_pic_name" =>
+              display_pic_url &&
+                (picked_name || (socket.assigns.user && socket.assigns.user.display_pic_name))
+          })
+
+        case AshPhoenix.Form.submit(form, params: params) do
+          {:ok, user} ->
+            stored_before = socket.assigns.user && socket.assigns.user.display_pic_url
+
+            if stored_before && stored_before != user.display_pic_url,
+              do: Upload.delete(stored_before)
+
+            {:noreply,
+             socket
+             |> put_flash(
+               :info,
+               if(socket.assigns.live_action == :create,
+                 do: "User created.",
+                 else: "User updated."
+               )
+             )
+             |> push_navigate(to: ~p"/admin/users")}
+
+          {:error, form} ->
+            if new_display_pic, do: Upload.delete(new_display_pic)
+            {:noreply, assign(socket, :form, to_form(form))}
         end
-
-      new_display_pic = List.first(Upload.consume(socket, :display_pic, "users"))
-      display_pic_url = new_display_pic || socket.assigns.existing_display_pic
-
-      params =
-        Map.merge(params, %{
-          "display_pic_url" => display_pic_url,
-          "display_pic_name" =>
-            display_pic_url && (picked_name || socket.assigns.user.display_pic_name)
-        })
-
-      case AshPhoenix.Form.submit(form, params: params) do
-        {:ok, user} ->
-          stored_before = socket.assigns.user.display_pic_url
-
-          if stored_before && stored_before != user.display_pic_url,
-            do: Upload.delete(stored_before)
-
-          {:noreply,
-           socket |> put_flash(:info, "User updated.") |> push_navigate(to: ~p"/admin/users")}
-
-        {:error, form} ->
-          if new_display_pic, do: Upload.delete(new_display_pic)
-          {:noreply, assign(socket, :form, to_form(form))}
-      end
-    else
-      {:noreply, assign(socket, :form, to_form(form))}
-    end
-  end
-
-  def handle_event("assign_roles", %{"roles_form" => params}, socket) do
-    case AshPhoenix.Form.submit(socket.assigns.roles_form, params: params) do
-      {:ok, _user} ->
-        {:noreply,
-         socket |> put_flash(:info, "Roles updated.") |> push_navigate(to: ~p"/admin/users")}
-
-      {:error, form} ->
-        {:noreply, assign(socket, :roles_form, form)}
     end
   end
 

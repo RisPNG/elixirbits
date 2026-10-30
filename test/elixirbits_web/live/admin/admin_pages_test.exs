@@ -67,52 +67,66 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
     assert has_element?(role_view, "#role-form fieldset[disabled] input[name='form[name]']")
   end
 
-  test "users with update access can save profiles but cannot forge a role-assignment event", %{
+  test "users with update access can save profiles but cannot forge role assignments", %{
     conn: conn
   } do
-    target = create_user()
+    target = create_user(display_name: "Original")
     conn = grant(conn, %{"USERS" => 5, "ROLES" => 15})
-    Ash.create!(Role, %{code: "superuser", name: "Superuser"}, actor: %{system: true})
+    Ash.create!(Role, %{code: "member", name: "Member"}, actor: %{system: true})
     {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
 
     assert has_element?(view, "#user-form[novalidate]")
-    refute has_element?(view, "#roles-form")
-    html = render_submit(view, "assign_roles", %{"roles_form" => %{"roles" => ["superuser"]}})
-    assert html =~ "do not have permission"
-    assert Ash.get!(User, target.id, actor: %{system: true}).roles == []
+    refute has_element?(view, "#user-roles")
+
+    html =
+      render_submit(view, "save", %{
+        "form" => %{"display_name" => "Forged", "roles" => ["member"]}
+      })
+
+    assert html =~ "do not have permission to save these changes"
+    unchanged = Ash.get!(User, target.id, actor: %{system: true})
+    assert unchanged.roles == []
+    assert unchanged.display_name == "Original"
 
     view |> form("#user-form", form: %{display_name: "Updated"}) |> render_submit()
     assert Ash.get!(User, target.id, actor: %{system: true}).display_name == "Updated"
   end
 
-  test "role combobox submissions assign roles and clear the final selection", %{conn: conn} do
-    target = create_user()
+  test "one user form saves profile details and roles and clears the final selection", %{
+    conn: conn
+  } do
+    target = create_user(display_name: "Original")
     Ash.create!(Role, %{code: "member", name: "Member"}, actor: %{system: true})
     conn = grant(conn, %{"USERS" => 5, "ROLES" => 16})
     {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
 
-    assert has_element?(view, "#roles-form select[name='roles_form[roles][]'][multiple]")
+    assert has_element?(view, "#user-form #user-roles select[name='form[roles][]'][multiple]")
+    refute has_element?(view, "#user-roles button[type=submit]")
 
     assert has_element?(
              view,
-             "#roles-form input[type=hidden][name='roles_form[roles][]'][value='']"
+             "#user-form input[type=hidden][name='form[roles][]'][value='']"
            )
 
     assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
              view
-             |> form("#roles-form", roles_form: %{roles: ["", "member"]})
+             |> form("#user-form", form: %{display_name: "Updated", roles: ["", "member"]})
              |> render_submit()
 
-    assert Ash.get!(User, target.id, actor: %{system: true}).roles == ["member"]
+    updated = Ash.get!(User, target.id, actor: %{system: true})
+    assert updated.roles == ["member"]
+    assert updated.display_name == "Updated"
     {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
-    assert has_element?(view, "#roles-form select option[value=member][selected]")
+    assert has_element?(view, "#user-roles select option[value=member][selected]")
 
     assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
              view
-             |> form("#roles-form", roles_form: %{roles: [""]})
+             |> form("#user-form", form: %{display_name: "Cleared", roles: [""]})
              |> render_submit()
 
-    assert Ash.get!(User, target.id, actor: %{system: true}).roles == []
+    cleared = Ash.get!(User, target.id, actor: %{system: true})
+    assert cleared.roles == []
+    assert cleared.display_name == "Cleared"
   end
 
   test "user birthdays remain dates while timezone preferences validate and reset", %{conn: conn} do

@@ -3569,7 +3569,6 @@ defmodule ElixirbitsWeb.CoreComponents do
       <.card>
         <.header>
           Identity
-          <:subtitle>Venue name and registration numbers.</:subtitle>
         </.header>
         ...
       </.card>
@@ -3651,7 +3650,6 @@ defmodule ElixirbitsWeb.CoreComponents do
   """
   attr :level, :integer, values: [1, 2, 3], default: 2
   slot :inner_block, required: true
-  slot :subtitle
   slot :actions
 
   def header(assigns) do
@@ -3663,26 +3661,49 @@ defmodule ElixirbitsWeb.CoreComponents do
         else: "grid-cols-[minmax(0,1fr)_max-content]"
       )
     ]}>
-      <div class="min-w-0 space-y-1">
-        <.dynamic_tag
-          tag_name={"h#{@level}"}
-          class={[
-            "font-medium text-content",
-            @level == 1 && "text-3xl leading-10 tracking-tight",
-            @level == 2 && "text-lg leading-7",
-            @level == 3 && "text-base leading-6"
-          ]}
-        >
-          {render_slot(@inner_block)}
-        </.dynamic_tag>
-
-        <p :if={@subtitle != []} class="text-sm leading-6 text-subcontent">
-          {render_slot(@subtitle)}
-        </p>
-      </div>
+      <.dynamic_tag
+        tag_name={"h#{@level}"}
+        class={[
+          "min-w-0 font-medium text-content",
+          @level == 1 && "text-3xl leading-10 tracking-tight",
+          @level == 2 && "text-lg leading-7",
+          @level == 3 && "text-base leading-6"
+        ]}
+      >
+        {render_slot(@inner_block)}
+      </.dynamic_tag>
 
       <div :if={@actions != []}>{render_slot(@actions)}</div>
     </header>
+    """
+  end
+
+  @doc """
+  Renders a page with shared actions above and below its content. The actions slot receives `:top` or `:bottom` so controls can keep distinct IDs.
+  """
+  attr :class, :any, default: "space-y-6"
+  attr :rest, :global
+  slot :title, required: true
+  slot :actions
+  slot :inner_block, required: true
+
+  def page(assigns) do
+    ~H"""
+    <section class={@class} {@rest}>
+      <.header level={1}>
+        {render_slot(@title)}
+        <:actions :if={@actions != []}>{render_slot(@actions, :top)}</:actions>
+      </.header>
+
+      {render_slot(@inner_block)}
+
+      <footer
+        :if={@actions != []}
+        class="grid grid-cols-[max-content] justify-end border-t border-outline pt-6"
+      >
+        {render_slot(@actions, :bottom)}
+      </footer>
+    </section>
     """
   end
 
