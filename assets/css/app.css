@@ -1646,6 +1646,23 @@ input[type="file"]::file-selector-button {
 
 /* Shared component utilities */
 
+@utility flash-surface {
+  --flash-accent: var(--color-info);
+  --surface-base: color-mix(in srgb, var(--color-primary), var(--flash-accent) 24%);
+  --surface-reset: 0;
+  --surface-fill-alpha: 1;
+  @apply surface-colors;
+  background-color: var(--surface-background) !important;
+
+  &[data-flash-kind="error"] {
+    --flash-accent: var(--color-error);
+  }
+
+  &[data-flash-kind="warning"] {
+    --flash-accent: var(--color-warning);
+  }
+}
+
 @utility shell-surface {
   @apply bg-primary overlay-dark-[0.04] dark:overlay-light-[0.04];
 }

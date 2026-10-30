@@ -1,6 +1,7 @@
 defmodule ElixirbitsWeb.LiveUserAuth do
   import Phoenix.Component
-  import Phoenix.LiveView
+  import Phoenix.LiveView, except: [put_flash: 3]
+  import ElixirbitsWeb.Flash, only: [put_flash: 3]
   use ElixirbitsWeb, :verified_routes
 
   alias Elixirbits.AccessControl.Permissions

@@ -1,6 +1,7 @@
 defmodule ElixirbitsWeb.AuthController do
   use ElixirbitsWeb, :controller
   use AshAuthentication.Phoenix.Controller
+  import Phoenix.Controller, except: [put_flash: 3]
 
   alias Elixirbits.Accounts.LoginGuard
 

@@ -169,19 +169,21 @@ defmodule ElixirbitsWeb.CoreComponents do
     <div
       :if={msg = render_slot(@inner_block) || @msg}
       id={@id}
-      phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
-      phx-hook={if @duration, do: "FlashAutoDismiss"}
+      phx-click={
+        if @msg,
+          do: JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}"),
+          else: hide("##{@id}")
+      }
+      phx-hook={if @duration || @msg, do: "FlashAutoDismiss"}
+      data-flash-notice
+      data-flash-kind={@kind}
+      data-flash-key={if @msg, do: @kind}
       data-duration={@duration}
       role="alert"
-      class="fixed top-4 right-4 z-50 flex flex-col gap-2"
+      class="flash-surface fixed top-4 right-4 z-50 flex flex-col gap-2 rounded-default"
       {@rest}
     >
-      <div class={[
-        "flex items-start gap-3 p-4 rounded-default border border-outline w-80 max-w-80 text-wrap shadow-sm overlay-opacity-[0.12] text-content",
-        @kind == :info && "bg-info",
-        @kind == :error && "bg-error",
-        @kind == :warning && "bg-warning"
-      ]}>
+      <div class="flex items-start gap-3 p-4 rounded-default border border-outline w-80 max-w-80 text-wrap shadow-sm text-content">
         <.icon :if={@icon} name={@icon} class="size-5 shrink-0" />
         <div>
           <p :if={@title} class="font-semibold">{@title}</p>
@@ -245,9 +247,12 @@ defmodule ElixirbitsWeb.CoreComponents do
         kind={:error}
         title={gettext("We can't find the internet")}
         show_spinner
-        phx-disconnected={
-          show(".phx-client-error ##{@flash_ids.client_error}") |> JS.remove_attribute("hidden")
+        data-show={
+          JS.hide(to: "[data-flash-notice]:not(##{@flash_ids.client_error})", time: 0)
+          |> JS.show(to: "##{@flash_ids.client_error}", time: 0)
+          |> JS.remove_attribute("hidden", to: "##{@flash_ids.client_error}")
         }
+        phx-disconnected={JS.exec("data-show", to: ".phx-client-error ##{@flash_ids.client_error}")}
         phx-connected={hide("##{@flash_ids.client_error}") |> JS.set_attribute({"hidden", ""})}
         hidden
       >
@@ -259,9 +264,12 @@ defmodule ElixirbitsWeb.CoreComponents do
         kind={:error}
         title={gettext("Something went wrong!")}
         show_spinner
-        phx-disconnected={
-          show(".phx-server-error ##{@flash_ids.server_error}") |> JS.remove_attribute("hidden")
+        data-show={
+          JS.hide(to: "[data-flash-notice]:not(##{@flash_ids.server_error})", time: 0)
+          |> JS.show(to: "##{@flash_ids.server_error}", time: 0)
+          |> JS.remove_attribute("hidden", to: "##{@flash_ids.server_error}")
         }
+        phx-disconnected={JS.exec("data-show", to: ".phx-server-error ##{@flash_ids.server_error}")}
         phx-connected={hide("##{@flash_ids.server_error}") |> JS.set_attribute({"hidden", ""})}
         hidden
       >
