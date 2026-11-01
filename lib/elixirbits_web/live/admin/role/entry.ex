@@ -145,9 +145,11 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
       end
 
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
-      {:ok, _role} ->
+      {:ok, role} ->
         {:noreply,
-         socket |> put_flash(:info, "Role saved.") |> push_navigate(to: ~p"/admin/roles")}
+         socket
+         |> put_flash(:info, "Role saved.")
+         |> push_navigate(to: ~p"/admin/roles/#{role.id}/read")}
 
       {:error, form} ->
         {:noreply, assign(socket, :form, form)}

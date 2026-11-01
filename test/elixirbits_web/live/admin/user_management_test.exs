@@ -86,20 +86,20 @@ defmodule ElixirbitsWeb.Admin.UserManagementTest do
     manager = grant(conn, %{"USERS" => 6})
     {:ok, view, _html} = live(manager.conn, ~p"/admin/users/create")
 
-    assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
-             view
-             |> form("#user-form",
-               form: %{
-                 email: "managed@example.com",
-                 password: "created-password",
-                 password_confirmation: "created-password",
-                 display_name: "Managed account",
-                 first_name: "Managed",
-                 last_name: "Person",
-                 timezone: "Asia/Singapore"
-               }
-             )
-             |> render_submit()
+    result =
+      view
+      |> form("#user-form",
+        form: %{
+          email: "managed@example.com",
+          password: "created-password",
+          password_confirmation: "created-password",
+          display_name: "Managed account",
+          first_name: "Managed",
+          last_name: "Person",
+          timezone: "Asia/Singapore"
+        }
+      )
+      |> render_submit()
 
     user = Ash.get!(User, %{email: "managed@example.com"}, actor: @system)
     assert user.display_name == "Managed account"
@@ -108,6 +108,14 @@ defmodule ElixirbitsWeb.Admin.UserManagementTest do
     assert user.timezone == "Asia/Singapore"
     assert user.roles == []
     assert Bcrypt.verify_pass("created-password", user.hashed_password)
+
+    {:ok, saved_view, _html} =
+      follow_redirect(result, manager.conn, ~p"/admin/users/#{user.id}/read")
+
+    assert has_element?(saved_view, "#user-form fieldset[disabled]")
+    assert has_element?(saved_view, "input[name='form[display_name]'][value='Managed account']")
+    refute has_element?(saved_view, "#user-form button[type=submit]")
+    refute has_element?(saved_view, "a[data-tooltip=Update]")
   end
 
   test "invalid credentials keep the creation form open without saving an account", %{conn: conn} do
@@ -247,7 +255,9 @@ defmodule ElixirbitsWeb.Admin.UserManagementTest do
 
     assert has_element?(view, "#user-roles option[value=superuser]")
 
-    assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
+    destination = ~p"/admin/users/#{target.id}/read"
+
+    assert {:error, {:live_redirect, %{to: ^destination}}} =
              view
              |> form("#user-form", form: %{display_name: "Promoted", roles: ["superuser"]})
              |> render_submit()

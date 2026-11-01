@@ -83,20 +83,30 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
     assert has_element?(view, "#user-form .text-error")
     assert has_element?(view, "#user-form footer button[type=submit]")
 
-    assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
-             view
-             |> form("#user-form",
-               form: %{
-                 email: "bottom-user@example.com",
-                 password: "created-password",
-                 password_confirmation: "created-password",
-                 display_name: "Created from footer"
-               }
-             )
-             |> render_submit()
+    result =
+      view
+      |> form("#user-form",
+        form: %{
+          email: "bottom-user@example.com",
+          password: "created-password",
+          password_confirmation: "created-password",
+          display_name: "Created from footer"
+        }
+      )
+      |> render_submit()
 
     user = Ash.get!(User, %{email: "bottom-user@example.com"}, actor: @system)
     assert user.display_name == "Created from footer"
+    destination = ~p"/admin/users/#{user.id}/read"
+    {:ok, saved_view, _html} = follow_redirect(result, conn, destination)
+    assert has_element?(saved_view, "#user-form fieldset[disabled]")
+
+    assert has_element?(
+             saved_view,
+             "input[name='form[display_name]'][value='Created from footer']"
+           )
+
+    refute has_element?(saved_view, "#user-form button[type=submit]")
     {:ok, view, _html} = live(conn, ~p"/admin/users/#{user.id}/update")
 
     for section <- ["header", "footer"] do
@@ -104,12 +114,21 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
       assert has_element?(view, "#user-form #{section} a[href='/admin/users'][data-tooltip=Back]")
     end
 
-    assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
-             view
-             |> form("#user-form", form: %{display_name: "Updated from footer"})
-             |> render_submit()
+    result =
+      view
+      |> form("#user-form", form: %{display_name: "Updated from footer"})
+      |> render_submit()
 
     assert Ash.get!(User, user.id, actor: @system).display_name == "Updated from footer"
+    {:ok, saved_view, _html} = follow_redirect(result, conn, destination)
+    assert has_element?(saved_view, "#user-form fieldset[disabled]")
+
+    assert has_element?(
+             saved_view,
+             "input[name='form[display_name]'][value='Updated from footer']"
+           )
+
+    refute has_element?(saved_view, "#user-form button[type=submit]")
   end
 
   test "bottom role actions submit the shared creation and update forms", %{conn: conn} do
@@ -121,13 +140,18 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
       assert has_element?(view, "#role-form #{section} a[href='/admin/roles'][data-tooltip=Back]")
     end
 
-    assert {:error, {:live_redirect, %{to: "/admin/roles"}}} =
-             view
-             |> form("#role-form", form: %{code: "bottom-role", name: "Created from footer"})
-             |> render_submit()
+    result =
+      view
+      |> form("#role-form", form: %{code: "bottom-role", name: "Created from footer"})
+      |> render_submit()
 
     role = Ash.get!(Role, %{code: "bottom-role"}, actor: @system)
     assert role.name == "Created from footer"
+    destination = ~p"/admin/roles/#{role.id}/read"
+    {:ok, saved_view, _html} = follow_redirect(result, conn, destination)
+    assert has_element?(saved_view, "#role-form fieldset[disabled]")
+    assert has_element?(saved_view, "input[name='form[name]'][value='Created from footer']")
+    refute has_element?(saved_view, "#role-form button[type=submit]")
     {:ok, view, _html} = live(conn, ~p"/admin/roles/#{role.id}/update")
 
     for section <- ["header", "footer"] do
@@ -135,12 +159,16 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
       assert has_element?(view, "#role-form #{section} a[href='/admin/roles'][data-tooltip=Back]")
     end
 
-    assert {:error, {:live_redirect, %{to: "/admin/roles"}}} =
-             view
-             |> form("#role-form", form: %{name: "Updated from footer"})
-             |> render_submit()
+    result =
+      view
+      |> form("#role-form", form: %{name: "Updated from footer"})
+      |> render_submit()
 
     assert Ash.get!(Role, role.id, actor: @system).name == "Updated from footer"
+    {:ok, saved_view, _html} = follow_redirect(result, conn, destination)
+    assert has_element?(saved_view, "#role-form fieldset[disabled]")
+    assert has_element?(saved_view, "input[name='form[name]'][value='Updated from footer']")
+    refute has_element?(saved_view, "#role-form button[type=submit]")
   end
 
   test "bottom organization actions create and update the same settings", %{conn: conn} do

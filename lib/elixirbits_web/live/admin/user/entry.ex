@@ -158,7 +158,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
                  else: "User updated."
                )
              )
-             |> push_navigate(to: ~p"/admin/users")}
+             |> push_navigate(to: ~p"/admin/users/#{user.id}/read")}
 
           {:error, form} ->
             if new_display_pic, do: Upload.delete(new_display_pic)

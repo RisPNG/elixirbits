@@ -108,7 +108,9 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
              "#user-form input[type=hidden][name='form[roles][]'][value='']"
            )
 
-    assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
+    destination = ~p"/admin/users/#{target.id}/read"
+
+    assert {:error, {:live_redirect, %{to: ^destination}}} =
              view
              |> form("#user-form", form: %{display_name: "Updated", roles: ["", "member"]})
              |> render_submit()
@@ -119,7 +121,7 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
     {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
     assert has_element?(view, "#user-roles select option[value=member][selected]")
 
-    assert {:error, {:live_redirect, %{to: "/admin/users"}}} =
+    assert {:error, {:live_redirect, %{to: ^destination}}} =
              view
              |> form("#user-form", form: %{display_name: "Cleared", roles: [""]})
              |> render_submit()

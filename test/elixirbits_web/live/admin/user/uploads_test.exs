@@ -139,7 +139,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.UploadsTest do
     assert File.exists?(previous)
 
     view |> form("#user-form") |> render_submit()
-    assert_redirect(view, "/admin/users")
+    assert_redirect(view, ~p"/admin/users/#{user.id}/read")
     saved = Ash.get!(User, user.id, actor: @system)
     assert is_nil(saved.display_pic_url)
     assert is_nil(saved.display_pic_name)
@@ -175,7 +175,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.UploadsTest do
                []
 
       view |> form("#user-form") |> render_submit()
-      assert_redirect(view, "/admin/users")
+      assert_redirect(view, ~p"/admin/users/#{user.id}/read")
       saved = Ash.get!(User, user.id, actor: @system)
       assert saved.display_pic_name == name
       assert Path.extname(saved.display_pic_url) == Path.extname(name)
@@ -214,7 +214,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.UploadsTest do
     assert is_nil(Ash.get!(User, user.id, actor: @system).display_pic_url)
 
     render_submit(view, "save", %{"form" => %{"display_name" => "Corrected"}})
-    assert_redirect(view, "/admin/users")
+    assert_redirect(view, ~p"/admin/users/#{user.id}/read")
     saved = Ash.get!(User, user.id, actor: @system)
     assert saved.display_name == "Corrected"
     assert saved.display_pic_name == "portrait.png"
@@ -311,7 +311,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.UploadsTest do
     render_upload(upload, "portrait.png")
 
     view |> form("#user-form") |> render_submit()
-    assert_redirect(view, "/admin/users")
+    assert_redirect(view, ~p"/admin/users/#{user.id}/read")
     refute File.exists?(previous)
     saved = Ash.get!(User, user.id, actor: @system)
     assert saved.display_pic_url != "/uploads/users/previous.png"
