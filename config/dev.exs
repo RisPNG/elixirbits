@@ -1,6 +1,8 @@
 import Config
 config :ash, policies: [show_policy_breakdowns?: true]
 
+config :live_debugger, port: 5000, auto_port: true
+
 # Configure your database
 config :elixirbits, Elixirbits.Repo,
   username: "postgres",
@@ -15,6 +17,7 @@ config :elixirbits, Elixirbits.Repo,
 #
 # The watchers configuration can be used to run external watchers to your application. For example, we can use it to bundle .js and .css sources.
 config :elixirbits, ElixirbitsWeb.Endpoint,
+  auto_port: true,
   # Binding to loopback ipv4 address prevents access from other machines. Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}],
   check_origin: false,
