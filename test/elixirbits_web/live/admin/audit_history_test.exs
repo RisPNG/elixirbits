@@ -506,6 +506,102 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
     assert Organizations.organization_settings!(actor: @system).name == "Today's organization"
   end
 
+  test "address removal lists only populated values while clearing and refilling a field remain changes",
+       %{conn: conn} do
+    {conn, actor, _grants} = grant(conn, %{"USERS" => 15})
+
+    target =
+      create_user(display_name: "Address history", addresses: [%{line_1: "a"}])
+      |> Ash.load!(:addresses, actor: @system)
+
+    [address] = target.addresses
+    field_key = "addresses.#{address.id}.line_1"
+    path = ~p"/admin/users/#{target.id}/read"
+
+    cleared = Ash.update!(target, %{addresses: [%{id: address.id, line_1: nil}]}, actor: actor)
+    {:ok, cleared_history} = AuditLog.history(User, target.id, actor)
+    cleared_revision = hd(cleared_history.revisions)
+    cleared_field = Enum.find(cleared_revision.fields, &(&1.key == field_key))
+    assert cleared_field.status == :changed
+    assert cleared_field.before == "a"
+    assert cleared_field.after == "Not set"
+    assert cleared_field.before_present? and cleared_field.after_present?
+
+    {:ok, cleared_view, _html} = live(conn, path <> "?version=#{cleared_revision.id}")
+
+    cleared_selector =
+      "input[name='form[addresses][0][line_1]'][data-audit-changed=true][data-audit-side=previous]"
+
+    assert has_element?(cleared_view, cleared_selector)
+
+    cleared_input =
+      cleared_view |> render() |> Floki.parse_document!() |> Floki.find(cleared_selector)
+
+    assert Floki.attribute(cleared_input, "value") in [[], [""]]
+    refute has_element?(cleared_view, "#audit-removed-fields")
+
+    refilled = Ash.update!(cleared, %{addresses: [%{id: address.id, line_1: "a"}]}, actor: actor)
+    {:ok, refilled_history} = AuditLog.history(User, target.id, actor)
+    refilled_revision = hd(refilled_history.revisions)
+    refilled_field = Enum.find(refilled_revision.fields, &(&1.key == field_key))
+    assert refilled_field.status == :changed
+    assert refilled_field.before == "Not set"
+    assert refilled_field.after == "a"
+    assert refilled_field.before_present? and refilled_field.after_present?
+
+    {:ok, refilled_view, _html} = live(conn, path <> "?version=#{refilled_revision.id}")
+
+    assert has_element?(
+             refilled_view,
+             "input[name='form[addresses][0][line_1]'][value=a][data-audit-changed=true][data-audit-side=previous]"
+           )
+
+    Ash.update!(refilled, %{addresses: []}, actor: actor)
+    {:ok, deleted_history} = AuditLog.history(User, target.id, actor)
+    deletion = hd(deleted_history.revisions)
+    before_deletion = Enum.find(deleted_history.revisions, &(&1.id == refilled_revision.id))
+
+    for fields <- [deletion.fields, before_deletion.current_fields] do
+      by_key = Map.new(fields, &{&1.key, &1})
+      assert by_key[field_key].status == :changed
+      assert by_key[field_key].before == "a"
+      refute by_key[field_key].after_present?
+
+      for field <- [
+            "line_2",
+            "line_3",
+            "contact_name",
+            "contact_tel_no",
+            "city",
+            "state",
+            "country",
+            "postal_code"
+          ] do
+        assert by_key["addresses.#{address.id}.#{field}"].status == :unchanged
+      end
+    end
+
+    {:ok, deleted_view, _html} = live(conn, path <> "?version=#{deletion.id}")
+
+    {:ok, current_view, _html} =
+      live(conn, path <> "?version=#{refilled_revision.id}&side=current")
+
+    for view <- [deleted_view, current_view] do
+      cards =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.find("#audit-removed-fields > [data-field]")
+
+      assert Floki.attribute(cards, "data-field") == [field_key]
+      assert cards |> Floki.find("p.whitespace-pre-wrap") |> Floki.text() == "a"
+      refute has_element?(view, "#audit-removed-fields", "Not set")
+      refute has_element?(view, "input[name='form[addresses][0][line_1]']")
+    end
+
+    assert Ash.get!(User, target.id, actor: @system, load: [:addresses]).addresses == []
+  end
+
   test "a user creation highlights populated values and leaves blank optional values unmarked", %{
     conn: conn
   } do

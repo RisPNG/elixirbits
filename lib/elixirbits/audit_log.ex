@@ -787,6 +787,9 @@ defmodule Elixirbits.AuditLog do
           old == :missing and new in [{:ok, nil}, {:ok, ""}, {:ok, []}] ->
             :unchanged
 
+          new == :missing and old in [{:ok, nil}, {:ok, ""}, {:ok, []}] ->
+            :unchanged
+
           true ->
             case {old, new} do
               {{:ok, old}, {:ok, new}} ->
