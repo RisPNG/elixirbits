@@ -21,7 +21,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "doc_type",
+      "source": "code",
       "type": "text"
     },
     {
@@ -33,20 +33,20 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "period_key",
-      "type": "date"
+      "source": "name",
+      "type": "text"
     },
     {
-      "allow_nil?": false,
-      "default": "0",
+      "allow_nil?": true,
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "current_value",
-      "type": "bigint"
+      "source": "description",
+      "type": "text"
     },
     {
       "allow_nil?": false,
@@ -78,24 +78,20 @@
   "create_table_options": null,
   "custom_indexes": [],
   "custom_statements": [],
-  "has_create_action": true,
-  "hash": "CBA764F4239331EC9B8241E3E77D8E1198DC89D0D7FBBE694A69592B31BD9C54",
+  "has_create_action": false,
+  "hash": "544E9943299D4D091C8E621CFA07BE3771C8CED1BB1C4E8AFFEBC7B9F11F7564",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "number_sequences_unique_doc_period_index",
+      "index_name": "roles_unique_code_index",
       "keys": [
         {
           "type": "atom",
-          "value": "doc_type"
-        },
-        {
-          "type": "atom",
-          "value": "period_key"
+          "value": "code"
         }
       ],
-      "name": "unique_doc_period",
+      "name": "unique_code",
       "nils_distinct?": true,
       "where": null
     }
@@ -107,6 +103,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "number_sequences",
+  "table": "roles",
   "temporal": null
 }

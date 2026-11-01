@@ -409,20 +409,21 @@ defmodule ElixirbitsWeb.CoreComponents do
   @doc """
   Renders a record action as a bordered icon button.
 
-  Creating a record, adding a row, viewing, updating, saving, archiving, deleting, and leaving the page all use the same square bordered icon, so these controls look consistent in page headers, table rows, and repeated sub-forms.
+  Creating a record, adding a row, viewing records and their history, updating, saving, archiving, deleting, and leaving the page all use the same square bordered icon, so these controls look consistent in page headers, table rows, and repeated sub-forms.
 
   Destructive actions use the error color. Other actions use neutral colors. Hovering darkens each button's existing surface. For a domain-specific action without its own entry, pass `icon` to override the icon while keeping the button's shape and colors, and pass a `tooltip` that describes the action.
 
   ## Examples
 
       <.action_button action={:read} navigate={~p"/inventory/categories"} />
+      <.action_button action={:history} patch={@audit.history_path} />
       <.action_button action={:archive} phx-click="request_delete" phx-value-id={c.id} />
       <.action_button action={:save} type="submit" />
       <.action_button action={:create} icon="tabler-calendar-plus" tooltip="Add" />
   """
   attr :action, :atom,
     required: true,
-    values: [:create, :read, :update, :save, :send, :archive, :delete, :back]
+    values: [:create, :read, :history, :update, :save, :send, :archive, :delete, :back]
 
   attr :icon, :string, default: nil, doc: "overrides the action's default icon"
 
@@ -439,6 +440,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       case assigns.action do
         :create -> {"hero-plus", "Add new"}
         :read -> {"hero-eye", "View"}
+        :history -> {"hero-clock", "History"}
         :update -> {"hero-pencil-square", "Update"}
         :save -> {"tabler-device-floppy", "Save"}
         :send -> {"tabler-send", "Send"}
@@ -671,16 +673,47 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
-    form_timezone =
+    {form_timezone, changed_fields, change_side} =
       case field.form.source do
-        %AshPhoenix.Form{opts: opts} -> get_in(opts[:context] || %{}, [:shared, :user_timezone])
-        _ -> nil
+        %AshPhoenix.Form{opts: opts, data: data} ->
+          {get_in(opts[:context] || %{}, [:shared, :user_timezone]),
+           data && Ash.Resource.get_metadata(data, :audit_changed_fields),
+           data && Ash.Resource.get_metadata(data, :audit_change_side)}
+
+        _ ->
+          {nil, nil, nil}
+      end
+
+    rest =
+      if changed_fields && MapSet.member?(changed_fields, field.field) do
+        assigns.rest
+        |> Map.put(:"data-audit-changed", "true")
+        |> Map.put(:"data-audit-side", to_string(change_side || :previous))
+      else
+        assigns.rest
+      end
+
+    rest =
+      if rest[:"data-audit-changed"] in [true, "true"] do
+        rest
+        |> Map.put(:"data-audit-changed", "true")
+        |> Map.put_new(:"data-audit-side", "previous")
+        |> Map.put_new(
+          :"aria-description",
+          if(rest[:"data-audit-side"] == "current",
+            do: "Different from the selected revision",
+            else: "Changed by this revision"
+          )
+        )
+      else
+        rest
       end
 
     assigns
     |> assign(
       field: nil,
       form_field: field,
+      rest: rest,
       timezone: assigns.timezone || form_timezone || "Etc/UTC",
       id: assigns.id || field.id
     )
@@ -2333,7 +2366,16 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(
         :div_attrs,
         assigns.rest
-        |> Map.take([:role, :"aria-label", :"aria-labelledby", :"aria-describedby"])
+        |> Map.filter(fn {key, _value} ->
+          key in [
+            :role,
+            :"aria-label",
+            :"aria-labelledby",
+            :"aria-describedby",
+            :"aria-description"
+          ] or
+            String.starts_with?(to_string(key), "data-")
+        end)
         |> then(fn attrs ->
           if map_size(attrs) > 0, do: Map.put_new(attrs, :role, "group"), else: attrs
         end)

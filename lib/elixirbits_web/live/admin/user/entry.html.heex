@@ -1,6 +1,7 @@
 <% editable? =
   @live_action in [:create, :update] and can?(@permissions, @current_path, @live_action) %>
 <Layouts.app flash={@flash} nav={@nav} user_timezone={@user_timezone}>
+  <History.history audit={@audit} user_timezone={@user_timezone} />
   <.form
     for={@form}
     id="user-form"
@@ -14,16 +15,30 @@
       <:actions>
         <div class={[
           "grid items-center gap-2",
-          case {
-            editable? or (@live_action == :read and can?(@permissions, @current_path, :update)),
-            @live_action == :update and can?(@permissions, @current_path, :delete)
-          } do
-            {true, true} -> "grid-cols-[auto_auto_auto]"
-            {false, false} -> "grid-cols-[auto]"
-            _ -> "grid-cols-[auto_auto]"
+          case Enum.count(
+                 [
+                   editable? or
+                     (@live_action == :read and can?(@permissions, @current_path, :update)),
+                   @live_action == :update and can?(@permissions, @current_path, :delete),
+                   @live_action == :read and @user != nil and
+                     can?(@permissions, @current_path, :update)
+                 ],
+                 & &1
+               ) do
+            0 -> "grid-cols-[auto]"
+            1 -> "grid-cols-[auto_auto]"
+            2 -> "grid-cols-[auto_auto_auto]"
           end
         ]}>
           <.action_button action={:back} navigate={~p"/admin/users"} />
+          <.action_button
+            :if={
+              @live_action == :read and @user != nil and
+                can?(@permissions, @current_path, :update)
+            }
+            action={:history}
+            patch={@audit.history_path}
+          />
           <.action_button
             :if={@live_action == :read and can?(@permissions, @current_path, :update)}
             action={:update}
@@ -49,7 +64,18 @@
             Account
           </.header>
 
-          <div class="group/profile-picture grid grid-cols-[8rem_minmax(0,1fr)] items-center gap-6 border-b border-outline pb-6">
+          <div
+            class="group/profile-picture grid grid-cols-[8rem_minmax(0,1fr)] items-center gap-6 border-b border-outline pb-6"
+            data-audit-side={@audit.selected && to_string(@audit.side)}
+            data-audit-changed={
+              if @audit.selected &&
+                   Enum.any?(
+                     @audit.fields,
+                     &(&1.key in ["display_pic_url", "display_pic_name"] and &1.status == :changed)
+                   ),
+                 do: "true"
+            }
+          >
             <div class="relative size-32">
               <span
                 :if={@existing_display_pic == nil && @uploads.display_pic.entries == []}
@@ -216,7 +242,6 @@
               type="text"
               label="Timezone"
               placeholder="Automatic (browser)"
-              tooltip="Leave blank to use your browser's timezone."
             />
           </div>
         </.card>

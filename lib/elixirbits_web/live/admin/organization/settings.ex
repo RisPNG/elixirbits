@@ -1,12 +1,14 @@
 defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
   use ElixirbitsWeb, :live_view
 
-  on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/organization"}}
-
   alias Elixirbits.CoreUtils.EnumTypes.AddressLabel
   alias Elixirbits.CoreUtils.Resource
   alias Elixirbits.Organizations
   alias Elixirbits.Organizations.Organization
+  alias ElixirbitsWeb.Admin.AuditLogLive.History
+
+  on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/organization"}}
+  on_mount {History, Organization}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -19,12 +21,14 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
   end
 
   @impl true
-  def handle_params(_params, _uri, socket) do
+  def handle_params(params, _uri, socket) do
     organization =
       Organizations.organization_settings!(
         actor: socket.assigns.current_user,
         load: [:addresses]
       )
+
+    {socket, organization} = History.load_revision(socket, organization, params)
 
     form =
       case organization do
@@ -39,6 +43,11 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
 
         organization ->
           AshPhoenix.Form.for_update(organization, :update,
+            id:
+              if(socket.assigns.audit.selected,
+                do: "form-#{socket.assigns.audit.selected.id}-#{socket.assigns.audit.side}",
+                else: "form"
+              ),
             actor: socket.assigns.current_user,
             context: %{shared: %{user_timezone: socket.assigns.user_timezone}},
             transform_params: &Resource.convert_form_datetimes/3,

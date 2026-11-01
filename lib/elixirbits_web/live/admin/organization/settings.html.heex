@@ -1,6 +1,7 @@
 <Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
   <% editable? =
     @live_action == :update and can?(@permissions, @current_path, @form.source.type) %>
+  <History.history audit={@audit} user_timezone={@user_timezone} />
   <.form
     for={@form}
     id="organization-form"
@@ -16,12 +17,32 @@
       }>
         <div class={[
           "grid items-center gap-2",
-          if(editable?, do: "grid-cols-[auto_auto]", else: "grid-cols-[auto]")
+          case Enum.count(
+                 [
+                   @live_action == :update,
+                   @live_action == :read and can?(@permissions, @current_path, @form.source.type),
+                   editable?,
+                   @live_action == :read and @form.source.type == :update and
+                     can?(@permissions, @current_path, :update)
+                 ],
+                 & &1
+               ) do
+            1 -> "grid-cols-[auto]"
+            2 -> "grid-cols-[auto_auto]"
+          end
         ]}>
           <.action_button
             :if={@live_action == :update}
             action={:back}
             navigate={~p"/admin/organization"}
+          />
+          <.action_button
+            :if={
+              @live_action == :read and @form.source.type == :update and
+                can?(@permissions, @current_path, :update)
+            }
+            action={:history}
+            patch={@audit.history_path}
           />
           <.action_button
             :if={@live_action == :read and can?(@permissions, @current_path, @form.source.type)}

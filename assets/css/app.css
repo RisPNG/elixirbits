@@ -1223,6 +1223,54 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--color-error);
 }
 
+/* Historical field changes */
+
+#audit-value-side label:has(input[value="previous"]) {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+#audit-value-side label:has(input[value="current"]) {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+[data-audit-side="current"],
+:is(label, .input-floating-wrapper, .number-input-control):has([data-audit-side="current"]),
+.input-floating-control[data-audit-side="current"] + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control[data-audit-side="current"]) + .input-floating-label,
+label:has(+ .number-input-control [data-audit-side="current"]),
+:is(label, span):has(+ [data-audit-side="current"]) {
+  --audit-field-color: var(--color-success);
+}
+
+[data-audit-changed="true"],
+[data-audit-changed="true"] :is(input, textarea, select),
+.input-floating-wrapper:has([data-audit-changed="true"]),
+.number-input-control:has([data-audit-changed="true"]) {
+  color: var(--audit-field-color, var(--color-error));
+  border-color: var(--audit-field-color, var(--color-error));
+}
+
+[data-audit-changed="true"]:disabled,
+[data-audit-changed="true"] :is(input, textarea, select):disabled {
+  color: var(--audit-field-color, var(--color-error));
+}
+
+[data-audit-changed="true"]::placeholder,
+[data-audit-changed="true"] :is(input, textarea)::placeholder {
+  color: var(--audit-field-color, var(--color-error));
+}
+
+.input-floating-control[data-audit-changed="true"] + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control[data-audit-changed="true"]) + .input-floating-label,
+[data-audit-changed="true"] .input-floating-control + .input-floating-label,
+label:has(> [data-audit-changed="true"]) > span,
+label:has(+ .number-input-control [data-audit-changed="true"]),
+:is(label, span):has(+ [data-audit-changed="true"]) {
+  color: var(--audit-field-color, var(--color-error));
+}
+
 /* Cinder filters and pagination */
 
 [data-key="filter_clear_button_class"].invisible { display: none; }

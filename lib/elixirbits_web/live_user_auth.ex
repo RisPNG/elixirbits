@@ -158,7 +158,13 @@ defmodule ElixirbitsWeb.LiveUserAuth do
             authorize_page(socket, URI.parse(uri).path)
           end)
           |> attach_hook(:require_capability, :handle_event, fn
-            _event, _params, %{assigns: %{live_action: :read}} = socket ->
+            event, _params, %{assigns: %{live_action: :read}} = socket
+            when event not in [
+                   "audit_value_change",
+                   "request_restore",
+                   "cancel_restore",
+                   "confirm_restore"
+                 ] ->
               {:halt, put_flash(socket, :error, "Switch to Update to make changes.")}
 
             event, params, socket ->

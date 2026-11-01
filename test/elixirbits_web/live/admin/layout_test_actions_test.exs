@@ -88,9 +88,15 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.ActionsTest do
   test "one action preview exposes every action and its state controls", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 
-    for action <- ~w(create read update save send archive delete back) do
+    for action <- ~w(create read history update save send archive delete back) do
       render_click(element(view, "#record-option-selected-#{action}"))
       assert has_element?(view, "#record-action-#{action}[phx-value-action=#{action}]")
+
+      if action == "history" do
+        render_click(element(view, "#record-action-history"))
+        assert has_element?(view, "#record-action-status", "History requested for entry #1.")
+        assert has_element?(view, "#record-entry-1")
+      end
 
       assert view
              |> render()

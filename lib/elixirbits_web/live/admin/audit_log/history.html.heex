@@ -1,0 +1,172 @@
+<section
+  :if={@audit.selected}
+  id="audit-revision"
+  class="space-y-3 rounded-default border border-outline bg-primary p-4"
+>
+  <div class="grid grid-cols-[minmax(0,1fr)_max-content] items-start gap-4">
+    <div class="space-y-1">
+      <h2 class="text-lg font-semibold text-content">Revision history</h2>
+      <p class="text-sm text-subcontent">
+        Saved by <span class="font-medium text-content">{@audit.selected.author}</span>
+        on <time datetime={DateTime.to_iso8601(@audit.selected.at)}>{Calendar.strftime(DateTime.shift_zone!(@audit.selected.at, @user_timezone), "%d %b %Y, %H:%M:%S")}</time>.
+      </p>
+      <p :if={@audit.selected.restored_from_version_id} class="text-sm text-subcontent">
+        Restored from revision {@audit.selected.restored_from_version_id}.
+      </p>
+    </div>
+    <div class={[
+      "grid items-center gap-2",
+      if(@audit.history.can_restore?, do: "grid-cols-[auto_auto]", else: "grid-cols-[auto]")
+    ]}>
+      <.button patch={@audit.path} variant={:neutral}>Current view</.button>
+      <.button
+        :if={@audit.history.can_restore?}
+        type="button"
+        variant={:neutral}
+        phx-click="request_restore"
+      >Restore this version</.button>
+    </div>
+  </div>
+  <.form
+    :let={value_form}
+    for={to_form(%{"side" => to_string(@audit.side)}, as: "audit")}
+    id="audit-value-form"
+    phx-change="audit_value_change"
+  >
+    <.input
+      field={value_form[:side]}
+      id="audit-value-side"
+      type="radio"
+      variant="card"
+      aria-label="Revision values"
+      options={[
+        {"Previous value", "previous"},
+        {"Current value", "current"}
+      ]}
+    />
+  </.form>
+  <div
+    :if={Enum.any?(@audit.fields, &(&1.status == :changed and not &1.after_present?))}
+    id="audit-removed-fields"
+    class="space-y-2"
+  >
+    <h3 class="font-medium text-error">
+      {if @audit.side == :previous,
+        do: "Removed in this revision",
+        else: "Removed since this revision"}
+    </h3>
+    <div
+      :for={field <- @audit.fields}
+      :if={field.status == :changed and not field.after_present?}
+      data-field={field.key}
+      data-audit-changed="true"
+      data-audit-side="previous"
+      class="rounded-default border border-error p-3 text-sm text-error"
+    >
+      <p class="font-medium">{field.label}</p>
+      <p class="whitespace-pre-wrap">{field.before}</p>
+    </div>
+  </div>
+</section>
+
+<.modal :if={@audit.open?} id="audit-history-picker" on_cancel={JS.patch(@audit.close_path)}>
+  <:title>History</:title>
+  <p class="text-sm text-subcontent">
+    Select a revision to view its saved values and changed fields.
+  </p>
+  <nav aria-label="Saved revisions" class="mt-4 max-h-96 space-y-2 overflow-y-auto">
+    <p :if={@audit.history.revisions == []} class="text-sm text-subcontent">
+      No revisions recorded.
+    </p>
+    <.link
+      :for={revision <- @audit.history.revisions}
+      id={"revision-#{revision.id}"}
+      patch={
+        URI.to_string(%{
+          URI.parse(@audit.path)
+          | query: Plug.Conn.Query.encode(Map.put(@audit.query, "version", revision.id))
+        })
+      }
+      aria-current={@audit.selected && @audit.selected.id == revision.id && "true"}
+      class={[
+        "block rounded-default border p-3 text-sm focus-visible:outline-2 focus-visible:outline-brand",
+        if(@audit.selected && @audit.selected.id == revision.id,
+          do: "border-brand bg-secondary",
+          else: "border-outline bg-primary"
+        )
+      ]}
+    >
+      <span class="block font-medium text-content">{revision.author}</span>
+      <time datetime={DateTime.to_iso8601(revision.at)} class="block text-subcontent">{Calendar.strftime(
+        DateTime.shift_zone!(revision.at, @user_timezone),
+        "%d %b %Y, %H:%M:%S"
+      )}</time>
+      <span class="block text-subcontent">
+        {if revision.restored_from_version_id do
+          "Restored a previous version"
+        else
+          case revision.action do
+            :create -> "Created"
+            :update -> "Updated"
+            :destroy -> "Deleted"
+          end
+        end}
+      </span>
+    </.link>
+  </nav>
+  <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+    <.button patch={@audit.close_path} variant={:neutral}>Cancel</.button>
+    <.button patch={@audit.path} variant={:neutral}>Current view</.button>
+  </div>
+</.modal>
+
+<.modal :if={@audit.preview} id="confirm-restore" on_cancel={JS.push("cancel_restore")}>
+  <:title>Restore this version?</:title>
+  <p class="text-sm text-content">
+    The fields below compare the current record with the selected version. Restoring creates a new revision and keeps the existing history.
+  </p>
+  <div id="restore-fields" class="mt-4 max-h-80 space-y-3 overflow-y-auto">
+    <p :if={Enum.all?(@audit.preview, &(&1.status == :unchanged))} class="text-sm text-subcontent">
+      No field changes to restore.
+    </p>
+    <div
+      :for={field <- @audit.preview}
+      :if={field.status != :unchanged}
+      data-field={field.key}
+      class="rounded-default border border-outline p-3 text-sm"
+    >
+      <p class="font-medium text-content">{field.label}</p>
+      <p :if={!field.restorable?} class="text-subcontent">
+        Not restored. The current value will be kept.
+      </p>
+      <p :if={field.status == :unknown} class="text-subcontent">Change not recorded.</p>
+      <div
+        :if={field.restorable? && field.status != :unknown}
+        class="mt-2 grid grid-cols-[1fr_1fr] gap-3"
+      >
+        <div class="min-w-0">
+          <p class="text-xs text-subcontent">Current</p>
+          <p class={[
+            "break-words",
+            if(field.status == :changed, do: "text-error", else: "text-content")
+          ]}>
+            <span class="whitespace-pre-wrap">{field.before}</span>
+          </p>
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs text-subcontent">Restored</p>
+          <p class={[
+            "break-words",
+            if(field.status == :changed, do: "text-success", else: "text-content")
+          ]}>
+            <span class="whitespace-pre-wrap">{field.after}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
+    <.button type="button" variant={:neutral} phx-click="cancel_restore">Cancel</.button>
+    <.button type="button" variant={:primary} phx-click="confirm_restore">Restore version</.button>
+  </div>
+</.modal>

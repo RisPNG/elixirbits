@@ -22,8 +22,15 @@ defmodule Elixirbits.AccessControl.RolePerm do
   paper_trail do
     primary_key_type :uuid_v7
     reference_source? false
-    change_tracking_mode :changes_only
+    change_tracking_mode :snapshot
     store_action_name? true
+    attributes_as_attributes [:roles_code, :sitenav_code]
+    operation_id_field :operation_id
+    belongs_to_actor :actor, Elixirbits.Accounts.User, domain: Elixirbits.Accounts
+    metadata :actor_name, :string
+    metadata :restored_from_version_id, :uuid
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin Elixirbits.AuditLog.Version
   end
 
   use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/roles"

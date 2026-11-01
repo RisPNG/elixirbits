@@ -738,6 +738,11 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
+      add :user_id, :uuid
+      add :organization_id, :uuid
       add :version_source_id, :uuid, null: false
       add :changes, :map
 
@@ -748,6 +753,8 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id, :uuid
     end
 
     create table(:api_keys, primary_key: false) do
@@ -772,6 +779,9 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
 
       add :version_source_id,
           references(:api_keys,
@@ -791,6 +801,8 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id, :uuid
     end
 
     create table(:events, primary_key: false) do
@@ -829,6 +841,9 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
 
       add :version_source_id,
           references(:ledger_accounts,
@@ -848,6 +863,8 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id, :uuid
     end
 
     create table(:ledger_balances, primary_key: false) do
@@ -928,6 +945,9 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
 
       add :version_source_id,
           references(:ledger_transfers,
@@ -947,6 +967,8 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id, :uuid
     end
 
     create table(:number_sequences, primary_key: false) do
@@ -1016,6 +1038,9 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
 
       add :version_source_id,
           references(:organizations,
@@ -1035,6 +1060,8 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id, :uuid
     end
 
     create table(:role_perms, primary_key: false) do
@@ -1061,6 +1088,11 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
+      add :sitenav_code, :text, null: false
+      add :roles_code, :text, null: false
       add :version_source_id, :uuid, null: false
       add :changes, :map
 
@@ -1071,6 +1103,8 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id, :uuid
     end
 
     create table(:roles, primary_key: false) do
@@ -1106,6 +1140,9 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
       add :version_source_id, :uuid, null: false
       add :changes, :map
 
@@ -1116,6 +1153,8 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id, :uuid
     end
 
     create table(:sitenav, primary_key: false) do
@@ -1163,6 +1202,9 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
       add :version_source_id, :uuid, null: false
       add :changes, :map
 
@@ -1173,6 +1215,8 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id, :uuid
     end
 
     create table(:tokens, primary_key: false) do
@@ -1217,6 +1261,18 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
              """
            )
 
+    alter table(:addresses_versions) do
+      modify :actor_id,
+             references(:users,
+               column: :id,
+               name: "addresses_versions_actor_id_fkey",
+               type: :uuid,
+               prefix: "public",
+               on_delete: :nothing,
+               on_update: :update_all
+             )
+    end
+
     alter table(:api_keys) do
       modify :user_id,
              references(:users,
@@ -1224,6 +1280,90 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
                name: "api_keys_user_id_fkey",
                type: :uuid,
                prefix: "public"
+             )
+    end
+
+    alter table(:api_keys_versions) do
+      modify :actor_id,
+             references(:users,
+               column: :id,
+               name: "api_keys_versions_actor_id_fkey",
+               type: :uuid,
+               prefix: "public",
+               on_delete: :nothing,
+               on_update: :update_all
+             )
+    end
+
+    alter table(:ledger_accounts_versions) do
+      modify :actor_id,
+             references(:users,
+               column: :id,
+               name: "ledger_accounts_versions_actor_id_fkey",
+               type: :uuid,
+               prefix: "public",
+               on_delete: :nothing,
+               on_update: :update_all
+             )
+    end
+
+    alter table(:ledger_transfers_versions) do
+      modify :actor_id,
+             references(:users,
+               column: :id,
+               name: "ledger_transfers_versions_actor_id_fkey",
+               type: :uuid,
+               prefix: "public",
+               on_delete: :nothing,
+               on_update: :update_all
+             )
+    end
+
+    alter table(:organizations_versions) do
+      modify :actor_id,
+             references(:users,
+               column: :id,
+               name: "organizations_versions_actor_id_fkey",
+               type: :uuid,
+               prefix: "public",
+               on_delete: :nothing,
+               on_update: :update_all
+             )
+    end
+
+    alter table(:role_perms_versions) do
+      modify :actor_id,
+             references(:users,
+               column: :id,
+               name: "role_perms_versions_actor_id_fkey",
+               type: :uuid,
+               prefix: "public",
+               on_delete: :nothing,
+               on_update: :update_all
+             )
+    end
+
+    alter table(:roles_versions) do
+      modify :actor_id,
+             references(:users,
+               column: :id,
+               name: "roles_versions_actor_id_fkey",
+               type: :uuid,
+               prefix: "public",
+               on_delete: :nothing,
+               on_update: :update_all
+             )
+    end
+
+    alter table(:sitenav_versions) do
+      modify :actor_id,
+             references(:users,
+               column: :id,
+               name: "sitenav_versions_actor_id_fkey",
+               type: :uuid,
+               prefix: "public",
+               on_delete: :nothing,
+               on_update: :update_all
              )
     end
 
@@ -1267,6 +1407,9 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
       add :version_action_type, :text, null: false
       add :version_action_name, :text, null: false
+      add :operation_id, :uuid
+      add :actor_name, :text
+      add :restored_from_version_id, :uuid
 
       add :version_source_id,
           references(:users,
@@ -1286,10 +1429,22 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       add :version_updated_at, :utc_datetime_usec,
         null: false,
         default: fragment("(now() AT TIME ZONE 'utc')")
+
+      add :actor_id,
+          references(:users,
+            column: :id,
+            name: "users_versions_actor_id_fkey",
+            type: :uuid,
+            prefix: "public",
+            on_delete: :nothing,
+            on_update: :update_all
+          )
     end
   end
 
   def down do
+    drop constraint(:users_versions, "users_versions_actor_id_fkey")
+
     drop constraint(:users_versions, "users_versions_version_source_id_fkey")
 
     drop table(:users_versions)
@@ -1320,10 +1475,69 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
       remove :email
     end
 
+    drop constraint(:sitenav_versions, "sitenav_versions_actor_id_fkey")
+
+    alter table(:sitenav_versions) do
+      modify :actor_id, :uuid
+    end
+
+    drop constraint(:roles_versions, "roles_versions_actor_id_fkey")
+
+    alter table(:roles_versions) do
+      modify :actor_id, :uuid
+    end
+
+    drop constraint(:role_perms_versions, "role_perms_versions_actor_id_fkey")
+
+    alter table(:role_perms_versions) do
+      modify :actor_id, :uuid
+    end
+
+    drop constraint(:organizations_versions, "organizations_versions_actor_id_fkey")
+
+    drop constraint(:organizations_versions, "organizations_versions_version_source_id_fkey")
+
+    alter table(:organizations_versions) do
+      modify :actor_id, :uuid
+    end
+
+    drop constraint(:ledger_transfers_versions, "ledger_transfers_versions_actor_id_fkey")
+
+    drop constraint(
+           :ledger_transfers_versions,
+           "ledger_transfers_versions_version_source_id_fkey"
+         )
+
+    alter table(:ledger_transfers_versions) do
+      modify :actor_id, :uuid
+    end
+
+    drop constraint(:ledger_accounts_versions, "ledger_accounts_versions_actor_id_fkey")
+
+    drop constraint(:ledger_accounts_versions, "ledger_accounts_versions_version_source_id_fkey")
+
+    alter table(:ledger_accounts_versions) do
+      modify :actor_id, :uuid
+    end
+
+    drop constraint(:api_keys_versions, "api_keys_versions_actor_id_fkey")
+
+    drop constraint(:api_keys_versions, "api_keys_versions_version_source_id_fkey")
+
+    alter table(:api_keys_versions) do
+      modify :actor_id, :uuid
+    end
+
     drop constraint(:api_keys, "api_keys_user_id_fkey")
 
     alter table(:api_keys) do
       modify :user_id, :uuid
+    end
+
+    drop constraint(:addresses_versions, "addresses_versions_actor_id_fkey")
+
+    alter table(:addresses_versions) do
+      modify :actor_id, :uuid
     end
 
     drop_if_exists constraint(:addresses, :addresses_exactly_one_owner)
@@ -1380,8 +1594,6 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
 
     drop table(:role_perms)
 
-    drop constraint(:organizations_versions, "organizations_versions_version_source_id_fkey")
-
     drop table(:organizations_versions)
 
     drop_if_exists constraint(:organizations, :organizations_application_key)
@@ -1414,11 +1626,6 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
 
     drop table(:number_sequences)
 
-    drop constraint(
-           :ledger_transfers_versions,
-           "ledger_transfers_versions_version_source_id_fkey"
-         )
-
     drop table(:ledger_transfers_versions)
 
     drop constraint(:ledger_transfers, "ledger_transfers_to_account_id_fkey")
@@ -1450,8 +1657,6 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
 
     drop table(:ledger_balances)
 
-    drop constraint(:ledger_accounts_versions, "ledger_accounts_versions_version_source_id_fkey")
-
     drop table(:ledger_accounts_versions)
 
     drop_if_exists unique_index(:ledger_accounts, [:identifier],
@@ -1462,8 +1667,6 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
 
     drop table(:events)
 
-    drop constraint(:api_keys_versions, "api_keys_versions_version_source_id_fkey")
-
     drop table(:api_keys_versions)
 
     drop_if_exists unique_index(:api_keys, [:api_key_hash], name: "api_keys_unique_api_key_index")
@@ -1473,7 +1676,6 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
     drop table(:addresses_versions)
 
     drop table(:addresses)
-
     # Uncomment this if you actually want to uninstall the extensions
     # when this migration is rolled back:
     execute(

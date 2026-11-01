@@ -19,8 +19,15 @@ defmodule Elixirbits.AccessControl.Role do
   paper_trail do
     primary_key_type :uuid_v7
     reference_source? false
-    change_tracking_mode :changes_only
+    change_tracking_mode :snapshot
+    only_when_changed? false
     store_action_name? true
+    operation_id_field :operation_id
+    belongs_to_actor :actor, Elixirbits.Accounts.User, domain: Elixirbits.Accounts
+    metadata :actor_name, :string
+    metadata :restored_from_version_id, :uuid
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin Elixirbits.AuditLog.Version
   end
 
   use Elixirbits.AccessControl.ResourcePolicies,
@@ -75,7 +82,6 @@ defmodule Elixirbits.AccessControl.Role do
                    Elixirbits.Accounts.User
                    |> Ash.Query.new(base_filter?: false)
                    |> Ash.Query.filter(^code in roles)
-                   |> Ash.Query.select([:roles])
                    |> Ash.Query.sort(id: :asc)
                    |> Ash.Query.lock(:for_update)
                    |> Ash.read!(authorize?: false)
@@ -122,6 +128,40 @@ defmodule Elixirbits.AccessControl.Role do
       accept [:name, :description]
 
       argument :permissions, {:array, :map}
+
+      change manage_relationship(:permissions, :role_perms,
+               type: :direct_control,
+               use_identities: [:unique_role_sitenav],
+               on_missing: :ignore
+             )
+    end
+
+    update :restore do
+      require_atomic? false
+      accept [:name, :description]
+      argument :permissions, {:array, :map}
+
+      change fn changeset, context ->
+        case Ash.Changeset.get_argument(changeset, :permissions) do
+          nil ->
+            changeset
+
+          permissions ->
+            role = Ash.load!(changeset.data, :role_perms, actor: context.actor)
+            pages = MapSet.new(permissions, &Map.get(&1, "sitenav_code", &1[:sitenav_code]))
+
+            missing =
+              for grant <- role.role_perms,
+                  grant.level != 0 and not MapSet.member?(pages, grant.sitenav_code),
+                  do: %{sitenav_code: grant.sitenav_code, level: 0}
+
+            permissions = permissions ++ missing
+
+            if permissions == [],
+              do: Ash.Changeset.delete_argument(changeset, :permissions),
+              else: Ash.Changeset.set_argument(changeset, :permissions, permissions)
+        end
+      end
 
       change manage_relationship(:permissions, :role_perms,
                type: :direct_control,

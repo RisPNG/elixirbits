@@ -7,9 +7,11 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
   alias Elixirbits.CoreUtils.EnumTypes.UserSex
   alias Elixirbits.CoreUtils.Resource
   alias Elixirbits.CoreUtils.Upload
+  alias ElixirbitsWeb.Admin.AuditLogLive.History
   alias ElixirbitsWeb.Admin.UserLive.Deletion
 
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/admin/users"}}
+  on_mount {History, Elixirbits.Accounts.User}
   on_mount {Deletion, :entry}
 
   @impl true
@@ -24,9 +26,11 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    {user, form, title} =
+    {socket, user, form, title} =
       case socket.assigns.live_action do
         :create ->
+          {socket, nil} = History.load_revision(socket, nil, params)
+
           form =
             AshPhoenix.Form.for_create(Elixirbits.Accounts.User, :create,
               actor: socket.assigns.current_user,
@@ -36,7 +40,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
               forms: [auto?: true]
             )
 
-          {nil, form, "New User"}
+          {socket, nil, form, "New User"}
 
         action when action in [:read, :update] ->
           user =
@@ -45,8 +49,18 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
               load: [:addresses]
             )
 
+          {socket, user} =
+            History.load_revision(socket, user, params,
+              preserve_fields: [:display_pic_url, :display_pic_name]
+            )
+
           form =
             AshPhoenix.Form.for_update(user, :update,
+              id:
+                if(socket.assigns.audit.selected,
+                  do: "form-#{socket.assigns.audit.selected.id}-#{socket.assigns.audit.side}",
+                  else: "form"
+                ),
               actor: socket.assigns.current_user,
               context: %{shared: %{user_timezone: socket.assigns.user_timezone}},
               transform_params: &Resource.convert_form_datetimes/3,
@@ -55,7 +69,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
             )
 
           title = if action == :read, do: "View", else: "Update"
-          {user, form, "#{title} #{user.display_name || to_string(user.email)}"}
+          {socket, user, form, "#{title} #{user.display_name || to_string(user.email)}"}
       end
 
     can_assign_roles? =

@@ -41,7 +41,7 @@ defmodule ElixirbitsWeb.Admin.UpdateDeletionTest do
     }
   end
 
-  test "update pages place Delete after Back and Save at both ends", %{conn: conn} do
+  test "update pages place Delete after navigation and Save at both ends", %{conn: conn} do
     target = create_user(display_name: "Existing account")
     role = Ash.create!(Role, %{code: "existing", name: "Existing role"}, actor: @system)
     manager = grant(conn, %{"USERS" => 15, "ROLES" => 15})

@@ -576,6 +576,9 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
            record_message: "Viewing entry ##{selected}."
          )}
 
+      "history" ->
+        {:noreply, assign(socket, :record_message, "History requested for entry ##{selected}.")}
+
       "update" ->
         {:noreply,
          assign(socket,

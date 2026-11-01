@@ -1214,7 +1214,7 @@
           <div :for={
             {option, label, value, choices} <- [
               {"selected", "Action", @showcase["actions"]["selected"],
-               Enum.map(~w(create read update save send archive delete back), fn action ->
+               Enum.map(~w(create read history update save send archive delete back), fn action ->
                  {Phoenix.Naming.humanize(action), action}
                end)},
               {"render_as", "Render as", @record_mode,
@@ -1299,7 +1299,7 @@
           phx-value-action={@showcase["actions"]["selected"]}
           disabled={
             @showcase["actions"]["disabled"] or
-              (@showcase["actions"]["selected"] in ~w(read update send archive delete) and
+              (@showcase["actions"]["selected"] in ~w(read history update send archive delete) and
                  is_nil(@record_selected))
           }
         />

@@ -2,7 +2,7 @@
   "attributes": [
     {
       "allow_nil?": false,
-      "default": "fragment(\"gen_random_uuid()\")",
+      "default": "fragment(\"uuidv7()\")",
       "generated?": false,
       "precision": null,
       "primary_key?": true,
@@ -13,7 +13,7 @@
       "type": "uuid"
     },
     {
-      "allow_nil?": false,
+      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -21,20 +21,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "api_key_hash",
-      "type": "binary"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "expires_at",
-      "type": "utc_datetime_usec"
+      "source": "balance",
+      "type": "money_with_currency"
     },
     {
       "allow_nil?": false,
@@ -61,7 +49,7 @@
       "type": "utc_datetime_usec"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -81,16 +69,49 @@
           "global": null,
           "strategy": null
         },
-        "name": "api_keys_user_id_fkey",
+        "name": "ledger_balances_transfer_id_fkey",
         "on_delete": null,
         "on_update": null,
         "primary_key?": true,
         "schema": "public",
-        "table": "users"
+        "table": "ledger_transfers"
       },
       "scale": null,
       "size": null,
-      "source": "user_id",
+      "source": "transfer_id",
+      "type": "binary"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "index_where": null,
+        "match_tenant?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "ledger_balances_account_id_fkey",
+        "on_delete": null,
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "ledger_accounts"
+      },
+      "scale": null,
+      "size": null,
+      "source": "account_id",
       "type": "uuid"
     }
   ],
@@ -99,20 +120,24 @@
   "create_table_options": null,
   "custom_indexes": [],
   "custom_statements": [],
-  "has_create_action": false,
-  "hash": "758A4BDFBCC05347004C215D1C72469AA184EED69E6B0AEAF771D45FCD98EF40",
+  "has_create_action": true,
+  "hash": "F6237B99DC9AE9AB16E022ADCF481D81969D9D3A57CFAB9403823ABC190A96E2",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "api_keys_unique_api_key_index",
+      "index_name": "ledger_balances_unique_references_index",
       "keys": [
         {
           "type": "atom",
-          "value": "api_key_hash"
+          "value": "account_id"
+        },
+        {
+          "type": "atom",
+          "value": "transfer_id"
         }
       ],
-      "name": "unique_api_key",
+      "name": "unique_references",
       "nils_distinct?": true,
       "where": null
     }
@@ -124,6 +149,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "api_keys",
+  "table": "ledger_balances",
   "temporal": null
 }

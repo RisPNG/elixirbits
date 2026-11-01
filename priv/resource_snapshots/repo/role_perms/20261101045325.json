@@ -2,7 +2,7 @@
   "attributes": [
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "fragment(\"uuidv7()\")",
       "generated?": false,
       "precision": null,
       "primary_key?": true,
@@ -10,7 +10,7 @@
       "scale": null,
       "size": null,
       "source": "id",
-      "type": "binary"
+      "type": "uuid"
     },
     {
       "allow_nil?": false,
@@ -21,8 +21,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "amount",
-      "type": "money_with_currency"
+      "source": "level",
+      "type": "bigint"
     },
     {
       "allow_nil?": false,
@@ -50,28 +50,16 @@
     },
     {
       "allow_nil?": false,
-      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "timestamp",
-      "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": {
         "deferrable": false,
-        "destination_attribute": "id",
+        "destination_attribute": "code",
         "destination_attribute_default": null,
         "destination_attribute_generated": null,
-        "index?": false,
+        "index?": true,
         "index_where": null,
         "match_tenant?": false,
         "match_type": null,
@@ -81,30 +69,30 @@
           "global": null,
           "strategy": null
         },
-        "name": "ledger_transfers_from_account_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
+        "name": "role_perms_sitenav_code_fkey",
+        "on_delete": "restrict",
+        "on_update": "update",
+        "primary_key?": false,
         "schema": "public",
-        "table": "ledger_accounts"
+        "table": "sitenav"
       },
       "scale": null,
       "size": null,
-      "source": "from_account_id",
-      "type": "uuid"
+      "source": "sitenav_code",
+      "type": "text"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": {
         "deferrable": false,
-        "destination_attribute": "id",
+        "destination_attribute": "code",
         "destination_attribute_default": null,
         "destination_attribute_generated": null,
-        "index?": false,
+        "index?": true,
         "index_where": null,
         "match_tenant?": false,
         "match_type": null,
@@ -114,17 +102,17 @@
           "global": null,
           "strategy": null
         },
-        "name": "ledger_transfers_to_account_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
+        "name": "role_perms_roles_code_fkey",
+        "on_delete": "delete",
+        "on_update": "update",
+        "primary_key?": false,
         "schema": "public",
-        "table": "ledger_accounts"
+        "table": "roles"
       },
       "scale": null,
       "size": null,
-      "source": "to_account_id",
-      "type": "uuid"
+      "source": "roles_code",
+      "type": "text"
     }
   ],
   "base_filter": null,
@@ -133,8 +121,27 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": false,
-  "hash": "F860D1259D228805502E3569ABB9A442B5DEB3F8FF63E946BAEA52CFAC8CF204",
-  "identities": [],
+  "hash": "ECAB0434F176634F38648D79A0BA9336C22454DE9AE316FBF26DE73803C7198E",
+  "identities": [
+    {
+      "all_tenants?": false,
+      "base_filter": null,
+      "index_name": "role_perms_unique_role_sitenav_index",
+      "keys": [
+        {
+          "type": "atom",
+          "value": "roles_code"
+        },
+        {
+          "type": "atom",
+          "value": "sitenav_code"
+        }
+      ],
+      "name": "unique_role_sitenav",
+      "nils_distinct?": true,
+      "where": null
+    }
+  ],
   "multitenancy": {
     "attribute": null,
     "global": null,
@@ -142,6 +149,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "ledger_transfers",
+  "table": "role_perms",
   "temporal": null
 }

@@ -13,7 +13,7 @@
       "type": "uuid"
     },
     {
-      "allow_nil?": false,
+      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -21,19 +21,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "code",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "name",
+      "source": "contact_name",
       "type": "text"
     },
     {
@@ -45,7 +33,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "description",
+      "source": "contact_tel_no",
       "type": "text"
     },
     {
@@ -57,31 +45,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "icon",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "level",
-      "type": "bigint"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "parent",
+      "source": "country",
       "type": "text"
     },
     {
@@ -93,7 +57,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "url",
+      "source": "line_1",
       "type": "text"
     },
     {
@@ -105,12 +69,48 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "sequence",
-      "type": "bigint"
+      "source": "line_2",
+      "type": "text"
     },
     {
-      "allow_nil?": false,
-      "default": "\"ENABLED\"",
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "line_3",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "postal_code",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "city",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
@@ -121,34 +121,52 @@
       "type": "text"
     },
     {
-      "allow_nil?": false,
-      "default": "[]",
+      "allow_nil?": true,
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "roles_bypass",
-      "type": [
-        "array",
-        "text"
-      ]
+      "source": "latitude",
+      "type": "decimal"
     },
     {
-      "allow_nil?": false,
-      "default": "[]",
+      "allow_nil?": true,
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "users_bypass",
-      "type": [
-        "array",
-        "text"
-      ]
+      "source": "longitude",
+      "type": "decimal"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "label",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "other_label",
+      "type": "text"
     },
     {
       "allow_nil?": false,
@@ -173,31 +191,92 @@
       "size": null,
       "source": "updated_at",
       "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": true,
+        "index_where": null,
+        "match_tenant?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "addresses_user_id_fkey",
+        "on_delete": "delete",
+        "on_update": "update",
+        "primary_key?": true,
+        "schema": "public",
+        "table": "users"
+      },
+      "scale": null,
+      "size": null,
+      "source": "user_id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": true,
+        "index_where": null,
+        "match_tenant?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "addresses_organization_id_fkey",
+        "on_delete": "restrict",
+        "on_update": "update",
+        "primary_key?": true,
+        "schema": "public",
+        "table": "organizations"
+      },
+      "scale": null,
+      "size": null,
+      "source": "organization_id",
+      "type": "uuid"
     }
   ],
   "base_filter": null,
-  "check_constraints": [],
+  "check_constraints": [
+    {
+      "attribute": [
+        "user_id",
+        "organization_id"
+      ],
+      "base_filter": null,
+      "check": "(user_id IS NULL) <> (organization_id IS NULL)",
+      "name": "addresses_exactly_one_owner"
+    }
+  ],
   "create_table_options": null,
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": false,
-  "hash": "59CD9E2C6984948F1753F370C2D4BEE4092F5E9BD68220965EDB706B1EB0A853",
-  "identities": [
-    {
-      "all_tenants?": false,
-      "base_filter": null,
-      "index_name": "sitenav_unique_code_index",
-      "keys": [
-        {
-          "type": "atom",
-          "value": "code"
-        }
-      ],
-      "name": "unique_code",
-      "nils_distinct?": true,
-      "where": null
-    }
-  ],
+  "hash": "4170A4866995AE6CB2D4E4B588FEB1EC472864710B254BE6D33C3D9D318EAFBF",
+  "identities": [],
   "multitenancy": {
     "attribute": null,
     "global": null,
@@ -205,6 +284,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "sitenav",
+  "table": "addresses",
   "temporal": null
 }

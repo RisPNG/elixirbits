@@ -2,26 +2,14 @@
   "attributes": [
     {
       "allow_nil?": false,
-      "default": "fragment(\"uuidv7()\")",
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": true,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "version_action_type",
+      "source": "jti",
       "type": "text"
     },
     {
@@ -33,7 +21,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_action_name",
+      "source": "subject",
       "type": "text"
     },
     {
@@ -45,8 +33,20 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_source_id",
-      "type": "uuid"
+      "source": "expires_at",
+      "type": "utc_datetime"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "purpose",
+      "type": "text"
     },
     {
       "allow_nil?": true,
@@ -57,7 +57,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "changes",
+      "source": "extra_data",
       "type": "map"
     },
     {
@@ -69,7 +69,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_inserted_at",
+      "source": "created_at",
       "type": "utc_datetime_usec"
     },
     {
@@ -81,7 +81,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_updated_at",
+      "source": "updated_at",
       "type": "utc_datetime_usec"
     }
   ],
@@ -91,7 +91,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "490A5488EA7AE839E2662E1F56001A79F1EF3FF7F1733AB8A4FCDF7F069EE0E9",
+  "hash": "4C8D3E21E01FAF12B319964E25B793DB260880A0F1E44A88A4B8C30551CFD519",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -100,6 +100,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "role_perms_versions",
+  "table": "tokens",
   "temporal": null
 }

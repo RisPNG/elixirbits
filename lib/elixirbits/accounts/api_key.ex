@@ -17,9 +17,15 @@ defmodule Elixirbits.Accounts.ApiKey do
 
   paper_trail do
     primary_key_type :uuid_v7
-    change_tracking_mode :changes_only
+    change_tracking_mode :snapshot
     store_action_name? true
     ignore_attributes [:api_key_hash]
+    operation_id_field :operation_id
+    belongs_to_actor :actor, Elixirbits.Accounts.User, domain: Elixirbits.Accounts
+    metadata :actor_name, :string
+    metadata :restored_from_version_id, :uuid
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin Elixirbits.AuditLog.Version
   end
 
   actions do
