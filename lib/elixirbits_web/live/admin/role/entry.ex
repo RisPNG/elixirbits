@@ -48,7 +48,7 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
 
           {nil, form, "New Role", %{}}
 
-        :update ->
+        action when action in [:read, :update] ->
           role =
             Ash.get!(Role, params["id"], actor: socket.assigns.current_user, load: [:role_perms])
 
@@ -61,8 +61,9 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
               forms: [auto?: false]
             )
 
-          {role, form, "Update #{role.name}",
-           Map.new(role.role_perms, &{&1.sitenav_code, &1.level})}
+          title = if action == :read, do: "View #{role.name}", else: "Update #{role.name}"
+
+          {role, form, title, Map.new(role.role_perms, &{&1.sitenav_code, &1.level})}
       end
 
     levels =

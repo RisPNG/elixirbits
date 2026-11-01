@@ -104,6 +104,8 @@ The numbers are combinations, rather than an increasing authority scale: level `
 
 Use `Permissions.can?(permissions, path, capability)` with `:create`, `:read`, `:update`, `:delete`, or `:su` for capability checks. For a special rule requiring the exact effective SU level, use `Permissions.perm_level(permissions, path) == 16`, then define what that protected operation permits. Level `15` alone cannot satisfy an SU rule. Public access grants read only, but roles can add capabilities on public pages. Disabled pages and branches still deny access.
 
+User and role listings provide View through `<.action_button action={:read} />`, linking to `/admin/users/:id/read` and `/admin/roles/:id/read` with the `:read` LiveView action. These screens reuse the entry layouts with disabled fields, including assigned user roles and role permission grants. View remains read-only for every permission level, including SU, and rejects record-changing events. Back returns to the listing, and Update appears when the account has update permission.
+
 User and role update screens use `/admin/users/:id/update` and `/admin/roles/:id/update`, with the `:update` LiveView action. Shared record controls use `<.action_button action={:update} />`.
 
 User and role creation screens use `/admin/users/create` and `/admin/roles/create`, with the `:create` LiveView action. User creation requires create permission for users and uses the shared profile, address, and upload form with an email, a password of at least eight characters, and password confirmation. New accounts follow the existing email confirmation process and start without roles. Assign roles from the account's update form after creating the account.
@@ -114,7 +116,7 @@ User and role listings and update screens provide deletion controls when the cur
 
 Nested address changes also need the relevant capability. Updating an existing parent requires update permission. Adding an address additionally requires create, and deleting a saved address additionally requires delete. Discarding an unsaved address requires only the parent form's save permission. A new organisation uses create permission for its initial save and address creation.
 
-The organisation screen stores one application's identity, currency, locale, timezone, contacts, and addresses. Public navigation receives only its name and regional metadata. Contact details and addresses require settings access. Addresses belong to exactly one user or the organisation, with ownership supplied through the parent relationship.
+The organisation screen stores one application's identity, currency, locale, timezone, contacts, and addresses. `/admin/organization` uses the `:read` LiveView action and opens read-only for every permission level, including SU. Update opens `/admin/organization/update` with the `:update` action, requiring create permission before the first settings record exists and update permission afterwards. The update screen provides Back and Save above and below the form, and a successful save returns to the read-only screen. When no settings record exists, the read-only screen displays the resource defaults. Public navigation receives only its name and regional metadata. Contact details and addresses require settings access. Addresses belong to exactly one user or the organisation, with ownership supplied through the parent relationship.
 
 ## API documentation
 

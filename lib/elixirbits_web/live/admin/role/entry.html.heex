@@ -1,9 +1,11 @@
 <Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <% editable? =
+    @live_action in [:create, :update] and can?(@permissions, @current_path, @live_action) %>
   <.form
     for={@form}
     id="role-form"
-    phx-change="validate"
-    phx-submit="save"
+    phx-change={if editable?, do: "validate"}
+    phx-submit={if editable?, do: "save"}
     class="space-y-6"
   >
     <.page>
@@ -13,7 +15,8 @@
         <div class={[
           "grid items-center gap-2",
           case {
-            can?(@permissions, @current_path, @live_action),
+            editable? or
+              (@live_action == :read and can?(@permissions, @current_path, :update)),
             @live_action == :update and @role.code != "superuser" and
               can?(@permissions, @current_path, :delete)
           } do
@@ -24,9 +27,14 @@
         ]}>
           <.action_button action={:back} navigate={~p"/admin/roles"} />
           <.action_button
-            :if={can?(@permissions, @current_path, @live_action)}
+            :if={editable?}
             action={:save}
             type="submit"
+          />
+          <.action_button
+            :if={@live_action == :read and can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/admin/roles/#{@role.id}/update"}
           />
           <.action_button
             :if={
@@ -46,7 +54,7 @@
         </.header>
 
         <fieldset
-          disabled={!can?(@permissions, @current_path, @live_action)}
+          disabled={!editable?}
           class="space-y-4"
         >
           <div class="grid grid-cols-[1fr_3fr] subgap-2">
@@ -89,7 +97,7 @@
               <label
                 id={"permission-label-#{page.code}"}
                 for={
-                  if can?(@permissions, @current_path, :su),
+                  if editable? and can?(@permissions, @current_path, :su),
                     do: "permission-level-#{page.code}-input",
                     else: "permission-level-#{page.code}"
                 }
@@ -117,7 +125,7 @@
                 aria-labelledby={"permission-label-#{page.code}"}
                 aria-describedby={if page.public?, do: "permission-hint-#{page.code}"}
                 clearable={false}
-                disabled={!can?(@permissions, @current_path, :su)}
+                disabled={!editable? or !can?(@permissions, @current_path, :su)}
               />
             </div>
           </div>

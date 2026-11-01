@@ -145,28 +145,47 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
 
   test "bottom organization actions create and update the same settings", %{conn: conn} do
     conn = grant(conn, %{"ORG" => 7})
-    {:ok, view, _html} = live(conn, ~p"/admin/organization")
+    {:ok, view, _html} = live(conn, ~p"/admin/organization/update")
 
     for section <- ["header", "footer"] do
       assert has_element?(view, "#organization-form #{section} button[type=submit]")
+
+      assert has_element?(
+               view,
+               "#organization-form #{section} a[href='/admin/organization'][data-tooltip=Back]"
+             )
     end
 
-    html =
+    result =
       view
       |> form("#organization-form", form: %{name: "Created from footer"})
       |> render_submit()
 
+    {:ok, view, html} = follow_redirect(result, conn, ~p"/admin/organization")
     assert html =~ "Organization settings saved."
     organization = Organizations.organization_settings!(actor: @system)
     assert organization.name == "Created from footer"
 
     for section <- ["header", "footer"] do
-      assert has_element?(view, "#organization-form #{section} button[type=submit]")
+      refute has_element?(view, "#organization-form #{section} button[type=submit]")
+
+      assert has_element?(
+               view,
+               "#organization-form #{section} a[href='/admin/organization/update'][data-tooltip=Update]"
+             )
     end
 
-    view
-    |> form("#organization-form", form: %{name: "Updated from footer"})
-    |> render_submit()
+    result =
+      view
+      |> element("#organization-form footer a[href='/admin/organization/update']")
+      |> render_click()
+
+    {:ok, view, _html} = follow_redirect(result, conn, ~p"/admin/organization/update")
+
+    assert {:error, {:live_redirect, %{to: "/admin/organization"}}} =
+             view
+             |> form("#organization-form", form: %{name: "Updated from footer"})
+             |> render_submit()
 
     updated = Organizations.organization_settings!(actor: @system)
     assert updated.id == organization.id

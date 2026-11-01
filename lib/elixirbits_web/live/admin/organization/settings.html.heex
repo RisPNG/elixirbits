@@ -1,16 +1,40 @@
 <Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <% editable? =
+    @live_action == :update and can?(@permissions, @current_path, @form.source.type) %>
   <.form
     for={@form}
     id="organization-form"
-    phx-change="validate"
-    phx-submit="save"
+    phx-change={if editable?, do: "validate"}
+    phx-submit={if editable?, do: "save"}
     class="space-y-6"
   >
     <.page>
       <:title>Organization settings</:title>
 
-      <:actions :if={@editable?}>
-        <.action_button action={:save} type="submit" tooltip="Save settings" />
+      <:actions :if={
+        @live_action == :update or can?(@permissions, @current_path, @form.source.type)
+      }>
+        <div class={[
+          "grid items-center gap-2",
+          if(editable?, do: "grid-cols-[auto_auto]", else: "grid-cols-[auto]")
+        ]}>
+          <.action_button
+            :if={@live_action == :update}
+            action={:back}
+            navigate={~p"/admin/organization"}
+          />
+          <.action_button
+            :if={@live_action == :read and can?(@permissions, @current_path, @form.source.type)}
+            action={:update}
+            navigate={~p"/admin/organization/update"}
+          />
+          <.action_button
+            :if={editable?}
+            action={:save}
+            type="submit"
+            tooltip="Save settings"
+          />
+        </div>
       </:actions>
 
       <.card>
@@ -19,19 +43,19 @@
             field={@form[:name]}
             type="text"
             label="Name"
-            render_as={if @editable?, do: "enabled", else: "disabled"}
+            render_as={if editable?, do: "enabled", else: "disabled"}
           />
           <.input
             field={@form[:registration_no]}
             type="text"
             label="Registration number"
-            render_as={if @editable?, do: "enabled", else: "disabled"}
+            render_as={if editable?, do: "enabled", else: "disabled"}
           />
           <.input
             field={@form[:tax_identification_no]}
             type="text"
             label="Tax identification number"
-            render_as={if @editable?, do: "enabled", else: "disabled"}
+            render_as={if editable?, do: "enabled", else: "disabled"}
           />
         </div>
 
@@ -40,19 +64,19 @@
             field={@form[:base_currency]}
             type="text"
             label="Base currency"
-            render_as={if @editable?, do: "enabled", else: "disabled"}
+            render_as={if editable?, do: "enabled", else: "disabled"}
           />
           <.input
             field={@form[:locale]}
             type="text"
             label="Locale"
-            render_as={if @editable?, do: "enabled", else: "disabled"}
+            render_as={if editable?, do: "enabled", else: "disabled"}
           />
           <.input
             field={@form[:timezone]}
             type="text"
             label="Timezone"
-            render_as={if @editable?, do: "enabled", else: "disabled"}
+            render_as={if editable?, do: "enabled", else: "disabled"}
           />
         </div>
 
@@ -61,13 +85,13 @@
             field={@form[:email]}
             type="email"
             label="Email"
-            render_as={if @editable?, do: "enabled", else: "disabled"}
+            render_as={if editable?, do: "enabled", else: "disabled"}
           />
           <.input
             field={@form[:phone]}
             type="tel"
             label="Phone"
-            render_as={if @editable?, do: "enabled", else: "disabled"}
+            render_as={if editable?, do: "enabled", else: "disabled"}
           />
         </div>
       </.card>
@@ -77,7 +101,7 @@
           Addresses
           <:actions>
             <.action_button
-              :if={@editable? and can?(@permissions, @current_path, :create)}
+              :if={editable? and can?(@permissions, @current_path, :create)}
               action={:create}
               type="button"
               phx-click="add_form"
@@ -92,7 +116,7 @@
               <:actions>
                 <.action_button
                   :if={
-                    @editable? and
+                    editable? and
                       (af.source.type == :create or can?(@permissions, @current_path, :delete))
                   }
                   action={:delete}
@@ -111,13 +135,13 @@
                   label="Label"
                   options={@label_options}
                   prompt="None"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
                 <.input
                   field={af[:other_label]}
                   type="text"
                   label="Nickname"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
               </div>
 
@@ -126,13 +150,13 @@
                   field={af[:contact_name]}
                   type="text"
                   label="Contact name"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
                 <.input
                   field={af[:contact_tel_no]}
                   type="tel"
                   label="Contact phone"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
               </div>
 
@@ -141,7 +165,7 @@
                   field={af[:line_1]}
                   type="text"
                   label="Line 1"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
               </div>
 
@@ -150,7 +174,7 @@
                   field={af[:line_2]}
                   type="text"
                   label="Line 2"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
               </div>
 
@@ -159,7 +183,7 @@
                   field={af[:line_3]}
                   type="text"
                   label="Line 3"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
               </div>
 
@@ -168,13 +192,13 @@
                   field={af[:postal_code]}
                   type="text"
                   label="Postal code"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
                 <.input
                   field={af[:city]}
                   type="text"
                   label="City"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
               </div>
 
@@ -183,13 +207,13 @@
                   field={af[:state]}
                   type="text"
                   label="State"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
                 <.input
                   field={af[:country]}
                   type="text"
                   label="Country"
-                  render_as={if @editable?, do: "enabled", else: "disabled"}
+                  render_as={if editable?, do: "enabled", else: "disabled"}
                 />
               </div>
             </.entry_panel>

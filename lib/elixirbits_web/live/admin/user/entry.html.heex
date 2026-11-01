@@ -1,9 +1,11 @@
+<% editable? =
+  @live_action in [:create, :update] and can?(@permissions, @current_path, @live_action) %>
 <Layouts.app flash={@flash} nav={@nav} user_timezone={@user_timezone}>
   <.form
     for={@form}
     id="user-form"
-    phx-change="validate"
-    phx-submit="save"
+    phx-change={if editable?, do: "validate"}
+    phx-submit={if editable?, do: "save"}
     class="space-y-6"
   >
     <.page>
@@ -13,7 +15,7 @@
         <div class={[
           "grid items-center gap-2",
           case {
-            can?(@permissions, @current_path, @live_action),
+            editable? or (@live_action == :read and can?(@permissions, @current_path, :update)),
             @live_action == :update and can?(@permissions, @current_path, :delete)
           } do
             {true, true} -> "grid-cols-[auto_auto_auto]"
@@ -23,7 +25,12 @@
         ]}>
           <.action_button action={:back} navigate={~p"/admin/users"} />
           <.action_button
-            :if={can?(@permissions, @current_path, @live_action)}
+            :if={@live_action == :read and can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/admin/users/#{@user.id}/update"}
+          />
+          <.action_button
+            :if={editable?}
             action={:save}
             type="submit"
           />
@@ -36,7 +43,7 @@
         </div>
       </:actions>
 
-      <fieldset disabled={!can?(@permissions, @current_path, @live_action)} class="space-y-6">
+      <fieldset disabled={!editable?} class="space-y-6">
         <.card>
           <.header>
             Account
@@ -55,12 +62,19 @@
                 )}
               </span>
               <.file_preview
+                :if={@live_action != :read}
                 id="user-profile-picture-preview"
                 class="relative size-32 overflow-hidden rounded-full"
               />
+              <img
+                :if={@live_action == :read && @existing_display_pic}
+                src={@existing_display_pic}
+                alt="Profile picture"
+                class="size-full rounded-full object-cover"
+              />
             </div>
 
-            <div class="space-y-3">
+            <div :if={@live_action != :read} class="space-y-3">
               <div class="grid grid-cols-[max-content_1.5rem] items-center gap-1">
                 <label for={@uploads.display_pic.ref} class="text-sm font-medium text-content">
                   Profile Picture
@@ -83,7 +97,7 @@
                   for={@uploads.display_pic.ref}
                   class={[
                     "button-base button-neutral grid min-h-11 place-items-center rounded-default px-4 py-2 text-sm group-has-[input:focus-visible]/profile-picture:outline-2 group-has-[input:focus-visible]/profile-picture:outline-brand",
-                    if(can?(@permissions, @current_path, @live_action),
+                    if(editable?,
                       do: "cursor-pointer",
                       else: "cursor-not-allowed text-subcontent"
                     )
@@ -128,7 +142,7 @@
                 editor={%{width: 128, height: 128}}
                 preview_as="thumbnail"
                 thumbnail_class="h-full w-full"
-                disabled={!can?(@permissions, @current_path, @live_action)}
+                disabled={!editable?}
               >
                 <:stored_preview :let={url}>
                   <img src={url} alt="Profile picture" class="size-full object-cover" />
@@ -191,6 +205,7 @@
               label="Sex"
               options={@sex_options}
               prompt="None"
+              disabled={!editable?}
             /> <.input field={@form[:dob]} type="date" label="Date of Birth" />
           </div>
 
@@ -212,7 +227,7 @@
             <:actions>
               <.action_button
                 :if={
-                  can?(@permissions, @current_path, @live_action) and
+                  editable? and
                     can?(@permissions, @current_path, :create)
                 }
                 type="button"
@@ -230,7 +245,7 @@
                 <:actions>
                   <.action_button
                     :if={
-                      can?(@permissions, @current_path, @live_action) and
+                      editable? and
                         (af.source.type == :create or can?(@permissions, @current_path, :delete))
                     }
                     type="button"
@@ -248,6 +263,7 @@
                     label="Label"
                     options={@label_options}
                     prompt="None"
+                    disabled={!editable?}
                   /> <.input field={af[:other_label]} type="text" label="Nickname" />
                 </div>
 
@@ -282,7 +298,7 @@
           </div>
         </.card>
       </fieldset>
-      <.card :if={@can_assign_roles?} id="user-roles">
+      <.card :if={@can_assign_roles? or @live_action == :read} id="user-roles">
         <.header>
           Roles
         </.header>
@@ -294,6 +310,7 @@
             multiple
             label="Roles"
             options={@role_options}
+            disabled={!editable?}
           />
         </div>
       </.card>

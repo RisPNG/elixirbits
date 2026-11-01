@@ -38,7 +38,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
 
           {nil, form, "New User"}
 
-        :update ->
+        action when action in [:read, :update] ->
           user =
             Accounts.get_user!(params["id"],
               actor: socket.assigns.current_user,
@@ -54,7 +54,8 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
               forms: [auto?: true]
             )
 
-          {user, form, "Update #{user.display_name || to_string(user.email)}"}
+          title = if action == :read, do: "View", else: "Update"
+          {user, form, "#{title} #{user.display_name || to_string(user.email)}"}
       end
 
     can_assign_roles? =
@@ -73,7 +74,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
         |> Enum.sort_by(& &1.name)
         |> Enum.map(&{&1.name, &1.code})
       else
-        []
+        if socket.assigns.live_action == :read, do: Enum.map(user.roles, &{&1, &1}), else: []
       end
 
     {:noreply,

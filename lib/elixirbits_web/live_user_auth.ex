@@ -157,74 +157,78 @@ defmodule ElixirbitsWeb.LiveUserAuth do
           |> attach_hook(:require_page_access, :handle_params, fn _params, uri, socket ->
             authorize_page(socket, URI.parse(uri).path)
           end)
-          |> attach_hook(:require_capability, :handle_event, fn event, params, socket ->
-            permission =
-              case event do
-                "save" ->
-                  capability =
-                    if socket.assigns.form.source.type == :create, do: :create, else: :update
+          |> attach_hook(:require_capability, :handle_event, fn
+            _event, _params, %{assigns: %{live_action: :read}} = socket ->
+              {:halt, put_flash(socket, :error, "Switch to Update to make changes.")}
 
-                  [{socket.assigns.current_path, capability}]
+            event, params, socket ->
+              permission =
+                case event do
+                  "save" ->
+                    capability =
+                      if socket.assigns.form.source.type == :create, do: :create, else: :update
 
-                "confirm_delete" ->
-                  [{socket.assigns.current_path, :delete}]
+                    [{socket.assigns.current_path, capability}]
 
-                "add_form" ->
-                  capability =
-                    if socket.assigns.form.source.type == :create, do: :create, else: :update
+                  "confirm_delete" ->
+                    [{socket.assigns.current_path, :delete}]
 
-                  [
-                    {socket.assigns.current_path, capability},
-                    {socket.assigns.current_path, :create}
-                  ]
+                  "add_form" ->
+                    capability =
+                      if socket.assigns.form.source.type == :create, do: :create, else: :update
 
-                "remove_form" ->
-                  capability =
-                    if socket.assigns.form.source.type == :create, do: :create, else: :update
+                    [
+                      {socket.assigns.current_path, capability},
+                      {socket.assigns.current_path, :create}
+                    ]
 
-                  case AshPhoenix.Form.get_form(socket.assigns.form, params["path"]) do
-                    %{type: :create} ->
-                      [{socket.assigns.current_path, capability}]
+                  "remove_form" ->
+                    capability =
+                      if socket.assigns.form.source.type == :create, do: :create, else: :update
 
-                    _form ->
-                      [
-                        {socket.assigns.current_path, capability},
-                        {socket.assigns.current_path, :delete}
-                      ]
-                  end
+                    case AshPhoenix.Form.get_form(socket.assigns.form, params["path"]) do
+                      %{type: :create} ->
+                        [{socket.assigns.current_path, capability}]
 
-                _ ->
-                  nil
-              end
+                      _form ->
+                        [
+                          {socket.assigns.current_path, capability},
+                          {socket.assigns.current_path, :delete}
+                        ]
+                    end
 
-            case permission do
-              nil ->
-                {:cont, socket}
-
-              capabilities ->
-                permissions = Permissions.load(socket.assigns.current_user)
-
-                socket =
-                  socket
-                  |> assign(:permissions, permissions)
-                  |> assign(:current_user, permissions.user)
-                  |> update(
-                    :nav,
-                    &%{
-                      &1
-                      | user: permissions.user,
-                        items: Permissions.visible_sitenav(permissions)
-                    }
-                  )
-
-                if Enum.all?(capabilities, fn {path, capability} ->
-                     Permissions.can?(permissions, path, capability)
-                   end) do
-                  {:cont, socket}
-                else
-                  {:halt, put_flash(socket, :error, "You do not have permission to do that.")}
+                  _ ->
+                    nil
                 end
-            end
+
+              case permission do
+                nil ->
+                  {:cont, socket}
+
+                capabilities ->
+                  permissions = Permissions.load(socket.assigns.current_user)
+
+                  socket =
+                    socket
+                    |> assign(:permissions, permissions)
+                    |> assign(:current_user, permissions.user)
+                    |> update(
+                      :nav,
+                      &%{
+                        &1
+                        | user: permissions.user,
+                          items: Permissions.visible_sitenav(permissions)
+                      }
+                    )
+
+                  if Enum.all?(capabilities, fn {path, capability} ->
+                       Permissions.can?(permissions, path, capability)
+                     end) do
+                    {:cont, socket}
+                  else
+                    {:halt, put_flash(socket, :error, "You do not have permission to do that.")}
+                  end
+              end
           end)
 
         {:cont, socket}

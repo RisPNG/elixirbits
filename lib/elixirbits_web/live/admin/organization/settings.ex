@@ -10,6 +10,16 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
 
   @impl true
   def mount(_params, _session, socket) do
+    {:ok,
+     assign(
+       socket,
+       :label_options,
+       Enum.map(AddressLabel.values(), &{Phoenix.Naming.humanize(&1), to_string(&1)})
+     )}
+  end
+
+  @impl true
+  def handle_params(_params, _uri, socket) do
     organization =
       Organizations.organization_settings!(
         actor: socket.assigns.current_user,
@@ -37,22 +47,9 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
           )
       end
 
-    {:ok,
+    {:noreply,
      socket
      |> assign(:page_title, "Organization settings")
-     |> assign(:organization, organization)
-     |> assign(
-       :editable?,
-       can?(
-         socket.assigns.permissions,
-         "/admin/organization",
-         if(organization, do: :update, else: :create)
-       )
-     )
-     |> assign(
-       :label_options,
-       Enum.map(AddressLabel.values(), &{Phoenix.Naming.humanize(&1), to_string(&1)})
-     )
      |> assign(:form, to_form(form))}
   end
 
@@ -63,27 +60,11 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
 
   def handle_event("save", %{"form" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
-      {:ok, organization} ->
-        organization = Ash.load!(organization, :addresses, actor: socket.assigns.current_user)
-
+      {:ok, _organization} ->
         {:noreply,
          socket
-         |> assign(:organization, organization)
-         |> assign(:editable?, can?(socket.assigns.permissions, "/admin/organization", :update))
-         |> update(:nav, &%{&1 | organization: organization})
-         |> assign(
-           :form,
-           to_form(
-             AshPhoenix.Form.for_update(organization, :update,
-               actor: socket.assigns.current_user,
-               context: %{shared: %{user_timezone: socket.assigns.user_timezone}},
-               transform_params: &Resource.convert_form_datetimes/3,
-               post_process_errors: &Resource.local_datetime_errors/3,
-               forms: [auto?: true]
-             )
-           )
-         )
-         |> put_flash(:info, "Organization settings saved.")}
+         |> put_flash(:info, "Organization settings saved.")
+         |> push_navigate(to: ~p"/admin/organization")}
 
       {:error, form} ->
         {:noreply, assign(socket, :form, form)}

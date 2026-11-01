@@ -26,7 +26,12 @@
       <:col :let={r} field="description" label="Description">{r.description}</:col>
 
       <:col :let={r} label="Actions">
-        <div class="grid grid-cols-[auto_auto] justify-start gap-2">
+        <div class="grid grid-cols-[auto_auto_auto] justify-start gap-2">
+          <.action_button
+            :if={can?(@permissions, @current_path, :read)}
+            action={:read}
+            navigate={~p"/admin/roles/#{r.id}/read"}
+          />
           <.action_button
             :if={can?(@permissions, @current_path, :update)}
             action={:update}
