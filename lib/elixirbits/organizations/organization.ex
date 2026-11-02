@@ -72,7 +72,10 @@ defmodule Elixirbits.Organizations.Organization do
       ]
 
       argument :addresses, {:array, :map}
-      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
+
+      change {Ash.Resource.Change.Function,
+              fun: {Elixirbits.CoreUtils.Resource, :normalize_ordered_relationship, [:addresses]}}
+
       change manage_relationship(:addresses, type: :direct_control)
     end
 
@@ -91,7 +94,10 @@ defmodule Elixirbits.Organizations.Organization do
       ]
 
       argument :addresses, {:array, :map}
-      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
+
+      change {Ash.Resource.Change.Function,
+              fun: {Elixirbits.CoreUtils.Resource, :normalize_ordered_relationship, [:addresses]}}
+
       change manage_relationship(:addresses, type: :direct_control)
     end
   end

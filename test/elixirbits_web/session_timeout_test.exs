@@ -30,16 +30,23 @@ defmodule ElixirbitsWeb.SessionTimeoutTest do
     assert get_session(conn, "user_token") == token
   end
 
-  test "expires a session idle for more than three hours", %{conn: conn, token: token} do
-    conn =
-      conn
-      |> Plug.Test.init_test_session(%{
-        "user_token" => token,
-        "last_active_at" => System.system_time(:second) - 4 * 60 * 60
-      })
-      |> get(~p"/")
+  test "ordinary sessions expire at the 365-day inactivity limit", %{conn: conn, token: token} do
+    timeout_seconds = 365 * 24 * 60 * 60
 
-    assert get_session(conn, "user_token") == nil
+    for {idle_seconds, active?} <- [
+          {timeout_seconds - 60, true},
+          {timeout_seconds + 60, false}
+        ] do
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{
+          "user_token" => token,
+          "last_active_at" => System.system_time(:second) - idle_seconds
+        })
+        |> get(~p"/")
+
+      assert get_session(conn, "user_token") == if(active?, do: token, else: nil)
+    end
   end
 
   test "remember me sessions survive an idle gap longer than three hours", %{
@@ -56,6 +63,32 @@ defmodule ElixirbitsWeb.SessionTimeoutTest do
       |> get(~p"/")
 
     assert get_session(conn, "user_token") == token
+  end
+
+  test "remember me sessions expire according to the configured strategy lifetime", %{
+    conn: conn,
+    token: token
+  } do
+    timeout_seconds =
+      AshAuthentication.Info.strategy!(Elixirbits.Accounts.User, :remember_me).token_lifetime
+      |> AshAuthentication.Utils.lifetime_to_seconds()
+
+    for {idle_seconds, active?} <- [
+          {timeout_seconds - 60, true},
+          {timeout_seconds + 60, false}
+        ] do
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{
+          "user_token" => token,
+          "remember_me" => true,
+          "last_active_at" => System.system_time(:second) - idle_seconds
+        })
+        |> get(~p"/")
+
+      assert get_session(conn, "user_token") == if(active?, do: token, else: nil)
+      assert get_session(conn, :remember_me) == if(active?, do: true, else: nil)
+    end
   end
 
   test "stamps activity on every request", %{conn: conn} do

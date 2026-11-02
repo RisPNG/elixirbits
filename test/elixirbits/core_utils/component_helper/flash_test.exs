@@ -1,4 +1,4 @@
-defmodule ElixirbitsWeb.FlashTest.Notices do
+defmodule Elixirbits.CoreUtils.ComponentHelper.FlashTest.Notices do
   use ElixirbitsWeb, :live_view
 
   @impl true
@@ -22,14 +22,14 @@ defmodule ElixirbitsWeb.FlashTest.Notices do
   end
 end
 
-defmodule ElixirbitsWeb.FlashTest do
+defmodule Elixirbits.CoreUtils.ComponentHelper.FlashTest do
   use ElixirbitsWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
 
   alias ElixirbitsWeb.CoreComponents
-  alias ElixirbitsWeb.Flash
-  alias ElixirbitsWeb.FlashTest.Notices
+  alias Elixirbits.CoreUtils.ComponentHelper
+  alias Elixirbits.CoreUtils.ComponentHelper.FlashTest.Notices
 
   test "a new notice replaces the previous kind in either direction", %{conn: conn} do
     {:ok, view, _html} = live_isolated(conn, Notices)
@@ -91,8 +91,8 @@ defmodule ElixirbitsWeb.FlashTest do
 
     socket =
       socket
-      |> Flash.put_flash(:error, "Earlier error")
-      |> Flash.put_flash(:warning, payload)
+      |> ComponentHelper.put_flash(:error, "Earlier error")
+      |> ComponentHelper.put_flash(:warning, payload)
 
     assert socket.assigns.flash == %{"warning" => payload}
     assert Phoenix.LiveView.Utils.changed_flash(socket) == %{"warning" => payload}

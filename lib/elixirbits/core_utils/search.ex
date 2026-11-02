@@ -44,6 +44,8 @@ defmodule Elixirbits.CoreUtils.Search do
   @comparison_keywords ~w(after after_equal before before_equal equal range)
   @text_types [:string, :ci_string]
 
+  # Search entry points
+
   def search(opts) do
     resource = Keyword.fetch!(opts, :module)
     args = opts |> Keyword.get(:args, %{}) |> normalize_map()
@@ -78,22 +80,6 @@ defmodule Elixirbits.CoreUtils.Search do
     execute_query(query, pagination)
   end
 
-  def construct_date_map(from_date, to_date, key) when is_binary(key) or is_atom(key) do
-    cond do
-      from_date not in ["", nil] and to_date not in ["", nil] ->
-        %{key => [from_date, to_date, "range"]}
-
-      from_date not in ["", nil] ->
-        %{key => [from_date, "after_equal"]}
-
-      to_date not in ["", nil] ->
-        %{key => [to_date, "before_equal"]}
-
-      true ->
-        %{key => []}
-    end
-  end
-
   def filter(options, text, opts \\ []) do
     if text in ["", nil] or String.trim(to_string(text)) == "" do
       options
@@ -119,6 +105,24 @@ defmodule Elixirbits.CoreUtils.Search do
     end
   end
 
+  # Date filters
+
+  def construct_date_map(from_date, to_date, key) when is_binary(key) or is_atom(key) do
+    cond do
+      from_date not in ["", nil] and to_date not in ["", nil] ->
+        %{key => [from_date, to_date, "range"]}
+
+      from_date not in ["", nil] ->
+        %{key => [from_date, "after_equal"]}
+
+      to_date not in ["", nil] ->
+        %{key => [to_date, "before_equal"]}
+
+      true ->
+        %{key => []}
+    end
+  end
+
   def construct_date_list(from_date, to_date) do
     cond do
       from_date not in ["", nil] and to_date not in ["", nil] ->
@@ -135,79 +139,7 @@ defmodule Elixirbits.CoreUtils.Search do
     end
   end
 
-  defp clean_args(args, drop_args) do
-    drop_fields =
-      @sensitive_fields ++ Enum.map(List.wrap(drop_args), &to_string/1)
-
-    Map.reject(args, fn {key, _value} ->
-      to_string(key) in drop_fields
-    end)
-  end
-
-  defp apply_regular_filters(query, args, user_timezone, use_or) do
-    {or_filters, remaining_args} = take_named_key(args, "_or")
-    {multi_or_filters, remaining_args} = take_named_key(remaining_args, "_multi_or")
-
-    query =
-      case combine_filter_expressions(
-             query.resource,
-             remaining_args,
-             user_timezone,
-             if(use_or, do: :or, else: :and)
-           ) do
-        nil ->
-          query
-
-        expression ->
-          Query.do_filter(query, %Filter{resource: query.resource, expression: expression})
-      end
-
-    query
-    |> put_named_context("_or", or_filters)
-    |> put_named_context("_multi_or", multi_or_filters)
-  end
-
-  defp apply_or_filters(query, args, user_timezone) do
-    search_utils_context = Map.get(query.context, :search_utils, %{})
-
-    case take_named_key(args, "_or") do
-      {nil, _remaining} ->
-        case search_utils_context["_or"] do
-          nil ->
-            query
-
-          filters ->
-            apply_expression_filter(
-              query,
-              combine_filter_expressions(query.resource, filters, user_timezone, :or)
-            )
-        end
-
-      {filters, _remaining} ->
-        apply_expression_filter(
-          query,
-          combine_filter_expressions(query.resource, filters, user_timezone, :or)
-        )
-    end
-  end
-
-  defp apply_multi_or_filters(query, args, user_timezone) do
-    search_utils_context = Map.get(query.context, :search_utils, %{})
-
-    groups =
-      case take_named_key(args, "_multi_or") do
-        {nil, _remaining} -> search_utils_context["_multi_or"]
-        {value, _remaining} -> value
-      end
-
-    expressions =
-      groups
-      |> List.wrap()
-      |> Enum.map(&combine_filter_expressions(query.resource, &1, user_timezone, :and))
-      |> Enum.reject(&is_nil/1)
-
-    apply_expression_filter(query, combine_expressions(expressions, :or))
-  end
+  # Query execution
 
   defp apply_sort(query, resource, order_by, order_method) do
     Query.sort(query, normalize_order_by(resource, order_by, order_method))
@@ -333,6 +265,136 @@ defmodule Elixirbits.CoreUtils.Search do
       total_entries: page.count,
       total_pages: total_pages
     }
+  end
+
+  defp normalize_order_by(resource, order_by, default_method) do
+    case order_by do
+      field when is_atom(field) or is_binary(field) ->
+        [normalize_order_entry(resource, field, default_method)]
+
+      {field, method} when (is_atom(field) or is_binary(field)) and method in [:asc, :desc] ->
+        [normalize_order_entry(resource, field, method)]
+
+      fields when is_list(fields) ->
+        Enum.map(fields, fn
+          field when is_atom(field) or is_binary(field) ->
+            normalize_order_entry(resource, field, default_method)
+
+          {field, method} when (is_atom(field) or is_binary(field)) and method in [:asc, :desc] ->
+            normalize_order_entry(resource, field, method)
+
+          _ ->
+            normalize_order_entry(resource, primary_sort_field(resource), default_method)
+        end)
+
+      _ ->
+        [normalize_order_entry(resource, primary_sort_field(resource), default_method)]
+    end
+  end
+
+  defp normalize_order_entry(resource, field, method) do
+    translated =
+      field
+      |> to_string()
+      |> String.replace("@", ".")
+
+    case Ash.Sort.parse_sort(resource, {translated, method}, nil, false) do
+      {:ok, _sort} ->
+        {translated, method}
+
+      _ ->
+        {primary_sort_field(resource), method}
+    end
+  end
+
+  defp primary_read_action_name(resource) do
+    case Ash.Resource.Info.primary_action(resource, :read) do
+      nil -> raise "No primary read action found for #{inspect(resource)}"
+      action -> action.name
+    end
+  end
+
+  defp primary_sort_field(resource) do
+    resource
+    |> Ash.Resource.Info.primary_key()
+    |> List.first()
+    |> Kernel.||(:id)
+  end
+
+  # Query filters
+
+  defp clean_args(args, drop_args) do
+    drop_fields =
+      @sensitive_fields ++ Enum.map(List.wrap(drop_args), &to_string/1)
+
+    Map.reject(args, fn {key, _value} ->
+      to_string(key) in drop_fields
+    end)
+  end
+
+  defp apply_regular_filters(query, args, user_timezone, use_or) do
+    {or_filters, remaining_args} = take_named_key(args, "_or")
+    {multi_or_filters, remaining_args} = take_named_key(remaining_args, "_multi_or")
+
+    query =
+      case combine_filter_expressions(
+             query.resource,
+             remaining_args,
+             user_timezone,
+             if(use_or, do: :or, else: :and)
+           ) do
+        nil ->
+          query
+
+        expression ->
+          Query.do_filter(query, %Filter{resource: query.resource, expression: expression})
+      end
+
+    query
+    |> put_named_context("_or", or_filters)
+    |> put_named_context("_multi_or", multi_or_filters)
+  end
+
+  defp apply_or_filters(query, args, user_timezone) do
+    search_utils_context = Map.get(query.context, :search_utils, %{})
+
+    case take_named_key(args, "_or") do
+      {nil, _remaining} ->
+        case search_utils_context["_or"] do
+          nil ->
+            query
+
+          filters ->
+            apply_expression_filter(
+              query,
+              combine_filter_expressions(query.resource, filters, user_timezone, :or)
+            )
+        end
+
+      {filters, _remaining} ->
+        apply_expression_filter(
+          query,
+          combine_filter_expressions(query.resource, filters, user_timezone, :or)
+        )
+    end
+  end
+
+  defp apply_multi_or_filters(query, args, user_timezone) do
+    search_utils_context = Map.get(query.context, :search_utils, %{})
+
+    groups =
+      case take_named_key(args, "_multi_or") do
+        {nil, _remaining} -> search_utils_context["_multi_or"]
+        {value, _remaining} -> value
+      end
+
+    expressions =
+      groups
+      |> List.wrap()
+      |> Enum.map(&combine_filter_expressions(query.resource, &1, user_timezone, :and))
+      |> Enum.reject(&is_nil/1)
+
+    apply_expression_filter(query, combine_expressions(expressions, :or))
   end
 
   defp apply_expression_filter(query, nil), do: query
@@ -485,6 +547,8 @@ defmodule Elixirbits.CoreUtils.Search do
         nil
     end
   end
+
+  # Field expressions
 
   defp build_array_expression(resource, path, field, field_info, keyword, values, user_timezone) do
     combinator =
@@ -662,6 +726,8 @@ defmodule Elixirbits.CoreUtils.Search do
     combine_expressions(expressions, :or)
   end
 
+  # Field arithmetic
+
   defp build_field_operation_expression(resource, operation, value, user_timezone)
        when is_list(value) do
     {comparison, raw_values} =
@@ -803,6 +869,8 @@ defmodule Elixirbits.CoreUtils.Search do
     end
   end
 
+  # Expression composition
+
   defp combine_expressions([], _combinator), do: nil
   defp combine_expressions([expression], _combinator), do: expression
 
@@ -833,6 +901,8 @@ defmodule Elixirbits.CoreUtils.Search do
     |> Filter.parse!(statement)
     |> Map.fetch!(:expression)
   end
+
+  # Resource fields and dates
 
   defp parse_field_key(key) do
     key_string = to_string(key)
@@ -968,45 +1038,7 @@ defmodule Elixirbits.CoreUtils.Search do
     String.match?(value, ~r/^\d{4}-\d{2}-\d{2}$/)
   end
 
-  defp normalize_order_by(resource, order_by, default_method) do
-    case order_by do
-      field when is_atom(field) or is_binary(field) ->
-        [normalize_order_entry(resource, field, default_method)]
-
-      {field, method} when (is_atom(field) or is_binary(field)) and method in [:asc, :desc] ->
-        [normalize_order_entry(resource, field, method)]
-
-      fields when is_list(fields) ->
-        Enum.map(fields, fn
-          field when is_atom(field) or is_binary(field) ->
-            normalize_order_entry(resource, field, default_method)
-
-          {field, method} when (is_atom(field) or is_binary(field)) and method in [:asc, :desc] ->
-            normalize_order_entry(resource, field, method)
-
-          _ ->
-            normalize_order_entry(resource, primary_sort_field(resource), default_method)
-        end)
-
-      _ ->
-        [normalize_order_entry(resource, primary_sort_field(resource), default_method)]
-    end
-  end
-
-  defp normalize_order_entry(resource, field, method) do
-    translated =
-      field
-      |> to_string()
-      |> String.replace("@", ".")
-
-    case Ash.Sort.parse_sort(resource, {translated, method}, nil, false) do
-      {:ok, _sort} ->
-        {translated, method}
-
-      _ ->
-        {primary_sort_field(resource), method}
-    end
-  end
+  # Filter parameters
 
   defp take_named_key(map, key_name) do
     case Enum.find(Map.keys(map), &(to_string(&1) == key_name)) do
@@ -1055,19 +1087,5 @@ defmodule Elixirbits.CoreUtils.Search do
 
   defp field_match_mode(type) do
     if text_type?(type), do: :fuzzy, else: :exact
-  end
-
-  defp primary_read_action_name(resource) do
-    case Ash.Resource.Info.primary_action(resource, :read) do
-      nil -> raise "No primary read action found for #{inspect(resource)}"
-      action -> action.name
-    end
-  end
-
-  defp primary_sort_field(resource) do
-    resource
-    |> Ash.Resource.Info.primary_key()
-    |> List.first()
-    |> Kernel.||(:id)
   end
 end

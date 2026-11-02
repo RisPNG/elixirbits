@@ -1,7 +1,25 @@
-defmodule Elixirbits.CoreUtils.Phones do
+# Enum options
+
+defmodule Elixirbits.CoreUtils.Options.SitenavState do
+  use Ash.Type.Enum, values: [:ENABLED, :DISABLED]
+end
+
+defmodule Elixirbits.CoreUtils.Options.AddressLabel do
+  use Ash.Type.Enum, values: [:HOME, :OTHER]
+end
+
+defmodule Elixirbits.CoreUtils.Options.UserSex do
+  use Ash.Type.Enum, values: [:MALE, :FEMALE]
+end
+
+# Phone options
+
+defmodule Elixirbits.CoreUtils.Options.Phones do
   @moduledoc """
-  ISO 3166-1 alpha-2 country codes paired with E.164 dialling codes. Used by the `<.input type="tel">` component to render a searchable country-code selector alongside a phone-number text input.
+  ISO 3166-1 alpha-2 country codes paired with E.164 dialing codes. Used by the `<.input type="tel">` component to render a searchable country-code selector alongside a phone-number text input.
   """
+
+  # Country and dial-code data
 
   @raw [
     {"AF", "+93"},
@@ -246,6 +264,8 @@ defmodule Elixirbits.CoreUtils.Phones do
     {"ZW", "+263"}
   ]
 
+  # Selector data
+
   @countries Enum.map(@raw, fn {iso, dial} ->
                name =
                  case Cldr.Territory.from_territory_code(String.to_atom(iso), Elixirbits.Cldr) do
@@ -264,6 +284,8 @@ defmodule Elixirbits.CoreUtils.Phones do
   @search_options Enum.zip(@countries, @options)
   @dial_codes_json @countries |> Map.new(&{&1.iso, &1.dial_code}) |> Jason.encode!()
 
+  # Catalog access
+
   @doc "Returns all countries sorted by name."
   def list_countries, do: @countries
 
@@ -274,6 +296,8 @@ defmodule Elixirbits.CoreUtils.Phones do
 
   @doc "Returns the country-to-dial-code JSON used by telephone inputs."
   def dial_codes_json, do: @dial_codes_json
+
+  # Search and lookup
 
   @doc """
   Filters options by `text`, matching against ISO code, country name, or dial code. Empty text returns the full list.
@@ -302,40 +326,4 @@ defmodule Elixirbits.CoreUtils.Phones do
   end
 
   def by_iso(_), do: nil
-
-  @doc """
-  Splits a composite phone string like `"+60 123456789"` or `"+60123456789"` into `{dial_code, number, iso}`. The longest matching dial-code prefix wins. Returns `{nil, raw, nil}` if no dial-code prefix is detected.
-  """
-  def parse(value) when is_binary(value) do
-    trimmed = String.trim(value)
-
-    cond do
-      trimmed == "" ->
-        {nil, "", nil}
-
-      String.starts_with?(trimmed, "+") ->
-        match =
-          @countries
-          |> Enum.filter(fn c -> String.starts_with?(trimmed, c.dial_code) end)
-          |> Enum.max_by(fn c -> String.length(c.dial_code) end, fn -> nil end)
-
-        case match do
-          nil ->
-            {nil, trimmed, nil}
-
-          c ->
-            rest =
-              trimmed
-              |> String.replace_prefix(c.dial_code, "")
-              |> String.trim_leading()
-
-            {c.dial_code, rest, c.iso}
-        end
-
-      true ->
-        {nil, trimmed, nil}
-    end
-  end
-
-  def parse(_), do: {nil, "", nil}
 end

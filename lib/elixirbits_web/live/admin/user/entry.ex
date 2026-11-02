@@ -3,10 +3,10 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
 
   alias Elixirbits.Accounts
   alias Elixirbits.AccessControl.Permissions
-  alias Elixirbits.CoreUtils.EnumTypes.AddressLabel
-  alias Elixirbits.CoreUtils.EnumTypes.UserSex
+  alias Elixirbits.CoreUtils.ComponentHelper.Upload
+  alias Elixirbits.CoreUtils.Options.AddressLabel
+  alias Elixirbits.CoreUtils.Options.UserSex
   alias Elixirbits.CoreUtils.Resource
-  alias Elixirbits.CoreUtils.Upload
   alias ElixirbitsWeb.Admin.AuditLogLive.History
   alias ElixirbitsWeb.Admin.UserLive.Deletion
 

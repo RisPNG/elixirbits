@@ -21,7 +21,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   embed_templates "core_components/*"
 
-  @color_space_options Elixirbits.CoreUtils.Color.options()
+  @color_space_options Elixirbits.CoreUtils.Parse.color_options()
 
   def on_mount(:inputs, _params, _session, socket) do
     socket =
@@ -40,7 +40,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               case colors[id] do
                 %{value: ^value, color: nil} -> {:ok, nil}
                 %{value: ^value} = state -> {:ok, state}
-                _ -> Elixirbits.CoreUtils.Color.inspect_color(value)
+                _ -> Elixirbits.CoreUtils.Parse.inspect_color(value)
               end
 
             result =
@@ -54,7 +54,7 @@ defmodule ElixirbitsWeb.CoreComponents do
                   "convert" ->
                     with {:ok, state} <- source do
                       if state && state.format != format,
-                        do: Elixirbits.CoreUtils.Color.convert_color(state.color, format),
+                        do: Elixirbits.CoreUtils.Parse.convert_color(state.color, format),
                         else: {:ok, state}
                     end
 
@@ -71,7 +71,7 @@ defmodule ElixirbitsWeb.CoreComponents do
                          alpha =
                            if(previous && !params["alpha_changed"], do: previous.rgba.a, else: a),
                          {:ok, picked} <- Color.new([r / 255, g / 255, b / 255, alpha * 1.0]) do
-                      Elixirbits.CoreUtils.Color.convert_color(picked, format)
+                      Elixirbits.CoreUtils.Parse.convert_color(picked, format)
                     else
                       _ -> {:error, "must be a supported color value"}
                     end
@@ -1419,7 +1419,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     placeholder = assigns.rest[:placeholder]
 
     color_state =
-      case Elixirbits.CoreUtils.Color.inspect_color(value) do
+      case Elixirbits.CoreUtils.Parse.inspect_color(value) do
         {:ok, state} -> state
         {:error, _reason} -> nil
       end
@@ -2820,7 +2820,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{type: "month"} = assigns), do: vcalendar_input(assigns)
 
   def input(%{type: "tel"} = assigns) do
-    {dial_code, number, iso} = Elixirbits.CoreUtils.Phones.parse(assigns[:value] || "")
+    {dial_code, number, iso} = Elixirbits.CoreUtils.Parse.to_phone(assigns[:value] || "")
 
     parent_form =
       case assigns[:form_field] do
@@ -2870,8 +2870,8 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:country_id, country_field.id)
       |> assign(:country_name, country_field.name)
       |> assign(:wrapper_id, wrapper_id)
-      |> assign(:countries_json, Elixirbits.CoreUtils.Phones.dial_codes_json())
-      |> assign(:country_options, Elixirbits.CoreUtils.Phones.options())
+      |> assign(:countries_json, Elixirbits.CoreUtils.Options.Phones.dial_codes_json())
+      |> assign(:country_options, Elixirbits.CoreUtils.Options.Phones.options())
       |> assign(:number_value, number)
       |> assign(:composite_value, composite_value)
 

@@ -4,7 +4,7 @@ defmodule ElixirbitsWeb.LoginLive.IndexTest do
   import Phoenix.LiveViewTest
 
   test "renders the sign in form with key elements", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/sign-in")
+    {:ok, view, html} = live(conn, ~p"/sign-in")
 
     assert has_element?(view, "#login-form[novalidate]")
 
@@ -16,6 +16,18 @@ defmodule ElixirbitsWeb.LoginLive.IndexTest do
            )
 
     assert has_element?(view, "#login-form input[name=\"user[remember_me]\"][type=\"checkbox\"]")
+
+    [tooltip] =
+      html
+      |> Floki.parse_document!()
+      |> Floki.find("#login-form [data-tooltip]")
+      |> Enum.filter(fn wrapper ->
+        Floki.find(wrapper, "input[name='user[remember_me]']") != []
+      end)
+      |> Floki.attribute("data-tooltip")
+
+    assert String.trim(tooltip) != ""
+
     assert has_element?(view, "button[phx-click=\"request_magic_link\"]")
     assert has_element?(view, "a[href=\"/reset\"]")
     assert has_element?(view, "a[href=\"/register\"]")

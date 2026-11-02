@@ -1,8 +1,8 @@
-defmodule ElixirbitsWeb.CalendarComponentsTest do
+defmodule Elixirbits.CoreUtils.ComponentHelper.CalendarComponentTest do
   use ExUnit.Case, async: true
 
   import Phoenix.LiveViewTest
-  alias ElixirbitsWeb.CalendarComponents
+  alias Elixirbits.CoreUtils.ComponentHelper.Calendar, as: CalendarComponent
 
   test "overnight events have clipped segments and unique native selection buttons" do
     event = %{
@@ -14,7 +14,7 @@ defmodule ElixirbitsWeb.CalendarComponentsTest do
     }
 
     html =
-      render_component(&CalendarComponents.calendar/1,
+      render_component(&CalendarComponent.calendar/1,
         id: "example",
         events: [event],
         view: :week,
@@ -51,7 +51,7 @@ defmodule ElixirbitsWeb.CalendarComponentsTest do
 
     for view <- [:month, :schedule] do
       html =
-        render_component(&CalendarComponents.calendar/1,
+        render_component(&CalendarComponent.calendar/1,
           events: [event],
           view: view,
           cursor: ~D[2026-07-08],
@@ -82,7 +82,7 @@ defmodule ElixirbitsWeb.CalendarComponentsTest do
     ]
 
     html =
-      render_component(&CalendarComponents.calendar/1,
+      render_component(&CalendarComponent.calendar/1,
         events: events,
         view: :day,
         cursor: ~D[2026-07-08],
@@ -106,7 +106,7 @@ defmodule ElixirbitsWeb.CalendarComponentsTest do
     }
 
     html =
-      render_component(&CalendarComponents.calendar/1,
+      render_component(&CalendarComponent.calendar/1,
         events: [event],
         view: :resource,
         cursor: ~D[2026-07-08],
@@ -132,7 +132,7 @@ defmodule ElixirbitsWeb.CalendarComponentsTest do
           {"America/New_York", ~D[2026-07-08], "7:30 PM"}
         ] do
       html =
-        render_component(&CalendarComponents.calendar/1,
+        render_component(&CalendarComponent.calendar/1,
           events: [event],
           timezone: timezone,
           view: :day,

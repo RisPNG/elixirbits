@@ -1,7 +1,7 @@
-defmodule Elixirbits.CoreUtils.PhonesTest do
+defmodule Elixirbits.CoreUtils.OptionsTest do
   use ExUnit.Case, async: true
 
-  alias Elixirbits.CoreUtils.Phones
+  alias Elixirbits.CoreUtils.Options.Phones
 
   test "browser dial codes cover the same countries as the selector" do
     dial_codes = Jason.decode!(Phones.dial_codes_json())

@@ -66,7 +66,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive.CinderEntry do
     attribute :level, :integer, public?: true
     attribute :url, :string, public?: true
     attribute :sequence, :integer, public?: true
-    attribute :state, Elixirbits.CoreUtils.EnumTypes.SitenavState, public?: true
+    attribute :state, Elixirbits.CoreUtils.Options.SitenavState, public?: true
     timestamps()
   end
 end

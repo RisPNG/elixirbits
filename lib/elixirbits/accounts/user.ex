@@ -41,7 +41,11 @@ defmodule Elixirbits.Accounts.User do
     tokens do
       enabled? true
       token_resource Elixirbits.Accounts.Token
-      signing_secret Elixirbits.Secrets
+
+      signing_secret fn _secret_name, _resource ->
+        Application.fetch_env(:elixirbits, :token_signing_secret)
+      end
+
       store_all_tokens? true
       require_token_presence_for_authentication? true
       token_lifetime {365, :days}
@@ -147,7 +151,10 @@ defmodule Elixirbits.Accounts.User do
                 strategy_name: :password}
 
       change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
-      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
+
+      change {Ash.Resource.Change.Function,
+              fun: {Elixirbits.CoreUtils.Resource, :normalize_ordered_relationship, [:addresses]}}
+
       change manage_relationship(:addresses, type: :direct_control)
     end
 
@@ -179,7 +186,10 @@ defmodule Elixirbits.Accounts.User do
       ]
 
       argument :addresses, {:array, :map}
-      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
+
+      change {Ash.Resource.Change.Function,
+              fun: {Elixirbits.CoreUtils.Resource, :normalize_ordered_relationship, [:addresses]}}
+
       change manage_relationship(:addresses, type: :direct_control)
     end
 
@@ -203,7 +213,10 @@ defmodule Elixirbits.Accounts.User do
       ]
 
       argument :addresses, {:array, :map}
-      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
+
+      change {Ash.Resource.Change.Function,
+              fun: {Elixirbits.CoreUtils.Resource, :normalize_ordered_relationship, [:addresses]}}
+
       change manage_relationship(:addresses, type: :direct_control)
     end
 
@@ -605,7 +618,7 @@ defmodule Elixirbits.Accounts.User do
     attribute :weight_kg, :decimal
     attribute :height_cm, :decimal
     attribute :dob, :date
-    attribute :sex, Elixirbits.CoreUtils.EnumTypes.UserSex
+    attribute :sex, Elixirbits.CoreUtils.Options.UserSex
     attribute :locale, :string
     attribute :timezone, :string
 

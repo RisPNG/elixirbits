@@ -1,81 +1,8 @@
-/* Imports, sources, and icon plugins */
+/* Build inputs */
 
 @import "tailwindcss" source(none);
 @import "vanilla-calendar-pro/styles/index.css";
 @import "./subgap.css";
-
-[data-file-preview-outlet]:not(:has([data-file-collection]:not([hidden]) [data-file-item]:not([hidden]), [data-file-collection]:not([hidden]) [data-file-preview-container]:not([hidden]))) {
-  display: none;
-}
-
-[data-file-collection][data-file-detached="true"] [data-file-item]:not([hidden]):has(> [data-file-preview-as="thumbnail"]) {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  height: 100%;
-  min-height: 0;
-}
-
-[data-file-collection][data-file-detached="true"] [data-file-preview-as="thumbnail"] {
-  height: 100%;
-  min-height: 0;
-  width: 100%;
-}
-
-[data-file-collection][data-file-focused="true"][data-file-mode="text"] label,
-[data-file-collection][data-file-focused="true"][data-file-mode="text-enabled"] label {
-  text-decoration-line: underline;
-}
-
-[data-file-cycle],
-[data-file-edit],
-[data-file-caption] {
-  @apply opacity-0 pointer-events-none transition-opacity;
-}
-
-[data-file-cycle] {
-  @apply absolute top-1/2 z-20 -translate-y-1/2;
-}
-
-[data-file-cycle]:focus {
-  @apply ring-0;
-}
-
-[data-file-caption] {
-  @apply absolute top-1 left-1 right-8 z-10 w-fit truncate rounded-default bg-primary px-1 text-sm text-content;
-  max-width: calc(100% - 2.25rem);
-}
-
-[data-file-edit] {
-  @apply absolute bottom-1 left-1/2 -translate-x-1/2;
-}
-
-[data-file-collection]:hover [data-file-cycle]:not(:disabled),
-[data-file-collection]:focus-within [data-file-cycle]:not(:disabled),
-[data-file-item]:hover [data-file-edit]:not(:disabled),
-[data-file-item]:focus-within [data-file-edit]:not(:disabled),
-[data-file-preview-container]:hover [data-file-edit]:not(:disabled),
-[data-file-preview-container]:focus-within [data-file-edit]:not(:disabled) {
-  @apply opacity-100 pointer-events-auto;
-}
-
-[data-file-collection]:hover [data-file-caption],
-[data-file-collection]:focus-within [data-file-caption] {
-  @apply opacity-100;
-}
-
-[data-file-collection]:has(> [data-file-preview-position]) [data-file-preview-as="tag"] {
-  @apply pb-8;
-}
-
-[data-file-collection]:has(> [data-file-preview-position]):has([data-file-preview-as="tag"]) [data-file-cycle] {
-  @apply top-4;
-}
-
-[data-file-preview-as="tag"]:has(> [data-file-edit]),
-[data-file-preview-container][data-file-preview-as="tag"]:has([data-file-edit]:not([hidden])),
-[data-file-collection]:has(> [data-file-preview-position]) [data-file-preview-as="tag"]:has([data-file-edit]:not([hidden])) {
-  @apply pb-9;
-}
 
 @source "../../deps/cinder";
 @source "../../deps/ash_authentication_phoenix";
@@ -83,12 +10,13 @@
 @source "../css";
 @source "../js";
 @source "../../lib/elixirbits_web";
+@source "../../lib/elixirbits/core_utils";
 @source "../../priv/repo";
 
 @plugin "../vendor/heroicons";
 @plugin "../vendor/tabler";
 
-/* Shared palette and light theme */
+/* Global theme tokens and light colors */
 
 @theme static {
   --theme-light-content: oklch(24% 0.016 252.42);
@@ -136,7 +64,7 @@
   --surface-light--alpha: var(--overlay-opacity);
 }
 
-/* Contextual backgrounds */
+/* Contextual surfaces and shadows */
 
 @theme inline {
   --background-image-transparency-grid: repeating-conic-gradient(var(--color-outline) 0 25%, var(--surface-primary) 0 50%);
@@ -148,7 +76,7 @@
   --shadow-button: inset 0 1px 0 color-mix(in srgb, var(--color-light), transparent 50%), 0 1px 2px var(--color-dark);
 }
 
-/* Dark theme */
+/* Dark colors */
 
 [data-theme="dark"] {
   --color-primary: #141414;
@@ -167,7 +95,7 @@
   --outline-strength: 24%;
 }
 
-/* System dark theme */
+/* System dark colors */
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -186,17 +114,6 @@
     --outline-target: var(--color-light);
     --outline-strength: 24%;
   }
-}
-
-/* Shared corner rounding for HTML and SVG rectangles */
-
-@utility rounded-default {
-  rx: var(--radius-default);
-}
-
-@utility rounded-full {
-  rx: min(var(--radius-full), calc(min(attr(width px), attr(height px)) / 2));
-  ry: auto;
 }
 
 /* Adaptive surface colors */
@@ -469,7 +386,7 @@
   fill: var(--surface-background) !important;
 }
 
-/* Overlay modifiers */
+/* Surface overlays */
 
 @utility overlay-dark-* {
   --surface-overlay-kind: 1;
@@ -518,7 +435,7 @@
   background-color: var(--surface-background) !important;
 }
 
-/* LiveView and theme variants */
+/* Global variants and theme transitions */
 
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
@@ -535,8 +452,6 @@
     }
   }
 }
-
-/* Theme switching animation */
 
 ::view-transition-group(root) {
   animation: none;
@@ -572,9 +487,271 @@
   }
 }
 
-/* LiveView containers and floating surfaces */
+/* Shared corner rounding */
+
+@utility rounded-default {
+  rx: var(--radius-default);
+}
+
+@utility rounded-full {
+  rx: min(var(--radius-full), calc(min(attr(width px), attr(height px)) / 2));
+  ry: auto;
+}
+
+/* LiveView structure */
 
 [data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* Application frame and navigation */
+
+@utility shell-surface {
+  @apply bg-primary overlay-dark-[0.04] dark:overlay-light-[0.04];
+}
+
+@utility workspace-canvas {
+  @apply bg-primary;
+  anchor-name: --workspace;
+  --workspace-shell-surface: var(--surface-parent);
+
+  &::before {
+    content: "";
+    position: fixed;
+    position-anchor: --workspace;
+    top: 4rem;
+    left: anchor(left);
+    width: var(--radius-workspace);
+    height: var(--radius-workspace);
+    z-index: 20;
+    pointer-events: none;
+    background-color: var(--workspace-shell-surface);
+    mask-image: radial-gradient(circle at bottom right, transparent calc(var(--radius-workspace) - 0.5px), black var(--radius-workspace));
+  }
+}
+
+@utility panel-surface {
+  @apply bg-primary overlay-dark-[0.025] dark:overlay-light-[0.025];
+  --control-parent-surface: var(--surface-parent);
+}
+
+@utility inset-surface {
+  @apply bg-transparent overlay-dark-[0.035] dark:overlay-light-[0.035];
+  --control-parent-surface: var(--surface-parent);
+}
+
+@utility nav-item {
+  @apply rounded-full text-subcontent transition-colors hover:overlay-dark;
+}
+
+/* Shared buttons */
+
+@utility button-base {
+  @apply inline-grid place-items-center rounded-default font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none;
+}
+
+@utility button-text {
+  @apply text-brand underline-offset-4 hover:underline focus-visible:underline;
+}
+
+@utility button-primary {
+  @apply border border-brand bg-brand text-content-inverse dark:text-content shadow-button hover:overlay-dark focus:border-brand active:shadow-none disabled:shadow-none;
+}
+
+@utility button-neutral {
+  @apply border border-outline bg-transparent text-content shadow-button hover:overlay-dark focus:border-brand active:shadow-none disabled:shadow-none;
+}
+
+@utility button-default {
+  @apply border border-transparent bg-control text-subcontent hover:overlay-dark focus:border-brand;
+
+  &[aria-pressed="true"],
+  &[aria-selected="true"] {
+    @apply bg-brand overlay-opacity-[0.12] text-content;
+  }
+}
+
+@utility button-danger {
+  @apply border border-error bg-error overlay-opacity-[0.12] text-content shadow-button hover:overlay-dark focus:border-error active:shadow-none disabled:shadow-none;
+}
+
+/* Shared feedback */
+
+@utility flash-surface {
+  --flash-accent: var(--color-info);
+  --surface-base: color-mix(in srgb, var(--color-primary), var(--flash-accent) 24%);
+  --surface-reset: 0;
+  --surface-fill-alpha: 1;
+  @apply surface-colors;
+  background-color: var(--surface-background) !important;
+
+  &[data-flash-kind="error"] {
+    --flash-accent: var(--color-error);
+  }
+
+  &[data-flash-kind="warning"] {
+    --flash-accent: var(--color-warning);
+  }
+}
+
+@utility status-pill {
+  @apply inline-grid place-items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap overlay-opacity-[0.12];
+}
+
+/* Shared listings */
+
+@utility listing-surface {
+  @apply rounded-default border border-outline shadow-card;
+}
+
+@utility listing-table {
+  @apply w-full text-left text-sm;
+  & tbody tr:nth-child(even):not(:has(input:checked)) {
+    @apply bg-primary overlay-dark-[0.02] dark:overlay-light-[0.02];
+  }
+  & tbody tr + tr {
+    @apply border-t border-outline;
+  }
+}
+
+@utility listing-heading {
+  @apply bg-primary overlay-dark-[0.04] dark:overlay-light-[0.04] px-4 py-3 text-left font-medium text-subcontent whitespace-nowrap;
+}
+
+@utility listing-cell {
+  @apply px-4 py-2 text-content;
+}
+
+/* Shared input controls and floating labels */
+
+.input-floating-control {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  line-height: 1.25rem;
+  transition: border-color var(--field-motion) ease, box-shadow var(--field-motion) ease, padding var(--field-motion) ease;
+}
+
+.input-floating-control::placeholder {
+  color: var(--color-subcontent);
+  opacity: 1;
+  transition: opacity var(--field-motion) ease;
+}
+
+:has(> .input-floating-label):not(:focus-within) .input-floating-control::placeholder,
+.pc-combo-box.input-floating-wrapper:has(+ .input-floating-label):not(:focus-within) .pc-combo-box__input::placeholder {
+  opacity: 0;
+}
+
+:has(> .input-floating-label):not(:focus-within) > .input-native-select:enabled:not([readonly]):has(option:checked[value=""]),
+[data-file-has-value="false"][data-file-editable-like="true"]:not([data-file-has-placeholder="true"]):not(:focus-within) [data-file-control] :has(> .input-floating-label) > :is([data-file-name], input[type="file"]) {
+  color: transparent;
+}
+
+.input-floating-textarea {
+  min-height: 2.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.input-floating-textarea:focus,
+.input-floating-textarea:not(:placeholder-shown) {
+  padding-top: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.input-floating-label {
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: var(--radius-default);
+  background-color: transparent;
+  box-shadow: none;
+  isolation: isolate;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  color: var(--color-subcontent);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  opacity: 1;
+  transition:
+    top var(--field-motion) ease,
+    left var(--field-motion) ease,
+    color var(--field-motion) ease,
+    font-size var(--field-motion) ease,
+    line-height var(--field-motion) ease,
+    opacity var(--field-motion) ease;
+}
+
+.input-floating-label::before {
+  content: "";
+  position: absolute;
+  inset-inline: -0.1875rem;
+  top: -0.1875rem;
+  height: calc(50% + 0.1875rem + 1px);
+  z-index: -1;
+  border-radius: inherit;
+  background-color: var(--surface);
+  opacity: 0;
+  transition: opacity 0s;
+}
+
+.input-floating-textarea + .input-floating-label {
+  top: 0.75rem;
+  transform: translateY(0);
+}
+
+.input-floating-wrapper-tags + .input-floating-label,
+*:has(> .input-floating-wrapper-tags) + .input-floating-label {
+  top: 1.375rem;
+  transform: translateY(-50%);
+}
+
+:focus-within > .input-floating-label,
+.input-floating-control:focus + .input-floating-label,
+.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown) + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label,
+*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label,
+*:has(> .input-floating-wrapper .input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label,
+.pc-combo-box.input-floating-wrapper:focus-within + .input-floating-label,
+.pc-combo-box.input-floating-wrapper[data-has-value] + .input-floating-label,
+.pc-combo-box.input-floating-wrapper:has(.pc-combo-box__input:disabled) + .input-floating-label,
+.input-native-select:is(:disabled, [readonly]) + .input-floating-label,
+.input-native-select:has(option:checked:not([value=""])) + .input-floating-label,
+[data-file-control]:focus-within .input-floating-label,
+:is([data-file-has-value="true"], [data-file-editable-like="false"], :where([data-file-has-placeholder="true"][data-file-editable-like="true"])) [data-file-control] .input-floating-label {
+  top: 0;
+  color: var(--color-brand);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  opacity: 1;
+}
+
+:focus-within > .input-floating-label::before,
+.input-floating-control:focus + .input-floating-label::before,
+.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown) + .input-floating-label::before,
+.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label::before,
+.input-floating-wrapper:has(.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label::before,
+*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label::before,
+*:has(> .input-floating-wrapper .input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label::before,
+.pc-combo-box.input-floating-wrapper:focus-within + .input-floating-label::before,
+.pc-combo-box.input-floating-wrapper[data-has-value] + .input-floating-label::before,
+.pc-combo-box.input-floating-wrapper:has(.pc-combo-box__input:disabled) + .input-floating-label::before,
+.input-native-select:is(:disabled, [readonly]) + .input-floating-label::before,
+.input-native-select:has(option:checked:not([value=""])) + .input-floating-label::before,
+[data-file-control]:focus-within .input-floating-label::before,
+:is([data-file-has-value="true"], [data-file-editable-like="false"], :where([data-file-has-placeholder="true"][data-file-editable-like="true"])) [data-file-control] .input-floating-label::before {
+  opacity: 1;
+  transition-delay: var(--field-motion);
+}
+
+.input-floating-textarea:focus + .input-floating-label,
+.input-floating-textarea:not(:placeholder-shown) + .input-floating-label {
+  transform: translateY(-50%);
+}
+
+/* Shared input popover positioning */
 
 .color-input-popover,
 [data-calendar-popover][data-vc=calendar] {
@@ -588,85 +765,29 @@
   max-width: calc(100vw - 1rem);
 }
 
-/* Input clear controls */
+/* Shared input utilities */
 
-input[type="search"]::-webkit-search-cancel-button {
-  @apply appearance-none hero-x-mark-mini size-5 text-error cursor-pointer;
+@utility option-surface {
+  @apply overlay-dark dark:overlay-light;
 }
 
-/* Select and combobox controls */
-
-.input-native-select {
-  appearance: base-select;
+@utility bg-control-radio {
+  background-image: radial-gradient(circle, currentColor 28%, transparent 32%);
 }
 
-.input-native-select:not([multiple]):not([size]),
-.input-native-select:not([multiple])[size="1"] {
-  @apply grid grid-cols-[minmax(0,1fr)_1.25rem] gap-1.5 items-center cursor-pointer;
+@utility bg-control-check {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: currentColor;
+    mask: url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e') center / 100% 100% no-repeat;
+  }
 }
 
-.input-native-select.input-floating-control:open {
-  @apply border-brand ring-2 ring-brand;
-}
-
-.input-native-select-error.input-floating-control:open {
-  @apply border-error ring-error;
-}
-
-.input-native-select:disabled {
-  @apply cursor-not-allowed;
-}
-
-.input-native-select::picker-icon {
-  @apply hero-chevron-down-mini size-5 text-subcontent;
-  content: "";
-  margin: 0;
-}
-
-.input-native-select::picker(select) {
-  @apply rounded-default border border-outline bg-surface text-content shadow-lg overflow-y-auto;
-  appearance: base-select;
-  position-area: block-end span-inline-end;
-  position-try-fallbacks: flip-inline, flip-block, flip-block flip-inline;
-  position-try-order: most-block-size;
-  inset: auto;
-  margin: 0.25rem 0;
-  padding: 0;
-  width: anchor-size(width);
-  max-width: calc(100vw - 1rem);
-  max-height: 15rem;
-}
-
-.input-native-select option {
-  @apply grid grid-cols-[minmax(0,1fr)_1.25rem] gap-2 items-center px-3 py-2 text-sm text-content cursor-pointer select-none;
-}
-
-.input-native-select option:enabled:hover,
-.input-native-select option:enabled:focus,
-.input-native-select option:checked {
-  @apply option-surface;
-}
-
-.input-native-select option:checked {
-  @apply font-semibold;
-}
-
-.input-native-select option:disabled {
-  @apply text-subcontent cursor-not-allowed;
-}
-
-.input-native-select option::checkmark {
-  @apply hero-check-mini size-4 invisible;
-  content: "";
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: center;
-  margin: 0;
-}
-
-.input-native-select option:checked::checkmark {
-  @apply visible;
-}
+/* Combobox controls */
 
 .pc-combo-box {
   @apply relative min-w-0 w-full;
@@ -960,315 +1081,189 @@ input[type="search"]::-webkit-search-cancel-button {
   @apply min-h-6 py-1;
 }
 
-/* Floating input controls and labels */
+/* Native select controls */
 
-.input-floating-control {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-  line-height: 1.25rem;
-  transition: border-color var(--field-motion) ease, box-shadow var(--field-motion) ease, padding var(--field-motion) ease;
+.input-native-select {
+  appearance: base-select;
 }
 
-.input-floating-control::placeholder {
-  color: var(--color-subcontent);
-  opacity: 1;
-  transition: opacity var(--field-motion) ease;
+.input-native-select:not([multiple]):not([size]),
+.input-native-select:not([multiple])[size="1"] {
+  @apply grid grid-cols-[minmax(0,1fr)_1.25rem] gap-1.5 items-center cursor-pointer;
 }
 
-:has(> .input-floating-label):not(:focus-within) .input-floating-control::placeholder,
-.pc-combo-box.input-floating-wrapper:has(+ .input-floating-label):not(:focus-within) .pc-combo-box__input::placeholder {
-  opacity: 0;
+.input-native-select.input-floating-control:open {
+  @apply border-brand ring-2 ring-brand;
 }
 
-:has(> .input-floating-label):not(:focus-within) > .input-native-select:enabled:not([readonly]):has(option:checked[value=""]),
-[data-file-has-value="false"][data-file-editable-like="true"]:not([data-file-has-placeholder="true"]):not(:focus-within) [data-file-control] :has(> .input-floating-label) > :is([data-file-name], input[type="file"]) {
-  color: transparent;
+.input-native-select-error.input-floating-control:open {
+  @apply border-error ring-error;
 }
 
-.input-floating-textarea {
-  min-height: 2.75rem;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+.input-native-select:disabled {
+  @apply cursor-not-allowed;
 }
 
-.input-floating-textarea:focus,
-.input-floating-textarea:not(:placeholder-shown) {
-  padding-top: 1rem;
-  padding-bottom: 0.5rem;
-}
-
-.input-floating-label {
-  pointer-events: none;
-  position: absolute;
-  z-index: 1;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  border-radius: var(--radius-default);
-  background-color: transparent;
-  box-shadow: none;
-  isolation: isolate;
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-  color: var(--color-subcontent);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  opacity: 1;
-  transition:
-    top var(--field-motion) ease,
-    left var(--field-motion) ease,
-    color var(--field-motion) ease,
-    font-size var(--field-motion) ease,
-    line-height var(--field-motion) ease,
-    opacity var(--field-motion) ease;
-}
-
-.input-floating-label::before {
+.input-native-select::picker-icon {
+  @apply hero-chevron-down-mini size-5 text-subcontent;
   content: "";
-  position: absolute;
-  inset-inline: -0.1875rem;
-  top: -0.1875rem;
-  height: calc(50% + 0.1875rem + 1px);
-  z-index: -1;
-  border-radius: inherit;
-  background-color: var(--surface);
-  opacity: 0;
-  transition: opacity 0s;
+  margin: 0;
 }
 
-.input-floating-textarea + .input-floating-label {
-  top: 0.75rem;
-  transform: translateY(0);
+.input-native-select::picker(select) {
+  @apply rounded-default border border-outline bg-surface text-content shadow-lg overflow-y-auto;
+  appearance: base-select;
+  position-area: block-end span-inline-end;
+  position-try-fallbacks: flip-inline, flip-block, flip-block flip-inline;
+  position-try-order: most-block-size;
+  inset: auto;
+  margin: 0.25rem 0;
+  padding: 0;
+  width: anchor-size(width);
+  max-width: calc(100vw - 1rem);
+  max-height: 15rem;
 }
 
-.input-floating-wrapper-tags + .input-floating-label,
-*:has(> .input-floating-wrapper-tags) + .input-floating-label {
-  top: 1.375rem;
-  transform: translateY(-50%);
+.input-native-select option {
+  @apply grid grid-cols-[minmax(0,1fr)_1.25rem] gap-2 items-center px-3 py-2 text-sm text-content cursor-pointer select-none;
 }
 
-:focus-within > .input-floating-label,
-.input-floating-control:focus + .input-floating-label,
-.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown) + .input-floating-label,
-.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label,
-.input-floating-wrapper:has(.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label,
-*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label,
-*:has(> .input-floating-wrapper .input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label,
-.pc-combo-box.input-floating-wrapper:focus-within + .input-floating-label,
-.pc-combo-box.input-floating-wrapper[data-has-value] + .input-floating-label,
-.pc-combo-box.input-floating-wrapper:has(.pc-combo-box__input:disabled) + .input-floating-label,
-.input-native-select:is(:disabled, [readonly]) + .input-floating-label,
-.input-native-select:has(option:checked:not([value=""])) + .input-floating-label,
+.input-native-select option:enabled:hover,
+.input-native-select option:enabled:focus,
+.input-native-select option:checked {
+  @apply option-surface;
+}
+
+.input-native-select option:checked {
+  @apply font-semibold;
+}
+
+.input-native-select option:disabled {
+  @apply text-subcontent cursor-not-allowed;
+}
+
+.input-native-select option::checkmark {
+  @apply hero-check-mini size-4 invisible;
+  content: "";
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  margin: 0;
+}
+
+.input-native-select option:checked::checkmark {
+  @apply visible;
+}
+
+/* Search clear controls */
+
+input[type="search"]::-webkit-search-cancel-button {
+  @apply appearance-none hero-x-mark-mini size-5 text-error cursor-pointer;
+}
+
+/* File controls and previews */
+
+[data-file-control] .input-floating-label {
+  left: 2.5rem;
+}
+
 [data-file-control]:focus-within .input-floating-label,
 :is([data-file-has-value="true"], [data-file-editable-like="false"], :where([data-file-has-placeholder="true"][data-file-editable-like="true"])) [data-file-control] .input-floating-label {
-  top: 0;
-  color: var(--color-brand);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  opacity: 1;
-}
-
-:focus-within > .input-floating-label::before,
-.input-floating-control:focus + .input-floating-label::before,
-.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown) + .input-floating-label::before,
-.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label::before,
-.input-floating-wrapper:has(.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label::before,
-*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label::before,
-*:has(> .input-floating-wrapper .input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label::before,
-.pc-combo-box.input-floating-wrapper:focus-within + .input-floating-label::before,
-.pc-combo-box.input-floating-wrapper[data-has-value] + .input-floating-label::before,
-.pc-combo-box.input-floating-wrapper:has(.pc-combo-box__input:disabled) + .input-floating-label::before,
-.input-native-select:is(:disabled, [readonly]) + .input-floating-label::before,
-.input-native-select:has(option:checked:not([value=""])) + .input-floating-label::before,
-[data-file-control]:focus-within .input-floating-label::before,
-:is([data-file-has-value="true"], [data-file-editable-like="false"], :where([data-file-has-placeholder="true"][data-file-editable-like="true"])) [data-file-control] .input-floating-label::before {
-  opacity: 1;
-  transition-delay: var(--field-motion);
-}
-
-.input-floating-textarea:focus + .input-floating-label,
-.input-floating-textarea:not(:placeholder-shown) + .input-floating-label {
-  transform: translateY(-50%);
-}
-
-.color-input-swatch {
-  background-image: linear-gradient(var(--input-color, transparent), var(--input-color, transparent)), conic-gradient(var(--color-outline) 25%, var(--color-primary) 0 50%, var(--color-outline) 0 75%, var(--color-primary) 0);
-  background-size: 100% 100%, 0.5rem 0.5rem;
-}
-
-.color-input-popover rgba-color-picker::part(saturation) {
-  border-bottom: 0;
-  border-radius: var(--radius-default) var(--radius-default) 0 0;
-}
-
-.color-input-popover rgba-color-picker::part(alpha) {
-  border-radius: 0 0 var(--radius-default) var(--radius-default);
-}
-
-.color-input-popover rgba-color-picker::part(alpha),
-.color-input-popover rgba-color-picker::part(alpha-pointer) {
-  background-color: var(--color-primary);
-  background-image: conic-gradient(var(--color-outline) 25%, var(--color-primary) 0 50%, var(--color-outline) 0 75%, var(--color-primary) 0);
-  background-size: 0.5rem 0.5rem;
-}
-
-.color-input-popover rgba-color-picker::part(saturation-pointer),
-.color-input-popover rgba-color-picker::part(hue-pointer),
-.color-input-popover rgba-color-picker::part(alpha-pointer) {
-  width: 1.25rem;
-  height: 1.25rem;
-  border-color: var(--color-content);
-  box-shadow: 0 0 0 1px var(--color-outline);
-}
-
-.color-input-popover rgba-color-picker::part(saturation):focus,
-.color-input-popover rgba-color-picker::part(hue):focus,
-.color-input-popover rgba-color-picker::part(alpha):focus {
-  outline: 2px solid var(--color-brand);
-  outline-offset: 2px;
-}
-
-.color-input-label {
-  left: 2.75rem;
-}
-
-.color-input-control:focus-within + .color-input-label,
-.color-input-control:has(.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .color-input-label,
-.color-input-label-filled {
   left: 0.75rem;
-  top: 0;
-  color: var(--color-brand);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  opacity: 1;
 }
 
-.color-input-label-filled::before {
-  opacity: 1;
+input[type="file"],
+[data-file-display] {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12m4.5-4.5v13.5'/%3e%3c/svg%3e");
+  background-position: left 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25rem 1.25rem;
+  background-origin: border-box;
+  padding-left: 2.5rem;
 }
 
-/* Floating label validation */
-
-.input-floating-label-error,
-:focus-within > .input-floating-label-error,
-.color-input-control:focus-within + .input-floating-label-error,
-.input-floating-control:focus + .input-floating-label-error,
-.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown) + .input-floating-label-error,
-.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label-error,
-.input-floating-wrapper:has(.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label-error,
-*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label-error,
-*:has(> .input-floating-wrapper .input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label-error,
-.pc-combo-box.input-floating-wrapper:has(.pc-combo-box__input:disabled) + .input-floating-label-error,
-.input-native-select:is(:disabled, [readonly]) + .input-floating-label-error,
-.input-native-select:has(option:checked:not([value=""])) + .input-floating-label-error,
-[data-file-control]:focus-within .input-floating-label-error,
-:is([data-file-has-value="true"], [data-file-editable-like="false"], :where([data-file-has-placeholder="true"][data-file-editable-like="true"])) [data-file-control] .input-floating-label-error {
-  color: var(--color-error);
+.input-floating-control[type="file"] {
+  padding-block: calc(0.75rem - 1px);
 }
 
-:where([data-core-input]:not([data-file-mode="like-enabled"]):has(:is(input:not([type="hidden"]), select, textarea):disabled):not(:has(:is(input:not([type="hidden"]), select, textarea):enabled))) {
-  & .input-required,
-  & :is([data-color-popover], [data-calendar-popover]) {
-    display: none;
-  }
-
-  & :is(input, textarea)::placeholder {
-    opacity: 0;
-  }
-
-  & .input-native-select:has(option:checked[value=""]) {
-    color: transparent;
-  }
-
-  & .input-floating-label.input-floating-label {
-    top: 0;
-    color: var(--color-brand);
-    font-size: 0.75rem;
-    line-height: 1rem;
-    opacity: 1;
-  }
-
-  & .input-floating-label::before {
-    opacity: 1;
-  }
-
-  & .input-floating-textarea {
-    padding-top: 1rem;
-  }
-
-  & .input-floating-textarea + .input-floating-label {
-    transform: translateY(-50%);
-  }
-
-  & .color-input-label,
-  & [data-file-control] .input-floating-label.input-floating-label {
-    left: 0.75rem;
-  }
-
-  & .input-floating-label-error.input-floating-label-error {
-    color: var(--color-error);
-  }
-
-  & :is(.number-input-control, .color-input-control, [data-file-control]) {
-    @apply overlay-dark;
-    color: var(--color-subcontent);
-    cursor: not-allowed;
-  }
-
-  & [data-boolean-text]:not(.text-error),
-  & > legend {
-    color: var(--color-subcontent);
-  }
-
-  & [data-boolean-text],
-  & > legend {
-    cursor: not-allowed;
-  }
-
-  &[data-file-has-value="false"] :is([data-file-name], [data-file-readonly-name], input[type="file"]) {
-    color: transparent;
-  }
+input[type="file"]::file-selector-button {
+  display: none;
 }
 
-/* Historical field changes */
-
-[data-audit-side="current"],
-:is(label, .input-floating-wrapper, .number-input-control):has([data-audit-side="current"]),
-.input-floating-control[data-audit-side="current"] + .input-floating-label,
-.input-floating-wrapper:has(.input-floating-control[data-audit-side="current"]) + .input-floating-label,
-label:has(+ .number-input-control [data-audit-side="current"]),
-:is(label, span):has(+ [data-audit-side="current"]) {
-  --audit-field-color: var(--color-success);
+[data-file-preview-outlet]:not(:has([data-file-collection]:not([hidden]) [data-file-item]:not([hidden]), [data-file-collection]:not([hidden]) [data-file-preview-container]:not([hidden]))) {
+  display: none;
 }
 
-[data-audit-changed="true"],
-[data-audit-changed="true"] :is(input, textarea, select),
-.input-floating-wrapper:has([data-audit-changed="true"]),
-.number-input-control:has([data-audit-changed="true"]) {
-  color: var(--audit-field-color, var(--color-error));
-  border-color: var(--audit-field-color, var(--color-error));
+[data-file-collection][data-file-detached="true"] [data-file-item]:not([hidden]):has(> [data-file-preview-as="thumbnail"]) {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
 }
 
-[data-audit-changed="true"]:disabled,
-[data-audit-changed="true"] :is(input, textarea, select):disabled {
-  color: var(--audit-field-color, var(--color-error));
+[data-file-collection][data-file-detached="true"] [data-file-preview-as="thumbnail"] {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
 }
 
-[data-audit-changed="true"]::placeholder,
-[data-audit-changed="true"] :is(input, textarea)::placeholder {
-  color: var(--audit-field-color, var(--color-error));
+[data-file-collection][data-file-focused="true"][data-file-mode="text"] label,
+[data-file-collection][data-file-focused="true"][data-file-mode="text-enabled"] label {
+  text-decoration-line: underline;
 }
 
-.input-floating-control[data-audit-changed="true"] + .input-floating-label,
-.input-floating-wrapper:has(.input-floating-control[data-audit-changed="true"]) + .input-floating-label,
-[data-audit-changed="true"] .input-floating-control + .input-floating-label,
-label:has(> [data-audit-changed="true"]) > span,
-label:has(+ .number-input-control [data-audit-changed="true"]),
-:is(label, span):has(+ [data-audit-changed="true"]) {
-  color: var(--audit-field-color, var(--color-error));
+[data-file-cycle],
+[data-file-edit],
+[data-file-caption] {
+  @apply opacity-0 pointer-events-none transition-opacity;
 }
 
-/* Calendar surfaces and layout */
+[data-file-cycle] {
+  @apply absolute top-1/2 z-20 -translate-y-1/2;
+}
+
+[data-file-cycle]:focus {
+  @apply ring-0;
+}
+
+[data-file-caption] {
+  @apply absolute top-1 left-1 right-8 z-10 w-fit truncate rounded-default bg-primary px-1 text-sm text-content;
+  max-width: calc(100% - 2.25rem);
+}
+
+[data-file-edit] {
+  @apply absolute bottom-1 left-1/2 -translate-x-1/2;
+}
+
+[data-file-collection]:hover [data-file-cycle]:not(:disabled),
+[data-file-collection]:focus-within [data-file-cycle]:not(:disabled),
+[data-file-item]:hover [data-file-edit]:not(:disabled),
+[data-file-item]:focus-within [data-file-edit]:not(:disabled),
+[data-file-preview-container]:hover [data-file-edit]:not(:disabled),
+[data-file-preview-container]:focus-within [data-file-edit]:not(:disabled) {
+  @apply opacity-100 pointer-events-auto;
+}
+
+[data-file-collection]:hover [data-file-caption],
+[data-file-collection]:focus-within [data-file-caption] {
+  @apply opacity-100;
+}
+
+[data-file-collection]:has(> [data-file-preview-position]) [data-file-preview-as="tag"] {
+  @apply pb-8;
+}
+
+[data-file-collection]:has(> [data-file-preview-position]):has([data-file-preview-as="tag"]) [data-file-cycle] {
+  @apply top-4;
+}
+
+[data-file-preview-as="tag"]:has(> [data-file-edit]),
+[data-file-preview-container][data-file-preview-as="tag"]:has([data-file-edit]:not([hidden])),
+[data-file-collection]:has(> [data-file-preview-position]) [data-file-preview-as="tag"]:has([data-file-edit]:not([hidden])) {
+  @apply pb-9;
+}
+
+/* Calendar controls */
 
 [data-vc=calendar] {
   border-radius: var(--radius-default);
@@ -1612,163 +1607,183 @@ label:has(+ .number-input-control [data-audit-changed="true"]),
   @apply overlay-dark!;
 }
 
-/* Input icons and file controls */
+/* Color picker controls */
 
-[data-file-control] .input-floating-label {
-  left: 2.5rem;
+.color-input-swatch {
+  background-image: linear-gradient(var(--input-color, transparent), var(--input-color, transparent)), conic-gradient(var(--color-outline) 25%, var(--color-primary) 0 50%, var(--color-outline) 0 75%, var(--color-primary) 0);
+  background-size: 100% 100%, 0.5rem 0.5rem;
 }
 
-[data-file-control]:focus-within .input-floating-label,
-:is([data-file-has-value="true"], [data-file-editable-like="false"], :where([data-file-has-placeholder="true"][data-file-editable-like="true"])) [data-file-control] .input-floating-label {
+.color-input-popover rgba-color-picker::part(saturation) {
+  border-bottom: 0;
+  border-radius: var(--radius-default) var(--radius-default) 0 0;
+}
+
+.color-input-popover rgba-color-picker::part(alpha) {
+  border-radius: 0 0 var(--radius-default) var(--radius-default);
+}
+
+.color-input-popover rgba-color-picker::part(alpha),
+.color-input-popover rgba-color-picker::part(alpha-pointer) {
+  background-color: var(--color-primary);
+  background-image: conic-gradient(var(--color-outline) 25%, var(--color-primary) 0 50%, var(--color-outline) 0 75%, var(--color-primary) 0);
+  background-size: 0.5rem 0.5rem;
+}
+
+.color-input-popover rgba-color-picker::part(saturation-pointer),
+.color-input-popover rgba-color-picker::part(hue-pointer),
+.color-input-popover rgba-color-picker::part(alpha-pointer) {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-color: var(--color-content);
+  box-shadow: 0 0 0 1px var(--color-outline);
+}
+
+.color-input-popover rgba-color-picker::part(saturation):focus,
+.color-input-popover rgba-color-picker::part(hue):focus,
+.color-input-popover rgba-color-picker::part(alpha):focus {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.color-input-label {
+  left: 2.75rem;
+}
+
+.color-input-control:focus-within + .color-input-label,
+.color-input-control:has(.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .color-input-label,
+.color-input-label-filled {
   left: 0.75rem;
+  top: 0;
+  color: var(--color-brand);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  opacity: 1;
 }
 
-input[type="file"],
-[data-file-display] {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12m4.5-4.5v13.5'/%3e%3c/svg%3e");
-  background-position: left 0.75rem center;
-  background-repeat: no-repeat;
-  background-size: 1.25rem 1.25rem;
-  background-origin: border-box;
-  padding-left: 2.5rem;
+.color-input-label-filled::before {
+  opacity: 1;
 }
 
-.input-floating-control[type="file"] {
-  padding-block: calc(0.75rem - 1px);
+/* Input validation overrides */
+
+.input-floating-label-error,
+:focus-within > .input-floating-label-error,
+.color-input-control:focus-within + .input-floating-label-error,
+.input-floating-control:focus + .input-floating-label-error,
+.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown) + .input-floating-label-error,
+.input-floating-wrapper:has(.input-floating-control:focus) + .input-floating-label-error,
+.input-floating-wrapper:has(.input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label-error,
+*:has(> .input-floating-wrapper .input-floating-control:focus) + .input-floating-label-error,
+*:has(> .input-floating-wrapper .input-floating-control:not([type="file"]):not(select):not(:placeholder-shown)) + .input-floating-label-error,
+.pc-combo-box.input-floating-wrapper:has(.pc-combo-box__input:disabled) + .input-floating-label-error,
+.input-native-select:is(:disabled, [readonly]) + .input-floating-label-error,
+.input-native-select:has(option:checked:not([value=""])) + .input-floating-label-error,
+[data-file-control]:focus-within .input-floating-label-error,
+:is([data-file-has-value="true"], [data-file-editable-like="false"], :where([data-file-has-placeholder="true"][data-file-editable-like="true"])) [data-file-control] .input-floating-label-error {
+  color: var(--color-error);
 }
 
-input[type="file"]::file-selector-button {
-  display: none;
-}
+/* Disabled input overrides */
 
-/* Shared component utilities */
-
-@utility flash-surface {
-  --flash-accent: var(--color-info);
-  --surface-base: color-mix(in srgb, var(--color-primary), var(--flash-accent) 24%);
-  --surface-reset: 0;
-  --surface-fill-alpha: 1;
-  @apply surface-colors;
-  background-color: var(--surface-background) !important;
-
-  &[data-flash-kind="error"] {
-    --flash-accent: var(--color-error);
+:where([data-core-input]:not([data-file-mode="like-enabled"]):has(:is(input:not([type="hidden"]), select, textarea):disabled):not(:has(:is(input:not([type="hidden"]), select, textarea):enabled))) {
+  & .input-required,
+  & :is([data-color-popover], [data-calendar-popover]) {
+    display: none;
   }
 
-  &[data-flash-kind="warning"] {
-    --flash-accent: var(--color-warning);
+  & :is(input, textarea)::placeholder {
+    opacity: 0;
   }
-}
 
-@utility shell-surface {
-  @apply bg-primary overlay-dark-[0.04] dark:overlay-light-[0.04];
-}
-
-@utility workspace-canvas {
-  @apply bg-primary;
-  anchor-name: --workspace;
-  --workspace-shell-surface: var(--surface-parent);
-
-  &::before {
-    content: "";
-    position: fixed;
-    position-anchor: --workspace;
-    top: 4rem;
-    left: anchor(left);
-    width: var(--radius-workspace);
-    height: var(--radius-workspace);
-    z-index: 20;
-    pointer-events: none;
-    background-color: var(--workspace-shell-surface);
-    mask-image: radial-gradient(circle at bottom right, transparent calc(var(--radius-workspace) - 0.5px), black var(--radius-workspace));
+  & .input-native-select:has(option:checked[value=""]) {
+    color: transparent;
   }
-}
 
-@utility panel-surface {
-  @apply bg-primary overlay-dark-[0.025] dark:overlay-light-[0.025];
-  --control-parent-surface: var(--surface-parent);
-}
-
-@utility inset-surface {
-  @apply bg-transparent overlay-dark-[0.035] dark:overlay-light-[0.035];
-  --control-parent-surface: var(--surface-parent);
-}
-
-@utility option-surface {
-  @apply overlay-dark dark:overlay-light;
-}
-
-@utility nav-item {
-  @apply rounded-full text-subcontent transition-colors hover:overlay-dark;
-}
-
-@utility listing-surface {
-  @apply rounded-default border border-outline shadow-card;
-}
-
-@utility listing-table {
-  @apply w-full text-left text-sm;
-  & tbody tr:nth-child(even):not(:has(input:checked)) {
-    @apply bg-primary overlay-dark-[0.02] dark:overlay-light-[0.02];
+  & .input-floating-label.input-floating-label {
+    top: 0;
+    color: var(--color-brand);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    opacity: 1;
   }
-  & tbody tr + tr {
-    @apply border-t border-outline;
+
+  & .input-floating-label::before {
+    opacity: 1;
   }
-}
 
-@utility listing-heading {
-  @apply bg-primary overlay-dark-[0.04] dark:overlay-light-[0.04] px-4 py-3 text-left font-medium text-subcontent whitespace-nowrap;
-}
+  & .input-floating-textarea {
+    padding-top: 1rem;
+  }
 
-@utility listing-cell {
-  @apply px-4 py-2 text-content;
-}
+  & .input-floating-textarea + .input-floating-label {
+    transform: translateY(-50%);
+  }
 
-@utility button-base {
-  @apply inline-grid place-items-center rounded-default font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none;
-}
+  & .color-input-label,
+  & [data-file-control] .input-floating-label.input-floating-label {
+    left: 0.75rem;
+  }
 
-@utility button-text {
-  @apply text-brand underline-offset-4 hover:underline focus-visible:underline;
-}
+  & .input-floating-label-error.input-floating-label-error {
+    color: var(--color-error);
+  }
 
-@utility button-primary {
-  @apply border border-brand bg-brand text-content-inverse dark:text-content shadow-button hover:overlay-dark focus:border-brand active:shadow-none disabled:shadow-none;
-}
+  & :is(.number-input-control, .color-input-control, [data-file-control]) {
+    @apply overlay-dark;
+    color: var(--color-subcontent);
+    cursor: not-allowed;
+  }
 
-@utility button-neutral {
-  @apply border border-outline bg-transparent text-content shadow-button hover:overlay-dark focus:border-brand active:shadow-none disabled:shadow-none;
-}
+  & [data-boolean-text]:not(.text-error),
+  & > legend {
+    color: var(--color-subcontent);
+  }
 
-@utility button-default {
-  @apply border border-transparent bg-control text-subcontent hover:overlay-dark focus:border-brand;
+  & [data-boolean-text],
+  & > legend {
+    cursor: not-allowed;
+  }
 
-  &[aria-pressed="true"],
-  &[aria-selected="true"] {
-    @apply bg-brand overlay-opacity-[0.12] text-content;
+  &[data-file-has-value="false"] :is([data-file-name], [data-file-readonly-name], input[type="file"]) {
+    color: transparent;
   }
 }
 
-@utility button-danger {
-  @apply border border-error bg-error overlay-opacity-[0.12] text-content shadow-button hover:overlay-dark focus:border-error active:shadow-none disabled:shadow-none;
+/* Historical field changes */
+
+[data-audit-side="current"],
+:is(label, .input-floating-wrapper, .number-input-control):has([data-audit-side="current"]),
+.input-floating-control[data-audit-side="current"] + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control[data-audit-side="current"]) + .input-floating-label,
+label:has(+ .number-input-control [data-audit-side="current"]),
+:is(label, span):has(+ [data-audit-side="current"]) {
+  --audit-field-color: var(--color-success);
 }
 
-@utility status-pill {
-  @apply inline-grid place-items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap overlay-opacity-[0.12];
+[data-audit-changed="true"],
+[data-audit-changed="true"] :is(input, textarea, select),
+.input-floating-wrapper:has([data-audit-changed="true"]),
+.number-input-control:has([data-audit-changed="true"]) {
+  color: var(--audit-field-color, var(--color-error));
+  border-color: var(--audit-field-color, var(--color-error));
 }
 
-@utility bg-control-radio {
-  background-image: radial-gradient(circle, currentColor 28%, transparent 32%);
+[data-audit-changed="true"]:disabled,
+[data-audit-changed="true"] :is(input, textarea, select):disabled {
+  color: var(--audit-field-color, var(--color-error));
 }
 
-@utility bg-control-check {
-  position: relative;
+[data-audit-changed="true"]::placeholder,
+[data-audit-changed="true"] :is(input, textarea)::placeholder {
+  color: var(--audit-field-color, var(--color-error));
+}
 
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-color: currentColor;
-    mask: url('data:image/svg+xml,%3csvg%20viewBox=%220%200%2016%2016%22%20xmlns=%22http://www.w3.org/2000/svg%22%3e%3cpath%20d=%22M12.207%204.793a1%201%200%20010%201.414l-5%205a1%201%200%2001-1.414%200l-2-2a1%201%200%20011.414-1.414L6.5%209.086l4.293-4.293a1%201%200%20011.414%200z%22/%3e%3c/svg%3e') center / 100% 100% no-repeat;
-  }
+.input-floating-control[data-audit-changed="true"] + .input-floating-label,
+.input-floating-wrapper:has(.input-floating-control[data-audit-changed="true"]) + .input-floating-label,
+[data-audit-changed="true"] .input-floating-control + .input-floating-label,
+label:has(> [data-audit-changed="true"]) > span,
+label:has(+ .number-input-control [data-audit-changed="true"]),
+:is(label, span):has(+ [data-audit-changed="true"]) {
+  color: var(--audit-field-color, var(--color-error));
 }

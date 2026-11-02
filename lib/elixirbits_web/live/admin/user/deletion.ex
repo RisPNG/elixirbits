@@ -1,7 +1,7 @@
 defmodule ElixirbitsWeb.Admin.UserLive.Deletion do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, push_navigate: 2]
-  import ElixirbitsWeb.Flash, only: [put_flash: 3]
+  import Elixirbits.CoreUtils.ComponentHelper, only: [put_flash: 3]
   use ElixirbitsWeb, :verified_routes
 
   alias Elixirbits.AccessControl.Permissions

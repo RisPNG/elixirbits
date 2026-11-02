@@ -1,7 +1,7 @@
 defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
   use ElixirbitsWeb, :live_view
 
-  alias Elixirbits.CoreUtils.EnumTypes.AddressLabel
+  alias Elixirbits.CoreUtils.Options.AddressLabel
   alias Elixirbits.CoreUtils.Resource
   alias Elixirbits.Organizations
   alias Elixirbits.Organizations.Organization

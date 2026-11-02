@@ -14,7 +14,7 @@
         day.month != @cursor.month && "overlay-dark"
       ]}
     >
-      <% day_events = @events |> Cal.events_on(day) |> Enum.sort_by(& &1.start, DateTime) %>
+      <% day_events = @events |> events_on(day) |> Enum.sort_by(& &1.start, DateTime) %>
       <div class="mb-1 grid justify-items-end">
         <span class={[
           "grid size-6 place-items-center rounded-full text-xs",

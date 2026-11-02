@@ -152,4 +152,18 @@ defmodule Elixirbits.CoreUtils.ParseTest do
     assert Parse.to_naive_datetime("2023-02-01T13:00:00.123456+08:00") ==
              ~N[2023-02-01 05:00:00.123456]
   end
+
+  test "to_phone selects the longest country prefix and preserves shared-code country ordering" do
+    assert Parse.to_phone("  +60 123456789  ") == {"+60", "123456789", "MY"}
+    assert Parse.to_phone("+60123456789") == {"+60", "123456789", "MY"}
+    assert Parse.to_phone("+1684 5551234") == {"+1684", "5551234", "AS"}
+    assert Parse.to_phone("+1 2025550123") == {"+1", "2025550123", "CA"}
+  end
+
+  test "to_phone preserves unmatched numbers and clears empty form values" do
+    assert Parse.to_phone(" 81234567 ") == {nil, "81234567", nil}
+    assert Parse.to_phone(" +999 123456 ") == {nil, "+999 123456", nil}
+    assert Parse.to_phone("   ") == {nil, "", nil}
+    assert Parse.to_phone(nil) == {nil, "", nil}
+  end
 end

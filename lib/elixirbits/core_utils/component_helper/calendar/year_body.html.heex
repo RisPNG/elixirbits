@@ -14,7 +14,7 @@
     </div>
 
     <div
-      :for={week <- Cal.month_grid(Date.new!(@cursor.year, month, 1))}
+      :for={week <- month_grid(Date.new!(@cursor.year, month, 1))}
       class="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr]"
     >
       <button

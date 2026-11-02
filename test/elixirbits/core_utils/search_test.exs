@@ -804,7 +804,7 @@ defmodule Elixirbits.CoreUtils.SearchTest do
       assert Search.filter(options, "pictureframe", exact: true) == []
 
       options =
-        Elixirbits.CoreUtils.EnumTypes.AddressLabel.values()
+        Elixirbits.CoreUtils.Options.AddressLabel.values()
         |> Enum.map(&{Phoenix.Naming.humanize(&1), to_string(&1)})
 
       assert Search.filter(options, "oth") == [{"Other", "OTHER"}]

@@ -1,7 +1,7 @@
-defmodule Elixirbits.CoreUtils.UploadTest do
+defmodule Elixirbits.CoreUtils.ComponentHelper.UploadTest do
   use ExUnit.Case, async: false
 
-  alias Elixirbits.CoreUtils.Upload
+  alias Elixirbits.CoreUtils.ComponentHelper.Upload
 
   setup do
     directory =

@@ -1,7 +1,7 @@
-defmodule Elixirbits.CoreUtils.CalendarTest do
+defmodule Elixirbits.CoreUtils.ComponentHelper.CalendarTest do
   use ExUnit.Case, async: true
 
-  alias Elixirbits.CoreUtils.Calendar
+  alias Elixirbits.CoreUtils.ComponentHelper.Calendar
 
   test "month_grid covers the whole month, Monday-first, in 7-day weeks" do
     weeks = Calendar.month_grid(~D[2026-07-15])

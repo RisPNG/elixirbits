@@ -1,7 +1,8 @@
-defmodule Elixirbits.CoreUtils.ColorTest do
+defmodule Elixirbits.CoreUtils.Parse.ColorTest do
   use ExUnit.Case, async: true
 
-  alias Elixirbits.CoreUtils.Color
+  alias Elixirbits.CoreUtils.Parse
+  alias Elixirbits.CoreUtils.Parse.Color
 
   test "selected formats and alpha survive casting, storage, and loading without conversion" do
     for value <- [
@@ -40,7 +41,7 @@ defmodule Elixirbits.CoreUtils.ColorTest do
   end
 
   test "the available formats all support native conversion and serialization" do
-    assert Color.options() == [
+    assert Parse.color_options() == [
              {"HEX", "hex"},
              {"RGB", "rgb"},
              {"HSL", "hsl"},
@@ -54,14 +55,14 @@ defmodule Elixirbits.CoreUtils.ColorTest do
            ]
 
     assert {:ok, %{color: source, rgba: original}} =
-             Color.inspect_color("oklch(65.123456789% 0.1 65.123456789 / 0.123456789)")
+             Parse.inspect_color("oklch(65.123456789% 0.1 65.123456789 / 0.123456789)")
 
-    for {_label, format} <- Color.options() do
+    for {_label, format} <- Parse.color_options() do
       assert {:ok, %{value: value, format: ^format, color: ^source}} =
-               Color.convert_color(source, format)
+               Parse.convert_color(source, format)
 
       assert {:ok, %{value: ^value, format: ^format, rgba: recovered}} =
-               Color.inspect_color(value)
+               Parse.inspect_color(value)
 
       assert_in_delta recovered.r, original.r, 0.6
       assert_in_delta recovered.g, original.g, 0.6
@@ -72,11 +73,11 @@ defmodule Elixirbits.CoreUtils.ColorTest do
 
   test "format selection retains the precise original color rather than converting rounded output" do
     assert {:ok, %{color: source}} =
-             Color.inspect_color("oklch(65.123456789% 0.123456789 65.123456789 / 0.123456789)")
+             Parse.inspect_color("oklch(65.123456789% 0.123456789 65.123456789 / 0.123456789)")
 
-    assert {:ok, %{value: hex, color: ^source}} = Color.convert_color(source, "hex")
-    assert {:ok, %{value: rgb, color: ^source}} = Color.convert_color(source, "rgb")
-    assert {:ok, %{value: hex_again, color: ^source}} = Color.convert_color(source, "hex")
+    assert {:ok, %{value: hex, color: ^source}} = Parse.convert_color(source, "hex")
+    assert {:ok, %{value: rgb, color: ^source}} = Parse.convert_color(source, "rgb")
+    assert {:ok, %{value: hex_again, color: ^source}} = Parse.convert_color(source, "hex")
     assert hex == hex_again
     assert rgb =~ "/ 0.1235)"
     assert source.alpha == 0.123456789
@@ -91,10 +92,10 @@ defmodule Elixirbits.CoreUtils.ColorTest do
           {"COLOR(  SRGB .2 .3 .4 / .375)", "rgb"},
           {"color(xyz .2 .3 .4 / .375)", "xyz-d65"}
         ] do
-      assert {:ok, %{value: ^value, format: ^format}} = Color.inspect_color(value)
+      assert {:ok, %{value: ^value, format: ^format}} = Parse.inspect_color(value)
     end
 
-    assert {:ok, %{rgba: rgba}} = Color.inspect_color("color(srgb 1 0 0 / .375)")
+    assert {:ok, %{rgba: rgba}} = Parse.inspect_color("color(srgb 1 0 0 / .375)")
     assert_in_delta rgba.r, 255, 0.001
     assert_in_delta rgba.g, 0, 0.001
     assert_in_delta rgba.b, 0, 0.001
@@ -102,16 +103,16 @@ defmodule Elixirbits.CoreUtils.ColorTest do
   end
 
   test "Lab and LCH serialization adapts to the CSS D50 reference white" do
-    assert {:ok, %{color: red}} = Color.inspect_color("#ff0000")
-    assert {:ok, %{value: lab}} = Color.convert_color(red, "lab")
-    assert {:ok, %{color: %Elixir.Color.Lab{} = parsed_lab}} = Color.inspect_color(lab)
+    assert {:ok, %{color: red}} = Parse.inspect_color("#ff0000")
+    assert {:ok, %{value: lab}} = Parse.convert_color(red, "lab")
+    assert {:ok, %{color: %Elixir.Color.Lab{} = parsed_lab}} = Parse.inspect_color(lab)
     assert parsed_lab.illuminant == :D50
     assert_in_delta parsed_lab.l, 54.29, 0.08
     assert_in_delta parsed_lab.a, 80.81, 0.08
     assert_in_delta parsed_lab.b, 69.89, 0.08
 
-    assert {:ok, %{value: lch}} = Color.convert_color(red, "lch")
-    assert {:ok, %{color: %Elixir.Color.LCHab{} = parsed_lch}} = Color.inspect_color(lch)
+    assert {:ok, %{value: lch}} = Parse.convert_color(red, "lch")
+    assert {:ok, %{color: %Elixir.Color.LCHab{} = parsed_lch}} = Parse.inspect_color(lch)
     assert parsed_lch.illuminant == :D50
     assert_in_delta parsed_lch.l, 54.29, 0.08
     assert_in_delta parsed_lch.c, 106.84, 0.1
@@ -119,16 +120,16 @@ defmodule Elixirbits.CoreUtils.ColorTest do
   end
 
   test "XYZ serialization adapts channels and identifies each reference white" do
-    assert {:ok, %{color: red}} = Color.inspect_color("#ff0000")
-    assert {:ok, %{value: d50}} = Color.convert_color(red, "xyz-d50")
-    assert {:ok, %{color: d50_color, format: "xyz-d50"}} = Color.inspect_color(d50)
+    assert {:ok, %{color: red}} = Parse.inspect_color("#ff0000")
+    assert {:ok, %{value: d50}} = Parse.convert_color(red, "xyz-d50")
+    assert {:ok, %{color: d50_color, format: "xyz-d50"}} = Parse.inspect_color(d50)
     assert d50_color.illuminant == :D50
     assert_in_delta d50_color.x, 0.4361, 0.0002
     assert_in_delta d50_color.y, 0.2225, 0.0002
     assert_in_delta d50_color.z, 0.0139, 0.0002
 
-    assert {:ok, %{value: d65}} = Color.convert_color(red, "xyz-d65")
-    assert {:ok, %{color: d65_color, format: "xyz-d65"}} = Color.inspect_color(d65)
+    assert {:ok, %{value: d65}} = Parse.convert_color(red, "xyz-d65")
+    assert {:ok, %{color: d65_color, format: "xyz-d65"}} = Parse.inspect_color(d65)
     assert d65_color.illuminant == :D65
     assert_in_delta d65_color.x, 0.4125, 0.0002
     assert_in_delta d65_color.y, 0.2127, 0.0002
@@ -139,12 +140,12 @@ defmodule Elixirbits.CoreUtils.ColorTest do
     value = "oklch(70% 0.4 30 / 0.123456789)"
 
     assert {:ok, %{value: ^value, color: source, rgba: rgba, swatch: swatch}} =
-             Color.inspect_color(value)
+             Parse.inspect_color(value)
 
     assert source.c == 0.4
     assert source.alpha == 0.123456789
     assert rgba.a == 0.123456789
-    assert {:ok, %{format: "rgb"}} = Color.inspect_color(swatch)
+    assert {:ok, %{format: "rgb"}} = Parse.inspect_color(swatch)
 
     for channel <- [rgba.r, rgba.g, rgba.b] do
       assert channel >= 0
@@ -152,14 +153,14 @@ defmodule Elixirbits.CoreUtils.ColorTest do
     end
 
     for format <- ["hex", "rgb", "hsl", "cmyk"] do
-      assert {:ok, %{value: converted, color: ^source}} = Color.convert_color(source, format)
-      assert {:ok, _color} = Color.inspect_color(converted)
+      assert {:ok, %{value: converted, color: ^source}} = Parse.convert_color(source, format)
+      assert {:ok, _color} = Parse.inspect_color(converted)
     end
   end
 
   test "hue units wrap correctly across repeated and negative rotations" do
     for value <- ["hsl(720 100% 50%)", "hsl(-720deg 100% 50%)", "hsl(2turn 100% 50%)"] do
-      assert {:ok, %{rgba: rgba}} = Color.inspect_color(value)
+      assert {:ok, %{rgba: rgba}} = Parse.inspect_color(value)
       assert_in_delta rgba.r, 255, 0.001
       assert_in_delta rgba.g, 0, 0.001
       assert_in_delta rgba.b, 0, 0.001
@@ -179,14 +180,14 @@ defmodule Elixirbits.CoreUtils.ColorTest do
           {"device-cmyk(0 0 0 200%)", "rgb(0 0 0)", [0, 0, 0]}
         ] do
       assert {:ok, %{value: ^value, rgba: rgba, swatch: ^expected, color: source}} =
-               Color.inspect_color(value)
+               Parse.inspect_color(value)
 
       for {actual, expected} <- Enum.zip([rgba.r, rgba.g, rgba.b], channels) do
         assert_in_delta actual, expected, 0.001
       end
 
       assert {:ok, ^value} = Ash.Type.cast_input(Color, value)
-      assert {:ok, %{value: ^expected, color: ^source}} = Color.convert_color(source, "rgb")
+      assert {:ok, %{value: ^expected, color: ^source}} = Parse.convert_color(source, "rgb")
     end
   end
 
@@ -195,18 +196,18 @@ defmodule Elixirbits.CoreUtils.ColorTest do
           {"rgb(201 130 43 / 150%)", 1.5, 1.0},
           {"oklch(65% 0.14 65 / -.5)", -0.5, 0.0}
         ] do
-      assert {:ok, %{value: ^value, color: source, rgba: rgba}} = Color.inspect_color(value)
+      assert {:ok, %{value: ^value, color: source, rgba: rgba}} = Parse.inspect_color(value)
       assert source.alpha == alpha
       assert rgba.a == expected
     end
 
-    assert {:ok, %{color: source}} = Color.inspect_color("lab(70% 150 150)")
+    assert {:ok, %{color: source}} = Parse.inspect_color("lab(70% 150 150)")
     assert source.l == 70
     assert source.a == 150
     assert source.b == 150
 
     assert {:ok, %{value: "lab(70% 150 150)", color: ^source}} =
-             Color.convert_color(source, "lab")
+             Parse.convert_color(source, "lab")
   end
 
   test "the storage type generates a PostgreSQL text column" do
@@ -216,7 +217,7 @@ defmodule Elixirbits.CoreUtils.ColorTest do
 
   test "optional color attributes accept nil and blank form input" do
     for value <- [nil, "", "  "] do
-      assert Color.inspect_color(value) == {:ok, nil}
+      assert Parse.inspect_color(value) == {:ok, nil}
       assert Ash.Type.cast_input(Color, value) == {:ok, nil}
       assert Ash.Type.dump_to_native(Color, value) == {:ok, nil}
       assert Ash.Type.cast_stored(Color, value) == {:ok, nil}
@@ -273,7 +274,7 @@ defmodule Elixirbits.CoreUtils.ColorTest do
           %{},
           :red
         ] do
-      assert Color.inspect_color(value) == {:error, "must be a supported color value"}
+      assert Parse.inspect_color(value) == {:error, "must be a supported color value"}
       assert Ash.Type.cast_input(Color, value) == {:error, "must be a supported color value"}
       assert Ash.Type.dump_to_native(Color, value) == {:error, "must be a supported color value"}
     end
@@ -311,12 +312,12 @@ defmodule Elixirbits.CoreUtils.ColorTest do
   end
 
   test "conversion rejects unsupported target formats" do
-    assert {:ok, %{color: source}} = Color.inspect_color("#c9822b")
+    assert {:ok, %{color: source}} = Parse.inspect_color("#c9822b")
 
     for format <- ["rgba", "hsla", "hwb", "display-p3", "unknown", nil] do
-      assert Color.convert_color(source, format) == {:error, "must be a supported color value"}
+      assert Parse.convert_color(source, format) == {:error, "must be a supported color value"}
     end
 
-    assert Color.convert_color(nil, "hex") == {:error, "must be a supported color value"}
+    assert Parse.convert_color(nil, "hex") == {:error, "must be a supported color value"}
   end
 end

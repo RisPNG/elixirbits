@@ -11,6 +11,18 @@ defmodule ElixirbitsWeb.LoginLive.Index do
   def mount(_params, _session, socket) do
     strategy = Info.strategy!(User, :password)
 
+    remember_me_lifetime =
+      Info.strategy!(User, :remember_me).token_lifetime
+      |> AshAuthentication.Utils.lifetime_to_seconds()
+
+    remember_me_unit = Cldr.DateTime.Relative.unit_from_relative_time(remember_me_lifetime)
+
+    remember_me_duration =
+      Cldr.Unit.new!(
+        remember_me_unit,
+        Cldr.DateTime.Relative.scale_relative(remember_me_lifetime, remember_me_unit)
+      )
+
     form =
       User
       |> AshPhoenix.Form.for_action(strategy.sign_in_action_name,
@@ -30,6 +42,15 @@ defmodule ElixirbitsWeb.LoginLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Sign In")
+     |> assign(
+       :remember_me_duration,
+       remember_me_duration
+       |> Cldr.Unit.localize(Elixirbits.Cldr, locale: "en")
+       |> Enum.concat([remember_me_duration])
+       |> Enum.max_by(&Map.fetch!(Cldr.DateTime.Relative.default_unit_steps(), &1.unit))
+       |> Cldr.Unit.round()
+       |> Elixirbits.Cldr.Unit.to_string!(locale: "en", style: :long, format: :spellout)
+     )
      |> assign(:form, form)}
   end
 

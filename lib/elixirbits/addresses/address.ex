@@ -165,7 +165,7 @@ defmodule Elixirbits.Address do
     attribute :state, :string
     attribute :latitude, :decimal
     attribute :longitude, :decimal
-    attribute :label, Elixirbits.CoreUtils.EnumTypes.AddressLabel
+    attribute :label, Elixirbits.CoreUtils.Options.AddressLabel
     attribute :other_label, :string
 
     timestamps()
