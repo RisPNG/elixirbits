@@ -4,7 +4,7 @@ defmodule ElixirbitsWeb.SessionTimeout do
   import Plug.Conn
 
   @user_token_key "user_token"
-  @inactivity_timeout_seconds 365 * 24 * 60 * 60
+  @inactivity_timeout_seconds 7 * 24 * 60 * 60
 
   @impl true
   def init(opts), do: opts
