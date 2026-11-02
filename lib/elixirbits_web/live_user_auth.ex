@@ -168,9 +168,12 @@ defmodule ElixirbitsWeb.LiveUserAuth do
               {:halt, put_flash(socket, :error, "Switch to Update to make changes.")}
 
             event, params, socket ->
+              reordering? =
+                event == "validate" and match?(["address_position", _index], params["_target"])
+
               permission =
                 case event do
-                  "save" ->
+                  event when event == "save" or reordering? ->
                     capability =
                       if socket.assigns.form.source.type == :create, do: :create, else: :update
 

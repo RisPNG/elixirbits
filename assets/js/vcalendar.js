@@ -34,7 +34,7 @@ const parseInitial = (mode, value) => {
 }
 
 const setValue = (input, value) => {
-  if (input.disabled) return
+  if (input.matches(":disabled")) return
   input.value = value
   input.setAttribute("value", value)
   input.dispatchEvent(new Event("input", {bubbles: true}))
@@ -175,22 +175,28 @@ const VCalendar = {
     this.calendar.init()
 
     this.onClick = () => {
-      if (!input.disabled && !this.popover.matches(":popover-open")) {
+      if (!input.matches(":disabled") && !this.popover.matches(":popover-open")) {
         this.popover.showPopover({source: input})
       }
     }
     this.onKeydown = event => {
-      if (input.disabled || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return
+      if (input.matches(":disabled") || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return
       this.onClick()
       const control = [...this.popover.querySelectorAll("button, input, [tabindex]")].find(el =>
-        el.tabIndex >= 0 && !el.disabled && el.getAttribute("aria-disabled") !== "true" && el.getClientRects().length,
+        el.tabIndex >= 0 && !el.matches(":disabled") && el.getAttribute("aria-disabled") !== "true" && el.getClientRects().length,
       )
       if (control) {
         event.preventDefault()
         control.focus({preventScroll: true})
       }
     }
-    this.onBeforeToggle = event => input.setAttribute("aria-expanded", String(event.newState === "open"))
+    this.onBeforeToggle = event => {
+      if (event.newState === "open" && input.matches(":disabled")) {
+        event.preventDefault()
+        return
+      }
+      input.setAttribute("aria-expanded", String(event.newState === "open"))
+    }
     input.addEventListener("click", this.onClick)
     input.addEventListener("keydown", this.onKeydown)
     this.popover.addEventListener("beforetoggle", this.onBeforeToggle)
@@ -198,7 +204,7 @@ const VCalendar = {
   updated() {
     if (!this.calendar) return
     const input = this.el
-    if (input.disabled && this.popover.matches(":popover-open")) this.popover.hidePopover()
+    if (input.matches(":disabled") && this.popover.matches(":popover-open")) this.popover.hidePopover()
     const value = input.dataset.vcValue ?? input.value
     const timezone = input.dataset.vcTimezone
     const today = input.dataset.vcToday

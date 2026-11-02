@@ -13,25 +13,13 @@
       <:title>{@page_title}</:title>
 
       <:actions>
-        <div class={[
-          "grid items-center gap-2",
-          case Enum.count(
-                 [
-                   editable? or
-                     (@live_action == :read and can?(@permissions, @current_path, :update)),
-                   @live_action == :update and @role.code != "superuser" and
-                     can?(@permissions, @current_path, :delete),
-                   @live_action == :read and @role != nil and
-                     can?(@permissions, @current_path, :update)
-                 ],
-                 & &1
-               ) do
-            0 -> "grid-cols-[auto]"
-            1 -> "grid-cols-[auto_auto]"
-            2 -> "grid-cols-[auto_auto_auto]"
-          end
-        ]}>
+        <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
           <.action_button action={:back} navigate={~p"/admin/roles"} />
+          <.action_button
+            :if={@live_action == :update and can?(@permissions, @current_path, :read)}
+            action={:read}
+            navigate={~p"/admin/roles/#{@role.id}/read"}
+          />
           <.action_button
             :if={
               @live_action == :read and @role != nil and

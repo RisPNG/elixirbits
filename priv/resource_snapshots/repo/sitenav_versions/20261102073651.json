@@ -78,28 +78,7 @@
       "generated?": false,
       "precision": null,
       "primary_key?": false,
-      "references": {
-        "deferrable": false,
-        "destination_attribute": "id",
-        "destination_attribute_default": null,
-        "destination_attribute_generated": null,
-        "index?": false,
-        "index_where": null,
-        "match_tenant?": false,
-        "match_type": null,
-        "match_with": null,
-        "multitenancy": {
-          "attribute": null,
-          "global": null,
-          "strategy": null
-        },
-        "name": "ledger_accounts_versions_version_source_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
-        "schema": "public",
-        "table": "ledger_accounts"
-      },
+      "references": null,
       "scale": null,
       "size": null,
       "source": "version_source_id",
@@ -162,7 +141,7 @@
           "global": null,
           "strategy": null
         },
-        "name": "ledger_accounts_versions_actor_id_fkey",
+        "name": "sitenav_versions_actor_id_fkey",
         "on_delete": "nothing",
         "on_update": "update",
         "primary_key?": true,
@@ -181,7 +160,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "513A963B1544F1EAB23AEBAD7F0A67946643D33237C691F00F2D2CE59B8B5A74",
+  "hash": "D1381CEEEB5F57FA73D2B6E90DFA43E52BFABBA0732967211446AE816230806F",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -190,6 +169,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "ledger_accounts_versions",
+  "table": "sitenav_versions",
   "temporal": null
 }

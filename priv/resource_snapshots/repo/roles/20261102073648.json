@@ -21,7 +21,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "identifier",
+      "source": "code",
       "type": "text"
     },
     {
@@ -33,7 +33,19 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "currency",
+      "source": "name",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "description",
       "type": "text"
     },
     {
@@ -67,19 +79,19 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": false,
-  "hash": "AC6A4C7A32B83C9FDF2449B29EFB8B75A1A9226BF7B94F03427CA37029BB12FD",
+  "hash": "67F5C7F595A7CE05ED2ACF6F394B0F88D484196C31E889D0195E6D5C59A59ABC",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "ledger_accounts_unique_identifier_index",
+      "index_name": "roles_unique_code_index",
       "keys": [
         {
           "type": "atom",
-          "value": "identifier"
+          "value": "code"
         }
       ],
-      "name": "unique_identifier",
+      "name": "unique_code",
       "nils_distinct?": true,
       "where": null
     }
@@ -91,6 +103,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "ledger_accounts",
+  "table": "roles",
   "temporal": null
 }

@@ -13,6 +13,18 @@
       "type": "uuid"
     },
     {
+      "allow_nil?": false,
+      "default": "1",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "sequence",
+      "type": "bigint"
+    },
+    {
       "allow_nil?": true,
       "default": "nil",
       "generated?": false,
@@ -275,7 +287,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": false,
-  "hash": "4170A4866995AE6CB2D4E4B588FEB1EC472864710B254BE6D33C3D9D318EAFBF",
+  "hash": "A18B7A1A5ADD84E3A842750CD29332557108553DB565AA8CCB71509EF02A8A9B",
   "identities": [],
   "multitenancy": {
     "attribute": null,

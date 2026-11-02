@@ -57,7 +57,7 @@ class Element extends EventTarget {
     this.pickerColor = {...value}
     if (this.emitOnSet) this.dispatchEvent(new CustomEvent("color-changed", {bubbles: true, detail: {value}}))
   }
-  matches(selector) { return selector === ":popover-open" && this.popoverOpen }
+  matches(selector) { return selector === ":disabled" ? this.disabled || this.inheritedDisabled === true : selector === ":popover-open" && this.popoverOpen }
   showPopover(options) {
     const before = Object.assign(new Event("beforetoggle", {cancelable: true}), {newState: "open"})
     this.dispatchEvent(before)
@@ -603,6 +603,49 @@ test("disabled, read-only and text-only displays neither request conversion nor 
   const display = openInput(nativeColor("cmyk(.1 .2 .3 .4)", "cmyk"), {editable: false})
   assert.equal(display.controls.format.textContent, "CMYK")
   assert.equal(display.requests.length, 0)
+})
+
+test("inherited disabled state closes an open picker without latching auxiliary controls", async () => {
+  const field = openInput()
+  field.open()
+  assert.equal(field.controls.popover.popoverOpen, true)
+  field.controls.input.inheritedDisabled = true
+  field.context.updated()
+  assert.equal(field.controls.popover.popoverOpen, false)
+  field.selectSpace("hsl")
+  field.pick({r: 0, g: 0, b: 0, a: 1})
+  field.open()
+  assert.equal(field.requests.length, 0)
+  assert.equal(field.controls.popover.popoverOpen, false)
+  assert.equal(field.controls.input.disabled, false)
+  assert.equal(field.controls.trigger.disabled, false)
+  assert.equal(field.controls.spaceText.disabled, false)
+  assert.equal(field.controls.spaceInput.disabled, false)
+
+  field.controls.input.inheritedDisabled = false
+  field.open()
+  assert.equal(field.controls.popover.popoverOpen, true)
+  field.pick({r: 0, g: 0, b: 0, a: 1})
+  assert.equal(field.requests.length, 1)
+  await field.reply(0, nativeColor("#000000"))
+  assert.equal(field.controls.input.value, "#000000")
+})
+
+test("inherited disabled state prevents an awaited validation reply from reopening the picker", async () => {
+  const field = openInput()
+  field.type("rgb(12 34 56)")
+  field.open()
+  assert.equal(field.requests.length, 1)
+  field.controls.input.inheritedDisabled = true
+  await field.reply(0, nativeColor("rgb(12 34 56)", "rgb"))
+  assert.equal(field.controls.popover.popoverOpen, false)
+  assert.equal(field.controls.input.focused, undefined)
+  assert.equal(field.context.draft, true)
+  field.controls.input.inheritedDisabled = false
+  field.open()
+  assert.equal(field.requests.length, 2)
+  await field.reply(1, nativeColor("rgb(12 34 56)", "rgb"))
+  assert.equal(field.controls.popover.popoverOpen, true)
 })
 
 test("closing the native popover clears alpha interaction and destruction dismisses it", () => {

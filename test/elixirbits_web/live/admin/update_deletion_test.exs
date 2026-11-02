@@ -41,14 +41,14 @@ defmodule ElixirbitsWeb.Admin.UpdateDeletionTest do
     }
   end
 
-  test "update pages place Delete after navigation and Save at both ends", %{conn: conn} do
+  test "update pages place View before Save and Delete at both ends", %{conn: conn} do
     target = create_user(display_name: "Existing account")
     role = Ash.create!(Role, %{code: "existing", name: "Existing role"}, actor: @system)
     manager = grant(conn, %{"USERS" => 15, "ROLES" => 15})
 
-    for {path, form_id} <- [
-          {~p"/admin/users/#{target.id}/update", "user-form"},
-          {~p"/admin/roles/#{role.id}/update", "role-form"}
+    for {path, view_path, form_id} <- [
+          {~p"/admin/users/#{target.id}/update", ~p"/admin/users/#{target.id}/read", "user-form"},
+          {~p"/admin/roles/#{role.id}/update", ~p"/admin/roles/#{role.id}/read", "role-form"}
         ] do
       {:ok, view, _html} = live(manager.conn, path)
       document = view |> render() |> Floki.parse_document!()
@@ -62,7 +62,12 @@ defmodule ElixirbitsWeb.Admin.UpdateDeletionTest do
             label
           end)
 
-        assert labels == ["Back", "Save", "Delete"]
+        assert labels == ["Back", "View", "Save", "Delete"]
+
+        assert has_element?(
+                 view,
+                 "##{form_id} > section > #{position} a[data-tooltip=View][href='#{view_path}']"
+               )
 
         assert has_element?(
                  view,

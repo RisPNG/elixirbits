@@ -8,6 +8,7 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
   alias Elixirbits.Organizations
+  alias Elixirbits.Organizations.Organization
 
   @system %{system: true}
 
@@ -65,6 +66,7 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
     for section <- ["header", "footer"] do
       assert has_element?(view, "#user-form #{section} button[type=submit]")
       assert has_element?(view, "#user-form #{section} a[href='/admin/users'][data-tooltip=Back]")
+      refute has_element?(view, "#user-form #{section} a[data-tooltip=View]")
     end
 
     document = view |> render() |> Floki.parse_document!()
@@ -138,6 +140,7 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
     for section <- ["header", "footer"] do
       assert has_element?(view, "#role-form #{section} button[type=submit]")
       assert has_element?(view, "#role-form #{section} a[href='/admin/roles'][data-tooltip=Back]")
+      refute has_element?(view, "#role-form #{section} a[data-tooltip=View]")
     end
 
     result =
@@ -180,8 +183,11 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
 
       assert has_element?(
                view,
-               "#organization-form #{section} a[href='/admin/organization'][data-tooltip=Back]"
+               "#organization-form #{section} a[href='/admin/organization'][data-tooltip=View]"
              )
+
+      refute has_element?(view, "#organization-form #{section} a[data-tooltip=Back]")
+      refute has_element?(view, "#organization-form #{section} a[data-tooltip=History]")
     end
 
     result =
@@ -220,7 +226,95 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
     assert updated.name == "Updated from footer"
   end
 
-  test "read access hides save controls at both ends while retaining form back links", %{
+  test "View actions return to saved records without saving drafts", %{conn: conn} do
+    user = create_user(display_name: "Saved user")
+    role = Ash.create!(Role, %{code: "view-draft-role", name: "Saved role"}, actor: @system)
+
+    organization =
+      Organizations.create_organization!(%{name: "Saved organization"}, actor: @system)
+
+    for level <- [5, 13, 16] do
+      operator_conn = grant(conn, %{"USERS" => level, "ROLES" => level, "ORG" => level})
+
+      for section <- ["header", "footer"],
+          {resource, record, form_id, field, collection, destination} <- [
+            {User, user, "user-form", :display_name, "/admin/users",
+             "/admin/users/#{user.id}/read"},
+            {Role, role, "role-form", :name, "/admin/roles", "/admin/roles/#{role.id}/read"},
+            {Organization, organization, "organization-form", :name, "/admin/organization",
+             "/admin/organization"}
+          ] do
+        update_path =
+          if resource == Organization,
+            do: collection <> "/update",
+            else: "#{collection}/#{record.id}/update"
+
+        saved_name = Map.fetch!(record, field)
+        draft = "Unsaved #{saved_name}"
+        {:ok, edit, _html} = live(operator_conn, update_path)
+
+        edit |> form("##{form_id}", form: %{field => draft}) |> render_change()
+        assert has_element?(edit, "input[name='form[#{field}]'][value='#{draft}']")
+        document = edit |> render() |> Floki.parse_document!()
+
+        for position <- ["header", "footer"] do
+          assert length(
+                   Floki.find(
+                     document,
+                     "##{form_id} #{position} a[href='#{destination}'][data-tooltip=View]"
+                   )
+                 ) == 1
+
+          if resource == Organization do
+            refute has_element?(edit, "##{form_id} #{position} a[data-tooltip=Back]")
+          else
+            assert has_element?(
+                     edit,
+                     "##{form_id} #{position} a[data-tooltip=Back] + a[href='#{destination}'][data-tooltip=View]"
+                   )
+
+            assert has_element?(edit, "##{form_id} #{position} button[phx-click=request_delete]") ==
+                     level in [13, 16]
+          end
+        end
+
+        result =
+          edit
+          |> element("##{form_id} #{section} a[href='#{destination}'][data-tooltip=View]")
+          |> render_click()
+
+        {:ok, read, _html} = follow_redirect(result, operator_conn, destination)
+        refute has_element?(read, "##{form_id}[phx-change], ##{form_id}[phx-submit]")
+        refute has_element?(read, "##{form_id} button[type=submit]")
+
+        if resource == Organization do
+          assert has_element?(read, "span#form_name", saved_name)
+        else
+          assert has_element?(read, "##{form_id} fieldset[disabled]")
+          assert has_element?(read, "input[name='form[#{field}]'][value='#{saved_name}']")
+        end
+
+        refute has_element?(read, "##{form_id}", draft)
+        assert Map.fetch!(Ash.get!(resource, record.id, actor: @system), field) == saved_name
+      end
+    end
+
+    protected_role = Ash.create!(Role, %{code: "superuser", name: "Superuser"}, actor: @system)
+    operator_conn = grant(conn, %{"ROLES" => 16})
+    {:ok, edit, _html} = live(operator_conn, ~p"/admin/roles/#{protected_role.id}/update")
+
+    for section <- ["header", "footer"] do
+      assert has_element?(
+               edit,
+               "#role-form #{section} a[href='/admin/roles/#{protected_role.id}/read'][data-tooltip=View]"
+             )
+
+      assert has_element?(edit, "#role-form #{section} button[type=submit]")
+      refute has_element?(edit, "#role-form #{section} button[phx-click=request_delete]")
+    end
+  end
+
+  test "read access hides save controls while retaining Back and View links", %{
     conn: conn
   } do
     user = create_user()
@@ -240,6 +334,13 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
         assert has_element?(
                  view,
                  "##{form_id} #{section} a[href='#{back_path}'][data-tooltip=Back]"
+               )
+
+        destination = String.replace_suffix(path, "/update", "/read")
+
+        assert has_element?(
+                 view,
+                 "##{form_id} #{section} a[href='#{destination}'][data-tooltip=View]"
                )
       end
     end

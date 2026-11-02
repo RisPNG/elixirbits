@@ -599,6 +599,7 @@
               :for={
                 {state, label} <- [
                   {"readonly", "Read-only"},
+                  {"fieldset_disabled", "Disabled fieldset"},
                   {"tooltip", "Tooltips"},
                   {"constraints", "Constraints"},
                   {"datalist", "Datalist"},
@@ -627,7 +628,11 @@
         phx-submit="local_save"
         class="space-y-4"
       >
-        <div id="layout-test-input-examples" class="space-y-4">
+        <fieldset
+          id="layout-test-input-examples"
+          disabled={@input_states["fieldset_disabled"]}
+          class="space-y-4"
+        >
           <div
             :for={
               {columns, fields} <- [
@@ -827,7 +832,7 @@
               </p>
             </div>
           </div>
-        </div>
+        </fieldset>
 
         <datalist :if={@input_states["datalist"]} id="layout-test-input-cities">
           <option value="Ipoh" /> <option value="Kuala Lumpur" /> <option value="George Town" />
@@ -849,7 +854,7 @@
         )}</span>
       </p>
 
-      <.card_inset id="layout-test-combobox-card">
+      <.card_inset id="layout-test-combobox-card" class="space-y-3">
         <.header>
           Combobox
         </.header>

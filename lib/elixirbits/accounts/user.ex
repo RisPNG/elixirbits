@@ -147,6 +147,7 @@ defmodule Elixirbits.Accounts.User do
                 strategy_name: :password}
 
       change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
       change manage_relationship(:addresses, type: :direct_control)
     end
 
@@ -178,6 +179,7 @@ defmodule Elixirbits.Accounts.User do
       ]
 
       argument :addresses, {:array, :map}
+      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
       change manage_relationship(:addresses, type: :direct_control)
     end
 
@@ -201,6 +203,7 @@ defmodule Elixirbits.Accounts.User do
       ]
 
       argument :addresses, {:array, :map}
+      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
       change manage_relationship(:addresses, type: :direct_control)
     end
 
@@ -616,6 +619,7 @@ defmodule Elixirbits.Accounts.User do
 
     has_many :addresses, Elixirbits.Address do
       destination_attribute :user_id
+      sort sequence: :asc, id: :asc
     end
   end
 

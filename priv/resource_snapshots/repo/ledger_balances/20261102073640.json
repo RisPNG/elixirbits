@@ -13,64 +13,40 @@
       "type": "uuid"
     },
     {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "balance",
+      "type": "money_with_currency"
+    },
+    {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_action_type",
-      "type": "text"
+      "source": "inserted_at",
+      "type": "utc_datetime_usec"
     },
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_action_name",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "operation_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "actor_name",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "restored_from_version_id",
-      "type": "uuid"
+      "source": "updated_at",
+      "type": "utc_datetime_usec"
     },
     {
       "allow_nil?": false,
@@ -93,56 +69,20 @@
           "global": null,
           "strategy": null
         },
-        "name": "users_versions_version_source_id_fkey",
+        "name": "ledger_balances_transfer_id_fkey",
         "on_delete": null,
         "on_update": null,
         "primary_key?": true,
         "schema": "public",
-        "table": "users"
+        "table": "ledger_transfers"
       },
       "scale": null,
       "size": null,
-      "source": "version_source_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "changes",
-      "type": "map"
+      "source": "transfer_id",
+      "type": "binary"
     },
     {
       "allow_nil?": false,
-      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "version_inserted_at",
-      "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": false,
-      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "version_updated_at",
-      "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -162,16 +102,16 @@
           "global": null,
           "strategy": null
         },
-        "name": "users_versions_actor_id_fkey",
-        "on_delete": "nothing",
-        "on_update": "update",
+        "name": "ledger_balances_account_id_fkey",
+        "on_delete": null,
+        "on_update": null,
         "primary_key?": true,
         "schema": "public",
-        "table": "users"
+        "table": "ledger_accounts"
       },
       "scale": null,
       "size": null,
-      "source": "actor_id",
+      "source": "account_id",
       "type": "uuid"
     }
   ],
@@ -181,8 +121,27 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "4C98B11C788C152EBDBD01B88CF05751428F2E32869142C55FB99D72294DB39B",
-  "identities": [],
+  "hash": "4649C46DD8B2F9FD77DEAA881EF9F243901F2CB333D79274FA092BA6713E525C",
+  "identities": [
+    {
+      "all_tenants?": false,
+      "base_filter": null,
+      "index_name": "ledger_balances_unique_references_index",
+      "keys": [
+        {
+          "type": "atom",
+          "value": "account_id"
+        },
+        {
+          "type": "atom",
+          "value": "transfer_id"
+        }
+      ],
+      "name": "unique_references",
+      "nils_distinct?": true,
+      "where": null
+    }
+  ],
   "multitenancy": {
     "attribute": null,
     "global": null,
@@ -190,6 +149,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "users_versions",
+  "table": "ledger_balances",
   "temporal": null
 }

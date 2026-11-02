@@ -4,7 +4,7 @@ const ColorInput = {
   mounted() {
     this.revision = 0
     this.onInput = event => {
-      if (!this.editable || this.applying || event.target !== this.input) return
+      if (!this.editable || this.applying || this.input.matches(":disabled") || this.input.readOnly || event.target !== this.input) return
       this.value = this.input.value
       this.pending?.resolve(null)
       this.pending = null
@@ -19,7 +19,7 @@ const ColorInput = {
       if (!this.editable || event.target.name !== this.el.dataset.colorSpaceName) return
       event.stopPropagation()
       if (event.type !== "change") return
-      if (this.input.disabled || this.input.readOnly) {
+      if (this.input.matches(":disabled") || this.input.readOnly) {
         event.target.value = this.format
         if (this.state.format === this.format && document.activeElement !== this.spaceText) this.spaceText.value = this.state.label
         return
@@ -33,7 +33,7 @@ const ColorInput = {
     this.onColorChanged = event => {
       if (event.target !== this.picker) return
       event.stopPropagation()
-      if (this.updatingPicker || !this.editable || this.input.disabled || this.input.readOnly) return
+      if (this.updatingPicker || !this.editable || this.input.matches(":disabled") || this.input.readOnly) return
       const rgba = event.detail.value
       const alphaChanged = this.editingAlpha || rgba.a !== Math.round((this.state.rgba?.a ?? 1) * 100) / 100
       this.revision++
@@ -53,7 +53,7 @@ const ColorInput = {
     }
     this.onBeforeToggle = event => {
       if (event.target !== this.popover || event.newState !== "open") return
-      if (!this.editable || this.input.disabled || this.input.readOnly) {
+      if (!this.editable || this.input.matches(":disabled") || this.input.readOnly) {
         event.preventDefault()
       } else if (this.draft || this.pending) {
         event.preventDefault()
@@ -63,7 +63,7 @@ const ColorInput = {
         const pending = this.pending?.promise || this.requestColor("validate")
         pending.then(reply => {
           this.opening = false
-          if (this.destroyedInput || this.revision !== revision) return
+          if (this.destroyedInput || this.revision !== revision || this.input.matches(":disabled") || this.input.readOnly) return
           if (reply && !this.draft && !this.pending) this.popover.showPopover({source: this.trigger})
           else this.input.focus()
         })
@@ -158,7 +158,7 @@ const ColorInput = {
           shared = {hooks: new Set(), submitting: false, replaying: false}
           shared.listener = async event => {
             if (shared.replaying) return
-            const hooks = [...shared.hooks].filter(hook => !hook.input.disabled && !hook.input.readOnly)
+            const hooks = [...shared.hooks].filter(hook => !hook.input.matches(":disabled") && !hook.input.readOnly)
             const invalid = hooks.find(hook => !hook.draft && !hook.pending && !hook.input.validity.valid)
             if (invalid) {
               event.preventDefault()
@@ -176,14 +176,14 @@ const ColorInput = {
             const submitter = event.submitter
             try {
               while (shared.hooks.size) {
-                const current = [...shared.hooks].filter(hook => !hook.input.disabled && !hook.input.readOnly)
+                const current = [...shared.hooks].filter(hook => !hook.input.matches(":disabled") && !hook.input.readOnly)
                 for (const hook of current) if (hook.draft && !hook.pending) hook.requestColor("validate")
                 const pending = current.flatMap(hook => hook.pending ? [hook.pending.promise] : [])
                 if (!pending.length) break
                 const replies = await Promise.all(pending)
                 if (replies.some(reply => reply?.failed)) return
               }
-              const invalid = [...shared.hooks].find(hook => !hook.input.disabled && !hook.input.readOnly && !hook.input.validity.valid)
+              const invalid = [...shared.hooks].find(hook => !hook.input.matches(":disabled") && !hook.input.readOnly && !hook.input.validity.valid)
               if (invalid) {
                 invalid.validationVisible = true
                 invalid.renderColor()
@@ -228,7 +228,7 @@ const ColorInput = {
   },
 
   requestColor(operation, detail = {}) {
-    if (!this.editable || this.input.disabled || this.input.readOnly) return Promise.resolve(null)
+    if (!this.editable || this.input.matches(":disabled") || this.input.readOnly) return Promise.resolve(null)
     const input = this.input
     this.pending?.resolve(null)
     const request = {revision: this.revision, value: input.value, format: this.format, draft: this.draft, operation}
@@ -236,7 +236,7 @@ const ColorInput = {
     request.promise = new Promise(resolve => {
       request.resolve = resolve
       this.pushEvent("color_input", {id: this.el.id, selector_id: this.el.dataset.colorSpaceId, value: request.value, format: request.format, operation, ...detail}).then(reply => {
-        if (this.destroyedInput || this.pending !== request || this.revision !== request.revision || this.input !== input || input.value !== request.value) {
+        if (this.destroyedInput || this.pending !== request || this.revision !== request.revision || this.input !== input || input.matches(":disabled") || input.readOnly || input.value !== request.value) {
           if (this.pending === request) {
             this.pending = null
             this.draft = true
@@ -270,7 +270,7 @@ const ColorInput = {
         }
         resolve(reply)
       }, () => {
-        if (this.destroyedInput || this.pending !== request || this.revision !== request.revision || this.input !== input || input.value !== request.value) {
+        if (this.destroyedInput || this.pending !== request || this.revision !== request.revision || this.input !== input || input.matches(":disabled") || input.readOnly || input.value !== request.value) {
           if (this.pending === request) {
             this.pending = null
             this.draft = true
@@ -308,7 +308,7 @@ const ColorInput = {
     this.trigger.disabled = unavailable
     this.spaceText.disabled = unavailable
     this.spaceInput.disabled = unavailable
-    if (unavailable && this.popover.matches(":popover-open")) this.popover.hidePopover()
+    if ((this.input.matches(":disabled") || this.input.readOnly) && this.popover.matches(":popover-open")) this.popover.hidePopover()
     if (preview?.rgba) {
       this.updatingPicker = true
       this.picker.color = preview.rgba

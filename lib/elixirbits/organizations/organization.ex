@@ -72,6 +72,7 @@ defmodule Elixirbits.Organizations.Organization do
       ]
 
       argument :addresses, {:array, :map}
+      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
       change manage_relationship(:addresses, type: :direct_control)
     end
 
@@ -90,6 +91,7 @@ defmodule Elixirbits.Organizations.Organization do
       ]
 
       argument :addresses, {:array, :map}
+      change {Elixirbits.CoreUtils.OrderedRelationship, argument: :addresses}
       change manage_relationship(:addresses, type: :direct_control)
     end
   end
@@ -135,6 +137,7 @@ defmodule Elixirbits.Organizations.Organization do
   relationships do
     has_many :addresses, Elixirbits.Address do
       destination_attribute :organization_id
+      sort sequence: :asc, id: :asc
     end
   end
 

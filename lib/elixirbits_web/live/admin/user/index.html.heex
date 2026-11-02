@@ -1,6 +1,6 @@
 <Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
   <.page id="users-collection" phx-hook="CinderPagination" class="space-y-4">
-    <:title>Users</:title>
+    <:title>{@page_title}</:title>
 
     <:actions :let={position} :if={can?(@permissions, @current_path, :create)}>
       <.action_button
@@ -17,7 +17,6 @@
       query_opts={[authorize?: true]}
       page_size={20}
       show_filters={true}
-      search={[placeholder: "Email, Name"]}
     >
       <:col :let={user} field="display_pic_url" label="Profile Picture">
         <img
@@ -48,7 +47,7 @@
       <:col :let={user} label="Roles">{Enum.join(user.roles, ", ")}</:col>
 
       <:col :let={user} label="Actions">
-        <div class="grid grid-cols-[auto_auto_auto] justify-start gap-2">
+        <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center justify-start gap-2">
           <.action_button
             :if={can?(@permissions, @current_path, :read)}
             action={:read}

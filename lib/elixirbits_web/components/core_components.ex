@@ -387,6 +387,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :index, :integer, required: true
   attr :columns, :integer, default: 1, values: [1, 2]
   attr :class, :any, default: nil
+  slot :sequence
   slot :actions
   slot :inner_block, required: true
 
@@ -398,7 +399,16 @@ defmodule ElixirbitsWeb.CoreComponents do
       @class
     ]}>
       <div class="grid grid-cols-[1fr_2.75rem] items-center gap-2 border-b border-outline pb-2">
-        <p class="text-sm font-semibold text-content">{"#{@label} ##{@index + 1}"}</p>
+        <p :if={@sequence == []} class="text-sm font-semibold text-content">
+          {"#{@label} ##{@index + 1}"}
+        </p>
+        <div
+          :if={@sequence != []}
+          class="grid grid-cols-[max-content_4rem] items-center text-sm font-semibold text-content"
+        >
+          <span>{@label} #</span>
+          {render_slot(@sequence)}
+        </div>
         {render_slot(@actions)}
       </div>
       {render_slot(@inner_block)}
@@ -406,10 +416,22 @@ defmodule ElixirbitsWeb.CoreComponents do
     """
   end
 
+  @action_defaults [
+    create: {"hero-plus", "Add new"},
+    read: {"hero-eye", "View"},
+    history: {"hero-clock", "History"},
+    update: {"hero-pencil-square", "Update"},
+    save: {"tabler-device-floppy", "Save"},
+    send: {"tabler-send", "Send"},
+    archive: {"hero-archive-box", "Archive"},
+    delete: {"hero-trash", "Delete"},
+    back: {"hero-arrow-left", "Back"}
+  ]
+
   @doc """
   Renders a record action as a bordered icon button.
 
-  Creating a record, adding a row, viewing records and their history, updating, saving, archiving, deleting, and leaving the page all use the same square bordered icon, so these controls look consistent in page headers, table rows, and repeated sub-forms.
+  Use this component for consistent action buttons in page headers, table rows, and repeated sub-forms.
 
   Destructive actions use the error color. Other actions use neutral colors. Hovering darkens each button's existing surface. For a domain-specific action without its own entry, pass `icon` to override the icon while keeping the button's shape and colors, and pass a `tooltip` that describes the action.
 
@@ -423,7 +445,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   """
   attr :action, :atom,
     required: true,
-    values: [:create, :read, :history, :update, :save, :send, :archive, :delete, :back]
+    values: Keyword.keys(@action_defaults)
 
   attr :icon, :string, default: nil, doc: "overrides the action's default icon"
 
@@ -436,18 +458,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled type)
 
   def action_button(assigns) do
-    {icon, tooltip} =
-      case assigns.action do
-        :create -> {"hero-plus", "Add new"}
-        :read -> {"hero-eye", "View"}
-        :history -> {"hero-clock", "History"}
-        :update -> {"hero-pencil-square", "Update"}
-        :save -> {"tabler-device-floppy", "Save"}
-        :send -> {"tabler-send", "Send"}
-        :archive -> {"hero-archive-box", "Archive"}
-        :delete -> {"hero-trash", "Delete"}
-        :back -> {"hero-arrow-left", "Back"}
-      end
+    {icon, tooltip} = Keyword.fetch!(@action_defaults, assigns.action)
 
     variant =
       if assigns.action in [:archive, :delete],
@@ -596,6 +607,10 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
 
+  attr :country_placeholder, :string,
+    default: "+00",
+    doc: "the placeholder for a telephone field's country calling code selector"
+
   attr :options, :list,
     doc:
       "select and combobox options, or radio {label, value} tuples with optional description and disabled metadata in a third keyword list"
@@ -673,15 +688,16 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
-    {form_timezone, changed_fields, change_side} =
+    {form_timezone, changed_fields, change_side, removed?} =
       case field.form.source do
         %AshPhoenix.Form{opts: opts, data: data} ->
           {get_in(opts[:context] || %{}, [:shared, :user_timezone]),
            data && Ash.Resource.get_metadata(data, :audit_changed_fields),
-           data && Ash.Resource.get_metadata(data, :audit_change_side)}
+           data && Ash.Resource.get_metadata(data, :audit_change_side),
+           data && Ash.Resource.get_metadata(data, :audit_removed?)}
 
         _ ->
-          {nil, nil, nil}
+          {nil, nil, nil, nil}
       end
 
     rest =
@@ -689,6 +705,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         assigns.rest
         |> Map.put(:"data-audit-changed", "true")
         |> Map.put(:"data-audit-side", to_string(change_side || :previous))
+        |> Map.put(:"data-audit-removed", removed? && "true")
       else
         assigns.rest
       end
@@ -700,10 +717,11 @@ defmodule ElixirbitsWeb.CoreComponents do
         |> Map.put_new(:"data-audit-side", "previous")
         |> Map.put_new(
           :"aria-description",
-          if(rest[:"data-audit-side"] == "current",
-            do: "Different from the selected revision",
-            else: "Changed by this revision"
-          )
+          cond do
+            removed? -> "Removed value"
+            rest[:"data-audit-side"] == "current" -> "Different from the selected revision"
+            true -> "Changed by this revision"
+          end
         )
       else
         rest
@@ -792,11 +810,28 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     entries = if upload, do: upload.entries, else: []
     file_count = length(assigns.stored) + length(entries)
-    file_inline = selection != "multiple" && (!assigns.preview || selection == "singles")
+    placeholder = assigns.rest[:placeholder]
+
+    file_inline =
+      (selection != "multiple" && (!assigns.preview || selection == "singles")) ||
+        placeholder not in [nil, ""]
+
     file_steps = selection == "singles" && !assigns.preview
     file_detached = assigns.preview_id != nil && selection != "multiple"
     first_entry = List.first(entries)
     first_url = List.first(assigns.stored)
+
+    editable =
+      assigns.render_as in ["enabled", "text", "text-enabled", "hidden", "hidden-enabled"]
+
+    editable_like =
+      (editable || assigns.render_as == "like-enabled") &&
+        assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false]
+
+    file_placeholder =
+      if editable_like,
+        do: placeholder || if(selection == "multiple", do: "Choose files", else: "Choose a file"),
+        else: ""
 
     {file_name, file_caption, file_caption_value} =
       cond do
@@ -813,17 +848,12 @@ defmodule ElixirbitsWeb.CoreComponents do
           {first_entry.client_name, assigns.pending_caption, first_entry}
 
         true ->
-          {assigns[:value] || assigns.rest[:placeholder] || "Choose a file", [], nil}
+          {if(assigns[:value] in [nil, ""], do: file_placeholder, else: assigns.value), [], nil}
       end
 
     file_id = if upload, do: upload.ref, else: assigns.id || assigns[:name]
     preview_as = assigns.preview_as || if(assigns.preview, do: "thumbnail", else: "tag")
     text_look = assigns.render_as in ["text", "text-enabled", "text-disabled"]
-
-    editable =
-      assigns.render_as in ["enabled", "text", "text-enabled", "hidden", "hidden-enabled"]
-
-    placeholder = assigns.rest[:placeholder]
 
     messages =
       if upload do
@@ -850,6 +880,8 @@ defmodule ElixirbitsWeb.CoreComponents do
         if(upload && selection != "multiple", do: %{upload | max_entries: 1}, else: upload)
       )
       |> assign(:file_entries, entries)
+      |> assign(:file_has_value, file_count > 0 || assigns[:value] not in [nil, ""])
+      |> assign(:file_has_placeholder, placeholder not in [nil, ""])
       |> assign(:file_inline, file_inline)
       |> assign(:file_steps, file_steps)
       |> assign(:file_detached, file_detached)
@@ -865,17 +897,19 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:file_editor, Jason.encode!(editor))
       |> assign(:file_editor_enabled, editor != false)
       |> assign(:file_editable, editable)
+      |> assign(:file_editable_like, editable_like)
       |> assign(:preview_as, preview_as)
       |> assign(:text_look, text_look)
-      |> assign(:label_as_placeholder, placeholder in [nil, ""])
       |> assign(
-        :file_placeholder,
-        placeholder || if(selection == "multiple", do: "Choose files", else: "Choose a file")
+        :placeholder,
+        if editable_like do
+          if(assigns.label && !text_look && placeholder in [nil, ""], do: " ", else: placeholder)
+        end
       )
+      |> assign(:file_placeholder, file_placeholder)
       |> assign(
         :file_readonly_name,
-        assigns[:value] || placeholder ||
-          if(selection == "multiple", do: "Choose files", else: "Choose a file")
+        if(assigns[:value] in [nil, ""], do: file_placeholder, else: assigns.value)
       )
       |> assign(:errors, assigns.errors ++ messages)
       |> assign(
@@ -884,6 +918,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           do: Map.put(assigns.rest, :multiple, true),
           else: Map.delete(assigns.rest, :multiple)
         )
+        |> Map.delete(:placeholder)
       )
       |> assign(
         :previews_class,
@@ -904,6 +939,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     ~H"""
     <div
+      data-core-input
       id={"#{@file_id}-file-input"}
       phx-hook="FileInput"
       data-file-preview={to_string(@preview)}
@@ -915,6 +951,9 @@ defmodule ElixirbitsWeb.CoreComponents do
       data-file-max-entries={@upload && @upload.max_entries}
       data-file-max-size={@upload && @upload.max_file_size}
       data-file-mode={@render_as}
+      data-file-has-value={to_string(@file_has_value)}
+      data-file-has-placeholder={to_string(@file_has_placeholder)}
+      data-file-editable-like={to_string(@file_editable_like)}
       class={[
         "relative",
         @render_as in ["hidden", "hidden-enabled", "hidden-disabled"] && "hidden",
@@ -986,11 +1025,9 @@ defmodule ElixirbitsWeb.CoreComponents do
             type="file"
             id={@file_id}
             name={@name}
-            {Map.delete(@rest, :placeholder)}
+            {@rest}
             data-file-input
-            placeholder={
-              if @label && !@text_look && @label_as_placeholder, do: " ", else: @rest[:placeholder]
-            }
+            placeholder={@placeholder}
             disabled={@rest[:disabled] || not @file_editable}
             class={
               if @file_inline,
@@ -1005,12 +1042,18 @@ defmodule ElixirbitsWeb.CoreComponents do
                 do: ["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"],
                 else: [
                   "input-floating-label",
-                  !@label_as_placeholder && "input-floating-label-hidden",
                   @errors != [] && "input-floating-label-error"
                 ]
             }
           >
-            {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+            {@label}<span
+              :if={
+                @rest[:required] && @rest[:disabled] in [nil, false] &&
+                  @rest[:readonly] in [nil, false] && (@file_editable || @render_as == "like-enabled")
+              }
+              aria-hidden="true"
+              class="input-required ml-1 text-error"
+            >*</span>
           </span>
 
           <span
@@ -1042,6 +1085,7 @@ defmodule ElixirbitsWeb.CoreComponents do
               @errors != [] && (@error_class || "text-error")
             ]}
           >{cond do
+            @file_has_placeholder && !@file_has_value -> @file_placeholder
             @selection == "singles" && @preview -> @file_count_label
             @file_inline && @file_caption != [] -> render_slot(@file_caption, @file_caption_value)
             @file_inline -> @file_name
@@ -1113,7 +1157,14 @@ defmodule ElixirbitsWeb.CoreComponents do
         :if={(not @file_editable && !@file_inline) and @label not in [nil, ""]}
         class="block text-sm font-medium text-subcontent"
       >
-        {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+        {@label}<span
+          :if={
+            @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+              @render_as == "like-enabled"
+          }
+          aria-hidden="true"
+          class="input-required ml-1 text-error"
+        >*</span>
       </span>
 
       <span
@@ -1178,10 +1229,11 @@ defmodule ElixirbitsWeb.CoreComponents do
           String.downcase(to_string(assigns.rest[:step])) == "any"
       )
       |> assign(:text_look, text_look)
-      |> assign(:label_as_placeholder, placeholder in [nil, ""])
       |> assign(
         :placeholder,
-        if(assigns.label && placeholder in [nil, ""], do: " ", else: placeholder)
+        if assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false] do
+          if(assigns.label && placeholder in [nil, ""], do: " ", else: placeholder)
+        end
       )
       |> assign(
         :rest,
@@ -1189,7 +1241,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       )
 
     ~H"""
-    <div>
+    <div data-core-input>
       <div
         id={@number_id}
         phx-hook="NumberInput"
@@ -1200,7 +1252,13 @@ defmodule ElixirbitsWeb.CoreComponents do
           for={@id}
           class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
         >
-          {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+          {@label}<span
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false]
+            }
+            aria-hidden="true"
+            class="input-required ml-1 text-error"
+          >*</span>
         </label>
 
         <div class={[
@@ -1221,10 +1279,11 @@ defmodule ElixirbitsWeb.CoreComponents do
             name={@name}
             value={Phoenix.HTML.Form.normalize_value("number", @value)}
             placeholder={@placeholder}
-            class={
+            class={[
+              "[appearance:textfield]! [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0",
               @class ||
                 [
-                  "min-w-0 w-full appearance-none border-0 bg-transparent p-0 text-sm text-content focus:outline-none focus:ring-0 disabled:text-subcontent disabled:cursor-not-allowed",
+                  "min-w-0 w-full border-0 bg-transparent p-0 text-sm text-content focus:outline-none focus:ring-0 disabled:text-subcontent disabled:cursor-not-allowed",
                   if(@text_look,
                     do: [
                       "py-1 focus-visible:underline",
@@ -1234,7 +1293,7 @@ defmodule ElixirbitsWeb.CoreComponents do
                     else: "input-floating-control"
                   )
                 ]
-            }
+            ]}
             {@rest}
           />
           <div class={[
@@ -1279,11 +1338,16 @@ defmodule ElixirbitsWeb.CoreComponents do
           for={@id}
           class={[
             "input-floating-label",
-            !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error"
           ]}
         >
-          {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+          {@label}<span
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false]
+            }
+            aria-hidden="true"
+            class="input-required ml-1 text-error"
+          >*</span>
         </label>
       </div>
 
@@ -1295,10 +1359,15 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{render_as: render_as, type: type} = assigns)
       when render_as in ["text", "text-enabled"] and
              type in ["email", "password", "search", "text", "url"] do
+    rest =
+      if assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false],
+        do: assigns.rest,
+        else: Map.delete(assigns.rest, :placeholder)
+
     assigns =
       assigns
       |> assign(:render_as, "enabled")
-      |> assign(:rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+      |> assign(:rest, Map.put_new(rest, :"phx-debounce", "blur"))
       |> assign(
         :text_input_class,
         assigns.class ||
@@ -1310,16 +1379,19 @@ defmodule ElixirbitsWeb.CoreComponents do
       )
 
     ~H"""
-    <div>
+    <div data-core-input>
       <label for={@id} class="flex flex-col gap-1">
         <span
           :if={@label}
           class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </span>
 
@@ -1403,10 +1475,12 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:text_look, text_look)
       |> assign(:disabled_look, disabled_look)
       |> assign(:include_hidden_input, assigns.render_as in ["like-disabled", "text-disabled"])
-      |> assign(:label_as_placeholder, placeholder in [nil, ""])
       |> assign(
         :placeholder,
-        if(assigns.label && placeholder in [nil, ""], do: " ", else: placeholder)
+        if (editable || assigns.render_as == "like-enabled") &&
+             assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false] do
+          if(assigns.label && placeholder in [nil, ""], do: " ", else: placeholder)
+        end
       )
       |> assign(
         :rest,
@@ -1423,7 +1497,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       )
 
     ~H"""
-    <div>
+    <div data-core-input>
       <div
         id={@color_id}
         phx-hook="ColorInput"
@@ -1440,14 +1514,17 @@ defmodule ElixirbitsWeb.CoreComponents do
           class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                (@color_editable || @render_as == "like-enabled") && @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </label>
 
         <div class={[
-          "color-input-control grid grid-cols-[1.5rem_minmax(0,1fr)_4rem] items-center gap-2",
+          "color-input-control grid grid-cols-[1.5rem_minmax(0,1fr)_6rem] items-center gap-2",
           !@text_look &&
             [
               "input-floating-wrapper min-h-11 ps-3 rounded-default border bg-transparent text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
@@ -1509,7 +1586,9 @@ defmodule ElixirbitsWeb.CoreComponents do
             id={if !@include_hidden_input, do: @id}
             data-color-value
             class={@class || "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm"}
-          >{@value}</span>
+          >{if @value == "" && @render_as == "like-enabled" && @label in [nil, ""],
+            do: @placeholder,
+            else: @value}</span>
           <span
             :if={!@color_editable}
             data-color-format
@@ -1523,7 +1602,6 @@ defmodule ElixirbitsWeb.CoreComponents do
             :if={@color_editable}
             id={"#{@color_format_id}_dropdown"}
             data-color-space-select
-            data-dropdown-min-width="18"
             class={[
               "min-w-0 self-stretch",
               !@text_look && "border-l border-outline"
@@ -1540,7 +1618,10 @@ defmodule ElixirbitsWeb.CoreComponents do
               clearable={false}
               form_id={@rest[:form]}
               class={[
-                "color-space-combobox",
+                ~S"[--combobox-min-width:18rem] [&>.pc-combo-box\_\_control]:grid-cols-[minmax(0,1fr)_0.75rem]! [&>.pc-combo-box\_\_control]:gap-0!",
+                ~S"[&>.pc-combo-box\_\_control]:rounded-l-none! [&>.pc-combo-box\_\_control]:border-0! [&>.pc-combo-box\_\_control]:min-h-10.5! [&>.pc-combo-box\_\_control]:pr-1!",
+                ~S"[&_.pc-combo-box\_\_input]:px-2! [&>.pc-combo-box\_\_control>.pc-combo-box\_\_chevron]:size-3!",
+                ~S"[&_.pc-combo-box\_\_panel]:[position-area:block-end_span-inline-start]! [&_.pc-combo-box\_\_panel[data-flip]]:[position-area:block-start_span-inline-start]!",
                 @text_look && "input-text-wrapper",
                 @text_look && @label && "input-text-label"
               ]}
@@ -1553,15 +1634,18 @@ defmodule ElixirbitsWeb.CoreComponents do
           for={if @color_editable, do: @id}
           class={[
             "input-floating-label color-input-label",
-            !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error",
-            !@color_editable && @value != "" && "color-input-label-filled"
+            !@color_editable && (@value != "" || @render_as != "like-enabled") &&
+              "color-input-label-filled"
           ]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                (@color_editable || @render_as == "like-enabled") && @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </label>
 
@@ -1572,12 +1656,13 @@ defmodule ElixirbitsWeb.CoreComponents do
           role="dialog"
           aria-label="Choose color"
           data-color-popover
-          class="color-input-popover rounded-default border border-outline bg-surface text-content"
+          class="color-input-popover w-60 max-h-[calc(100%_-_0.5rem)] overflow-y-auto rounded-default border border-outline bg-surface p-3 text-content"
         >
           <rgba-color-picker
             id={@color_picker_id}
             data-color-picker
             phx-update="ignore"
+            class="h-52 w-full"
           />
         </div>
 
@@ -1605,10 +1690,15 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def input(%{render_as: render_as, type: "textarea"} = assigns)
       when render_as in ["text", "text-enabled"] do
+    rest =
+      if assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false],
+        do: assigns.rest,
+        else: Map.delete(assigns.rest, :placeholder)
+
     assigns =
       assigns
       |> assign(:render_as, "enabled")
-      |> assign(:rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+      |> assign(:rest, Map.put_new(rest, :"phx-debounce", "blur"))
       |> assign(
         :text_input_class,
         assigns.class ||
@@ -1619,16 +1709,19 @@ defmodule ElixirbitsWeb.CoreComponents do
       )
 
     ~H"""
-    <div>
+    <div data-core-input>
       <label for={@id} class="flex flex-col gap-1">
         <span
           :if={@label}
           class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </span>
         <textarea id={@id} name={@name} class={@text_input_class} {@rest}>{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -1672,7 +1765,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       )
 
     ~H"""
-    <div>
+    <div data-core-input>
       <.dynamic_tag
         tag_name={if @text_editable, do: "label", else: "span"}
         data-boolean-text
@@ -1722,9 +1815,12 @@ defmodule ElixirbitsWeb.CoreComponents do
           :if={!@text_editable}
           data-boolean-state={if @checked, do: "checked", else: "unchecked"}
         >{if @checked, do: @checked_text, else: @unchecked_text}</span><span
-          :if={@rest[:required] && @label not in [nil, ""]}
+          :if={
+            @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+              @text_editable && @label not in [nil, ""]
+          }
           aria-hidden="true"
-          class="ml-1 text-error"
+          class="input-required ml-1 text-error"
         >*</span>
       </.dynamic_tag>
 
@@ -1799,7 +1895,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:span_rest, Map.drop(assigns.rest, [:autocomplete, :placeholder]))
 
     ~H"""
-    <div>
+    <div data-core-input>
       <div
         id={if @render_as != "like-disabled", do: @id}
         class={[
@@ -1830,9 +1926,12 @@ defmodule ElixirbitsWeb.CoreComponents do
           ]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @render_as == "like-enabled" && @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </span>
         <span :if={!@display_alt} class={@class || @box_class} />
@@ -1913,7 +2012,12 @@ defmodule ElixirbitsWeb.CoreComponents do
       end
 
     filled = display not in [nil, ""]
-    placeholder = assigns.rest[:placeholder]
+
+    placeholder =
+      if render_as == "like-enabled" && assigns.rest[:disabled] in [nil, false] &&
+           assigns.rest[:readonly] in [nil, false] && assigns.label in [nil, ""],
+         do: assigns.rest[:placeholder]
+
     disabled_look = render_as in ["disabled", "like-disabled"]
     text_look = render_as == "text-disabled"
     include_hidden_input = render_as in ["like-disabled", "text-disabled"]
@@ -1944,7 +2048,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           ),
           "w-full min-h-11 px-3 rounded-default border bg-transparent",
           (assigns.errors == [] || assigns.error_class) && "border-outline",
-          if(filled,
+          if(filled || render_as != "like-enabled",
             do: [
               "input-floating-control",
               assigns.type == "textarea" && "input-floating-textarea"
@@ -1965,21 +2069,23 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:display, if(filled, do: display, else: placeholder))
       |> assign(:text_look, text_look)
       |> assign(:include_hidden_input, include_hidden_input)
-      |> assign(:label_as_placeholder, placeholder in [nil, ""])
       |> assign(:span_class, span_class)
       |> assign(:span_rest, Map.drop(assigns.rest, [:autocomplete, :placeholder]))
 
     ~H"""
-    <div>
+    <div data-core-input>
       <div :if={@text_look} class="flex flex-col gap-1">
         <span
           :if={@label}
           class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @render_as == "like-enabled" && @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </span>
         <span
@@ -2001,14 +2107,16 @@ defmodule ElixirbitsWeb.CoreComponents do
           :if={@label}
           class={[
             "input-floating-label",
-            !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error"
           ]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @render_as == "like-enabled" && @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </span>
       </div>
@@ -2035,7 +2143,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     ~H"""
-    <div>
+    <div data-core-input>
       <label
         for={@id}
         class={[
@@ -2064,9 +2172,12 @@ defmodule ElixirbitsWeb.CoreComponents do
           {@rest}
         />
         <span>{@label}<span
-          :if={@rest[:required] && @label not in [nil, ""]}
+          :if={
+            @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+              @label not in [nil, ""]
+          }
           aria-hidden="true"
-          class="ml-1 text-error"
+          class="input-required ml-1 text-error"
         >*</span></span>
       </label>
 
@@ -2082,7 +2193,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     ~H"""
-    <div>
+    <div data-core-input>
       <label
         for={@id}
         class={[
@@ -2095,9 +2206,12 @@ defmodule ElixirbitsWeb.CoreComponents do
       >
         <span class="text-sm font-medium text-content group-has-[:disabled]:text-subcontent">
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </span>
 
@@ -2157,7 +2271,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       )
 
     ~H"""
-    <fieldset id={@id} class="group" {@radio_group_rest}>
+    <fieldset data-core-input id={@id} class="group" disabled={@rest[:disabled]} {@radio_group_rest}>
       <legend
         :if={@label}
         class={[
@@ -2166,9 +2280,12 @@ defmodule ElixirbitsWeb.CoreComponents do
         ]}
       >
         {@label}<span
-          :if={@rest[:required] && @label not in [nil, ""]}
+          :if={
+            @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+              @label not in [nil, ""]
+          }
           aria-hidden="true"
-          class="ml-1 text-error"
+          class="input-required ml-1 text-error"
         >*</span>
       </legend>
 
@@ -2236,7 +2353,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     ~H"""
-    <div>
+    <div data-core-input>
       <label
         for={@id}
         class={
@@ -2269,9 +2386,12 @@ defmodule ElixirbitsWeb.CoreComponents do
           {@rest}
         />
         <span :if={@label not in [nil, ""]}>{@label}<span
-          :if={@rest[:required] && @label not in [nil, ""]}
+          :if={
+            @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+              @label not in [nil, ""]
+          }
           aria-hidden="true"
-          class="ml-1 text-error"
+          class="input-required ml-1 text-error"
         >*</span></span>
       </label>
 
@@ -2287,7 +2407,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     ~H"""
-    <div>
+    <div data-core-input>
       <label
         for={@id}
         class={[
@@ -2300,9 +2420,12 @@ defmodule ElixirbitsWeb.CoreComponents do
       >
         <span class="text-sm font-medium text-content group-has-[:disabled]:text-subcontent">
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </span>
 
@@ -2406,12 +2529,29 @@ defmodule ElixirbitsWeb.CoreComponents do
       assigns
       |> assign_new(:value, fn -> nil end)
       |> assign(:text_look, assigns.render_as in ["text", "text-enabled"])
+      |> assign(
+        :select_prompt,
+        if(rest[:disabled] in [nil, false] && rest[:readonly] in [nil, false], do: assigns.prompt)
+      )
+      |> assign(
+        :rest,
+        if(rest[:disabled] in [nil, false] && rest[:readonly] in [nil, false],
+          do: rest,
+          else: Map.delete(rest, :placeholder)
+        )
+      )
 
     ~H"""
-    <div>
+    <div data-core-input>
       <label for={@id} class={if @text_look, do: "flex flex-col gap-1", else: "relative block"}>
         <span :if={@text_look && @label} class="text-sm font-medium text-subcontent">
-          {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+          {@label}<span
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false]
+            }
+            aria-hidden="true"
+            class="input-required ml-1 text-error"
+          >*</span>
         </span>
         <select
           id={@id}
@@ -2435,14 +2575,20 @@ defmodule ElixirbitsWeb.CoreComponents do
           ]}
           {@rest}
         >
-          <option :if={@prompt} value="">{@prompt}</option>
+          <option :if={@prompt} value="">{@select_prompt}</option>
           {Phoenix.HTML.Form.options_for_select(@options, @value)}
         </select>
         <span
           :if={!@text_look && @label}
           class={["input-floating-label", @errors != [] && "input-floating-label-error"]}
         >
-          {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+          {@label}<span
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false]
+            }
+            aria-hidden="true"
+            class="input-required ml-1 text-error"
+          >*</span>
         </span>
       </label>
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -2454,11 +2600,31 @@ defmodule ElixirbitsWeb.CoreComponents do
     text_look = assigns.render_as in ["text", "text-enabled"]
     placeholder = assigns.rest[:placeholder]
 
+    value =
+      case assigns[:value] do
+        "" ->
+          blank_choice? =
+            assigns.options
+            |> Enum.flat_map(fn
+              {_label, entries} when is_list(entries) -> entries
+              option -> [option]
+            end)
+            |> Enum.any?(fn
+              {_label, value, _options} -> to_string(value) == ""
+              {_label, value} -> to_string(value) == ""
+              value -> to_string(value) == ""
+            end)
+
+          if blank_choice?, do: "", else: nil
+
+        value ->
+          value
+      end
+
     assigns =
       assigns
-      |> assign_new(:value, fn -> nil end)
+      |> assign(:value, value)
       |> assign(:text_look, text_look)
-      |> assign(:label_as_placeholder, placeholder in [nil, ""])
       |> assign(:picker_id, assigns.id || assigns.name)
       |> assign(
         :picker_rest,
@@ -2484,21 +2650,36 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(
         :placeholder,
         cond do
-          text_look -> placeholder || assigns.prompt || "Choose an option"
-          assigns.label && placeholder in [nil, ""] -> " "
-          true -> placeholder || assigns.prompt || "Choose an option"
+          assigns.rest[:disabled] not in [nil, false] ||
+              assigns.rest[:readonly] not in [nil, false] ->
+            nil
+
+          text_look ->
+            placeholder || assigns.prompt || "Choose an option"
+
+          assigns.label && placeholder in [nil, ""] ->
+            " "
+
+          true ->
+            placeholder || assigns.prompt || "Choose an option"
         end
       )
 
     ~H"""
-    <div {@picker_rest}>
+    <div data-core-input {@picker_rest}>
       <div class={if @text_look, do: "flex flex-col gap-1", else: "relative block"}>
         <label
           :if={@text_look && @label}
           for={"#{@picker_id}-input"}
           class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
         >
-          {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+          {@label}<span
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false]
+            }
+            aria-hidden="true"
+            class="input-required ml-1 text-error"
+          >*</span>
         </label>
         <input
           :if={@rest[:multiple]}
@@ -2537,11 +2718,16 @@ defmodule ElixirbitsWeb.CoreComponents do
           for={"#{@picker_id}-input"}
           class={[
             "input-floating-label",
-            !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error"
           ]}
         >
-          {@label}<span :if={@rest[:required]} aria-hidden="true" class="ml-1 text-error">*</span>
+          {@label}<span
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false]
+            }
+            aria-hidden="true"
+            class="input-required ml-1 text-error"
+          >*</span>
         </label>
       </div>
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -2550,20 +2736,25 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   def input(%{type: "textarea"} = assigns) do
-    assigns = assign(assigns, :rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+    editable_like =
+      assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false]
+
+    rest = if editable_like, do: assigns.rest, else: Map.delete(assigns.rest, :placeholder)
+    assigns = assign(assigns, :rest, Map.put_new(rest, :"phx-debounce", "blur"))
 
     if assigns[:label] do
       placeholder = assigns.rest[:placeholder]
-      label_as_placeholder = placeholder in [nil, ""]
 
       assigns =
         assigns
         |> assign(:rest, Map.delete(assigns.rest, :placeholder))
-        |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
-        |> assign(:label_as_placeholder, label_as_placeholder)
+        |> assign(
+          :placeholder,
+          if(editable_like, do: if(placeholder in [nil, ""], do: " ", else: placeholder))
+        )
 
       ~H"""
-      <div>
+      <div data-core-input>
         <label for={@id} class="relative block">
           <textarea
             id={@id}
@@ -2581,13 +2772,15 @@ defmodule ElixirbitsWeb.CoreComponents do
           >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
           <span class={[
             "input-floating-label",
-            !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error"
           ]}>
             {@label}<span
-              :if={@rest[:required] && @label not in [nil, ""]}
+              :if={
+                @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                  @label not in [nil, ""]
+              }
               aria-hidden="true"
-              class="ml-1 text-error"
+              class="input-required ml-1 text-error"
             >*</span>
           </span>
         </label>
@@ -2597,7 +2790,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       """
     else
       ~H"""
-      <div>
+      <div data-core-input>
         <label for={@id} class="block">
           <textarea
             id={@id}
@@ -2642,7 +2835,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       end
 
     country_field_key = String.to_atom("#{base_field_key}_country_code")
-    country_field = %{parent_form[country_field_key] | value: iso || ""}
+    country_field = %{parent_form[country_field_key] | value: iso}
     wrapper_id = "#{assigns[:id] || assigns[:name]}_tel_wrapper"
 
     composite_value =
@@ -2653,7 +2846,6 @@ defmodule ElixirbitsWeb.CoreComponents do
       end
 
     placeholder = assigns.rest[:placeholder]
-    label_as_placeholder = placeholder in [nil, ""]
 
     assigns =
       assigns
@@ -2662,8 +2854,18 @@ defmodule ElixirbitsWeb.CoreComponents do
         :rest,
         assigns.rest |> Map.delete(:placeholder) |> Map.put_new(:"phx-debounce", "blur")
       )
-      |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
-      |> assign(:label_as_placeholder, label_as_placeholder)
+      |> assign(
+        :placeholder,
+        if assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false] do
+          if(placeholder in [nil, ""], do: " ", else: placeholder)
+        end
+      )
+      |> assign(
+        :country_placeholder,
+        if(assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false],
+          do: assigns.country_placeholder
+        )
+      )
       |> assign(:country_field, country_field)
       |> assign(:country_id, country_field.id)
       |> assign(:country_name, country_field.name)
@@ -2674,7 +2876,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:composite_value, composite_value)
 
     ~H"""
-    <div>
+    <div data-core-input>
       <div
         id={@wrapper_id}
         phx-hook="TelInput"
@@ -2685,8 +2887,9 @@ defmodule ElixirbitsWeb.CoreComponents do
           @text_look && "flex flex-col gap-1",
           !@text_look &&
             [
-              "[&>.input-floating-label]:!left-[4.75rem]",
-              "[&:has(.input-floating-control:focus)>.input-floating-label]:!left-3",
+              "[&>.input-floating-label]:!left-[5.25rem]",
+              "[&:focus-within>.input-floating-label]:!left-3",
+              "[&:has([data-tel-number]:disabled)>.input-floating-label]:!left-3",
               "[&:has(.input-floating-control:not(:placeholder-shown))>.input-floating-label]:!left-3"
             ]
         ]}
@@ -2697,9 +2900,12 @@ defmodule ElixirbitsWeb.CoreComponents do
           class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </label>
 
@@ -2713,13 +2919,10 @@ defmodule ElixirbitsWeb.CoreComponents do
         />
         <div class={
           if @text_look,
-            do: "grid grid-cols-[4rem_1fr] gap-0",
-            else: "input-floating-wrapper grid grid-cols-[4rem_auto] gap-0"
+            do: "grid grid-cols-[4.5rem_1fr] gap-0",
+            else: "input-floating-wrapper grid grid-cols-[4.5rem_auto] gap-0"
         }>
-          <div
-            id={"#{@country_id}_country_dropdown"}
-            data-dropdown-min-width="18"
-          >
+          <div id={"#{@country_id}_country_dropdown"}>
             <PetalComponents.ComboBox.combo_box
               field={@country_field}
               id={"#{@country_id}_country_select"}
@@ -2728,12 +2931,18 @@ defmodule ElixirbitsWeb.CoreComponents do
               value={@country_field.value}
               label="Country calling code"
               search_placeholder="Search countries"
-              placeholder="+60"
+              placeholder={@country_placeholder}
               disabled={@rest[:disabled] not in [false, nil] || @rest[:readonly] not in [false, nil]}
               clearable={false}
               form_id={@rest[:form]}
               class={[
-                "tel-country-combobox",
+                ~S"[--combobox-min-width:18rem] [&>.pc-combo-box\_\_trigger]:grid-cols-[minmax(0,1fr)_0.75rem]! [&>.pc-combo-box\_\_trigger]:gap-0!",
+                ~S"[&>.pc-combo-box\_\_trigger>.pc-combo-box\_\_chevron]:size-3!",
+                !@text_look &&
+                  [
+                    ~S"[&>.pc-combo-box\_\_trigger]:rounded-r-none! [&>.pc-combo-box\_\_trigger]:border-r-0!",
+                    ~S"[&>.pc-combo-box\_\_trigger]:ps-3! [&>.pc-combo-box\_\_trigger]:pe-1! [&>.pc-combo-box\_\_trigger]:py-2!"
+                  ],
                 @text_look && "input-text-wrapper",
                 @text_look && @label && "input-text-label"
               ]}
@@ -2775,14 +2984,16 @@ defmodule ElixirbitsWeb.CoreComponents do
           for={@id}
           class={[
             "input-floating-label",
-            !@label_as_placeholder && "input-floating-label-hidden",
             @errors != [] && "input-floating-label-error"
           ]}
         >
           {@label}<span
-            :if={@rest[:required] && @label not in [nil, ""]}
+            :if={
+              @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                @label not in [nil, ""]
+            }
             aria-hidden="true"
-            class="ml-1 text-error"
+            class="input-required ml-1 text-error"
           >*</span>
         </label>
       </div>
@@ -2794,22 +3005,28 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
+    editable_like =
+      assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false]
+
+    rest = if editable_like, do: assigns.rest, else: Map.delete(assigns.rest, :placeholder)
+
     assigns =
       assigns
-      |> assign(:rest, Map.put_new(assigns.rest, :"phx-debounce", "blur"))
+      |> assign(:rest, Map.put_new(rest, :"phx-debounce", "blur"))
 
     if assigns[:label] && assigns.type in ~w(color email file number password search text url) do
       placeholder = assigns.rest[:placeholder]
-      label_as_placeholder = placeholder in [nil, ""]
 
       assigns =
         assigns
         |> assign(:rest, Map.delete(assigns.rest, :placeholder))
-        |> assign(:placeholder, if(label_as_placeholder, do: " ", else: placeholder))
-        |> assign(:label_as_placeholder, label_as_placeholder)
+        |> assign(
+          :placeholder,
+          if(editable_like, do: if(placeholder in [nil, ""], do: " ", else: placeholder))
+        )
 
       ~H"""
-      <div>
+      <div data-core-input>
         <div
           id={@type == "password" && @id not in [nil, ""] && "#{@id}-password-wrapper"}
           phx-hook={@type == "password" && @id not in [nil, ""] && "PasswordVisibility"}
@@ -2835,13 +3052,15 @@ defmodule ElixirbitsWeb.CoreComponents do
             />
             <span class={[
               "input-floating-label",
-              !@label_as_placeholder && "input-floating-label-hidden",
               @errors != [] && "input-floating-label-error"
             ]}>
               {@label}<span
-                :if={@rest[:required] && @label not in [nil, ""]}
+                :if={
+                  @rest[:required] && @rest[:disabled] in [nil, false] &&
+                    @rest[:readonly] in [nil, false] && @label not in [nil, ""]
+                }
                 aria-hidden="true"
-                class="ml-1 text-error"
+                class="input-required ml-1 text-error"
               >*</span>
             </span>
           </label>
@@ -2858,7 +3077,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       """
     else
       ~H"""
-      <div>
+      <div data-core-input>
         <div
           id={@type == "password" && @id not in [nil, ""] && "#{@id}-password-wrapper"}
           phx-hook={@type == "password" && @id not in [nil, ""] && "PasswordVisibility"}
@@ -2866,9 +3085,12 @@ defmodule ElixirbitsWeb.CoreComponents do
         >
           <label for={@id} class="block">
             <span :if={@label} class="block text-sm font-medium text-content mb-1">{@label}<span
-              :if={@rest[:required] && @label not in [nil, ""]}
+              :if={
+                @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                  @label not in [nil, ""]
+              }
               aria-hidden="true"
-              class="ml-1 text-error"
+              class="input-required ml-1 text-error"
             >*</span></span>
             <input
               type={@type}
@@ -2942,7 +3164,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         data-file-previous
         hidden={length(@stored) + length(@file_entries) < 2}
         aria-label="Previous file"
-        class="button-base grid size-7 place-items-center rounded-full text-content cursor-pointer hover:overlay-dark focus-visible:text-brand focus-visible:outline-none"
+        class="button-base left-1 grid size-7 place-items-center rounded-full text-content cursor-pointer hover:overlay-dark focus-visible:text-brand focus-visible:outline-none"
       ><.icon name="hero-chevron-left-mini" class="size-5" /></button>
       <div
         data-file-preview-content
@@ -2951,7 +3173,10 @@ defmodule ElixirbitsWeb.CoreComponents do
         <div
           :if={@stored != [] or @file_entries != []}
           data-file-server-previews
-          class={@previews_class}
+          class={[
+            @previews_class,
+            @file_detached && @preview_as == "thumbnail" && "grid-rows-[minmax(0,1fr)]"
+          ]}
         >
           <.file_preview_item
             :for={{url, index} <- Enum.with_index(@stored)}
@@ -3035,7 +3260,10 @@ defmodule ElixirbitsWeb.CoreComponents do
               hidden
               target="_blank"
               rel="noopener noreferrer"
-              class="grid size-6 place-items-center rounded-default border border-outline bg-primary text-content hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+              class={[
+                "grid size-6 place-items-center rounded-default border border-outline bg-primary text-content hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand",
+                @preview_as == "thumbnail" && "absolute bottom-1 left-1"
+              ]}
               aria-label="Open selected file"
             ><.icon name="hero-arrow-top-right-on-square-micro" class="size-4" /></a>
             <span data-file-preview-name hidden class="block truncate text-sm text-subcontent" />
@@ -3059,13 +3287,13 @@ defmodule ElixirbitsWeb.CoreComponents do
         data-file-next
         hidden={length(@stored) + length(@file_entries) < 2}
         aria-label="Next file"
-        class="button-base grid size-7 place-items-center rounded-full text-content cursor-pointer hover:overlay-dark focus-visible:text-brand focus-visible:outline-none"
+        class="button-base right-1 grid size-7 place-items-center rounded-full text-content cursor-pointer hover:overlay-dark focus-visible:text-brand focus-visible:outline-none"
       ><.icon name="hero-chevron-right-mini" class="size-5" /></button>
       <span
         :if={@selection == "singles" && @preview}
         data-file-position
         data-file-preview-position
-        class="text-sm"
+        class="absolute bottom-1 right-1 z-10 rounded-default bg-primary px-1 text-sm text-content opacity-0 pointer-events-none transition-opacity group-hover/file-previews:opacity-100"
       >{@file_position}</span>
     </div>
     """
@@ -3368,6 +3596,11 @@ defmodule ElixirbitsWeb.CoreComponents do
   defp vcalendar_input(assigns) do
     timezone = assigns.timezone || "Etc/UTC"
 
+    editable_like =
+      assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false]
+
+    rest = if editable_like, do: assigns.rest, else: Map.delete(assigns.rest, :placeholder)
+
     value =
       case assigns[:value] do
         %DateTime{} = instant ->
@@ -3418,6 +3651,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     assigns =
       assign(assigns,
+        rest: rest,
         value: value,
         timezone: timezone,
         today: timezone |> DateTime.now!() |> DateTime.to_date() |> Date.to_iso8601(),
@@ -3426,19 +3660,19 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     if assigns[:label] do
       placeholder = assigns.rest[:placeholder]
-      label_as_placeholder = placeholder in [nil, ""]
 
       assigns =
         assigns
         |> assign(:rest, Map.delete(assigns.rest, :placeholder))
         |> assign(
           :placeholder,
-          if(label_as_placeholder and not assigns.text_look, do: " ", else: placeholder)
+          if editable_like do
+            if(placeholder in [nil, ""] and not assigns.text_look, do: " ", else: placeholder)
+          end
         )
-        |> assign(:label_as_placeholder, label_as_placeholder)
 
       ~H"""
-      <div>
+      <div data-core-input>
         <div class={if @text_look, do: "flex flex-col gap-1", else: "relative block"}>
           <label
             :if={@text_look}
@@ -3446,9 +3680,12 @@ defmodule ElixirbitsWeb.CoreComponents do
             class={["text-sm font-medium", (@errors != [] && "text-error") || "text-subcontent"]}
           >
             {@label}<span
-              :if={@rest[:required] && @label not in [nil, ""]}
+              :if={
+                @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                  @label not in [nil, ""]
+              }
               aria-hidden="true"
-              class="ml-1 text-error"
+              class="input-required ml-1 text-error"
             >*</span>
           </label>
 
@@ -3491,14 +3728,16 @@ defmodule ElixirbitsWeb.CoreComponents do
             :if={not @text_look}
             class={[
               "input-floating-label",
-              !@label_as_placeholder && "input-floating-label-hidden",
               @errors != [] && "input-floating-label-error"
             ]}
           >
             {@label}<span
-              :if={@rest[:required] && @label not in [nil, ""]}
+              :if={
+                @rest[:required] && @rest[:disabled] in [nil, false] && @rest[:readonly] in [nil, false] &&
+                  @label not in [nil, ""]
+              }
               aria-hidden="true"
-              class="ml-1 text-error"
+              class="input-required ml-1 text-error"
             >*</span>
           </span>
         </div>
@@ -3518,7 +3757,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       """
     else
       ~H"""
-      <div>
+      <div data-core-input>
         <input
           type="text"
           name={@name}

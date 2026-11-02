@@ -25,6 +25,8 @@ class Element extends EventTarget {
     this.tagName = "DIV"
     this.type = ""
     this.value = ""
+    this.disabled = false
+    this.readOnly = false
     this.parentElement = null
     this.children = []
     this.computedStyle = {overflowX: "visible", overflowY: "visible", webkitLineClamp: "none", textTransform: "none"}
@@ -41,6 +43,16 @@ class Element extends EventTarget {
   }
   matches(selector) {
     const input = this.tagName === "INPUT"
+    if (selector === ":disabled") {
+      if (!["BUTTON", "INPUT", "SELECT", "TEXTAREA", "FIELDSET"].includes(this.tagName)) return false
+      if (this.disabled) return true
+      for (let ancestor = this.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        if (ancestor.tagName !== "FIELDSET" || !ancestor.disabled) continue
+        const legend = ancestor.children.find(child => child.tagName === "LEGEND")
+        if (!legend?.contains(this)) return true
+      }
+      return false
+    }
     if (selector === "input, textarea") return input || this.tagName === "TEXTAREA"
     if (selector === "input[type=password], input[type=file]") return input && ["password", "file"].includes(this.type)
     return false
@@ -61,7 +73,9 @@ const event = (name, values = {}) => Object.assign(new Event(name, {cancelable: 
 test("password visibility survives patches and cleans up replaced controls", async () => {
   const hook = await loadHook("password_visibility")
   let input = new Element()
+  input.tagName = "INPUT"
   let button = new Element()
+  button.tagName = "BUTTON"
   const show = new Element()
   const hide = new Element()
   const context = {...hook, el: {querySelector: selector => ({input, "[data-password-toggle]": button, "[data-password-show-icon]": show, "[data-password-hide-icon]": hide})[selector]}}
@@ -74,7 +88,9 @@ test("password visibility survives patches and cleans up replaced controls", asy
 
   const oldButton = button
   input = new Element()
+  input.tagName = "INPUT"
   button = new Element()
+  button.tagName = "BUTTON"
   context.updated()
   assert.equal(input.type, "text")
   oldButton.dispatchEvent(event("click"))
@@ -98,6 +114,63 @@ test("password visibility survives patches and cleans up replaced controls", asy
   context.destroyed()
   button.dispatchEvent(event("click"))
   assert.equal(input.type, "text")
+})
+
+test("password visibility respects inherited disabled state and the first legend exception", async () => {
+  const hook = await loadHook("password_visibility")
+  const input = new Element()
+  input.tagName = "INPUT"
+  const button = new Element()
+  button.tagName = "BUTTON"
+  const wrapper = new Element()
+  input.parentElement = wrapper
+  button.parentElement = wrapper
+  wrapper.children = [input, button]
+  wrapper.querySelector = selector => ({input, "[data-password-toggle]": button})[selector] ?? null
+  const fieldset = new Element()
+  fieldset.tagName = "FIELDSET"
+  fieldset.disabled = true
+  const firstLegend = new Element()
+  firstLegend.tagName = "LEGEND"
+  firstLegend.parentElement = fieldset
+  const secondLegend = new Element()
+  secondLegend.tagName = "LEGEND"
+  secondLegend.parentElement = fieldset
+  fieldset.children = [firstLegend, wrapper, secondLegend]
+  wrapper.parentElement = fieldset
+  const context = {...hook, el: wrapper}
+  context.mounted()
+
+  try {
+    assert.equal(input.disabled, false)
+    assert.equal(button.disabled, false)
+    button.dispatchEvent(event("click"))
+    assert.equal(input.type, "password")
+    assert.equal(input.focused, undefined)
+
+    fieldset.disabled = false
+    button.dispatchEvent(event("click"))
+    assert.equal(input.type, "text")
+    assert.equal(input.focused, true)
+
+    fieldset.disabled = true
+    button.dispatchEvent(event("click"))
+    assert.equal(input.type, "text")
+
+    fieldset.children = [firstLegend, secondLegend]
+    wrapper.parentElement = firstLegend
+    firstLegend.children = [wrapper]
+    button.dispatchEvent(event("click"))
+    assert.equal(input.type, "password")
+
+    firstLegend.children = []
+    wrapper.parentElement = secondLegend
+    secondLegend.children = [wrapper]
+    button.dispatchEvent(event("click"))
+    assert.equal(input.type, "password")
+  } finally {
+    context.destroyed()
+  }
 })
 
 test("timers share a one-second interval, resume immediately, and clean up after patches", async () => {
@@ -567,6 +640,7 @@ test("ISO week input preserves year identity through boundaries and calendar nav
 
     for (const scenario of scenarios) {
       const input = new CalendarElement()
+      input.tagName = "INPUT"
       input.dataset.vcMode = "week"
       input.value = scenario.value
       const selected = new CalendarElement()
@@ -658,6 +732,7 @@ test("calendar loading uses the latest patch and leaves removed inputs uninitial
       .replace('await import("vanilla-calendar-pro")', "await globalThis.vcalendarTestDependencies")
     const hook = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#loading`)).default
     const input = new Element()
+    input.tagName = "INPUT"
     input.dataset = {vcMode: "date", vcValue: "2026-04-23", vcToday: "2026-04-23"}
     const context = {...hook, el: input}
     contexts.push(context)
@@ -675,6 +750,7 @@ test("calendar loading uses the latest patch and leaves removed inputs uninitial
 
     globalThis.vcalendarTestDependencies = new Promise(resolve => { resolveLibrary = resolve })
     const removedInput = new Element()
+    removedInput.tagName = "INPUT"
     const removed = {...hook, el: removedInput}
     contexts.push(removed)
     const removedMounting = removed.mounted()
@@ -707,7 +783,9 @@ test("calendar patches refresh native selections and preserve edits when server 
     focus(options) { super.focus(); this.focusOptions = options }
     matches(selector) { return selector === ":popover-open" ? this.open : super.matches(selector) }
     showPopover(options) {
-      this.dispatchEvent(event("beforetoggle", {newState: "open"}))
+      const opening = event("beforetoggle", {newState: "open"})
+      this.dispatchEvent(opening)
+      if (opening.defaultPrevented) return
       this.open = true
       this.source = options.source
     }
@@ -754,6 +832,8 @@ test("calendar patches refresh native selections and preserve edits when server 
         "await globalThis.vcalendarTestDependencies")
     const hook = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#patches`)).default
     const input = new CalendarElement()
+    input.tagName = "INPUT"
+    input.readOnly = true
     input.value = "2026-04-23T13:30:00"
     input.dataset = {
       vcMode: "datetime-local",
@@ -799,14 +879,25 @@ test("calendar patches refresh native selections and preserve edits when server 
 
     popover.hidePopover()
     const disabledControl = new CalendarElement()
+    disabledControl.tagName = "BUTTON"
     disabledControl.tabIndex = 0
     disabledControl.disabled = true
+    const disabledFieldset = new Element()
+    disabledFieldset.tagName = "FIELDSET"
+    disabledFieldset.disabled = true
+    const inheritedDisabledControl = new CalendarElement()
+    inheritedDisabledControl.tagName = "BUTTON"
+    inheritedDisabledControl.tabIndex = 0
+    inheritedDisabledControl.parentElement = disabledFieldset
+    disabledFieldset.children = [inheritedDisabledControl]
     const hiddenControl = new CalendarElement()
+    hiddenControl.tagName = "BUTTON"
     hiddenControl.tabIndex = 0
     hiddenControl.visible = false
     const visibleControl = new CalendarElement()
+    visibleControl.tagName = "BUTTON"
     visibleControl.tabIndex = 0
-    popover.controls = [disabledControl, hiddenControl, visibleControl]
+    popover.controls = [disabledControl, inheritedDisabledControl, hiddenControl, visibleControl]
     const enterCalendar = event("keydown", {key: "ArrowDown"})
     input.dispatchEvent(enterCalendar)
     assert.equal(popover.open, true)
@@ -814,6 +905,7 @@ test("calendar patches refresh native selections and preserve edits when server 
     assert.equal(visibleControl.focused, true)
     assert.deepEqual(visibleControl.focusOptions, {preventScroll: true})
     assert.equal(disabledControl.focused, undefined)
+    assert.equal(inheritedDisabledControl.focused, undefined)
     assert.equal(hiddenControl.focused, undefined)
     const tab = event("keydown", {key: "Tab"})
     input.dispatchEvent(tab)
@@ -838,6 +930,53 @@ test("calendar patches refresh native selections and preserve edits when server 
     calendar.options.onChangeTime(calendar)
     assert.equal(changes, 1)
     assert.equal(input.getAttribute("value"), "2026-04-24T10:45")
+
+    const fieldset = new Element()
+    fieldset.tagName = "FIELDSET"
+    fieldset.disabled = true
+    const firstLegend = new Element()
+    firstLegend.tagName = "LEGEND"
+    firstLegend.parentElement = fieldset
+    const secondLegend = new Element()
+    secondLegend.tagName = "LEGEND"
+    secondLegend.parentElement = fieldset
+    fieldset.children = [firstLegend, input, secondLegend]
+    input.parentElement = fieldset
+    assert.equal(input.disabled, false)
+    assert.equal(input.readOnly, true)
+    input.dispatchEvent(event("click"))
+    assert.equal(popover.open, false)
+    const blockedArrow = event("keydown", {key: "ArrowDown"})
+    input.dispatchEvent(blockedArrow)
+    assert.equal(blockedArrow.defaultPrevented, false)
+    calendar.options.onChangeTime(calendar)
+    assert.equal(changes, 1)
+    popover.showPopover({source: input})
+    assert.equal(popover.open, false)
+    assert.equal(input.getAttribute("aria-expanded"), "false")
+
+    fieldset.disabled = false
+    input.dispatchEvent(event("click"))
+    assert.equal(popover.open, true)
+    fieldset.disabled = true
+    context.updated()
+    assert.equal(popover.open, false)
+
+    fieldset.children = [firstLegend, secondLegend]
+    input.parentElement = firstLegend
+    firstLegend.children = [input]
+    input.dispatchEvent(event("click"))
+    assert.equal(popover.open, true)
+    popover.hidePopover()
+
+    firstLegend.children = []
+    input.parentElement = secondLegend
+    secondLegend.children = [input]
+    input.dispatchEvent(event("click"))
+    assert.equal(popover.open, false)
+    calendar.options.onChangeTime(calendar)
+    assert.equal(changes, 1)
+    input.parentElement = null
 
     input.dataset.vcTimezone = "Asia/Kuala_Lumpur"
     input.dataset.vcValue = "2026-04-24T22:45:00"
@@ -881,6 +1020,7 @@ test("calendar patches refresh native selections and preserve edits when server 
       {mode: "month", initial: "2026-01", value: "2027-03", year: 2027, month: 2},
     ]) {
       const control = new CalendarElement()
+      control.tagName = "INPUT"
       control.value = scenario.initial
       control.dataset = {vcMode: scenario.mode, vcValue: scenario.initial, vcTimezone: "Etc/UTC"}
       popover = new CalendarElement()

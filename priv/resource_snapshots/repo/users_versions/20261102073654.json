@@ -14,14 +14,14 @@
     },
     {
       "allow_nil?": false,
-      "default": "\"application\"",
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "key",
+      "source": "version_action_type",
       "type": "text"
     },
     {
@@ -33,7 +33,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "name",
+      "source": "version_action_name",
       "type": "text"
     },
     {
@@ -45,7 +45,19 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "registration_no",
+      "source": "operation_id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "actor_name",
       "type": "text"
     },
     {
@@ -57,44 +69,41 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "tax_identification_no",
-      "type": "text"
+      "source": "restored_from_version_id",
+      "type": "uuid"
     },
     {
       "allow_nil?": false,
-      "default": "\"MYR\"",
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
-      "references": null,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "index_where": null,
+        "match_tenant?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "users_versions_version_source_id_fkey",
+        "on_delete": null,
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "users"
+      },
       "scale": null,
       "size": null,
-      "source": "base_currency",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "\"en\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "locale",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "\"Asia/Kuala_Lumpur\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "timezone",
-      "type": "text"
+      "source": "version_source_id",
+      "type": "uuid"
     },
     {
       "allow_nil?": true,
@@ -105,20 +114,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "email",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "phone",
-      "type": "text"
+      "source": "changes",
+      "type": "map"
     },
     {
       "allow_nil?": false,
@@ -129,7 +126,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "inserted_at",
+      "source": "version_inserted_at",
       "type": "utc_datetime_usec"
     },
     {
@@ -141,42 +138,51 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "updated_at",
+      "source": "version_updated_at",
       "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "index_where": null,
+        "match_tenant?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "users_versions_actor_id_fkey",
+        "on_delete": "nothing",
+        "on_update": "update",
+        "primary_key?": true,
+        "schema": "public",
+        "table": "users"
+      },
+      "scale": null,
+      "size": null,
+      "source": "actor_id",
+      "type": "uuid"
     }
   ],
   "base_filter": null,
-  "check_constraints": [
-    {
-      "attribute": [
-        "key"
-      ],
-      "base_filter": null,
-      "check": "key = 'application'",
-      "name": "organizations_application_key"
-    }
-  ],
+  "check_constraints": [],
   "create_table_options": null,
   "custom_indexes": [],
   "custom_statements": [],
-  "has_create_action": false,
-  "hash": "111FFC0B8B2CF0F7DAFA1A3C22375D0AB7473E83DC93C7EB363F1E41C37AFBFE",
-  "identities": [
-    {
-      "all_tenants?": false,
-      "base_filter": null,
-      "index_name": "organizations_singleton_index",
-      "keys": [
-        {
-          "type": "atom",
-          "value": "key"
-        }
-      ],
-      "name": "singleton",
-      "nils_distinct?": true,
-      "where": null
-    }
-  ],
+  "has_create_action": true,
+  "hash": "2430C4D168CE5E5E4FD041FE63B2E489B842D844673463306CCA5D3D4A351431",
+  "identities": [],
   "multitenancy": {
     "attribute": null,
     "global": null,
@@ -184,6 +190,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "organizations",
+  "table": "users_versions",
   "temporal": null
 }

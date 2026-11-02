@@ -73,40 +73,37 @@
       "type": "uuid"
     },
     {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "user_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "organization_id",
-      "type": "uuid"
-    },
-    {
       "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
-      "references": null,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "index_where": null,
+        "match_tenant?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "ledger_transfers_versions_version_source_id_fkey",
+        "on_delete": null,
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "ledger_transfers"
+      },
       "scale": null,
       "size": null,
       "source": "version_source_id",
-      "type": "uuid"
+      "type": "binary"
     },
     {
       "allow_nil?": true,
@@ -165,7 +162,7 @@
           "global": null,
           "strategy": null
         },
-        "name": "addresses_versions_actor_id_fkey",
+        "name": "ledger_transfers_versions_actor_id_fkey",
         "on_delete": "nothing",
         "on_update": "update",
         "primary_key?": true,
@@ -184,7 +181,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "DE6B0B6A207FFFB927C8FE269354D4E5740DD0A7B51CC8CBC7ECD162E339D3E4",
+  "hash": "156367BFBD3B802EB37EF5EE39FA79334EECD003D88C7A7D8A77895700606093",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -193,6 +190,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "addresses_versions",
+  "table": "ledger_transfers_versions",
   "temporal": null
 }

@@ -14,10 +14,7 @@
         Restored from revision {@audit.selected.restored_from_version_id}.
       </p>
     </div>
-    <div class={[
-      "grid items-center gap-2",
-      if(@audit.history.can_restore?, do: "grid-cols-[auto_auto]", else: "grid-cols-[auto]")
-    ]}>
+    <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
       <.button patch={@audit.path} variant={:neutral}>Current view</.button>
       <.button
         :if={@audit.history.can_restore?}
@@ -32,6 +29,7 @@
     for={to_form(%{"side" => to_string(@audit.side)}, as: "audit")}
     id="audit-value-form"
     phx-change="audit_value_change"
+    class="[&_label:has(input[value=previous])]:text-error [&_label:has(input[value=previous])]:border-error! [&_label:has(input[value=current])]:text-success [&_label:has(input[value=current])]:border-success!"
   >
     <.input
       field={value_form[:side]}
@@ -45,28 +43,6 @@
       ]}
     />
   </.form>
-  <div
-    :if={Enum.any?(@audit.fields, &(&1.status == :changed and not &1.after_present?))}
-    id="audit-removed-fields"
-    class="space-y-2"
-  >
-    <h3 class="font-medium text-error">
-      {if @audit.side == :previous,
-        do: "Removed in this revision",
-        else: "Removed since this revision"}
-    </h3>
-    <div
-      :for={field <- @audit.fields}
-      :if={field.status == :changed and not field.after_present?}
-      data-field={field.key}
-      data-audit-changed="true"
-      data-audit-side="previous"
-      class="rounded-default border border-error p-3 text-sm text-error"
-    >
-      <p class="font-medium">{field.label}</p>
-      <p class="whitespace-pre-wrap">{field.before}</p>
-    </div>
-  </div>
 </section>
 
 <.modal :if={@audit.open?} id="audit-history-picker" on_cancel={JS.patch(@audit.close_path)}>

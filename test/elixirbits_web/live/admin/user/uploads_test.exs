@@ -54,15 +54,8 @@ defmodule ElixirbitsWeb.Admin.UserLive.UploadsTest do
     [accept] = Floki.attribute(document, "#user-form input[type=file]", "accept")
     assert MapSet.new(String.split(accept, ",")) == MapSet.new(~w(.jpg .jpeg .png .gif .webp))
 
-    [tooltip] =
-      Floki.attribute(
-        document,
-        "#user-form [aria-label='Supported profile picture formats']",
-        "data-tooltip"
-      )
-
-    for extension <- ~w(.jpg .jpeg .png .gif .webp),
-        do: assert(String.downcase(tooltip) =~ extension)
+    refute has_element?(view, "#user-form [aria-label='Supported profile picture formats']")
+    assert has_element?(view, "#user-form p", "128x128 pixels. Maximum 8 MB.")
 
     preview =
       view

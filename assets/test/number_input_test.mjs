@@ -9,11 +9,23 @@ class Element extends EventTarget {
   constructor() {
     super()
     this.parentElement = null
+    this.children = []
+    this.tagName = "DIV"
     this.dataset = {}
     this.disabled = false
     this.readOnly = false
     this.value = ""
     this.step = ""
+  }
+  matches(selector) {
+    if (selector !== ":disabled" || !["BUTTON", "INPUT", "SELECT", "TEXTAREA", "FIELDSET"].includes(this.tagName)) return false
+    if (this.disabled) return true
+    for (let ancestor = this.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      if (ancestor.tagName !== "FIELDSET" || !ancestor.disabled) continue
+      const legend = ancestor.children.find(child => child.tagName === "LEGEND")
+      if (!legend?.contains(this)) return true
+    }
+    return false
   }
   closest() {
     for (let element = this; element; element = element.parentElement) {
@@ -36,6 +48,9 @@ class Element extends EventTarget {
 function openInput(options = {}) {
   const wrapper = new Element()
   const controls = {input: new Element(), up: new Element(), down: new Element()}
+  controls.input.tagName = "INPUT"
+  controls.up.tagName = "BUTTON"
+  controls.down.tagName = "BUTTON"
   const calls = []
   const notifications = []
   Object.assign(controls.input, options)
@@ -109,23 +124,76 @@ test("disabled, readonly, and any-step fields never invoke invalid native steppi
   }
 })
 
+test("fieldset disabled state blocks stepping except inside its first legend", () => {
+  const field = openInput({value: "4", step: "1"})
+  const fieldset = new Element()
+  fieldset.tagName = "FIELDSET"
+  fieldset.disabled = true
+  const firstLegend = new Element()
+  firstLegend.tagName = "LEGEND"
+  firstLegend.parentElement = fieldset
+  const secondLegend = new Element()
+  secondLegend.tagName = "LEGEND"
+  secondLegend.parentElement = fieldset
+  fieldset.children = [firstLegend, field.wrapper, secondLegend]
+  field.wrapper.parentElement = fieldset
+
+  try {
+    assert.equal(field.controls.input.disabled, false)
+    field.click("up")
+    field.click("down")
+    assert.deepEqual(field.calls, [])
+    assert.deepEqual(field.notifications, [])
+
+    fieldset.disabled = false
+    field.click("up")
+    assert.equal(field.calls.length, 1)
+
+    fieldset.disabled = true
+    fieldset.children = [firstLegend, secondLegend]
+    field.wrapper.parentElement = firstLegend
+    firstLegend.children = [field.wrapper]
+    field.click("up")
+    assert.equal(field.calls.length, 2)
+
+    firstLegend.children = []
+    field.wrapper.parentElement = secondLegend
+    secondLegend.children = [field.wrapper]
+    field.click("down")
+    assert.equal(field.calls.length, 2)
+  } finally {
+    field.context.destroyed()
+  }
+})
+
 test("pointer presses preserve input focus without preventing keyboard button activation", () => {
+  const originalDocument = globalThis.document
   const field = openInput()
-  const press = new Event("pointerdown", {bubbles: true, cancelable: true})
-  field.controls.up.dispatchEvent(press)
-  assert.equal(press.defaultPrevented, true)
-  const keyboard = new Event("keydown", {bubbles: true, cancelable: true})
-  field.controls.up.dispatchEvent(keyboard)
-  assert.equal(keyboard.defaultPrevented, false)
-  field.click("up")
-  assert.equal(field.calls.length, 1)
-  field.context.destroyed()
+  globalThis.document = {activeElement: field.controls.input}
+  try {
+    const press = new Event("pointerdown", {bubbles: true, cancelable: true})
+    field.controls.up.dispatchEvent(press)
+    assert.equal(press.defaultPrevented, true)
+    globalThis.document.activeElement = null
+    const unfocused = new Event("pointerdown", {bubbles: true, cancelable: true})
+    field.controls.up.dispatchEvent(unfocused)
+    assert.equal(unfocused.defaultPrevented, false)
+    const keyboard = new Event("keydown", {bubbles: true, cancelable: true})
+    field.controls.up.dispatchEvent(keyboard)
+    assert.equal(keyboard.defaultPrevented, false)
+    field.click("up")
+    assert.equal(field.calls.length, 1)
+  } finally {
+    field.context.destroyed()
+    globalThis.document = originalDocument
+  }
 })
 
 test("patches use the current native input and destruction removes delegated listeners", () => {
   const field = openInput({disabled: true})
   const original = field.controls.input
   const replacement = new Element()
+  replacement.tagName = "INPUT"
   replacement.parentElement = field.wrapper
   replacement.stepUp = function() { field.calls.push({method: "up", input: this}) }
   replacement.stepDown = function() { field.calls.push({method: "down", input: this}) }

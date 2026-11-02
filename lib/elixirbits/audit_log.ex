@@ -106,6 +106,7 @@ defmodule Elixirbits.AuditLog do
                   restored_from_version_id: Map.get(version, :restored_from_version_id),
                   fields: compare_versions(definition, before, after_state),
                   current_fields: compare_versions(definition, after_state, current),
+                  before_state: before,
                   state: after_state,
                   definition: definition
                 }
@@ -148,6 +149,7 @@ defmodule Elixirbits.AuditLog do
       when side in [:previous, :current] do
     definition = revision.definition
     state = if side == :previous, do: revision.state, else: capture_state(record, definition)
+    before_state = if side == :previous, do: revision.before_state, else: revision.state
     fields = if side == :previous, do: revision.fields, else: revision.current_fields
     preserved = Keyword.get(opts, :preserve_fields, [])
 
@@ -169,17 +171,52 @@ defmodule Elixirbits.AuditLog do
         end
       end)
 
-    record =
-      Enum.reduce(definition.relationships, record, fn relationship, record ->
-        children =
-          state.related
+    {record, form_relationships} =
+      Enum.reduce(definition.relationships, {record, %{}}, fn relationship, {record, forms} ->
+        saved_children = Map.get(state.related, relationship.name, %{})
+        primary_key = Ash.Resource.Info.primary_key(relationship.resource)
+
+        positions =
+          saved_children
+          |> ordered_relationship_snapshots(relationship)
+          |> Enum.with_index()
+          |> Map.new(fn {{key, _values}, index} -> {key, index} end)
+
+        removed_keys =
+          for field <- fields,
+              field.relationship == relationship.name and field.status == :changed and
+                not field.after_present?,
+              do: field.record_key
+
+        removed_children =
+          before_state.related
           |> Map.get(relationship.name, %{})
-          |> Enum.sort_by(&elem(&1, 0))
+          |> Map.take(removed_keys)
+          |> Map.reject(fn {_key, values} ->
+            Enum.any?(saved_children, fn {_key, saved} ->
+              Enum.all?(primary_key, fn key ->
+                Map.fetch!(values, to_string(key)) == Map.fetch!(saved, to_string(key))
+              end)
+            end)
+          end)
+
+        children =
+          removed_children
+          |> Map.merge(saved_children)
+          |> ordered_relationship_snapshots(relationship)
           |> Enum.map(fn {key, values} ->
+            removed? = not Map.has_key?(saved_children, key)
+
             child =
               Enum.reduce(relationship.attributes, struct(relationship.resource), fn attribute,
                                                                                      child ->
-                case Map.fetch(values, to_string(attribute.name)) do
+                value =
+                  if removed? and attribute in relationship.fields and
+                       attribute.name not in relationship.identity_fields,
+                     do: {:ok, nil},
+                     else: Map.fetch(values, to_string(attribute.name))
+
+                case value do
                   {:ok, value} when not attribute.sensitive? ->
                     {:ok, value} =
                       Ash.Type.cast_from_embedded(attribute.type, value, attribute.constraints)
@@ -199,17 +236,45 @@ defmodule Elixirbits.AuditLog do
                   do: field.attribute
 
             Ash.Resource.set_metadata(child, %{
+              audit_record_key: key,
+              audit_position: Map.get(positions, key),
+              audit_recorded_fields: MapSet.new(Map.keys(values)),
               audit_changed_fields: changed,
-              audit_change_side: side
+              audit_change_side: if(removed?, do: :previous, else: side),
+              audit_removed?: removed?
             })
           end)
 
+        {removed_children, saved_children} =
+          Enum.split_with(children, &Ash.Resource.get_metadata(&1, :audit_removed?))
+
         value =
           if relationship.relationship.cardinality == :many,
-            do: children,
-            else: List.first(children)
+            do: saved_children,
+            else: List.first(saved_children)
 
-        Map.put(record, relationship.name, value)
+        form_value =
+          if relationship.relationship.cardinality == :many do
+            removed_by_key =
+              Map.new(removed_children, fn child ->
+                {Ash.Resource.get_metadata(child, :audit_record_key), child}
+              end)
+
+            before_state.related
+            |> Map.get(relationship.name, %{})
+            |> ordered_relationship_snapshots(relationship)
+            |> Enum.with_index()
+            |> Enum.reduce(saved_children, fn {{key, _values}, index}, children ->
+              case Map.fetch(removed_by_key, key) do
+                {:ok, child} -> List.insert_at(children, index, child)
+                :error -> children
+              end
+            end)
+          else
+            value || List.first(removed_children)
+          end
+
+        {Map.put(record, relationship.name, value), Map.put(forms, relationship.name, form_value)}
       end)
 
     changed =
@@ -218,7 +283,11 @@ defmodule Elixirbits.AuditLog do
           into: MapSet.new(),
           do: field.attribute
 
-    Ash.Resource.set_metadata(record, %{audit_changed_fields: changed, audit_change_side: side})
+    Ash.Resource.set_metadata(record, %{
+      audit_changed_fields: changed,
+      audit_change_side: side,
+      audit_form_relationships: form_relationships
+    })
   end
 
   def preview(resource, id, version_id, actor, opts \\ []) do
@@ -264,7 +333,7 @@ defmodule Elixirbits.AuditLog do
           if changed? do
             values =
               desired
-              |> Enum.sort_by(&elem(&1, 0))
+              |> ordered_relationship_snapshots(relationship)
               |> Enum.map(fn {key, attributes} ->
                 action =
                   if Map.has_key?(current, key),
@@ -398,6 +467,12 @@ defmodule Elixirbits.AuditLog do
             child_attributes = Ash.Resource.Info.attributes(relationship.destination)
             child_ignored = PaperTrail.ignore_attributes(relationship.destination)
 
+            sort =
+              relationship.destination
+              |> Ash.Query.sort(relationship.sort || [])
+              |> Ash.Query.default_sort(relationship.default_sort || [])
+              |> Map.fetch!(:sort)
+
             [
               %{
                 name: relationship.name,
@@ -408,6 +483,7 @@ defmodule Elixirbits.AuditLog do
                 identity_fields: identity_fields,
                 create_action: create_action,
                 update_action: update_action,
+                sort: sort,
                 attributes: child_attributes,
                 fields:
                   Enum.filter(child_attributes, fn attribute ->
@@ -434,6 +510,39 @@ defmodule Elixirbits.AuditLog do
       ignored: ignored,
       relationships: relationships
     }
+  end
+
+  defp ordered_relationship_snapshots(snapshots, relationship) do
+    entries = Enum.sort_by(snapshots, &elem(&1, 0))
+
+    if relationship.sort == [] do
+      entries
+    else
+      entries
+      |> Enum.map(fn {key, values} ->
+        child =
+          Enum.reduce(relationship.attributes, struct(relationship.resource), fn attribute,
+                                                                                 child ->
+            case Map.fetch(values, to_string(attribute.name)) do
+              {:ok, value} when not attribute.sensitive? ->
+                {:ok, value} =
+                  Ash.Type.cast_from_embedded(attribute.type, value, attribute.constraints)
+
+                Map.put(child, attribute.name, value)
+
+              _ ->
+                child
+            end
+          end)
+
+        Ash.Resource.set_metadata(child, %{audit_record_key: key})
+      end)
+      |> Ash.Sort.runtime_sort(relationship.sort, rekey?: false)
+      |> Enum.map(fn child ->
+        key = Ash.Resource.get_metadata(child, :audit_record_key)
+        {key, Map.fetch!(snapshots, key)}
+      end)
+    end
   end
 
   defp recorded_changes(record, definition, actor) do
@@ -747,11 +856,11 @@ defmodule Elixirbits.AuditLog do
         old_records = Map.get(before.related, relationship.name, %{})
         new_records = Map.get(after_state.related, relationship.name, %{})
 
-        (Map.keys(old_records) ++ Map.keys(new_records))
-        |> Enum.uniq()
-        |> Enum.sort()
+        old_records
+        |> Map.merge(new_records)
+        |> ordered_relationship_snapshots(relationship)
         |> Enum.with_index(1)
-        |> Enum.flat_map(fn {key, index} ->
+        |> Enum.flat_map(fn {{key, _values}, index} ->
           Enum.map(relationship.fields, fn attribute ->
             name = to_string(attribute.name)
 

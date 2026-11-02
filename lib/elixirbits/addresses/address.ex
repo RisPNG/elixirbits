@@ -46,6 +46,7 @@ defmodule Elixirbits.Address do
       primary? true
 
       accept [
+        :sequence,
         :contact_name,
         :contact_tel_no,
         :country,
@@ -66,6 +67,7 @@ defmodule Elixirbits.Address do
       primary? true
 
       accept [
+        :sequence,
         :contact_name,
         :contact_tel_no,
         :country,
@@ -145,6 +147,12 @@ defmodule Elixirbits.Address do
 
   attributes do
     uuid_v7_primary_key :id
+
+    attribute :sequence, :integer do
+      allow_nil? false
+      default 1
+      constraints min: 1
+    end
 
     attribute :contact_name, :string
     attribute :contact_tel_no, :string

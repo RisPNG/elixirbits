@@ -4,7 +4,7 @@ const NumberInput = {
       const button = event.target.closest("[data-number-step]")
       if (!button || !this.el.contains(button)) return
       event.preventDefault()
-      if (this.input.disabled || this.input.readOnly || this.input.step.toLowerCase() === "any") return
+      if (this.input.matches(":disabled") || this.input.readOnly || this.input.step.toLowerCase() === "any") return
 
       const previous = this.input.value
       if (button.dataset.numberStep === "1") this.input.stepUp()
@@ -16,7 +16,7 @@ const NumberInput = {
       }
     }
     this.onPointerDown = event => {
-      if (event.target.closest("[data-number-step]")) event.preventDefault()
+      if (event.target.closest("[data-number-step]") && document.activeElement === this.input) event.preventDefault()
     }
     this.el.addEventListener("click", this.onClick)
     this.el.addEventListener("pointerdown", this.onPointerDown)

@@ -21,7 +21,7 @@ class Element {
   removeEventListener(type, callback, capture = false) { this.listeners = this.listeners.filter(item => !(item.type === type && item.callback === callback && item.capture === capture)) }
   querySelector(selector) { return this.nodes.get(selector) || null }
   querySelectorAll(selector) { return this.nodes.get(selector) || [] }
-  matches(selector) { return selector === ":focus-visible" && this.focusVisible === true }
+  matches(selector) { return selector === ":disabled" ? this.disabled === true || this.inheritedDisabled === true : selector === ":focus-visible" && this.focusVisible === true }
   closest(selector) {
     const key = selector.slice(6, -1).replace(/-([a-z])/g, (_, char) => char.toUpperCase())
     for (let element = this; element; element = element.parent) if (element.dataset[key] !== undefined) return element
@@ -621,6 +621,34 @@ test("a disabled field cancels preparation and ignores dropped files", async () 
   } finally { setup.cleanup() }
 })
 
+test("inherited disabled state rejects a pending crop and allows selection after reenable", async () => {
+  const setup = fixture()
+  try {
+    setup.select(new File(["image"], "image.png", {type: "image/png"}))
+    await settled()
+    const editor = Editor.instances.at(-1)
+    setup.input.inheritedDisabled = true
+    editor.resolve(new File(["crop"], "cropped.png", {type: "image/png"}))
+    await settled()
+    assert.deepEqual(setup.context.files, [])
+    assert.deepEqual(setup.changes, [])
+    assert.equal(setup.input.disabled, false)
+    const drop = new UIEvent("drop", {bubbles: true, cancelable: true})
+    drop.dataTransfer = {files: [new File(["pdf"], "document.pdf", {type: "application/pdf"})]}
+    setup.root.dispatchEvent(drop)
+    assert.equal(Editor.instances.length, 1)
+
+    setup.input.inheritedDisabled = false
+    setup.select(new File(["new"], "new.png", {type: "image/png"}))
+    await settled()
+    const cropped = new File(["accepted crop"], "accepted.png", {type: "image/png"})
+    Editor.instances.at(-1).resolve(cropped)
+    await settled()
+    assert.deepEqual(setup.context.files, [cropped])
+    assert.deepEqual(setup.input.files, [cropped])
+  } finally { setup.cleanup() }
+})
+
 test("image and PDF replacement revokes prior URLs and preview flag changes update the same selected file", () => {
   const setup = fixture({fileEditor: "false"})
   try {
@@ -699,9 +727,11 @@ test("edited size failure retains the accepted selection and reports an actionab
 test("native tag preview shows the filename and clear restores stored media and the native FileList", () => {
   const setup = fixture({fileEditor: "false", filePreviewAs: "tag"})
   try {
+    assert.equal(setup.root.dataset.fileHasValue, "false")
     setup.readonly.dataset.fileDefaultName = "Stored file"
     const file = new File(["image"], "image.png", {type: "image/png"})
     setup.select(file)
+    assert.equal(setup.root.dataset.fileHasValue, "true")
     assert.equal(setup.image.hidden, true)
     assert.equal(setup.previewName.hidden, false)
     assert.equal(setup.previewName.textContent, "image.png")
@@ -710,11 +740,46 @@ test("native tag preview shows the filename and clear restores stored media and 
     const url = setup.open.href
     setup.clear.dispatchEvent(new UIEvent("click", {bubbles: true, cancelable: true}))
     assert.deepEqual(setup.input.files, [])
+    assert.equal(setup.root.dataset.fileHasValue, "false")
     assert.equal(setup.region.hidden, true)
     assert.equal(setup.stored.hidden, false)
     assert.equal(setup.clear.hidden, true)
     assert.equal(setup.readonly.textContent, "Stored file")
     assert.deepEqual(setup.revoked, [url])
+  } finally { setup.cleanup() }
+})
+
+test("empty file mode changes preserve blank hints and keep selected filenames", () => {
+  const setup = fixture({fileEditor: "false", filePreview: "false"})
+  try {
+    assert.equal(setup.name.textContent, "Choose a file")
+    for (const mode of ["disabled", "like-disabled", "text-disabled", "hidden-disabled"]) {
+      setup.root.dataset.fileMode = mode
+      setup.input.disabled = true
+      setup.name.dataset.fileDefaultName = ""
+      setup.readonly.dataset.fileDefaultName = ""
+      setup.context.updated()
+      assert.equal(setup.name.textContent, "")
+      assert.equal(setup.readonly.textContent, "")
+    }
+
+    setup.root.dataset.fileMode = "like-enabled"
+    setup.name.dataset.fileDefaultName = "Choose a document"
+    setup.readonly.dataset.fileDefaultName = "Choose a document"
+    setup.context.updated()
+    assert.equal(setup.name.textContent, "Choose a document")
+    assert.equal(setup.readonly.textContent, "Choose a document")
+
+    setup.root.dataset.fileMode = "enabled"
+    setup.input.disabled = false
+    setup.select(new File(["pdf"], "document.pdf", {type: "application/pdf"}))
+    setup.root.dataset.fileMode = "disabled"
+    setup.input.disabled = true
+    setup.name.dataset.fileDefaultName = ""
+    setup.readonly.dataset.fileDefaultName = ""
+    setup.context.updated()
+    assert.equal(setup.name.textContent, "document.pdf")
+    assert.equal(setup.readonly.textContent, "document.pdf")
   } finally { setup.cleanup() }
 })
 
@@ -984,14 +1049,17 @@ test("server acknowledgements retain new queued Files and discard only refs that
     setup.select(second)
     setup.context.updated()
     assert.deepEqual(setup.context.files, [first, second])
+    assert.equal(setup.root.dataset.fileHasValue, "true")
     setup.root.dataset.fileEntryRefs = "[]"
     setup.context.updated()
     assert.deepEqual(setup.context.files, [second])
+    assert.equal(setup.root.dataset.fileHasValue, "true")
     setup.root.dataset.fileEntryRefs = JSON.stringify([second._phxRef])
     setup.context.updated()
     setup.root.dataset.fileEntryRefs = "[]"
     setup.context.updated()
     assert.deepEqual(setup.context.files, [])
+    assert.equal(setup.root.dataset.fileHasValue, "false")
   } finally { setup.cleanup() }
 })
 
@@ -1143,6 +1211,7 @@ test("LiveView reset awaits each server cancellation and retains replacement met
     setup.context.replacements.set(first, "/saved.png")
     setup.root.dataset.fileEntryRefs = JSON.stringify([first._phxRef, second._phxRef])
     setup.context.updated()
+    assert.equal(setup.root.dataset.fileHasValue, "true")
     const originalMetadata = setup.metadata.children.map(input => [input.name, input.value])
     const calls = []
     const replies = []
@@ -1176,6 +1245,7 @@ test("LiveView reset awaits each server cancellation and retains replacement met
     await settled()
     assert.equal(setup.context.preparing, false)
     assert.deepEqual(setup.context.files, [])
+    assert.equal(setup.root.dataset.fileHasValue, "false")
     assert.deepEqual(setup.input.files, [])
     assert.deepEqual(setup.metadata.children, [])
     assert.equal(setup.context.replacements.size, 0)
@@ -1410,8 +1480,10 @@ test("native singles count stays fixed while cycling filenames and updates after
     const image = new File(["image"], "portrait.png", {type: "image/png"})
     const pdf = new File(["pdf"], "document.pdf", {type: "application/pdf"})
     assert.equal(setup.name.textContent, "0 files")
+    assert.equal(setup.root.dataset.fileHasValue, "false")
     setup.select(image)
     assert.equal(setup.name.textContent, "1 file")
+    assert.equal(setup.root.dataset.fileHasValue, "true")
     assert.equal(setup.caption.textContent, "portrait.png")
     assert.equal(setup.caption.hidden, false)
     setup.select(pdf)
@@ -1432,9 +1504,11 @@ test("native singles count stays fixed while cycling filenames and updates after
     assert.equal(setup.previewName.hidden, false)
     setup.clear.dispatchEvent(new UIEvent("click", {bubbles: true, cancelable: true}))
     assert.equal(setup.name.textContent, "1 file")
+    assert.equal(setup.root.dataset.fileHasValue, "true")
     assert.equal(setup.previewName.textContent, "document.pdf")
     setup.form.dispatchEvent(new UIEvent("reset"))
     assert.equal(setup.name.textContent, "0 files")
+    assert.equal(setup.root.dataset.fileHasValue, "false")
     assert.equal(setup.caption.textContent, "")
     assert.equal(setup.caption.hidden, true)
     setup.root.dataset.fileSelection = "single"
@@ -1443,6 +1517,34 @@ test("native singles count stays fixed while cycling filenames and updates after
     assert.equal(setup.name.textContent, "Choose a file")
     setup.select(image)
     assert.equal(setup.name.textContent, "portrait.png")
+  } finally { setup.cleanup() }
+})
+
+test("an explicit singles preview placeholder returns after clearing or resetting the count", () => {
+  const setup = fixture({fileSelection: "singles", fileEditor: "false", fileHasPlaceholder: "true"}, false)
+  setup.name.dataset.fileDefaultName = "Add attachments"
+  setup.readonly.dataset.fileDefaultName = "Add attachments"
+  setup.context.mounted()
+  try {
+    assert.equal(setup.name.textContent, "Add attachments")
+    setup.select(new File(["image"], "portrait.png", {type: "image/png"}))
+    assert.equal(setup.name.textContent, "1 file")
+    setup.clear.click()
+    assert.equal(setup.name.textContent, "Add attachments")
+    setup.select(new File(["image"], "portrait.png", {type: "image/png"}))
+    setup.select(new File(["pdf"], "document.pdf", {type: "application/pdf"}))
+    assert.equal(setup.name.textContent, "2 files")
+    setup.form.dispatchEvent(new UIEvent("reset"))
+    assert.equal(setup.name.textContent, "Add attachments")
+    assert.equal(setup.readonly.textContent, "Add attachments")
+
+    setup.root.dataset.fileMode = "disabled"
+    setup.input.disabled = true
+    setup.name.dataset.fileDefaultName = ""
+    setup.readonly.dataset.fileDefaultName = ""
+    setup.context.updated()
+    assert.equal(setup.name.textContent, "")
+    assert.equal(setup.readonly.textContent, "")
   } finally { setup.cleanup() }
 })
 
@@ -1660,6 +1762,7 @@ test("fresh Save patches keep pending files in their logical slots until consume
     const logo = serverItem(setup, {url: "/logo.svg", name: "logo.svg", type: "image/svg+xml"})
     setup.root.nodes.set("[data-file-item]", [logo])
     setup.context.updated()
+    assert.equal(setup.root.dataset.fileHasValue, "true")
     const image = new File(["portrait"], "portrait.png", {type: "image/png"})
     const pdf = new File(["document"], "document.pdf", {type: "application/pdf"})
     setup.select(image)
@@ -1685,6 +1788,7 @@ test("fresh Save patches keep pending files in their logical slots until consume
     assert.equal(savedImage.hidden, true)
     assert.equal(savedPdf.hidden, true)
     assert.equal(pendingImage.hidden, false)
+    assert.equal(setup.root.dataset.fileHasValue, "true")
 
     setup.root.dataset.fileEntryRefs = "[]"
     setup.root.nodes.set("[data-file-item]", [logo, savedImage, savedPdf])
@@ -1696,6 +1800,7 @@ test("fresh Save patches keep pending files in their logical slots until consume
     assert.equal(setup.previewPosition.textContent, "2/3")
     assert.equal(savedImage.hidden, false)
     assert.equal(savedPdf.hidden, true)
+    assert.equal(setup.root.dataset.fileHasValue, "true")
     setup.root.dataset.filePreview = "false"
     setup.context.updated()
     assert.equal(setup.name.textContent, "portrait.png")

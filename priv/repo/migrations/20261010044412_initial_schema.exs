@@ -708,6 +708,7 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
 
     create table(:addresses, primary_key: false) do
       add :id, :uuid, null: false, default: fragment("uuidv7()"), primary_key: true
+      add :sequence, :bigint, null: false, default: 1
       add :contact_name, :text
       add :contact_tel_no, :text
       add :country, :text
@@ -1676,6 +1677,7 @@ defmodule Elixirbits.Repo.Migrations.InitialSchema do
     drop table(:addresses_versions)
 
     drop table(:addresses)
+
     # Uncomment this if you actually want to uninstall the extensions
     # when this migration is rolled back:
     execute(

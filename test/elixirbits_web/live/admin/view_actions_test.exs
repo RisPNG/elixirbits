@@ -76,6 +76,10 @@ defmodule ElixirbitsWeb.Admin.ViewActionsTest do
       create_user(
         display_name: "Stored profile",
         first_name: "Stored first name",
+        username: nil,
+        middle_name: nil,
+        last_name: nil,
+        dob: nil,
         roles: ["view-member"],
         addresses: [%{line_1: "Stored address"}],
         display_pic_url: "/uploads/users/viewed.png",
@@ -84,16 +88,55 @@ defmodule ElixirbitsWeb.Admin.ViewActionsTest do
 
     for level <- [4, 16] do
       operator_conn = grant(conn, %{"USERS" => level, "ROLES" => level})
-      {:ok, view, _html} = live(operator_conn, ~p"/admin/users/#{user.id}/read")
+      {:ok, view, html} = live(operator_conn, ~p"/admin/users/#{user.id}/read")
+      document = Floki.parse_document!(html)
 
       assert has_element?(view, "h1", "View Stored profile")
       assert has_element?(view, "#user-form fieldset[disabled]")
-      assert has_element?(view, "input[name='form[display_name]'][value='Stored profile']")
-      assert has_element?(view, "input[name='form[first_name]'][value='Stored first name']")
 
       assert has_element?(
                view,
-               "input[name='form[addresses][0][line_1]'][value='Stored address']"
+               "input[name='form[display_name]'][value='Stored profile'][disabled]"
+             )
+
+      assert has_element?(
+               view,
+               "input[name='form[first_name]'][value='Stored first name'][disabled]"
+             )
+
+      assert has_element?(
+               view,
+               "input[name='form[addresses][0][line_1]'][value='Stored address'][disabled]"
+             )
+
+      for id <- [
+            "form_username",
+            "form_middle_name",
+            "form_last_name",
+            "form_dob",
+            "form_addresses_0_other_label",
+            "form_addresses_0_contact_name",
+            "form_addresses_0_line_2",
+            "form_addresses_0_line_3",
+            "form_addresses_0_postal_code",
+            "form_addresses_0_city",
+            "form_addresses_0_state",
+            "form_addresses_0_country"
+          ] do
+        assert has_element?(
+                 view,
+                 "input##{id}.input-floating-control[disabled]:not([placeholder])"
+               )
+
+        assert Floki.attribute(document, "input##{id}", "value") in [[], [""]]
+        assert Floki.find(document, "input##{id} + .input-floating-label") != []
+      end
+
+      assert has_element?(view, "input#form_dob[phx-hook=VCalendar][data-vc-mode=date][disabled]")
+
+      refute has_element?(
+               view,
+               "#user-form input:not([type=hidden]):not([disabled]), #user-form textarea:not([disabled]), #user-form select:not([disabled])"
              )
 
       assert has_element?(view, "img[src='/uploads/users/viewed.png']")

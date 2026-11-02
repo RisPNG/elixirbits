@@ -179,6 +179,66 @@ defmodule ElixirbitsWeb.Admin.LayoutTestInputMatrixTest do
     assert has_element?(view, "#local_compute_plan input[value='6-core'][checked][disabled]")
   end
 
+  test "disabled fieldsets preserve native control attributes and remain independent of direct disabled state",
+       %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+
+    view
+    |> form("#layout-test-form", local: %{project_name: "Preserved draft"})
+    |> render_change()
+
+    for state <- ~w(required placeholder fieldset_disabled) do
+      render_click(element(view, "#layout-test-input-state-#{state}"))
+      assert has_element?(view, "#layout-test-input-state-#{state}[aria-pressed=true]")
+    end
+
+    assert has_element?(view, "fieldset#layout-test-input-examples[disabled]")
+    refute has_element?(view, "#layout-test-input-state-disabled[aria-pressed=true]")
+
+    for id <- ~w(local_project_name local_password local_budget local_launch_date) do
+      assert has_element?(view, "fieldset[disabled] input##{id}:not([disabled])[required]")
+    end
+
+    assert has_element?(view, "input#local_launch_date[readonly][phx-hook=VCalendar]")
+
+    assert has_element?(
+             view,
+             "input#local_project_name[value='Preserved draft'][placeholder='Example Text']"
+           )
+
+    assert has_element?(
+             view,
+             "#layout-test-input-example-text [data-core-input] .input-required",
+             "*"
+           )
+
+    assert has_element?(
+             view,
+             "#layout-test-local-role select[name='local[role]']:not([disabled]) option[value=admin][selected]"
+           )
+
+    render_click(element(view, "#layout-test-input-state-disabled"))
+
+    assert has_element?(
+             view,
+             "fieldset#layout-test-input-examples[disabled] input#local_project_name[disabled]"
+           )
+
+    render_click(element(view, "#layout-test-input-state-fieldset_disabled"))
+
+    assert has_element?(
+             view,
+             "fieldset#layout-test-input-examples:not([disabled]) input#local_project_name[disabled]"
+           )
+
+    render_click(element(view, "#layout-test-input-state-disabled"))
+
+    assert has_element?(
+             view,
+             "fieldset#layout-test-input-examples:not([disabled]) input#local_project_name:not([disabled])[value='Preserved draft']"
+           )
+  end
+
   test "checkbox and switch variants and checked states change the actual controls", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
 

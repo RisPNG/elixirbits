@@ -8,6 +8,7 @@ defmodule ElixirbitsWeb.Admin.UserManagementTest do
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
   alias Elixirbits.Address
+  alias Elixirbits.AuditLog
 
   @system %{system: true}
 
@@ -62,7 +63,13 @@ defmodule ElixirbitsWeb.Admin.UserManagementTest do
       if create? do
         {:ok, entry, _html} = live(manager.conn, ~p"/admin/users/create")
         assert has_element?(entry, "#user-form input[name='form[email]']:not([disabled])")
-        assert has_element?(entry, "#user-form input[name='form[password]']")
+        assert has_element?(entry, "#user-form input[name='form[password]']:not([disabled])")
+
+        assert has_element?(
+                 entry,
+                 "#user-form input[name='form[password_confirmation]']:not([disabled])"
+               )
+
         assert has_element?(entry, "#user-form button[type=submit]")
         refute has_element?(entry, "#user-roles")
       else
@@ -85,6 +92,10 @@ defmodule ElixirbitsWeb.Admin.UserManagementTest do
   } do
     manager = grant(conn, %{"USERS" => 6})
     {:ok, view, _html} = live(manager.conn, ~p"/admin/users/create")
+
+    assert has_element?(view, "#user-form fieldset:not([disabled])")
+    assert has_element?(view, "input#form_first_name:not([disabled])")
+    assert has_element?(view, "input#form_dob[phx-hook=VCalendar]:not([disabled])")
 
     result =
       view
@@ -116,6 +127,227 @@ defmodule ElixirbitsWeb.Admin.UserManagementTest do
     assert has_element?(saved_view, "input[name='form[display_name]'][value='Managed account']")
     refute has_element?(saved_view, "#user-form button[type=submit]")
     refute has_element?(saved_view, "a[data-tooltip=Update]")
+  end
+
+  test "address numbers swap complete drafts and retain their order after saving", %{conn: conn} do
+    target =
+      create_user(addresses: [%{line_1: "A"}, %{line_1: "B"}])
+      |> Ash.load!(:addresses, actor: @system)
+
+    [first, second] = target.addresses
+    manager = grant(conn, %{"USERS" => 15})
+    {:ok, view, _html} = live(manager.conn, ~p"/admin/users/#{target.id}/update")
+
+    for {index, number} <- [{0, 1}, {1, 2}] do
+      assert has_element?(
+               view,
+               "input[name='address_position[#{index}]'][value='#{number}'][min='1'][max='2'][step='1']:not([phx-change])"
+             )
+    end
+
+    view
+    |> form("#user-form",
+      form: %{addresses: %{"0" => %{line_1: "A edited"}, "1" => %{line_1: "B edited"}}},
+      address_position: %{"0" => "2"}
+    )
+    |> render_change(%{"_target" => ["address_position", "0"]})
+
+    assert has_element?(view, "input[name='form[addresses][0][id]'][value='#{second.id}']")
+    assert has_element?(view, "input[name='form[addresses][0][line_1]'][value='B edited']")
+    assert has_element?(view, "input[name='form[addresses][1][id]'][value='#{first.id}']")
+    assert has_element?(view, "input[name='form[addresses][1][line_1]'][value='A edited']")
+
+    view
+    |> form("#user-form", address_position: %{"0" => "1"})
+    |> render_change(%{"_target" => ["address_position", "0"]})
+
+    assert has_element?(view, "input[name='form[addresses][0][id]'][value='#{second.id}']")
+    render_click(view, "add_form", %{"field" => "addresses"})
+    assert has_element?(view, "input[name='address_position[2]'][value='3'][max='3']")
+    view |> form("#user-form", form: %{addresses: %{"2" => %{line_1: "C"}}}) |> render_change()
+
+    view
+    |> element("button[phx-click=remove_form][phx-value-path='form[addresses][1]']")
+    |> render_click()
+
+    for {index, number} <- [{0, 1}, {1, 2}] do
+      assert has_element?(
+               view,
+               "input[name='address_position[#{index}]'][value='#{number}'][max='2']"
+             )
+    end
+
+    assert has_element?(view, "input[name='form[addresses][0][line_1]'][value='B edited']")
+    assert has_element?(view, "input[name='form[addresses][1][line_1]'][value=C]")
+    result = view |> form("#user-form") |> render_submit()
+
+    {:ok, saved_view, _html} =
+      follow_redirect(result, manager.conn, ~p"/admin/users/#{target.id}/read")
+
+    refute has_element?(saved_view, "input[name^='address_position[']:not([disabled])")
+
+    render_change(saved_view, "validate", %{
+      "_target" => ["address_position", "0"],
+      "form" => %{},
+      "address_position" => %{"0" => "2"}
+    })
+
+    assert has_element?(saved_view, "input[name='form[addresses][0][line_1]'][value='B edited']")
+    saved = Ash.get!(User, target.id, actor: @system, load: [:addresses])
+    assert Enum.map(saved.addresses, &{&1.sequence, &1.line_1}) == [{1, "B edited"}, {2, "C"}]
+    assert hd(saved.addresses).id == second.id
+    assert Ash.get!(Address, first.id, actor: @system, not_found_error?: false) == nil
+    {:ok, edit, _html} = live(manager.conn, ~p"/admin/users/#{target.id}/update")
+    assert has_element?(edit, "input[name='form[addresses][0][id]'][value='#{second.id}']")
+    assert has_element?(edit, "input[name='form[addresses][0][line_1]'][value='B edited']")
+    assert has_element?(edit, "input[name='form[addresses][1][line_1]'][value=C]")
+  end
+
+  test "phone, address contact, and regional controls preserve saved and historical values", %{
+    conn: conn
+  } do
+    target =
+      create_user(
+        tel_no: "+6581234567",
+        locale: nil,
+        timezone: "Asia/Singapore",
+        addresses: [%{line_1: "Home", contact_tel_no: "home@example.com"}]
+      )
+
+    manager = grant(conn, %{"USERS" => 5})
+    {:ok, history} = AuditLog.history(User, target.id, manager.user)
+    original = hd(history.revisions)
+    {:ok, view, _html} = live(manager.conn, ~p"/admin/users/#{target.id}/update")
+
+    assert has_element?(view, "input#form_email[disabled]")
+    assert has_element?(view, "input#form_first_name:not([disabled])")
+    assert has_element?(view, "input#form_dob[phx-hook=VCalendar]:not([disabled])")
+
+    assert has_element?(
+             view,
+             "#form_tel_no_tel_wrapper[phx-hook=TelInput] input[data-tel-composite][name='form[tel_no]'][value='+6581234567']"
+           )
+
+    assert has_element?(view, "#form_tel_no[type=tel][data-tel-number][value='81234567']")
+
+    assert has_element?(
+             view,
+             "input#form_addresses_0_contact_tel_no[type=text][name='form[addresses][0][contact_tel_no]'][value='home@example.com']"
+           )
+
+    refute has_element?(
+             view,
+             "#form_addresses_0_contact_tel_no_tel_wrapper, [name='form[addresses][0][contact_tel_no_country_code]']"
+           )
+
+    assert has_element?(
+             view,
+             "#form_locale[phx-hook=PetalComboBox] select[name='form[locale]'] option[value=en]"
+           )
+
+    assert has_element?(
+             view,
+             "#form_timezone[phx-hook=PetalComboBox] select[name='form[timezone]'] option[value='Asia/Singapore'][selected]"
+           )
+
+    assert has_element?(view, "#form_timezone option[value='']", "Automatic (browser)")
+
+    result =
+      view
+      |> form("#user-form",
+        form: %{
+          locale: "en",
+          timezone: "Asia/Kuala_Lumpur",
+          addresses: %{"0" => %{contact_tel_no: "contact@example.com"}}
+        }
+      )
+      |> render_submit(%{"form" => %{"tel_no" => "+60111222333"}})
+
+    path = ~p"/admin/users/#{target.id}/read"
+    {:ok, saved_view, _html} = follow_redirect(result, manager.conn, path)
+    saved = Ash.get!(User, target.id, actor: @system, load: [:addresses])
+    assert saved.tel_no == "+60111222333"
+    assert saved.locale == "en"
+    assert saved.timezone == "Asia/Kuala_Lumpur"
+    assert [%{contact_tel_no: "contact@example.com"}] = saved.addresses
+    assert has_element?(saved_view, "span#form_tel_no", "+60111222333")
+    assert has_element?(saved_view, "span#form_addresses_0_contact_tel_no", "contact@example.com")
+    assert has_element?(saved_view, "input#form_locale[value=en][disabled]")
+    assert has_element?(saved_view, "input#form_timezone[value='Asia/Kuala_Lumpur'][disabled]")
+
+    refute has_element?(
+             saved_view,
+             "#user-form [phx-hook=TelInput], #user-form [phx-hook=PetalComboBox]"
+           )
+
+    saved_view |> element("header a[data-tooltip=History]") |> render_click()
+    assert_patch(saved_view)
+    saved_view |> element("#revision-#{original.id}") |> render_click()
+    assert_patch(saved_view, path <> "?version=#{original.id}")
+
+    assert has_element?(
+             saved_view,
+             "span#form-#{original.id}-previous_tel_no[data-audit-changed=true][data-audit-side=previous]",
+             "+6581234567"
+           )
+
+    assert has_element?(
+             saved_view,
+             "span#form-#{original.id}-previous_addresses_0_contact_tel_no",
+             "home@example.com"
+           )
+
+    assert has_element?(
+             saved_view,
+             "input#form-#{original.id}-previous_locale[value=''][disabled]"
+           )
+
+    assert has_element?(
+             saved_view,
+             "input#form-#{original.id}-previous_timezone[value='Asia/Singapore'][disabled]"
+           )
+
+    refute has_element?(saved_view, "#user-form button[type=submit]")
+
+    saved_view |> form("#audit-value-form", audit: %{side: "current"}) |> render_change()
+    assert_patch(saved_view)
+
+    assert has_element?(
+             saved_view,
+             "span#form-#{original.id}-current_tel_no[data-audit-changed=true][data-audit-side=current]",
+             "+60111222333"
+           )
+
+    assert has_element?(
+             saved_view,
+             "span#form-#{original.id}-current_addresses_0_contact_tel_no",
+             "contact@example.com"
+           )
+
+    assert has_element?(
+             saved_view,
+             "input#form-#{original.id}-current_locale[value=en][disabled]"
+           )
+
+    assert has_element?(
+             saved_view,
+             "input#form-#{original.id}-current_timezone[value='Asia/Kuala_Lumpur'][disabled]"
+           )
+
+    for field <- ["locale", "timezone"] do
+      assert has_element?(
+               saved_view,
+               "[data-audit-changed=true][data-audit-side=current] input#form-#{original.id}-current_#{field}"
+             )
+    end
+
+    current = Ash.get!(User, target.id, actor: @system)
+
+    assert {current.tel_no, current.locale, current.timezone} ==
+             {saved.tel_no, saved.locale, saved.timezone}
+
+    {:ok, current_history} = AuditLog.history(User, target.id, manager.user)
+    assert length(current_history.revisions) == length(history.revisions) + 1
   end
 
   test "invalid credentials keep the creation form open without saving an account", %{conn: conn} do

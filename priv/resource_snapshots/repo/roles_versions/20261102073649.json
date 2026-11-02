@@ -78,32 +78,11 @@
       "generated?": false,
       "precision": null,
       "primary_key?": false,
-      "references": {
-        "deferrable": false,
-        "destination_attribute": "id",
-        "destination_attribute_default": null,
-        "destination_attribute_generated": null,
-        "index?": false,
-        "index_where": null,
-        "match_tenant?": false,
-        "match_type": null,
-        "match_with": null,
-        "multitenancy": {
-          "attribute": null,
-          "global": null,
-          "strategy": null
-        },
-        "name": "ledger_transfers_versions_version_source_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
-        "schema": "public",
-        "table": "ledger_transfers"
-      },
+      "references": null,
       "scale": null,
       "size": null,
       "source": "version_source_id",
-      "type": "binary"
+      "type": "uuid"
     },
     {
       "allow_nil?": true,
@@ -162,7 +141,7 @@
           "global": null,
           "strategy": null
         },
-        "name": "ledger_transfers_versions_actor_id_fkey",
+        "name": "roles_versions_actor_id_fkey",
         "on_delete": "nothing",
         "on_update": "update",
         "primary_key?": true,
@@ -181,7 +160,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "1E22073C1858BDE14E82C08225BD03B2252FC92CD82B9AC2FAB7B00C8267C5C8",
+  "hash": "681001FC8D6A6B7B5FC01EDA92E8D046B603077DE8BA5B5FCB64638610CED61A",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -190,6 +169,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "ledger_transfers_versions",
+  "table": "roles_versions",
   "temporal": null
 }

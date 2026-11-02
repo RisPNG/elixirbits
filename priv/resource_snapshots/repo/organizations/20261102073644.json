@@ -14,14 +14,14 @@
     },
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "\"application\"",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_action_type",
+      "source": "key",
       "type": "text"
     },
     {
@@ -33,7 +33,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_action_name",
+      "source": "name",
       "type": "text"
     },
     {
@@ -45,19 +45,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "operation_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "actor_name",
+      "source": "registration_no",
       "type": "text"
     },
     {
@@ -69,44 +57,44 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "restored_from_version_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "sitenav_code",
+      "source": "tax_identification_no",
       "type": "text"
     },
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "\"MYR\"",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "roles_code",
+      "source": "base_currency",
       "type": "text"
     },
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "\"en\"",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_source_id",
-      "type": "uuid"
+      "source": "locale",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "\"Asia/Kuala_Lumpur\"",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "timezone",
+      "type": "text"
     },
     {
       "allow_nil?": true,
@@ -117,8 +105,20 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "changes",
-      "type": "map"
+      "source": "email",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "phone",
+      "type": "text"
     },
     {
       "allow_nil?": false,
@@ -129,7 +129,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_inserted_at",
+      "source": "inserted_at",
       "type": "utc_datetime_usec"
     },
     {
@@ -141,51 +141,42 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "version_updated_at",
+      "source": "updated_at",
       "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": {
-        "deferrable": false,
-        "destination_attribute": "id",
-        "destination_attribute_default": null,
-        "destination_attribute_generated": null,
-        "index?": false,
-        "index_where": null,
-        "match_tenant?": false,
-        "match_type": null,
-        "match_with": null,
-        "multitenancy": {
-          "attribute": null,
-          "global": null,
-          "strategy": null
-        },
-        "name": "role_perms_versions_actor_id_fkey",
-        "on_delete": "nothing",
-        "on_update": "update",
-        "primary_key?": true,
-        "schema": "public",
-        "table": "users"
-      },
-      "scale": null,
-      "size": null,
-      "source": "actor_id",
-      "type": "uuid"
     }
   ],
   "base_filter": null,
-  "check_constraints": [],
+  "check_constraints": [
+    {
+      "attribute": [
+        "key"
+      ],
+      "base_filter": null,
+      "check": "key = 'application'",
+      "name": "organizations_application_key"
+    }
+  ],
   "create_table_options": null,
   "custom_indexes": [],
   "custom_statements": [],
-  "has_create_action": true,
-  "hash": "19B9CC9E8645150011AF6BF9452BE02E632AC957FA903AED234535BB2625B059",
-  "identities": [],
+  "has_create_action": false,
+  "hash": "877CA007885075B4A43D2316E6F97F1A91DAB5760E268A756126C9043E092031",
+  "identities": [
+    {
+      "all_tenants?": false,
+      "base_filter": null,
+      "index_name": "organizations_singleton_index",
+      "keys": [
+        {
+          "type": "atom",
+          "value": "key"
+        }
+      ],
+      "name": "singleton",
+      "nils_distinct?": true,
+      "where": null
+    }
+  ],
   "multitenancy": {
     "attribute": null,
     "global": null,
@@ -193,6 +184,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "role_perms_versions",
+  "table": "organizations",
   "temporal": null
 }

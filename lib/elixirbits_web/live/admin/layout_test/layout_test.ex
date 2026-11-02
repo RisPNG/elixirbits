@@ -40,9 +40,10 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
                         {"#{page.name} (#{page.source})", page.path}
                       end)
 
-  @input_render_modes ~w(enabled disabled like-enabled like-disabled hidden hidden-enabled hidden-disabled text text-enabled text-disabled)
-
-  @input_fields ~w(project_name email password budget launch_date launch_time launch_week launch_month launch_at accent search website phone native_role role notes enabled switch upload contact_method compute_plan hidden_token)
+  @input_render_modes Enum.find(
+                        ElixirbitsWeb.CoreComponents.__components__().input.attrs,
+                        &(&1.name == :render_as)
+                      ).opts[:values]
 
   @upload_options [accept: ~w(.png .jpg .jpeg .gif .webp .pdf .txt), max_file_size: 1_000_000]
 
@@ -262,6 +263,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
        "errors" => false,
        "disabled" => false,
        "readonly" => false,
+       "fieldset_disabled" => false,
        "tooltip" => false,
        "constraints" => false,
        "datalist" => false,
@@ -378,11 +380,14 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLive do
 
     socket =
       if state == "empty" do
-        fields = @input_fields
-
         {populated, values} =
           if socket.assigns.input_states["empty"] do
-            {Map.take(socket.assigns.local_form.params, fields), Map.new(fields, &{&1, nil})}
+            populated =
+              Map.reject(socket.assigns.local_form.params, fn {field, _value} ->
+                String.starts_with?(field, "_unused_")
+              end)
+
+            {populated, Map.new(populated, fn {field, _value} -> {field, nil} end)}
           else
             {socket.assigns.input_populated_values, socket.assigns.input_populated_values}
           end

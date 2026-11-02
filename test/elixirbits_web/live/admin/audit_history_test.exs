@@ -404,7 +404,273 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
     refute has_element?(edit, "a[data-tooltip=History]")
   end
 
-  test "organization Previous shows the selected save's removals while Current shows later removals",
+  test "saved address order is preserved in Previous, Current, and restoration", %{conn: conn} do
+    {conn, actor, _grants} = grant(conn, %{"USERS" => 15, "ORG" => 15})
+
+    for resource <- [User, Organization] do
+      addresses = [%{line_1: "A"}, %{line_1: "B"}, %{line_1: "C"}]
+
+      parent =
+        case resource do
+          User ->
+            Ash.create!(
+              User,
+              %{
+                email: "sequence-audit@example.com",
+                password: "password1234",
+                password_confirmation: "password1234",
+                addresses: addresses
+              },
+              action: :create,
+              actor: actor,
+              load: [:addresses]
+            )
+
+          Organization ->
+            Organizations.create_organization!(%{name: "Sequence audit", addresses: addresses},
+              actor: actor,
+              load: [:addresses]
+            )
+        end
+
+      {:ok, history} = AuditLog.history(resource, parent.id, actor)
+      selected = hd(history.revisions)
+      [first, second, third] = parent.addresses
+      params = %{addresses: [%{id: third.id}, %{id: first.id}, %{id: second.id}]}
+
+      case resource do
+        User -> Ash.update!(parent, params, action: :update, actor: actor)
+        Organization -> Organizations.update_organization!(parent, params, actor: actor)
+      end
+
+      {:ok, reordered_history} = AuditLog.history(resource, parent.id, actor)
+      reordered_revision = hd(reordered_history.revisions)
+
+      path =
+        case resource do
+          User -> ~p"/admin/users/#{parent.id}/read"
+          Organization -> ~p"/admin/organization"
+        end
+
+      {:ok, view, _html} = live(conn, path <> "?version=#{selected.id}")
+      document = view |> render() |> Floki.parse_document!()
+
+      values =
+        case resource do
+          User ->
+            Floki.attribute(
+              document,
+              "#user-form input[name^='form[addresses]'][name$='[line_1]']",
+              "value"
+            )
+
+          Organization ->
+            document
+            |> Floki.find("#organization-form span[id*='_addresses_'][id$='_line_1']")
+            |> Enum.map(fn field -> Floki.text([field]) end)
+        end
+
+      assert values == ["A", "B", "C"]
+      refute has_element?(view, "input[name^='address_position[']:not([disabled])")
+      view |> form("#audit-value-form", audit: %{side: "current"}) |> render_change()
+      assert_patch(view)
+      document = view |> render() |> Floki.parse_document!()
+
+      values =
+        case resource do
+          User ->
+            Floki.attribute(
+              document,
+              "#user-form input[name^='form[addresses]'][name$='[line_1]']",
+              "value"
+            )
+
+          Organization ->
+            document
+            |> Floki.find("#organization-form span[id*='_addresses_'][id$='_line_1']")
+            |> Enum.map(fn field -> Floki.text([field]) end)
+        end
+
+      assert values == ["C", "A", "B"]
+      current_parent = Ash.get!(resource, parent.id, actor: actor, load: [:addresses])
+      params = %{addresses: [%{id: first.id}, %{id: second.id}]}
+
+      case resource do
+        User -> Ash.update!(current_parent, params, action: :update, actor: actor)
+        Organization -> Organizations.update_organization!(current_parent, params, actor: actor)
+      end
+
+      view |> element("header a[data-tooltip=History]") |> render_click()
+      assert_patch(view)
+      view |> element("#revision-#{reordered_revision.id}") |> render_click()
+      assert_patch(view, path <> "?version=#{reordered_revision.id}")
+      view |> form("#audit-value-form", audit: %{side: "current"}) |> render_change()
+      assert_patch(view)
+      document = view |> render() |> Floki.parse_document!()
+
+      values =
+        case resource do
+          User ->
+            document
+            |> Floki.find("#user-form input[name^='form[addresses]'][name$='[line_1]']")
+            |> Enum.map(fn field -> List.first(Floki.attribute([field], "value")) || "" end)
+
+          Organization ->
+            document
+            |> Floki.find("#organization-form span[id*='_addresses_'][id$='_line_1']")
+            |> Enum.map(fn field -> Floki.text([field]) end)
+        end
+
+      assert values == ["", "A", "B"]
+
+      headers =
+        document
+        |> Floki.find("span[aria-label^='Address '][aria-label$=' sequence']")
+
+      assert Enum.map(headers, fn header -> String.trim(Floki.text([header])) end) == [
+               "nil",
+               "1",
+               "2"
+             ]
+
+      assert Floki.attribute([hd(headers)], "data-audit-changed") == ["true"]
+      assert Floki.attribute([hd(headers)], "data-audit-side") == ["previous"]
+      refute has_element?(view, "input[name^='address_position[']:not([disabled])")
+
+      case resource do
+        User ->
+          assert has_element?(
+                   view,
+                   "input[name='form[addresses][0][line_1]'][data-audit-removed=true][data-audit-side=previous]"
+                 )
+
+        Organization ->
+          assert has_element?(
+                   view,
+                   "#form-#{reordered_revision.id}-current_addresses_0_line_1[data-audit-removed=true][data-audit-side=previous]"
+                 )
+      end
+
+      {:ok, deleted_history} = AuditLog.history(resource, parent.id, actor)
+      before_deletion = Enum.find(deleted_history.revisions, &(&1.id == reordered_revision.id))
+      actual_current = AuditLog.revision_record(deleted_history.record, before_deletion, :current)
+      assert Enum.map(actual_current.addresses, & &1.id) == [first.id, second.id]
+      view |> element("button[phx-click=request_restore]") |> render_click()
+      result = view |> element("button[phx-click=confirm_restore]") |> render_click()
+      {:ok, restored_view, _html} = follow_redirect(result, conn, path)
+      restored = Ash.get!(resource, parent.id, actor: actor, load: [:addresses])
+      assert Enum.map(tl(restored.addresses), & &1.id) == [first.id, second.id]
+      assert hd(restored.addresses).id != third.id
+
+      assert Enum.map(restored.addresses, &{&1.sequence, &1.line_1}) == [
+               {1, "C"},
+               {2, "A"},
+               {3, "B"}
+             ]
+
+      refute has_element?(restored_view, "#audit-revision")
+      refute has_element?(restored_view, "input[name^='address_position[']:not([disabled])")
+    end
+  end
+
+  test "deleting the middle address shows a nil header without renumbering its saved survivors",
+       %{conn: conn} do
+    {conn, actor, _grants} = grant(conn, %{"USERS" => 15})
+
+    target =
+      create_user(addresses: [%{line_1: "A"}, %{line_1: "B"}, %{line_1: "C"}])
+      |> Ash.load!(:addresses, actor: @system)
+
+    [first, _middle, third] = target.addresses
+    {:ok, history} = AuditLog.history(User, target.id, actor)
+    before_deletion = hd(history.revisions)
+    Ash.update!(target, %{addresses: [%{id: first.id}, %{id: third.id}]}, actor: actor)
+    {:ok, history} = AuditLog.history(User, target.id, actor)
+    deletion = hd(history.revisions)
+    path = ~p"/admin/users/#{target.id}/read"
+
+    for params <- [
+          %{"version" => deletion.id},
+          %{"version" => before_deletion.id, "side" => "current"}
+        ] do
+      {:ok, view, _html} = live(conn, path <> "?" <> URI.encode_query(params))
+      document = view |> render() |> Floki.parse_document!()
+
+      headers =
+        Floki.find(document, "#user-form span[aria-label^='Address '][aria-label$=' sequence']")
+
+      assert Enum.map(headers, fn header -> String.trim(Floki.text([header])) end) == [
+               "1",
+               "nil",
+               "2"
+             ]
+
+      [_first_header, removed_header, _third_header] = headers
+      assert Floki.attribute([removed_header], "data-audit-changed") == ["true"]
+      assert Floki.attribute([removed_header], "data-audit-side") == ["previous"]
+
+      values =
+        document
+        |> Floki.find("#user-form input[name^='form[addresses]'][name$='[line_1]']")
+        |> Enum.map(fn field -> List.first(Floki.attribute([field], "value")) || "" end)
+
+      assert values == ["A", "", "C"]
+
+      assert has_element?(
+               view,
+               "input[name='form[addresses][1][line_1]'][data-audit-removed=true][data-audit-changed=true][data-audit-side=previous]"
+             )
+
+      refute has_element?(
+               view,
+               "input[name='form[addresses][1][line_2]'][data-audit-changed=true]"
+             )
+
+      refute has_element?(
+               view,
+               "input[name='form[addresses][1][contact_name]'][data-audit-changed=true]"
+             )
+
+      refute has_element?(
+               view,
+               "input[name='form[addresses][0][line_1]'][data-audit-changed=true]"
+             )
+
+      refute has_element?(
+               view,
+               "input[name='form[addresses][2][line_1]'][data-audit-changed=true]"
+             )
+
+      refute has_element?(view, "#audit-removed-fields")
+      refute has_element?(view, "p[data-audit-removed=true]")
+      refute has_element?(view, "[id$='-audit-removal']")
+      refute has_element?(view, "input[name^='address_position[']:not([disabled])")
+    end
+
+    {:ok, current_view, _html} = live(conn, path)
+    document = current_view |> render() |> Floki.parse_document!()
+
+    headers =
+      Floki.find(document, "#user-form span[aria-label^='Address '][aria-label$=' sequence']")
+
+    assert Enum.map(headers, fn header -> String.trim(Floki.text([header])) end) == ["1", "2"]
+
+    assert Floki.attribute(
+             document,
+             "#user-form input[name^='form[addresses]'][name$='[line_1]']",
+             "value"
+           ) == ["A", "C"]
+
+    refute has_element?(current_view, "[data-audit-removed=true]")
+    saved = Ash.get!(User, target.id, actor: @system, load: [:addresses])
+
+    assert Enum.map(saved.addresses, &{&1.id, &1.sequence, &1.line_1}) == [
+             {first.id, 1, "A"},
+             {third.id, 2, "C"}
+           ]
+  end
+
+  test "organization removals appear beside blank address fields on both history sides",
        %{conn: conn} do
     {conn, actor, _grants} = grant(conn, %{"ORG" => 15}, "Organization editor")
 
@@ -423,6 +689,10 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
       )
 
     retained = Enum.find(organization.addresses, &(&1.line_1 == "Original retained office"))
+
+    removed_by_save =
+      Enum.find(organization.addresses, &(&1.line_1 == "Removed by selected save"))
+
     later_removed = Enum.find(organization.addresses, &(&1.line_1 == "Removed later"))
 
     selected_record =
@@ -469,13 +739,37 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
 
     assert has_element?(view, "#organization-form", "Removed later")
     refute has_element?(view, "#organization-form [data-audit-changed=true]", "Removed later")
+
+    assert has_element?(
+             view,
+             "#organization-form input[type=hidden][name$='[id]'][value='#{removed_by_save.id}']"
+           )
+
     refute has_element?(view, "#organization-form", "Removed by selected save")
+
     refute has_element?(view, "#organization-form", "New branch")
-    assert has_element?(view, "#audit-removed-fields", "Removed in this revision")
-    assert has_element?(view, "#audit-removed-fields", "Removed by selected save")
-    refute has_element?(view, "#audit-removed-fields", "Removed later")
+    refute has_element?(view, "#audit-removed-fields")
     refute has_element?(view, "#audit-added-fields")
+    refute has_element?(view, "#audit-revision [data-audit-removed=true]")
     refute has_element?(view, "#organization-form button[type=submit]")
+
+    document = view |> render() |> Floki.parse_document!()
+
+    [blank_field] =
+      Floki.find(document, "#organization-form span[data-audit-removed=true][id$='_line_1']")
+
+    assert {"span", _attributes, _children} = blank_field
+    [field_id] = Floki.attribute([blank_field], "id")
+    assert String.starts_with?(field_id, "form-#{selected.id}-previous_addresses_")
+    assert String.ends_with?(field_id, "_line_1")
+    assert Floki.text([blank_field]) == ""
+    assert Floki.attribute([blank_field], "data-audit-changed") == ["true"]
+    assert Floki.attribute([blank_field], "data-audit-side") == ["previous"]
+
+    assert Floki.attribute([blank_field], "aria-description") == ["Removed value"]
+    refute has_element?(view, "p[data-audit-removed=true]")
+    refute has_element?(view, "[id$='-audit-removal']")
+    refute has_element?(view, "[aria-describedby*='audit-removal']")
 
     view |> form("#audit-value-form", audit: %{side: "current"}) |> render_change()
     assert_patch(view)
@@ -498,15 +792,46 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
              "New branch"
            )
 
+    assert has_element?(
+             view,
+             "#organization-form input[type=hidden][name$='[id]'][value='#{later_removed.id}']"
+           )
+
     refute has_element?(view, "#organization-form", "Removed later")
-    assert has_element?(view, "#audit-removed-fields", "Removed since this revision")
-    assert has_element?(view, "#audit-removed-fields", "Removed later")
-    refute has_element?(view, "#audit-removed-fields", "Removed by selected save")
+    refute has_element?(view, "#organization-form", "Removed by selected save")
+
+    refute has_element?(view, "#audit-removed-fields")
     refute has_element?(view, "#audit-added-fields")
-    assert Organizations.organization_settings!(actor: @system).name == "Today's organization"
+    refute has_element?(view, "#audit-revision [data-audit-removed=true]")
+
+    document = view |> render() |> Floki.parse_document!()
+
+    [blank_field] =
+      Floki.find(document, "#organization-form span[data-audit-removed=true][id$='_line_1']")
+
+    assert {"span", _attributes, _children} = blank_field
+    [field_id] = Floki.attribute([blank_field], "id")
+    assert String.starts_with?(field_id, "form-#{selected.id}-current_addresses_")
+    assert String.ends_with?(field_id, "_line_1")
+    assert Floki.text([blank_field]) == ""
+    assert Floki.attribute([blank_field], "data-audit-changed") == ["true"]
+    assert Floki.attribute([blank_field], "data-audit-side") == ["previous"]
+
+    assert Floki.attribute([blank_field], "aria-description") == ["Removed value"]
+    refute has_element?(view, "p[data-audit-removed=true]")
+    refute has_element?(view, "[id$='-audit-removal']")
+    refute has_element?(view, "[aria-describedby*='audit-removal']")
+
+    saved = Organizations.organization_settings!(actor: @system, load: [:addresses])
+    assert saved.name == "Today's organization"
+
+    assert Enum.sort(Enum.map(saved.addresses, & &1.line_1)) == [
+             "Current retained office",
+             "New branch"
+           ]
   end
 
-  test "address removal lists only populated values while clearing and refilling a field remain changes",
+  test "address removal marks blank native fields while clearing and refilling remain changes",
        %{conn: conn} do
     {conn, actor, _grants} = grant(conn, %{"USERS" => 15})
 
@@ -587,19 +912,55 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
       live(conn, path <> "?version=#{refilled_revision.id}&side=current")
 
     for view <- [deleted_view, current_view] do
-      cards =
+      document =
         view
         |> render()
         |> Floki.parse_document!()
-        |> Floki.find("#audit-removed-fields > [data-field]")
 
-      assert Floki.attribute(cards, "data-field") == [field_key]
-      assert cards |> Floki.find("p.whitespace-pre-wrap") |> Floki.text() == "a"
-      refute has_element?(view, "#audit-removed-fields", "Not set")
-      refute has_element?(view, "input[name='form[addresses][0][line_1]']")
+      [input] =
+        Floki.find(document, "#user-form input[data-audit-removed=true][name$='[line_1]']")
+
+      assert {"input", _attributes, _children} = input
+      assert Floki.attribute([input], "name") == ["form[addresses][0][line_1]"]
+      assert Floki.attribute([input], "value") in [[], [""]]
+      assert Floki.attribute([input], "data-audit-changed") == ["true"]
+      assert Floki.attribute([input], "data-audit-side") == ["previous"]
+
+      assert Floki.attribute([input], "aria-description") == ["Removed value"]
+      refute has_element?(view, "p[data-audit-removed=true]")
+      refute has_element?(view, "[id$='-audit-removal']")
+      refute has_element?(view, "[aria-describedby*='audit-removal']")
+
+      refute has_element?(view, "#audit-removed-fields")
+      refute has_element?(view, "#audit-revision [data-audit-removed=true]")
+
+      for field <- [
+            "line_2",
+            "line_3",
+            "contact_name",
+            "contact_tel_no",
+            "city",
+            "state",
+            "country",
+            "postal_code"
+          ] do
+        assert has_element?(view, "#user-form [id$='_addresses_0_#{field}']")
+
+        refute has_element?(
+                 view,
+                 "#user-form [id$='_addresses_0_#{field}'][data-audit-changed=true]"
+               )
+      end
     end
 
     assert Ash.get!(User, target.id, actor: @system, load: [:addresses]).addresses == []
+    current_view |> element("button[phx-click=request_restore]") |> render_click()
+    result = current_view |> element("button[phx-click=confirm_restore]") |> render_click()
+    {:ok, restored_view, _html} = follow_redirect(result, conn, path)
+    restored = Ash.get!(User, target.id, actor: @system, load: [:addresses])
+    assert [%{line_1: "a"}] = restored.addresses
+    assert has_element?(restored_view, "input[name='form[addresses][0][line_1]'][value=a]")
+    refute has_element?(restored_view, "[data-audit-removed=true]")
   end
 
   test "a user creation highlights populated values and leaves blank optional values unmarked", %{
@@ -674,8 +1035,13 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
     end
 
     for field <- ["display_name", "first_name", "tel_no", "dob", "timezone"] do
-      assert has_element?(view, "input[name='form[#{field}]']")
-      refute has_element?(view, "input[name='form[#{field}]'][data-audit-changed=true]")
+      assert has_element?(view, "#form-#{creation.id}-previous_#{field}")
+      refute has_element?(view, "#form-#{creation.id}-previous_#{field}[data-audit-changed=true]")
+
+      refute has_element?(
+               view,
+               "[data-audit-changed=true] #form-#{creation.id}-previous_#{field}"
+             )
     end
 
     for field <- ["sex", "roles"] do

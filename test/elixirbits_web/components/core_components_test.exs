@@ -72,6 +72,24 @@ defmodule ElixirbitsWeb.CoreComponentsTest.ColorPreview do
   end
 end
 
+defmodule ElixirbitsWeb.CoreComponentsTest.InputPreview do
+  use Phoenix.LiveView, layout: false
+
+  alias ElixirbitsWeb.CoreComponents
+
+  on_mount {CoreComponents, :inputs}
+
+  def mount(_params, session, socket) do
+    {:ok, assign(socket, :input_assigns, session["input_assigns"])}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <CoreComponents.input {@input_assigns} />
+    """
+  end
+end
+
 defmodule ElixirbitsWeb.CoreComponentsTest do
   use ExUnit.Case, async: true
 
@@ -231,6 +249,44 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
   end
 
   describe "combobox option states" do
+    test "explicit empty choices retain their selected label in native option formats" do
+      for options <- [
+            [{"Automatic (browser)", ""}],
+            [{"Automatic (browser)", "", disabled: false}],
+            [{"Preference", [{"Automatic (browser)", ""}]}],
+            [{"Preference", [{"Automatic (browser)", "", disabled: false}]}]
+          ] do
+        assigns = %{options: options}
+
+        html =
+          rendered_to_string(~H"""
+          <CoreComponents.input
+            id="preference"
+            name="preference"
+            type="combobox"
+            options={@options}
+            value=""
+            clearable={false}
+          />
+          """)
+
+        document = Floki.parse_document!(html)
+
+        assert Floki.find(document, "#preference[data-has-value=true]") != []
+
+        assert Floki.find(
+                 document,
+                 "#preference-input[value='Automatic (browser)']"
+               ) != []
+
+        assert document
+               |> Floki.find("#preference-select option[value=''][selected]")
+               |> Floki.text()
+               |> String.trim() ==
+                 "Automatic (browser)"
+      end
+    end
+
     test "comboboxes expose selected and disabled options and follow native form changes" do
       {:ok, view, html} =
         live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.SelectPreview)
@@ -240,6 +296,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       for id <- ["labeled-role", "unlabeled-role", "choices_phone_country_code_country_select"] do
         rows = Floki.find(document, "##{id} [role=option]")
         assert length(rows) >= 2
+        assert Floki.find(document, "##{id}[data-has-value]") != []
         assert length(Floki.find(document, "##{id} [role=option][aria-selected=true]")) == 1
         assert Floki.find(document, "##{id}-select option[selected]") != []
       end
@@ -490,7 +547,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       end
     end
 
-    test "form fields forward their attributes to the submitted text and keep one required label" do
+    test "form fields forward their attributes without marking the disabled label as required" do
       form =
         to_form(%{"accent" => "rgba(18, 52, 86, 0.5)"},
           as: :settings,
@@ -526,7 +583,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
              ]
 
       assert Floki.find(document, "label[for=settings_accent]") != []
-      assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+      assert Floki.find(document, "span[aria-hidden=true].text-error") == []
 
       assert Floki.find(
                document,
@@ -634,7 +691,9 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
           assert Floki.find(document, "[data-color-swatch]") != []
           assert Floki.text(document) =~ value
-          assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+
+          assert length(Floki.find(document, "span[aria-hidden=true].text-error")) ==
+                   if(render_as == "like-enabled", do: 1, else: 0)
         end
 
         if render_as in ~w(like-disabled text-disabled) do
@@ -1796,7 +1855,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
              ) != []
 
       assert Floki.find(document, "button[data-file-clear][hidden][disabled]") != []
-      assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+      assert Floki.find(document, "span[aria-hidden=true].text-error") == []
     end
   end
 
@@ -1836,6 +1895,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert length(markers) == 1, "#{type}/#{variant} must have one required marker"
         assert Floki.text(markers) == "*"
+        assert Floki.find(document, "[data-core-input] .input-required") == markers
 
         assert length(
                  Floki.find(
@@ -1854,7 +1914,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       end
     end
 
-    test "display modes show one marker and keep required on hidden submission controls" do
+    test "editable-looking modes show one marker and keep required on hidden submission controls" do
       for type <- ~w(text textarea date checkbox switch radio),
           render_as <-
             ~w(disabled like-enabled like-disabled text-disabled text text-enabled hidden hidden-enabled) do
@@ -1876,8 +1936,15 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         document = Floki.parse_document!(html)
 
-        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1,
-               "#{type}/#{render_as} must not duplicate the marker"
+        expected_markers =
+          if render_as in ~w(like-enabled text text-enabled hidden hidden-enabled) and
+               not (type == "radio" and render_as in ~w(text text-enabled)),
+             do: 1,
+             else: 0
+
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) ==
+                 expected_markers,
+               "#{type}/#{render_as} must match the field's editability"
 
         if render_as in ["like-disabled", "text-disabled", "hidden", "hidden-enabled"] do
           assert Floki.find(document, ".hidden [name=contact][required]") != []
@@ -1886,6 +1953,87 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         if render_as in ["like-disabled", "text-disabled"] do
           assert Floki.find(document, ".hidden span[aria-hidden=true].text-error") == []
         end
+      end
+    end
+
+    test "disabled and readonly fields hide markers while retaining required attributes" do
+      options = [{"Email", "email"}, {"Phone", "phone"}]
+
+      inputs = [
+        [type: "text", value: "Contact"],
+        [type: "password", value: "secret"],
+        [type: "number", value: 7],
+        [type: "textarea", value: "Contact details"],
+        [type: "date", value: "2026-11-02"],
+        [type: "color", value: "#336699"],
+        [type: "tel", value: "+14155552671"],
+        [type: "checkbox", value: true],
+        [type: "checkbox", value: true, variant: "alt"],
+        [type: "switch", value: true],
+        [type: "switch", value: true, variant: "alt"],
+        [type: "radio", value: "email", options: options],
+        [type: "radio", value: "email", options: options, variant: "card"],
+        [type: "select", value: "email", options: options],
+        [type: "select", value: ["email"], options: options, multiple: true],
+        [type: "combobox", value: "email", options: options],
+        [type: "combobox", value: ["email"], options: options, multiple: true],
+        [type: "file"],
+        [
+          type: "file",
+          upload: %Phoenix.LiveView.UploadConfig{
+            name: :attachment,
+            ref: "attachment-upload",
+            accept: :any
+          }
+        ]
+      ]
+
+      for input <- inputs,
+          rest <- [[disabled: true], [readonly: true], [disabled: false, readonly: false]] do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.InputPreview,
+            session: %{
+              "input_assigns" =>
+                Map.new(
+                  [id: "contact", name: "contact", label: "Contact", required: true] ++
+                    input ++ rest
+                )
+            }
+          )
+
+        document = Floki.parse_document!(html)
+
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) ==
+                 if(rest[:disabled] || rest[:readonly], do: 0, else: 1),
+               "#{inspect(input)}/#{inspect(rest)} must match the field's editability"
+
+        assert Floki.find(document, "[required]") != []
+      end
+    end
+
+    test "HTML boolean disabled and readonly values hide required markers" do
+      for {attribute, values} <- [disabled: ["", "disabled"], readonly: ["", "readonly"]],
+          value <- values,
+          type <- ~w(text color file) do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.InputPreview,
+            session: %{
+              "input_assigns" => %{
+                attribute => value,
+                id: "contact",
+                name: "contact",
+                label: "Contact",
+                type: type,
+                value: "#336699",
+                required: true
+              }
+            }
+          )
+
+        document = Floki.parse_document!(html)
+
+        assert Floki.find(document, "span[aria-hidden=true].text-error") == []
+        assert Floki.find(document, "[required]") != []
       end
     end
 
@@ -1960,10 +2108,10 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
              ) != []
 
       assert Floki.attribute(document, "input", "placeholder") == ["Enter an email address"]
-      assert Floki.find(document, ".input-floating-label-hidden span[aria-hidden=true]") != []
+      assert Floki.find(document, "label[for=account_email] span[aria-hidden=true]") != []
     end
 
-    test "disabled comboboxes keep one required label and their submitted option values" do
+    test "disabled comboboxes omit the marker and keep their required input and submitted values" do
       assigns = %{}
 
       html =
@@ -1981,14 +2129,14 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         """)
 
       document = Floki.parse_document!(html)
-      assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+      assert Floki.find(document, "span[aria-hidden=true].text-error") == []
       assert Floki.find(document, "input#role[disabled][required][value=Viewer]") != []
       assert Floki.find(document, "input[type=hidden][name=role][value=viewer]") != []
       assert [classes] = Floki.attribute(document, "input#role", "class")
       assert "disabled:overlay-dark" in String.split(classes)
     end
 
-    test "upload controls and their read-only previews retain one required label" do
+    test "upload controls mark editable-looking modes and retain required inputs in every mode" do
       for render_as <-
             ~w(enabled disabled like-enabled like-disabled text-disabled text text-enabled hidden hidden-enabled hidden-disabled) do
         assigns = %{
@@ -2012,7 +2160,12 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           """)
 
         document = Floki.parse_document!(html)
-        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) ==
+                 if(render_as in ~w(enabled like-enabled text text-enabled hidden hidden-enabled),
+                   do: 1,
+                   else: 0
+                 )
 
         if render_as in ["enabled", "text", "text-enabled", "hidden", "hidden-enabled"] do
           assert Floki.find(document, "input#attachment-upload[type=file][required]") != []
@@ -2347,6 +2500,416 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
     end
   end
 
+  describe "input placeholders" do
+    test "floating titles and explicit placeholders remain independent" do
+      options = [{"Email", "email"}]
+
+      for input <- [
+            [type: "text"],
+            [type: "number"],
+            [type: "textarea"],
+            [type: "date"],
+            [type: "color"],
+            [type: "tel"],
+            [type: "select", options: options, multiple: true],
+            [type: "combobox", options: options],
+            [type: "file"]
+          ] do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.InputPreview,
+            session: %{
+              "input_assigns" =>
+                Map.new(
+                  [
+                    id: "contact",
+                    name: "contact",
+                    label: "Contact",
+                    value: "",
+                    placeholder: "Enter contact"
+                  ] ++ input
+                )
+            }
+          )
+
+        document = Floki.parse_document!(html)
+        title = Floki.find(document, ".input-floating-label")
+
+        assert length(title) == 1
+        assert title |> Floki.text() |> String.trim() == "Contact"
+        assert Floki.find(document, ".input-floating-label-hidden") == []
+
+        assert Floki.attribute(
+                 document,
+                 "input#contact, textarea#contact, input#contact-input",
+                 "placeholder"
+               ) == ["Enter contact"]
+
+        if input[:type] in ~w(select combobox) do
+          assert Floki.find(document, "#contact[data-has-value]") == []
+        end
+      end
+    end
+
+    test "native and custom placeholders follow caller editability" do
+      options = [{"Email", "email"}, {"Phone", "phone"}]
+
+      for input <- [
+            [type: "text"],
+            [type: "password"],
+            [type: "number"],
+            [type: "textarea"],
+            [type: "date"],
+            [type: "color"],
+            [type: "tel"],
+            [type: "select", options: options, prompt: "Choose contact"],
+            [type: "select", options: options, multiple: true],
+            [type: "combobox", options: options],
+            [type: "file"]
+          ],
+          restriction <- [nil, :disabled, :readonly] do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.InputPreview,
+            session: %{
+              "input_assigns" =>
+                Map.new(
+                  [
+                    id: "contact",
+                    name: "contact",
+                    label: "Contact",
+                    value: "",
+                    placeholder: "Enter contact",
+                    disabled: restriction == :disabled,
+                    readonly: restriction == :readonly
+                  ] ++ input
+                )
+            }
+          )
+
+        document = Floki.parse_document!(html)
+
+        control =
+          Floki.find(
+            document,
+            "input#contact, textarea#contact, select#contact, input#contact-input"
+          )
+
+        if restriction do
+          assert Floki.attribute(control, "placeholder") == []
+        else
+          unless input[:type] == "select" and input[:multiple] in [nil, false] do
+            assert Floki.attribute(control, "placeholder") == ["Enter contact"]
+          end
+        end
+
+        if input[:type] == "select" and input[:multiple] in [nil, false] do
+          assert Floki.text(Floki.find(document, "select#contact option[value='']")) ==
+                   if(restriction, do: "", else: "Choose contact")
+
+          assert Floki.text(Floki.find(document, "select#contact option[value=email]")) == "Email"
+        end
+
+        if input[:type] == "tel" and restriction do
+          assert document
+                 |> Floki.find("[phx-hook=TelInput] [data-pc-combo-trigger-label]")
+                 |> Floki.text()
+                 |> String.trim() == ""
+        end
+      end
+    end
+
+    test "empty static fields prioritize titles and retain unlabeled like-enabled hints" do
+      for type <- ~w(text textarea number date select combobox tel),
+          render_as <- ~w(disabled like-disabled text-disabled like-enabled),
+          label <- ["Contact", nil] do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.InputPreview,
+            session: %{
+              "input_assigns" => %{
+                id: "contact",
+                name: "contact",
+                type: type,
+                value: "",
+                label: label,
+                options: [{"Email", "email"}],
+                render_as: render_as,
+                placeholder: "Enter contact",
+                required: true
+              }
+            }
+          )
+
+        visible = html |> Floki.parse_document!() |> Floki.filter_out(".hidden")
+
+        assert Floki.text(visible) =~ "Enter contact" ==
+                 (render_as == "like-enabled" and is_nil(label))
+
+        assert length(Floki.find(visible, "span[aria-hidden=true].text-error")) ==
+                 if(render_as == "like-enabled" and label != nil, do: 1, else: 0)
+
+        if render_as in ~w(disabled like-disabled) do
+          assert Floki.find(visible, "span.input-floating-control") != []
+          assert Floki.find(visible, ".input-floating-label-hidden") == []
+        end
+      end
+    end
+
+    test "like-enabled colors prioritize titles without hiding values or unlabeled hints" do
+      for label <- ["Accent", nil], value <- ["", "#336699"] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "accent",
+            name: "accent",
+            type: "color",
+            value: value,
+            label: label,
+            render_as: "like-enabled",
+            placeholder: "Enter a color"
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.text(Floki.find(document, "[data-color-value]")) ==
+                 if(value == "" and is_nil(label), do: "Enter a color", else: value)
+
+        assert document |> Floki.find(".input-floating-label") |> Floki.text() |> String.trim() ==
+                 (label || "")
+
+        assert Floki.find(document, ".input-floating-label-hidden") == []
+      end
+    end
+
+    test "empty read-only colors keep their boxed title active" do
+      for render_as <- ~w(disabled like-disabled), value <- [nil, ""] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "accent",
+            name: "accent",
+            type: "color",
+            value: value,
+            label: "Accent",
+            render_as: render_as,
+            placeholder: "Enter a color"
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, ".color-input-label.color-input-label-filled") != []
+        assert Floki.find(document, ".input-floating-label-hidden") == []
+        refute Floki.text(document) =~ "Enter a color"
+        assert Floki.text(Floki.find(document, "[data-color-value]")) == ""
+      end
+    end
+
+    test "file hints follow editability while stored filenames remain visible" do
+      for attributes <- [
+            [],
+            [render_as: "disabled"],
+            [render_as: "like-disabled"],
+            [render_as: "text-disabled"],
+            [disabled: true],
+            [readonly: true],
+            [render_as: "like-enabled"]
+          ],
+          placeholder <- [nil, "", "Choose a portrait"],
+          stored <- [[], ["/uploads/portrait.png"]] do
+        document =
+          render_component(
+            &CoreComponents.input/1,
+            [
+              id: "portrait",
+              name: "portrait",
+              type: "file",
+              label: "Portrait",
+              stored: stored,
+              placeholder: placeholder
+            ] ++ attributes
+          )
+          |> Floki.parse_document!()
+
+        names = Floki.find(document, "[data-file-name], [data-file-readonly-name]")
+
+        assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-has-placeholder") ==
+                 [if(placeholder in [nil, ""], do: "false", else: "true")]
+
+        if stored != [] do
+          assert Floki.text(names) =~ "portrait.png"
+          refute Floki.text(names) =~ "Choose a portrait"
+        else
+          assert String.trim(Floki.text(names)) ==
+                   if(
+                     attributes[:render_as] in [nil, "like-enabled"] and
+                       attributes[:disabled] in [nil, false] and
+                       attributes[:readonly] in [nil, false],
+                     do: placeholder || "Choose a file",
+                     else: ""
+                   )
+        end
+      end
+    end
+
+    test "explicit file hints share the canonical display across selection and preview modes" do
+      for selection <- ~w(single singles multiple),
+          preview <- [false, true],
+          live_upload? <- [false, true],
+          render_as <- ~w(enabled like-enabled disabled),
+          has_value? <- [false, true] do
+        upload =
+          if live_upload? do
+            %Phoenix.LiveView.UploadConfig{
+              name: :attachment,
+              ref: "attachment-upload",
+              accept: :any,
+              max_entries: if(selection == "single", do: 1, else: 3),
+              entries:
+                if(has_value?,
+                  do: [
+                    %Phoenix.LiveView.UploadEntry{
+                      ref: "picked-image",
+                      upload_ref: "attachment-upload",
+                      client_name: "portrait.png",
+                      client_type: "image/png"
+                    }
+                  ],
+                  else: []
+                )
+            }
+          end
+
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "portrait",
+            name: "portrait",
+            type: "file",
+            upload: upload,
+            selection: selection,
+            preview: preview,
+            render_as: render_as,
+            stored: if(has_value? and not live_upload?, do: ["/uploads/portrait.png"], else: []),
+            label: "Portrait",
+            placeholder: "Choose a portrait"
+          )
+          |> Floki.parse_document!()
+
+        input_id = if live_upload?, do: "attachment-upload", else: "portrait"
+        display = Floki.find(document, "[data-file-name][data-file-display]:not(.hidden)")
+
+        assert length(display) == 1
+        assert Floki.find(document, "input##{input_id}[type=file].sr-only") != []
+        assert Floki.find(document, "label[for=#{input_id}] .input-floating-label") != []
+
+        assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-has-value") ==
+                 [to_string(has_value?)]
+
+        expected_display =
+          cond do
+            not has_value? and render_as == "disabled" -> ""
+            not has_value? -> "Choose a portrait"
+            selection == "singles" and preview -> "1 file"
+            true -> "portrait.png"
+          end
+
+        assert String.trim(Floki.text(display)) == expected_display
+      end
+    end
+
+    test "file title state distinguishes empty fields, selected files, and editable-looking modes" do
+      upload = %Phoenix.LiveView.UploadConfig{
+        name: :attachment,
+        ref: "attachment-upload",
+        accept: :any,
+        entries: [
+          %Phoenix.LiveView.UploadEntry{
+            ref: "picked-image",
+            upload_ref: "attachment-upload",
+            client_name: "portrait.png",
+            client_type: "image/png"
+          }
+        ]
+      }
+
+      for {attributes, has_value, editable_like} <- [
+            {[], false, true},
+            {[stored: ["/uploads/portrait.png"]], true, true},
+            {[value: "portrait.png"], true, true},
+            {[upload: upload], true, true},
+            {[render_as: "like-enabled"], false, true},
+            {[render_as: "like-enabled", stored: ["/uploads/portrait.png"]], true, true},
+            {[disabled: true], false, false},
+            {[readonly: true], false, false},
+            {[render_as: "disabled"], false, false}
+          ] do
+        document =
+          render_component(
+            &CoreComponents.input/1,
+            [
+              id: "portrait",
+              name: "portrait",
+              type: "file",
+              label: "Portrait",
+              placeholder: "Choose a portrait"
+            ] ++ attributes
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-has-value") ==
+                 [to_string(has_value)]
+
+        assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-has-placeholder") ==
+                 ["true"]
+
+        assert Floki.attribute(document, "[phx-hook=FileInput]", "data-file-editable-like") ==
+                 [to_string(editable_like)]
+
+        assert document |> Floki.find(".input-floating-label") |> Floki.text() |> String.trim() ==
+                 "Portrait"
+
+        assert Floki.find(document, ".input-floating-label-hidden") == []
+      end
+    end
+
+    test "telephone country hints default independently and preserve explicit choices" do
+      for {attributes, expected} <- [
+            {[], "+00"},
+            {[country_placeholder: "+99"], "+99"},
+            {[country_placeholder: ""], ""},
+            {[country_placeholder: "+99", value: "+60123456789"], "+60"}
+          ] do
+        {:ok, _view, html} =
+          live_isolated(Phoenix.ConnTest.build_conn(), __MODULE__.InputPreview,
+            session: %{
+              "input_assigns" =>
+                Map.new(
+                  [
+                    id: "phone",
+                    name: "phone",
+                    type: "tel",
+                    value: "",
+                    label: "Phone",
+                    placeholder: "Enter a phone number"
+                  ] ++ attributes
+                )
+            }
+          )
+
+        document = Floki.parse_document!(html)
+
+        assert document
+               |> Floki.find("[phx-hook=TelInput] [data-pc-combo-trigger-label]")
+               |> Floki.text()
+               |> String.trim() == expected
+
+        assert Floki.attribute(
+                 document,
+                 "[phx-hook=TelInput] [data-pc-combo-trigger-label]",
+                 "data-placeholder-text"
+               ) == [Keyword.get(attributes, :country_placeholder, "+00")]
+
+        assert Floki.attribute(document, "input#phone", "placeholder") == ["Enter a phone number"]
+
+        assert Floki.attribute(document, "input[data-tel-composite]", "value") ==
+                 [attributes[:value] || ""]
+      end
+    end
+  end
+
   describe "input render_as" do
     test "enabled renders a real input by default" do
       assigns = %{}
@@ -2391,11 +2954,19 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
       html =
         rendered_to_string(~H"""
-        <CoreComponents.input type="text" name="city" value="Ipoh" label="City" render_as="like-enabled" />
+        <CoreComponents.input
+          type="text"
+          name="city"
+          value="Ipoh"
+          label="City"
+          placeholder="Enter city"
+          render_as="like-enabled"
+        />
         """)
 
       refute html =~ "<input"
       assert html =~ "Ipoh"
+      refute html =~ "Enter city"
       assert html =~ "bg-transparent"
       assert html =~ "text-content"
       refute html =~ "cursor-not-allowed"
@@ -2477,7 +3048,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       refute html =~ ">prk<"
     end
 
-    test "empty span keeps the floating label centered instead of floated" do
+    test "empty disabled spans keep their floating title active" do
       assigns = %{}
 
       html =
@@ -2485,7 +3056,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         <CoreComponents.input type="text" name="city" value="" label="City" render_as="disabled" />
         """)
 
-      refute html =~ "input-floating-control"
+      assert html =~ "input-floating-control"
       assert html =~ "input-floating-label"
     end
 
@@ -2628,7 +3199,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(document, "input[type=hidden][name=role][value=viewer]") != []
         assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
-        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+        assert Floki.find(document, "span[aria-hidden=true].text-error") == []
       end
     end
 
@@ -2654,12 +3225,14 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(document, "input#choice[disabled]") != [] == disabled
         assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
-        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) ==
+                 if(disabled, do: 0, else: 1)
 
         assert Floki.attribute(document, "input#choice", "value") == []
 
         assert Floki.text(Floki.find(document, "[data-file-name]")) |> String.trim() ==
-                 "Choose a file"
+                 if(disabled, do: "", else: "Choose a file")
       end
     end
 
@@ -2801,7 +3374,9 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert "group-has-[input:checked]/boolean:inline" in String.split(checked_classes)
         assert "group-has-[input:checked]/boolean:hidden" in String.split(unchecked_classes)
-        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+
+        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) ==
+                 if(disabled, do: 0, else: 1)
       end
     end
 
@@ -2878,7 +3453,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         assert Floki.find(visible, "input, label[for=active], .bg-control-check, .rounded-full") ==
                  []
 
-        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+        assert Floki.find(document, "span[aria-hidden=true].text-error") == []
       end
     end
 
@@ -2973,7 +3548,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
                  "email"
 
         assert Floki.find(document, "div:not(.hidden) > fieldset") == []
-        assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
+        assert Floki.find(document, "span[aria-hidden=true].text-error") == []
       end
     end
   end

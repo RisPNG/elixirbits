@@ -137,12 +137,16 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
     {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
 
     assert has_element?(view, "input[name='form[dob]'][data-vc-mode='date'][value='1990-01-01']")
-    assert has_element?(view, "input[name='form[timezone]'][value='America/New_York']")
+
+    assert has_element?(
+             view,
+             "#form_timezone[phx-hook=PetalComboBox] select[name='form[timezone]'] option[value='America/New_York'][selected]"
+           )
 
     html =
-      view
-      |> form("#user-form", form: %{dob: "1990-01-02", timezone: "Unknown/Zone"})
-      |> render_submit()
+      render_submit(view, "save", %{
+        "form" => %{"dob" => "1990-01-02", "timezone" => "Unknown/Zone"}
+      })
 
     assert html =~ "is not a known timezone"
     unchanged = Ash.get!(User, target.id, actor: %{system: true})
@@ -160,7 +164,7 @@ defmodule ElixirbitsWeb.Admin.AdminPagesTest do
 
     {:ok, view, _} = live(conn, ~p"/admin/users/#{target.id}/update")
     assert has_element?(view, "input[name='form[dob]'][value='1990-01-02']")
-    assert has_element?(view, "input[name='form[timezone]'][placeholder='Automatic (browser)']")
+    assert has_element?(view, "#form_timezone option[value='']", "Automatic (browser)")
     view |> form("#user-form", form: %{timezone: ""}) |> render_submit()
     automatic = Ash.get!(User, target.id, actor: %{system: true})
     assert automatic.timezone == nil

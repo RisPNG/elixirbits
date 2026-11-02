@@ -93,12 +93,12 @@
           "global": null,
           "strategy": null
         },
-        "name": "organizations_versions_version_source_id_fkey",
+        "name": "ledger_accounts_versions_version_source_id_fkey",
         "on_delete": null,
         "on_update": null,
         "primary_key?": true,
         "schema": "public",
-        "table": "organizations"
+        "table": "ledger_accounts"
       },
       "scale": null,
       "size": null,
@@ -162,7 +162,7 @@
           "global": null,
           "strategy": null
         },
-        "name": "organizations_versions_actor_id_fkey",
+        "name": "ledger_accounts_versions_actor_id_fkey",
         "on_delete": "nothing",
         "on_update": "update",
         "primary_key?": true,
@@ -181,7 +181,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "19921F695508895B5BBCAB85BED2BAF2F72D19A6C6BCE134FD1BAEF5A47A800A",
+  "hash": "3A4B79F51C378078FBDBC1A30A988DF654BC921D6CA5A80F52A62E7D8A6665AA",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -190,6 +190,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "organizations_versions",
+  "table": "ledger_accounts_versions",
   "temporal": null
 }

@@ -15,14 +15,14 @@ const FileInput = {
     for (const file of this.files) this.fileKeys.set(file, `local-${++this.nextFileKey}`)
     this.fileNames = this.files.map(file => file.name).join(", ")
     const display = this.el.querySelector("[data-file-name]")
-    this.placeholder = display?.dataset.fileDefaultName || display?.textContent || this.input.placeholder
+    this.placeholder = display?.dataset.fileDefaultName ?? display?.textContent ?? this.input.placeholder
     this.sequence = 0
     this.uploadUrls = new Map()
     this.replacements = new Map()
     this.registeredRefs = new Set(JSON.parse(this.el.dataset.fileEntryRefs))
     this.disposed = false
     this.onSelection = event => {
-      if (event.target !== this.input || this.handoff || this.input.disabled) return
+      if (event.target !== this.input || this.handoff || this.input.matches(":disabled")) return
       if (event.type === "change" && this.ignoreNativeChange) {
         event.stopImmediatePropagation()
         this.ignoreNativeChange = false
@@ -54,7 +54,7 @@ const FileInput = {
       }
     }
     this.onDrop = event => {
-      if (this.input.disabled || this.selection === "multiple" || !event.dataTransfer?.files.length) return
+      if (this.input.matches(":disabled") || this.selection === "multiple" || !event.dataTransfer?.files.length) return
       event.preventDefault()
       event.stopImmediatePropagation()
       this.receiveSelection(event.dataTransfer.files[0])
@@ -79,11 +79,11 @@ const FileInput = {
         this.activeKey = active.key
         this.activeFile = active.file || null
         this.updatePreview()
-      } else if (event.target.closest("[data-file-edit]") && !this.input.disabled) {
+      } else if (event.target.closest("[data-file-edit]") && !this.input.matches(":disabled")) {
         event.preventDefault()
         const element = event.target.closest("[data-file-item]")
         this.editSelection(element?.dataset.fileKey || this.activeKey)
-      } else if (event.target.closest("[data-file-clear]") && !this.input.disabled) {
+      } else if (event.target.closest("[data-file-clear]") && !this.input.matches(":disabled")) {
         event.preventDefault()
         if (this.el.dataset.fileUploadName) {
           const active = this.items.find(item => item.key === this.activeKey)
@@ -126,7 +126,7 @@ const FileInput = {
 
   editSelection(key) {
     const editor = JSON.parse(this.el.dataset.fileEditor)
-    if (!editor || this.el.dataset.filePreview !== "true" || this.selection === "multiple" || this.input.disabled) return
+    if (!editor || this.el.dataset.filePreview !== "true" || this.selection === "multiple" || this.input.matches(":disabled")) return
     const item = this.items.find(item => item.key === key)
     if (!item || !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(item.type)) return
     const file = item.file || item.ref && this.files.find(file => file._phxRef === item.ref)
@@ -155,13 +155,13 @@ const FileInput = {
         file = new File([blob], source.name, {type: source.type})
       }
       const {default: ImageEditor} = await import("./image_editor")
-      if (this.disposed || sequence !== this.sequence || this.input.disabled) return
+      if (this.disposed || sequence !== this.sequence || this.input.matches(":disabled")) return
       this.editor = new ImageEditor()
       const accepted = await this.editor.edit(file, {
         ...(options === true ? {} : options),
         template: this.el.querySelector("[data-file-editor-template]"),
       })
-      if (this.disposed || sequence !== this.sequence || this.input.disabled || !accepted) return
+      if (this.disposed || sequence !== this.sequence || this.input.matches(":disabled") || !accepted) return
       const maxSize = Number(this.el.dataset.fileMaxSize)
       if (maxSize && accepted.size > maxSize) throw new Error("The edited image exceeds the file size limit.")
       const replacing = this.files.find(file => file === source?.file || source?.ref && file._phxRef === source.ref)
@@ -175,7 +175,7 @@ const FileInput = {
           const failure = replies.find(reply => reply.status === "rejected")
           if (failure) throw failure.reason
         } else await this.pushEvent("cancel_upload", payload)
-        if (this.disposed || sequence !== this.sequence || this.input.disabled) return
+        if (this.disposed || sequence !== this.sequence || this.input.matches(":disabled")) return
       }
       this.acceptSelection(accepted, source)
     } catch (failure) {
@@ -195,7 +195,7 @@ const FileInput = {
   },
 
   acceptSelection(file, source = null) {
-    if (this.input.disabled) return
+    if (this.input.matches(":disabled")) return
     this.sequence++
     this.editor?.destroy()
     this.fetchController?.abort()
@@ -399,6 +399,7 @@ const FileInput = {
     items.push(...pending.values())
     const previousIndex = this.items?.findIndex(item => item.key === this.activeKey) ?? 0
     this.items = items
+    this.el.dataset.fileHasValue = String(items.length > 0)
     if (!items.some(item => item.key === this.activeKey)) this.activeKey = items[Math.max(0, Math.min(previousIndex, items.length - 1))]?.key
     const active = items.find(item => item.key === this.activeKey)
     this.activeFile = active?.file || null
@@ -406,8 +407,9 @@ const FileInput = {
     const preview = this.el.dataset.filePreview === "true"
     const filenameMode = !preview && this.selection !== "multiple"
     const count = `${items.length} ${items.length === 1 ? "file" : "files"}`
-    if (display) display.textContent = carousel && preview ? count : (filenameMode ? active?.name : this.fileNames) || display.dataset.fileDefaultName || this.placeholder
-    if (readonly) readonly.textContent = carousel && preview ? count : (filenameMode ? active?.name : this.fileNames) || readonly.dataset.fileDefaultName || this.placeholder
+    const showCount = carousel && preview && (items.length > 0 || this.el.dataset.fileHasPlaceholder !== "true")
+    if (display) display.textContent = showCount ? count : (filenameMode ? active?.name : this.fileNames) || (display.dataset.fileDefaultName ?? this.placeholder)
+    if (readonly) readonly.textContent = showCount ? count : (filenameMode ? active?.name : this.fileNames) || (readonly.dataset.fileDefaultName ?? this.placeholder)
     const position = `${items.findIndex(item => item.key === this.activeKey) + 1}/${items.length}`
     for (const element of new Set([...this.el.querySelectorAll("[data-file-position]"), ...(surface?.querySelectorAll("[data-file-position]") || [])])) element.textContent = position
     for (const item of items) {
@@ -423,7 +425,7 @@ const FileInput = {
     }
     const file = !this.el.dataset.fileUploadName && (carousel ? active?.file : this.files[0])
     const clear = this.el.querySelector("[data-file-clear]")
-    if (clear) clear.hidden = this.input.disabled || (this.el.dataset.fileUploadName ? !active?.element?.querySelector("button[phx-click='cancel_upload'], button[phx-click='remove_upload']") : !file)
+    if (clear) clear.hidden = this.input.matches(":disabled") || (this.el.dataset.fileUploadName ? !active?.element?.querySelector("button[phx-click='cancel_upload'], button[phx-click='remove_upload']") : !file)
     if (!this.el.dataset.fileUploadName) {
       for (const stored of surface?.querySelectorAll("[data-file-stored]") || []) {
         if (stored.dataset.fileItem === undefined) stored.hidden = this.selection === "single" && this.files.length > 0
@@ -452,7 +454,7 @@ const FileInput = {
     const edit = region.querySelector("[data-file-edit]")
     if (edit) {
       edit.disabled = this.input.disabled
-      edit.hidden = !file || !enabled || this.input.disabled || !JSON.parse(this.el.dataset.fileEditor) || !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(file.type)
+      edit.hidden = !file || !enabled || this.input.matches(":disabled") || !JSON.parse(this.el.dataset.fileEditor) || !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(file.type)
     }
     const previewAs = this.el.dataset.filePreviewAs || "thumbnail"
     if (caption) {
@@ -499,7 +501,7 @@ const FileInput = {
     const input = this.el.querySelector("[data-file-input]")
     const selection = this.el.dataset.fileSelection
     const editorConfig = this.el.dataset.fileEditor
-    if (input !== this.input || input.disabled || selection !== this.selection || editorConfig !== this.editorConfig || this.el.dataset.filePreview !== "true") {
+    if (input !== this.input || input.matches(":disabled") || selection !== this.selection || editorConfig !== this.editorConfig || this.el.dataset.filePreview !== "true") {
       this.sequence++
       this.editor?.destroy()
       this.fetchController?.abort()

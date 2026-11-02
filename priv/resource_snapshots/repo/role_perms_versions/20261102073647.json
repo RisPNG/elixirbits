@@ -78,28 +78,31 @@
       "generated?": false,
       "precision": null,
       "primary_key?": false,
-      "references": {
-        "deferrable": false,
-        "destination_attribute": "id",
-        "destination_attribute_default": null,
-        "destination_attribute_generated": null,
-        "index?": false,
-        "index_where": null,
-        "match_tenant?": false,
-        "match_type": null,
-        "match_with": null,
-        "multitenancy": {
-          "attribute": null,
-          "global": null,
-          "strategy": null
-        },
-        "name": "api_keys_versions_version_source_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
-        "schema": "public",
-        "table": "api_keys"
-      },
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "sitenav_code",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "roles_code",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
       "scale": null,
       "size": null,
       "source": "version_source_id",
@@ -162,7 +165,7 @@
           "global": null,
           "strategy": null
         },
-        "name": "api_keys_versions_actor_id_fkey",
+        "name": "role_perms_versions_actor_id_fkey",
         "on_delete": "nothing",
         "on_update": "update",
         "primary_key?": true,
@@ -181,7 +184,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "DEE11465C45EFD49690645CECCE5DE5AF1BDDAB0561A8D27BAC370E36CE7454B",
+  "hash": "B2E16668F7AF06891B20EF455A947305051C6794E8039F9999567BEBFE95F786",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -190,6 +193,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "api_keys_versions",
+  "table": "role_perms_versions",
   "temporal": null
 }

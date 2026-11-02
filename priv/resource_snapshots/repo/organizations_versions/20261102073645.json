@@ -2,7 +2,7 @@
   "attributes": [
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "fragment(\"uuidv7()\")",
       "generated?": false,
       "precision": null,
       "primary_key?": true,
@@ -10,7 +10,7 @@
       "scale": null,
       "size": null,
       "source": "id",
-      "type": "binary"
+      "type": "uuid"
     },
     {
       "allow_nil?": false,
@@ -21,44 +21,20 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "amount",
-      "type": "money_with_currency"
+      "source": "version_action_type",
+      "type": "text"
     },
     {
       "allow_nil?": false,
-      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "inserted_at",
-      "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": false,
-      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "updated_at",
-      "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": false,
-      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "timestamp",
-      "type": "utc_datetime_usec"
+      "source": "version_action_name",
+      "type": "text"
     },
     {
       "allow_nil?": true,
@@ -66,31 +42,10 @@
       "generated?": false,
       "precision": null,
       "primary_key?": false,
-      "references": {
-        "deferrable": false,
-        "destination_attribute": "id",
-        "destination_attribute_default": null,
-        "destination_attribute_generated": null,
-        "index?": false,
-        "index_where": null,
-        "match_tenant?": false,
-        "match_type": null,
-        "match_with": null,
-        "multitenancy": {
-          "attribute": null,
-          "global": null,
-          "strategy": null
-        },
-        "name": "ledger_transfers_from_account_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
-        "schema": "public",
-        "table": "ledger_accounts"
-      },
+      "references": null,
       "scale": null,
       "size": null,
-      "source": "from_account_id",
+      "source": "operation_id",
       "type": "uuid"
     },
     {
@@ -99,6 +54,30 @@
       "generated?": false,
       "precision": null,
       "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "actor_name",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "restored_from_version_id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
       "references": {
         "deferrable": false,
         "destination_attribute": "id",
@@ -114,16 +93,85 @@
           "global": null,
           "strategy": null
         },
-        "name": "ledger_transfers_to_account_id_fkey",
+        "name": "organizations_versions_version_source_id_fkey",
         "on_delete": null,
         "on_update": null,
         "primary_key?": true,
         "schema": "public",
-        "table": "ledger_accounts"
+        "table": "organizations"
       },
       "scale": null,
       "size": null,
-      "source": "to_account_id",
+      "source": "version_source_id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "changes",
+      "type": "map"
+    },
+    {
+      "allow_nil?": false,
+      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "version_inserted_at",
+      "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": false,
+      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "version_updated_at",
+      "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "index_where": null,
+        "match_tenant?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "organizations_versions_actor_id_fkey",
+        "on_delete": "nothing",
+        "on_update": "update",
+        "primary_key?": true,
+        "schema": "public",
+        "table": "users"
+      },
+      "scale": null,
+      "size": null,
+      "source": "actor_id",
       "type": "uuid"
     }
   ],
@@ -132,8 +180,8 @@
   "create_table_options": null,
   "custom_indexes": [],
   "custom_statements": [],
-  "has_create_action": false,
-  "hash": "DB66C167FB020D5E8674F944F0ED203853EC966B1F5C2E87052FEDED6E7AECCB",
+  "has_create_action": true,
+  "hash": "B2BE8336BBB8726D401880E6EEFC807AB350A9EFCC7C32C08615163095F86FFE",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -142,6 +190,6 @@
   },
   "repo": "Elixir.Elixirbits.Repo",
   "schema": null,
-  "table": "ledger_transfers",
+  "table": "organizations_versions",
   "temporal": null
 }
