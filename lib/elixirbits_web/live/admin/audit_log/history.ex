@@ -2,10 +2,10 @@ defmodule ElixirbitsWeb.Admin.AuditLogLive.History do
   use ElixirbitsWeb, :html
 
   import Phoenix.LiveView, only: [attach_hook: 4, push_navigate: 2, push_patch: 2]
-  import Elixirbits.CoreUtils.ComponentHelper, only: [put_flash: 3]
+  import ElixirbitsWeb.CoreComponents.Flash, only: [put_flash: 3]
 
   alias Elixirbits.AccessControl.Permissions
-  alias Elixirbits.AuditLog
+  alias Elixirbits.CoreUtils.Resource.AuditLog
 
   embed_templates "history.html"
 

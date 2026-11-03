@@ -1,9 +1,10 @@
 defmodule ElixirbitsWeb.Admin.UserLive.Entry do
   use ElixirbitsWeb, :live_view
 
-  alias Elixirbits.Accounts
+  alias Elixirbits.Users.UserService
   alias Elixirbits.AccessControl.Permissions
-  alias Elixirbits.CoreUtils.ComponentHelper.Upload
+  alias Elixirbits.AccessControl.Roles.RoleService
+  alias ElixirbitsWeb.CoreComponents.Upload
   alias Elixirbits.CoreUtils.Options.AddressLabel
   alias Elixirbits.CoreUtils.Options.UserSex
   alias Elixirbits.CoreUtils.Resource
@@ -49,7 +50,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
 
         action when action in [:read, :update] ->
           user =
-            Accounts.get_user!(params["id"],
+            UserService.get_user!(params["id"],
               actor: socket.assigns.current_user,
               load: [:addresses]
             )
@@ -103,8 +104,7 @@ defmodule ElixirbitsWeb.Admin.UserLive.Entry do
 
     roles =
       if can_assign_roles? do
-        Elixirbits.AccessControl.Role
-        |> Ash.read!(actor: socket.assigns.current_user)
+        RoleService.list_roles!(actor: socket.assigns.current_user)
         |> Enum.filter(fn role ->
           role.code != "superuser" or Permissions.superuser?(socket.assigns.permissions.user) or
             "superuser" in user.roles

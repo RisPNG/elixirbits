@@ -5,8 +5,8 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
 
   alias Elixirbits.AccessControl.RolePerm
   alias Elixirbits.AccessControl.Sitenav
-  alias Elixirbits.AuditLog
-  alias Elixirbits.Organizations
+  alias Elixirbits.CoreUtils.Resource.AuditLog
+  alias Elixirbits.Organizations.OrganizationService
   alias Elixirbits.Organizations.Organization
 
   @system %{system: true}
@@ -96,7 +96,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
 
     {:ok, view, html} = follow_redirect(result, conn, ~p"/admin/organization")
     assert html =~ "Organization settings saved."
-    organization = Organizations.organization_settings!(actor: @system, load: [:addresses])
+    organization = OrganizationService.organization_settings!(actor: @system, load: [:addresses])
     assert organization.name == "Template business"
     assert organization.base_currency == "GBP"
     assert organization.locale == "en"
@@ -167,7 +167,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
 
     {:ok, view, _html} = follow_redirect(result, conn, ~p"/admin/organization")
 
-    updated = Organizations.organization_settings!(actor: @system, load: [:addresses])
+    updated = OrganizationService.organization_settings!(actor: @system, load: [:addresses])
     assert updated.id == organization.id
     assert updated.name == "Updated business"
     assert updated.base_currency == "USD"
@@ -220,7 +220,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
            )
 
     refute has_element?(view, "#organization-form button[type=submit]")
-    assert Organizations.organization_settings!(actor: @system).base_currency == "USD"
+    assert OrganizationService.organization_settings!(actor: @system).base_currency == "USD"
     {:ok, current_history} = AuditLog.history(Organization, organization.id, actor)
     assert length(current_history.revisions) == length(history.revisions) + 1
   end
@@ -273,7 +273,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
     result = view |> form("#organization-form") |> render_submit()
     {:ok, saved_view, _html} = follow_redirect(result, conn, ~p"/admin/organization")
     refute has_element?(saved_view, "input[name^='address_position[']:not([disabled])")
-    saved = Organizations.organization_settings!(actor: @system, load: [:addresses])
+    saved = OrganizationService.organization_settings!(actor: @system, load: [:addresses])
     assert Enum.map(saved.addresses, &{&1.sequence, &1.line_1}) == [{1, "B"}, {2, "C"}]
     assert hd(saved.addresses).contact_name == "B contact"
     {:ok, edit, _html} = live(conn, ~p"/admin/organization/update")
@@ -282,7 +282,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
   end
 
   test "a settings reader cannot submit a forged update", %{conn: conn} do
-    Organizations.create_organization!(%{name: "Original"}, actor: @system)
+    OrganizationService.create_organization!(%{name: "Original"}, actor: @system)
     {:ok, view, _html} = live(grant(conn, 4), ~p"/admin/organization/update")
 
     refute has_element?(view, "#organization-form button[type='submit']")
@@ -290,7 +290,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
     assert render_submit(view, "save", %{"form" => %{"name" => "Forged"}}) =~
              "do not have permission"
 
-    assert Organizations.organization_settings!(actor: @system).name == "Original"
+    assert OrganizationService.organization_settings!(actor: @system).name == "Original"
   end
 
   test "create-only access can initialize settings and discard an unsaved address", %{conn: conn} do
@@ -315,7 +315,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
 
     {:ok, view, _html} = follow_redirect(result, conn, ~p"/admin/organization")
 
-    organization = Organizations.organization_settings!(actor: @system, load: [:addresses])
+    organization = OrganizationService.organization_settings!(actor: @system, load: [:addresses])
     assert organization.name == "First organization"
     assert [%{line_1: "First office"}] = organization.addresses
     refute has_element?(view, "#organization-form button[type=submit]")
@@ -328,7 +328,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
        %{
          conn: conn
        } do
-    Organizations.create_organization!(
+    OrganizationService.create_organization!(
       %{
         name: "Stored organization",
         registration_no: "STORED-123",
@@ -365,7 +365,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
           {true, [{4, false}, {5, true}, {6, false}, {16, true}]}
         ] do
       if exists? do
-        Organizations.create_organization!(%{name: "Existing organization"}, actor: @system)
+        OrganizationService.create_organization!(%{name: "Existing organization"}, actor: @system)
       end
 
       for {level, editable?} <- access do
@@ -416,7 +416,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
           refute has_element?(read, "#organization-form button[type=submit]")
 
           unless exists? do
-            assert Organizations.organization_settings!(actor: @system) == nil
+            assert OrganizationService.organization_settings!(actor: @system) == nil
             refute has_element?(read, "#organization-form a[data-tooltip=History]")
           end
         end
@@ -428,10 +428,10 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
     conn = log_in_user(conn, create_user(roles: ["superuser"]))
     {:ok, empty, _html} = live(conn, ~p"/admin/organization")
     render_submit(empty, "save", %{"form" => %{"name" => "Forged initialization"}})
-    assert Organizations.organization_settings!(actor: @system) == nil
+    assert OrganizationService.organization_settings!(actor: @system) == nil
 
     organization =
-      Organizations.create_organization!(
+      OrganizationService.create_organization!(
         %{name: "Unchanged organization", addresses: [%{line_1: "Unchanged office"}]},
         actor: @system
       )
@@ -448,7 +448,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.SettingsTest do
       }
     })
 
-    unchanged = Organizations.organization_settings!(actor: @system, load: [:addresses])
+    unchanged = OrganizationService.organization_settings!(actor: @system, load: [:addresses])
     assert unchanged.id == organization.id
     assert unchanged.name == "Unchanged organization"
     assert [%{line_1: "Unchanged office"}] = unchanged.addresses

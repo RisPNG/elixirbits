@@ -5,7 +5,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
   alias Elixirbits.Address
-  alias Elixirbits.Organizations
+  alias Elixirbits.Organizations.OrganizationService
   alias Elixirbits.Organizations.Organization
 
   @system %{system: true}
@@ -21,15 +21,17 @@ defmodule Elixirbits.Organizations.OrganizationTest do
   end
 
   test "the application has one organization and current metadata is public", %{actor: actor} do
-    assert {:ok, nil} = Organizations.current_organization()
-    assert {:ok, nil} = Organizations.organization_settings(actor: actor)
+    assert {:ok, nil} = OrganizationService.current_organization()
+    assert {:ok, nil} = OrganizationService.organization_settings(actor: actor)
 
-    organization = Organizations.create_organization!(%{name: "Template business"}, actor: actor)
+    organization =
+      OrganizationService.create_organization!(%{name: "Template business"}, actor: actor)
+
     assert organization.key == "application"
     assert organization.inserted_at
     assert organization.updated_at
 
-    assert {:ok, current} = Organizations.current_organization()
+    assert {:ok, current} = OrganizationService.current_organization()
     assert current.id == organization.id
     assert current.name == "Template business"
     assert current.base_currency == "MYR"
@@ -37,14 +39,14 @@ defmodule Elixirbits.Organizations.OrganizationTest do
     assert current.timezone == "Asia/Kuala_Lumpur"
 
     assert {:error, %Ash.Error.Invalid{}} =
-             Organizations.create_organization(%{name: "Second business"}, actor: actor)
+             OrganizationService.create_organization(%{name: "Second business"}, actor: actor)
 
     assert length(Ash.read!(Organization, actor: @system)) == 1
   end
 
   test "public current reads cannot expose private settings or addresses", %{actor: actor} do
     organization =
-      Organizations.create_organization!(
+      OrganizationService.create_organization!(
         %{
           name: "Private business",
           registration_no: "REG-123",
@@ -56,14 +58,14 @@ defmodule Elixirbits.Organizations.OrganizationTest do
         actor: actor
       )
 
-    assert {:ok, current} = Organizations.current_organization()
+    assert {:ok, current} = OrganizationService.current_organization()
     assert Enum.sort(Map.keys(current)) == [:base_currency, :id, :locale, :name, :timezone]
     refute is_struct(current)
 
-    assert {:error, %Ash.Error.Forbidden{}} = Organizations.organization_settings()
+    assert {:error, %Ash.Error.Forbidden{}} = OrganizationService.organization_settings()
     assert {:error, %Ash.Error.Forbidden{}} = Ash.read(Organization)
 
-    settings = Organizations.organization_settings!(actor: actor, load: [:addresses])
+    settings = OrganizationService.organization_settings!(actor: actor, load: [:addresses])
     assert settings.id == organization.id
     assert settings.registration_no == "REG-123"
     assert settings.tax_identification_no == "TAX-456"
@@ -74,7 +76,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
 
   test "organization actions manage addresses with exactly one owner", %{actor: actor} do
     organization =
-      Organizations.create_organization!(
+      OrganizationService.create_organization!(
         %{name: "Office", addresses: [%{line_1: "Original office"}]},
         actor: actor
       )
@@ -85,7 +87,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
     assert is_nil(address.user_id)
 
     organization =
-      Organizations.update_organization!(
+      OrganizationService.update_organization!(
         organization,
         %{addresses: [%{id: address.id, line_1: "Updated office"}]},
         actor: actor
@@ -158,7 +160,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
             )
 
           Organization ->
-            Organizations.create_organization!(
+            OrganizationService.create_organization!(
               %{name: "Ordered organization", addresses: addresses},
               actor: actor
             )
@@ -185,7 +187,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
 
       case resource do
         User -> Ash.update!(parent, params, action: :update, actor: actor)
-        Organization -> Organizations.update_organization!(parent, params, actor: actor)
+        Organization -> OrganizationService.update_organization!(parent, params, actor: actor)
       end
 
       reordered = Ash.get!(resource, parent.id, actor: actor, load: [:addresses])
@@ -203,7 +205,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
 
       case resource do
         User -> Ash.update!(reordered, params, action: :update, actor: actor)
-        Organization -> Organizations.update_organization!(reordered, params, actor: actor)
+        Organization -> OrganizationService.update_organization!(reordered, params, actor: actor)
       end
 
       saved = Ash.get!(resource, parent.id, actor: actor, load: [:addresses])
@@ -222,7 +224,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
 
   test "direct address access cannot bypass its parent resource", %{actor: actor} do
     organization =
-      Organizations.create_organization!(
+      OrganizationService.create_organization!(
         %{name: "Office", addresses: [%{line_1: "Authorized office"}]},
         actor: actor
       )
@@ -244,7 +246,9 @@ defmodule Elixirbits.Organizations.OrganizationTest do
   test "regional settings reject unknown currency and timezone", %{actor: actor} do
     for attrs <- [%{base_currency: "INVALID"}, %{timezone: "Unknown/Zone"}, %{locale: "invalid"}] do
       assert {:error, %Ash.Error.Invalid{}} =
-               Organizations.create_organization(Map.put(attrs, :name, "Office"), actor: actor)
+               OrganizationService.create_organization(Map.put(attrs, :name, "Office"),
+                 actor: actor
+               )
     end
   end
 end

@@ -13,9 +13,9 @@ defmodule Elixirbits.CoreUtils.ResourceTest.SequenceRow do
   end
 end
 
-defmodule Elixirbits.CoreUtils.SearchDatetimeTest.Record do
+defmodule Elixirbits.CoreUtils.Resource.SearchDatetimeTest.Record do
   use Ash.Resource,
-    domain: Elixirbits.CoreUtils.SearchDatetimeTest.Domain,
+    domain: Elixirbits.CoreUtils.Resource.SearchDatetimeTest.Domain,
     data_layer: Ash.DataLayer.Ets
 
   ets do
@@ -34,11 +34,11 @@ defmodule Elixirbits.CoreUtils.SearchDatetimeTest.Record do
   end
 end
 
-defmodule Elixirbits.CoreUtils.SearchDatetimeTest.Domain do
+defmodule Elixirbits.CoreUtils.Resource.SearchDatetimeTest.Domain do
   use Ash.Domain, otp_app: :elixirbits, validate_config_inclusion?: false
 
   resources do
-    resource Elixirbits.CoreUtils.SearchDatetimeTest.Record
+    resource Elixirbits.CoreUtils.Resource.SearchDatetimeTest.Record
   end
 end
 

@@ -1,6 +1,6 @@
 defmodule Elixirbits.Address do
   use Ash.Resource,
-    domain: Elixirbits.Accounts,
+    domain: Elixirbits.Addresses.AddressService,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events, AshPaperTrail.Resource]
@@ -32,11 +32,11 @@ defmodule Elixirbits.Address do
     store_action_name? true
     attributes_as_attributes [:user_id, :organization_id]
     operation_id_field :operation_id
-    belongs_to_actor :actor, Elixirbits.Accounts.User, domain: Elixirbits.Accounts
+    belongs_to_actor :actor, Elixirbits.Accounts.User, domain: Elixirbits.Users.UserService
     metadata :actor_name, :string
     metadata :restored_from_version_id, :uuid
     version_extensions authorizers: [Ash.Policy.Authorizer]
-    mixin Elixirbits.AuditLog.Version
+    mixin Elixirbits.CoreUtils.Resource.AuditLog.Version
   end
 
   actions do

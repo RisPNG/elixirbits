@@ -1,11 +1,11 @@
 defmodule ElixirbitsWeb.Admin.RoleLive.Deletion do
   import Phoenix.Component, only: [assign: 3, update: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, push_navigate: 2]
-  import Elixirbits.CoreUtils.ComponentHelper, only: [put_flash: 3]
+  import ElixirbitsWeb.CoreComponents.Flash, only: [put_flash: 3]
   use ElixirbitsWeb, :verified_routes
 
   alias Elixirbits.AccessControl.Permissions
-  alias Elixirbits.AccessControl.Role
+  alias Elixirbits.AccessControl.Roles.RoleService
 
   def on_mount(mode, _params, _session, socket) when mode in [:index, :entry] do
     socket =
@@ -28,7 +28,7 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Deletion do
               {:halt, put_flash(socket, :error, "You do not have permission to do that.")}
 
             true ->
-              case Ash.get(Role, id, actor: socket.assigns.current_user) do
+              case RoleService.get_role(id, actor: socket.assigns.current_user) do
                 {:ok, %{code: "superuser"}} ->
                   {:halt, put_flash(socket, :error, "The superuser role cannot be deleted.")}
 
@@ -50,10 +50,9 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Deletion do
               {:halt, socket}
 
             role ->
-              changeset =
-                Ash.Changeset.for_destroy(
+              result =
+                RoleService.delete_role(
                   role,
-                  :destroy,
                   %{
                     remove_assignments?:
                       socket.assigns.remove_assignments? and
@@ -62,7 +61,7 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Deletion do
                   actor: socket.assigns.current_user
                 )
 
-              case Ash.destroy(changeset) do
+              case result do
                 :ok ->
                   socket =
                     socket

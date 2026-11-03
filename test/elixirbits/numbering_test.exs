@@ -1,26 +1,33 @@
 defmodule Elixirbits.NumberingTest do
   use Elixirbits.DataCase, async: true
 
-  alias Elixirbits.Numbering
+  alias Elixirbits.NumberSequences.NumberSequenceService
 
   test "allocations are independent across document types and complete calendar dates" do
     doc_type = Ash.UUID.generate()
     other_type = Ash.UUID.generate()
 
-    assert Numbering.next_number(doc_type, ~D[2026-06-18]) == "#{doc_type}-20260618-00001"
-    assert Numbering.next_number(doc_type, ~D[2026-06-18]) == "#{doc_type}-20260618-00002"
-    assert Numbering.next_number(other_type, ~D[2026-06-18]) == "#{other_type}-20260618-00001"
-    assert Numbering.next_number(doc_type, ~D[2027-06-18]) == "#{doc_type}-20270618-00001"
+    assert NumberSequenceService.next_number(doc_type, ~D[2026-06-18]) ==
+             "#{doc_type}-20260618-00001"
+
+    assert NumberSequenceService.next_number(doc_type, ~D[2026-06-18]) ==
+             "#{doc_type}-20260618-00002"
+
+    assert NumberSequenceService.next_number(other_type, ~D[2026-06-18]) ==
+             "#{other_type}-20260618-00001"
+
+    assert NumberSequenceService.next_number(doc_type, ~D[2027-06-18]) ==
+             "#{doc_type}-20270618-00001"
   end
 
   test "instant-based allocation follows the selected timezone at a year boundary" do
     doc_type = Ash.UUID.generate()
     instant = ~U[2026-12-31 18:00:00Z]
 
-    assert Numbering.next_number(doc_type, instant, timezone: "Asia/Kuala_Lumpur") ==
+    assert NumberSequenceService.next_number(doc_type, instant, timezone: "Asia/Kuala_Lumpur") ==
              "#{doc_type}-20270101-00001"
 
-    assert Numbering.next_number(doc_type, instant, timezone: "Etc/UTC") ==
+    assert NumberSequenceService.next_number(doc_type, instant, timezone: "Etc/UTC") ==
              "#{doc_type}-20261231-00001"
   end
 
@@ -28,8 +35,8 @@ defmodule Elixirbits.NumberingTest do
     doc_type = Ash.UUID.generate()
     opts = [prefix: "INV", suffix: "MY", separator: "/", padding: 3, start: 99, increment: 99]
 
-    assert Numbering.next_number(doc_type, ~D[2026-06-18], opts) == "INV/001/MY"
-    assert Numbering.next_number(doc_type, ~D[2026-06-18], opts) == "INV/002/MY"
+    assert NumberSequenceService.next_number(doc_type, ~D[2026-06-18], opts) == "INV/001/MY"
+    assert NumberSequenceService.next_number(doc_type, ~D[2026-06-18], opts) == "INV/002/MY"
   end
 end
 
@@ -38,7 +45,7 @@ defmodule Elixirbits.NumberingConcurrencyTest do
   import Ecto.Query
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Elixirbits.Numbering
+  alias Elixirbits.NumberSequences.NumberSequenceService
   alias Elixirbits.Repo
 
   test "independent connections allocate each counter once under contention" do
@@ -56,7 +63,9 @@ defmodule Elixirbits.NumberingConcurrencyTest do
       1..12
       |> Task.async_stream(
         fn _index ->
-          Sandbox.unboxed_run(Repo, fn -> Numbering.next_number(doc_type, ~D[2026-06-18]) end)
+          Sandbox.unboxed_run(Repo, fn ->
+            NumberSequenceService.next_number(doc_type, ~D[2026-06-18])
+          end)
         end,
         max_concurrency: 4,
         timeout: 15_000

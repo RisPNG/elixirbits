@@ -60,8 +60,8 @@ config :elixirbits, ElixirbitsWeb.Endpoint,
       # Router, Controllers, LiveViews and LiveComponents
       ~r"lib/elixirbits_web/router\.ex$"E,
       ~r"lib/elixirbits_web/(controllers|live|components)/.*\.(ex|heex)$"E,
-      # Shared core utilities and their component templates
-      ~r"lib/elixirbits/core_utils/.*\.(ex|heex)$"E
+      # Shared core utilities
+      ~r"lib/elixirbits/_core_utils/.*\.(ex|heex)$"E
     ]
   ]
 

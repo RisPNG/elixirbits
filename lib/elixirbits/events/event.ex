@@ -1,7 +1,7 @@
 defmodule Elixirbits.Events.Event do
   use Ash.Resource,
     otp_app: :elixirbits,
-    domain: Elixirbits.Events,
+    domain: Elixirbits.Events.EventService,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.EventLog]

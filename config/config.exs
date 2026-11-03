@@ -106,12 +106,15 @@ config :elixirbits,
   ecto_repos: [Elixirbits.Repo],
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [
-    Elixirbits.Ledger,
-    Elixirbits.Accounts,
-    Elixirbits.Events,
-    Elixirbits.AccessControl,
-    Elixirbits.Organizations,
-    Elixirbits.Numbering
+    Elixirbits.Ledgers.LedgerService,
+    Elixirbits.Users.UserService,
+    Elixirbits.Addresses.AddressService,
+    Elixirbits.ApiKeys.ApiKeyService,
+    Elixirbits.Tokens.TokenService,
+    Elixirbits.Events.EventService,
+    Elixirbits.AccessControl.AccessControlService,
+    Elixirbits.Organizations.OrganizationService,
+    Elixirbits.NumberSequences.NumberSequenceService
   ],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 

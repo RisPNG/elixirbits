@@ -3,6 +3,7 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
 
   alias Elixirbits.AccessControl.Permissions
   alias Elixirbits.AccessControl.Role
+  alias Elixirbits.AccessControl.Roles.RoleService
   alias Elixirbits.CoreUtils.Resource
   alias ElixirbitsWeb.Admin.AuditLogLive.History
   alias ElixirbitsWeb.Admin.RoleLive.Deletion
@@ -54,7 +55,10 @@ defmodule ElixirbitsWeb.Admin.RoleLive.Entry do
 
         action when action in [:read, :update] ->
           role =
-            Ash.get!(Role, params["id"], actor: socket.assigns.current_user, load: [:role_perms])
+            RoleService.get_role!(params["id"],
+              actor: socket.assigns.current_user,
+              load: [:role_perms]
+            )
 
           {socket, role} = History.load_revision(socket, role, params)
 

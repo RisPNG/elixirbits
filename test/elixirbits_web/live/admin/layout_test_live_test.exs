@@ -3,7 +3,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias Elixirbits.AccessControl
+  alias Elixirbits.AccessControl.AccessControlService
   alias Elixirbits.AccessControl.Sitenav
 
   test "renders local tab by default and switches to ecosystem tab", %{conn: conn} do
@@ -20,7 +20,7 @@ defmodule ElixirbitsWeb.Admin.LayoutTestLiveTest do
         state: :ENABLED
       },
       action: :create,
-      domain: AccessControl,
+      domain: AccessControlService,
       actor: %{system: true}
     )
 

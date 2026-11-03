@@ -3,7 +3,10 @@ defmodule ElixirbitsWeb.CoreComponentBoundaryTest do
 
   alias Phoenix.LiveView.TagEngine.Parser
 
-  @core_file "lib/elixirbits_web/components/core_components.ex"
+  @core_files ~w(
+    lib/elixirbits_web/components/core_components/core_components.ex
+    lib/elixirbits_web/components/core_components/core_components.html.heex
+  )
   @control_tags ~w(form input select textarea)
   @local_renderers ~w(combo_box live_file_input)
   @native_renderers ~w(
@@ -24,7 +27,7 @@ defmodule ElixirbitsWeb.CoreComponentBoundaryTest do
     violations =
       ["lib/**/*.ex", "lib/**/*.heex", "test/**/*.ex", "test/**/*.exs", "test/**/*.heex"]
       |> Enum.flat_map(&Path.wildcard/1)
-      |> Enum.reject(&(&1 == @core_file))
+      |> Enum.reject(&(&1 in @core_files))
       |> Enum.sort()
       |> Enum.flat_map(fn path ->
         source = File.read!(path)

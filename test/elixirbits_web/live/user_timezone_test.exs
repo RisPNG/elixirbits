@@ -5,7 +5,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
-  alias Elixirbits.Organizations
+  alias Elixirbits.Organizations.OrganizationService
 
   @system %{system: true}
 
@@ -35,7 +35,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
   end
 
   test "a persisted preference wins over browser and organization timezones", %{conn: conn} do
-    Organizations.create_organization!(%{name: "Workspace", timezone: "Pacific/Auckland"},
+    OrganizationService.create_organization!(%{name: "Workspace", timezone: "Pacific/Auckland"},
       actor: @system
     )
 
@@ -92,7 +92,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
   end
 
   test "invalid browser timezone falls back to organization settings", %{conn: conn} do
-    Organizations.create_organization!(%{name: "Workspace", timezone: "Pacific/Auckland"},
+    OrganizationService.create_organization!(%{name: "Workspace", timezone: "Pacific/Auckland"},
       actor: @system
     )
 

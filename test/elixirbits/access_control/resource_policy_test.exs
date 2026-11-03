@@ -9,7 +9,7 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
   alias Elixirbits.AccessControl.RolePerm
   alias Elixirbits.AccessControl.ResourcePolicy
   alias Elixirbits.AccessControl.Sitenav
-  alias Elixirbits.Accounts
+  alias Elixirbits.Users.UserService
   alias Elixirbits.Accounts.User
   alias Elixirbits.Address
   alias Elixirbits.Organizations.Organization
@@ -495,7 +495,7 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
     user = create_user(display_name: "Original", dob: ~D[1990-01-01])
 
     assert {:ok, updated} =
-             Accounts.update_user_timezone(user, %{timezone: "America/New_York"}, actor: user)
+             UserService.update_user_timezone(user, %{timezone: "America/New_York"}, actor: user)
 
     assert updated.timezone == "America/New_York"
     assert updated.dob == ~D[1990-01-01]
@@ -509,17 +509,19 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
              Ash.update(updated, %{dob: "not-a-date"}, action: :update, actor: %{system: true})
 
     assert {:error, %Ash.Error.Invalid{}} =
-             Accounts.update_user_timezone(updated, %{timezone: "Unknown/Zone"}, actor: updated)
+             UserService.update_user_timezone(updated, %{timezone: "Unknown/Zone"},
+               actor: updated
+             )
 
     assert Ash.get!(User, user.id, actor: %{system: true}).timezone == "America/New_York"
 
     for attrs <- [%{display_name: "Forged"}, %{roles: ["superuser"]}] do
       assert {:error, %Ash.Error.Invalid{}} =
-               Accounts.update_user_timezone(updated, attrs, actor: updated)
+               UserService.update_user_timezone(updated, attrs, actor: updated)
     end
 
     assert {:ok, automatic} =
-             Accounts.update_user_timezone(updated, %{timezone: nil}, actor: updated)
+             UserService.update_user_timezone(updated, %{timezone: nil}, actor: updated)
 
     assert automatic.timezone == nil
     assert automatic.dob == ~D[1990-01-01]
@@ -541,13 +543,15 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
 
     for actor <- [nil, user, actor(%{"USERS" => 15})] do
       assert {:error, %Ash.Error.Forbidden{}} =
-               Accounts.update_user_timezone(target, %{timezone: "Europe/London"}, actor: actor)
+               UserService.update_user_timezone(target, %{timezone: "Europe/London"},
+                 actor: actor
+               )
     end
 
     assert Ash.get!(User, target.id, actor: %{system: true}).timezone == "Asia/Kuala_Lumpur"
 
     assert {:ok, target} =
-             Accounts.update_user_timezone(target, %{timezone: "Europe/London"},
+             UserService.update_user_timezone(target, %{timezone: "Europe/London"},
                actor: %{system: true}
              )
 
@@ -561,7 +565,7 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
     assert is_nil(user.archived_at)
 
     assert {:error, _error} =
-             Accounts.update_user_timezone(user, %{timezone: "America/New_York"}, actor: user)
+             UserService.update_user_timezone(user, %{timezone: "America/New_York"}, actor: user)
 
     assert Ash.get!(User, user.id, actor: %{system: true}, not_found_error?: false) == nil
     id = user.id

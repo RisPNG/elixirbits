@@ -7,8 +7,8 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
   alias Elixirbits.AccessControl.RolePerm
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
-  alias Elixirbits.AuditLog
-  alias Elixirbits.Organizations
+  alias Elixirbits.CoreUtils.Resource.AuditLog
+  alias Elixirbits.Organizations.OrganizationService
   alias Elixirbits.Organizations.Organization
 
   @system %{system: true}
@@ -49,7 +49,7 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
       refute has_element?(view, "a[data-tooltip=History]")
     end
 
-    Organizations.create_organization!(%{name: "History organization"}, actor: @system)
+    OrganizationService.create_organization!(%{name: "History organization"}, actor: @system)
 
     for level <- [4, 5] do
       {operator_conn, _actor, _grants} =
@@ -427,7 +427,8 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
             )
 
           Organization ->
-            Organizations.create_organization!(%{name: "Sequence audit", addresses: addresses},
+            OrganizationService.create_organization!(
+              %{name: "Sequence audit", addresses: addresses},
               actor: actor,
               load: [:addresses]
             )
@@ -440,7 +441,7 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
 
       case resource do
         User -> Ash.update!(parent, params, action: :update, actor: actor)
-        Organization -> Organizations.update_organization!(parent, params, actor: actor)
+        Organization -> OrganizationService.update_organization!(parent, params, actor: actor)
       end
 
       {:ok, reordered_history} = AuditLog.history(resource, parent.id, actor)
@@ -496,8 +497,11 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
       params = %{addresses: [%{id: first.id}, %{id: second.id}]}
 
       case resource do
-        User -> Ash.update!(current_parent, params, action: :update, actor: actor)
-        Organization -> Organizations.update_organization!(current_parent, params, actor: actor)
+        User ->
+          Ash.update!(current_parent, params, action: :update, actor: actor)
+
+        Organization ->
+          OrganizationService.update_organization!(current_parent, params, actor: actor)
       end
 
       view |> element("header a[data-tooltip=History]") |> render_click()
@@ -675,7 +679,7 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
     {conn, actor, _grants} = grant(conn, %{"ORG" => 15}, "Organization editor")
 
     organization =
-      Organizations.create_organization!(
+      OrganizationService.create_organization!(
         %{
           name: "Original organization",
           addresses: [
@@ -696,7 +700,7 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
     later_removed = Enum.find(organization.addresses, &(&1.line_1 == "Removed later"))
 
     selected_record =
-      Organizations.update_organization!(
+      OrganizationService.update_organization!(
         organization,
         %{
           name: "Selected organization",
@@ -711,7 +715,7 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
     {:ok, history} = AuditLog.history(Organization, organization.id, actor)
     selected = hd(history.revisions)
 
-    Organizations.update_organization!(
+    OrganizationService.update_organization!(
       selected_record,
       %{
         name: "Today's organization",
@@ -822,7 +826,7 @@ defmodule ElixirbitsWeb.Admin.AuditHistoryTest do
     refute has_element?(view, "[id$='-audit-removal']")
     refute has_element?(view, "[aria-describedby*='audit-removal']")
 
-    saved = Organizations.organization_settings!(actor: @system, load: [:addresses])
+    saved = OrganizationService.organization_settings!(actor: @system, load: [:addresses])
     assert saved.name == "Today's organization"
 
     assert Enum.sort(Enum.map(saved.addresses, & &1.line_1)) == [

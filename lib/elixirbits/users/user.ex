@@ -1,0 +1,642 @@
+defmodule Elixirbits.Accounts.User do
+  require Ash.Query
+
+  use Ash.Resource,
+    otp_app: :elixirbits,
+    domain: Elixirbits.Users.UserService,
+    data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [
+      AshAuthentication,
+      AshEvents.Events,
+      AshPaperTrail.Resource,
+      AshArchival.Resource
+    ]
+
+  @email_format ~r/\A[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\z/
+
+  authentication do
+    add_ons do
+      log_out_everywhere do
+        apply_on_password_change? true
+      end
+
+      confirmation :confirm_new_user do
+        monitor_fields [:email]
+        confirm_on_create? true
+        confirm_on_update? false
+        require_interaction? true
+        confirmed_at_field :confirmed_at
+
+        auto_confirm_actions [
+          :seed_with_password,
+          :sign_in_with_magic_link,
+          :reset_password_with_token
+        ]
+
+        sender Elixirbits.Accounts.User.Senders.SendNewUserConfirmationEmail
+      end
+    end
+
+    tokens do
+      enabled? true
+      token_resource Elixirbits.Accounts.Token
+
+      signing_secret fn _secret_name, _resource ->
+        Application.fetch_env(:elixirbits, :token_signing_secret)
+      end
+
+      store_all_tokens? true
+      require_token_presence_for_authentication? true
+      token_lifetime {365, :days}
+    end
+
+    strategies do
+      password :password do
+        identity_field :email
+        hash_provider AshAuthentication.BcryptProvider
+
+        resettable do
+          sender Elixirbits.Accounts.User.Senders.SendPasswordResetEmail
+          # these configurations will be the default in a future release
+          password_reset_action_name :reset_password_with_token
+          request_password_reset_action_name :request_password_reset_token
+        end
+      end
+
+      remember_me :remember_me do
+        token_lifetime {365, :days}
+      end
+
+      magic_link do
+        identity_field :email
+        registration_enabled? true
+        require_interaction? true
+
+        sender Elixirbits.Accounts.User.Senders.SendMagicLinkEmail
+      end
+
+      api_key :api_key do
+        api_key_relationship :valid_api_keys
+        api_key_hash_attribute :api_key_hash
+      end
+    end
+  end
+
+  postgres do
+    table "users"
+    repo Elixirbits.Repo
+    base_filter_sql "(archived_at IS NULL)"
+  end
+
+  resource do
+    base_filter expr(is_nil(archived_at))
+  end
+
+  events do
+    event_log Elixirbits.Events.Event
+  end
+
+  paper_trail do
+    primary_key_type :uuid_v7
+    change_tracking_mode :snapshot
+    only_when_changed? false
+    store_action_name? true
+    ignore_attributes [:hashed_password, :archived_at]
+    operation_id_field :operation_id
+    belongs_to_actor :actor, Elixirbits.Accounts.User, domain: Elixirbits.Users.UserService
+    metadata :actor_name, :string
+    metadata :restored_from_version_id, :uuid
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin Elixirbits.CoreUtils.Resource.AuditLog.Version
+  end
+
+  archive do
+    base_filter? true
+  end
+
+  actions do
+    defaults [:read]
+
+    create :create do
+      primary? true
+
+      accept [
+        :email,
+        :username,
+        :display_name,
+        :display_pic_url,
+        :display_pic_name,
+        :first_name,
+        :middle_name,
+        :last_name,
+        :tel_no,
+        :weight_kg,
+        :height_cm,
+        :dob,
+        :sex,
+        :locale,
+        :timezone
+      ]
+
+      argument :password, :string,
+        sensitive?: true,
+        allow_nil?: false,
+        constraints: [min_length: 8]
+
+      argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
+      argument :addresses, {:array, :map}
+
+      validate {AshAuthentication.Strategy.Password.PasswordConfirmationValidation,
+                strategy_name: :password}
+
+      change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+
+      change {Ash.Resource.Change.Function,
+              fun: {Elixirbits.CoreUtils.Resource, :normalize_ordered_relationship, [:addresses]}}
+
+      change manage_relationship(:addresses, type: :direct_control)
+    end
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+    end
+
+    update :update do
+      primary? true
+      require_atomic? false
+
+      accept [
+        :roles,
+        :username,
+        :display_name,
+        :display_pic_url,
+        :display_pic_name,
+        :first_name,
+        :middle_name,
+        :last_name,
+        :tel_no,
+        :weight_kg,
+        :height_cm,
+        :dob,
+        :sex,
+        :locale,
+        :timezone
+      ]
+
+      argument :addresses, {:array, :map}
+
+      change {Ash.Resource.Change.Function,
+              fun: {Elixirbits.CoreUtils.Resource, :normalize_ordered_relationship, [:addresses]}}
+
+      change manage_relationship(:addresses, type: :direct_control)
+    end
+
+    update :restore do
+      require_atomic? false
+
+      accept [
+        :roles,
+        :username,
+        :display_name,
+        :first_name,
+        :middle_name,
+        :last_name,
+        :tel_no,
+        :weight_kg,
+        :height_cm,
+        :dob,
+        :sex,
+        :locale,
+        :timezone
+      ]
+
+      argument :addresses, {:array, :map}
+
+      change {Ash.Resource.Change.Function,
+              fun: {Elixirbits.CoreUtils.Resource, :normalize_ordered_relationship, [:addresses]}}
+
+      change manage_relationship(:addresses, type: :direct_control)
+    end
+
+    update :update_timezone do
+      require_atomic? false
+      accept [:timezone]
+    end
+
+    update :assign_roles do
+      require_atomic? false
+      accept [:roles]
+    end
+
+    update :remove_deleted_role do
+      public? false
+      require_atomic? false
+      skip_global_validations? true
+      accept []
+
+      argument :role_code, :string, allow_nil?: false
+
+      validate argument_does_not_equal(:role_code, "superuser")
+
+      change fn changeset, _context ->
+        code = Ash.Changeset.get_argument(changeset, :role_code)
+        roles = Ash.Changeset.get_attribute(changeset, :roles)
+        Ash.Changeset.change_attribute(changeset, :roles, Enum.reject(roles, &(&1 == code)))
+      end
+    end
+
+    read :get_by_subject do
+      description "Get a user by the subject claim in a JWT"
+      argument :subject, :string, allow_nil?: false
+      get? true
+      prepare AshAuthentication.Preparations.FilterBySubject
+    end
+
+    update :change_password do
+      # Use this action to allow users to change their password by providing their current password and a new password.
+
+      require_atomic? false
+      accept []
+      argument :current_password, :string, sensitive?: true, allow_nil?: false
+
+      argument :password, :string,
+        sensitive?: true,
+        allow_nil?: false,
+        constraints: [min_length: 8]
+
+      argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
+
+      validate confirm(:password, :password_confirmation)
+
+      validate {AshAuthentication.Strategy.Password.PasswordValidation,
+                strategy_name: :password, password_argument: :current_password}
+
+      change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+    end
+
+    read :sign_in_with_password do
+      description "Attempt to sign in using a email and password."
+      get? true
+
+      argument :email, :ci_string do
+        description "The email to use for retrieving the user."
+        allow_nil? false
+      end
+
+      argument :password, :string do
+        description "The password to check for the matching user."
+        allow_nil? false
+        sensitive? true
+      end
+
+      argument :remember_me, :boolean do
+        description "Whether to generate a remember me token."
+        allow_nil? true
+      end
+
+      validate match(:email, @email_format), message: "must be a valid email address"
+
+      # validates the provided email and password and generates a token
+      prepare AshAuthentication.Strategy.Password.SignInPreparation
+
+      prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
+
+      metadata :token, :string do
+        description "A JWT that can be used to authenticate the user."
+        allow_nil? false
+      end
+    end
+
+    read :sign_in_with_token do
+      # In the generated sign in components, we validate the email and password directly in the LiveView and generate a short-lived token that can be used to sign in over a standard controller action, exchanging it for a standard token. This action performs that exchange. If you do not use the generated liveviews, you may remove this action, and set `sign_in_tokens_enabled? false` in the password strategy.
+
+      description "Attempt to sign in using a short-lived sign in token."
+      get? true
+
+      argument :token, :string do
+        description "The short-lived sign in token."
+        allow_nil? false
+        sensitive? true
+      end
+
+      argument :remember_me, :boolean do
+        description "Whether to generate a remember me token."
+        allow_nil? true
+      end
+
+      # validates the provided sign in token and generates a token
+      prepare AshAuthentication.Strategy.Password.SignInWithTokenPreparation
+
+      prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
+
+      metadata :token, :string do
+        description "A JWT that can be used to authenticate the user."
+        allow_nil? false
+      end
+    end
+
+    create :seed_with_password do
+      description "Provision a confirmed account through the trusted seed process."
+      public? false
+      accept []
+
+      argument :email, :ci_string, allow_nil?: false
+      argument :password, :string, sensitive?: true, allow_nil?: false
+      argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
+
+      change set_attribute(:email, arg(:email))
+      change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+
+      validate {AshAuthentication.Strategy.Password.PasswordConfirmationValidation,
+                strategy_name: :password}
+    end
+
+    create :register_with_password do
+      description "Register a new user with a email and password."
+
+      argument :email, :ci_string do
+        allow_nil? false
+      end
+
+      argument :password, :string do
+        description "The proposed password for the user, in plain text."
+        allow_nil? false
+        constraints min_length: 8
+        sensitive? true
+      end
+
+      argument :password_confirmation, :string do
+        description "The proposed password for the user (again), in plain text."
+        allow_nil? false
+        sensitive? true
+      end
+
+      # Sets the email from the argument
+      change set_attribute(:email, arg(:email))
+
+      # Hashes the provided password
+      change AshAuthentication.Strategy.Password.HashPasswordChange
+
+      # Generates an authentication token for the user
+      change AshAuthentication.GenerateTokenChange
+
+      # validates that the password matches the confirmation
+      validate AshAuthentication.Strategy.Password.PasswordConfirmationValidation
+
+      metadata :token, :string do
+        description "A JWT that can be used to authenticate the user."
+        allow_nil? false
+      end
+    end
+
+    action :request_password_reset_token do
+      description "Send password reset instructions to a user if they exist."
+
+      argument :email, :ci_string do
+        allow_nil? false
+      end
+
+      validate match(:email, @email_format), message: "must be a valid email address"
+
+      # creates a reset token and invokes the relevant senders
+      run {AshAuthentication.Strategy.Password.RequestPasswordReset, action: :get_by_email}
+    end
+
+    read :get_by_email do
+      description "Looks up a user by their email"
+      get_by :email
+      validate match(:email, @email_format), message: "must be a valid email address"
+    end
+
+    update :reset_password_with_token do
+      argument :reset_token, :string do
+        allow_nil? false
+        sensitive? true
+      end
+
+      argument :password, :string do
+        description "The proposed password for the user, in plain text."
+        allow_nil? false
+        constraints min_length: 8
+        sensitive? true
+      end
+
+      argument :password_confirmation, :string do
+        description "The proposed password for the user (again), in plain text."
+        allow_nil? false
+        sensitive? true
+      end
+
+      # validates the provided reset token
+      validate AshAuthentication.Strategy.Password.ResetTokenValidation
+
+      # validates that the password matches the confirmation
+      validate AshAuthentication.Strategy.Password.PasswordConfirmationValidation
+
+      # Hashes the provided password
+      change AshAuthentication.Strategy.Password.HashPasswordChange
+
+      # Generates an authentication token for the user
+      change AshAuthentication.GenerateTokenChange
+    end
+
+    create :sign_in_with_magic_link do
+      description "Sign in or register a user with magic link."
+
+      argument :token, :string do
+        description "The token from the magic link that was sent to the user"
+        allow_nil? false
+      end
+
+      argument :remember_me, :boolean do
+        description "Whether to generate a remember me token"
+        allow_nil? true
+      end
+
+      upsert? true
+      upsert_identity :unique_email
+      upsert_fields [:email]
+
+      # Uses the information from the token to create or sign in the user
+      change AshAuthentication.Strategy.MagicLink.SignInChange
+
+      change {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange,
+              strategy_name: :remember_me}
+
+      metadata :token, :string do
+        allow_nil? false
+      end
+    end
+
+    action :request_magic_link do
+      argument :email, :ci_string do
+        allow_nil? false
+      end
+
+      validate match(:email, @email_format), message: "must be a valid email address"
+
+      run AshAuthentication.Strategy.MagicLink.Request
+    end
+
+    read :sign_in_with_api_key do
+      argument :api_key, :string, allow_nil?: false
+      prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
+    end
+  end
+
+  policies do
+    policy action(:remove_deleted_role) do
+      authorize_if never()
+    end
+
+    policy action_type(:update) do
+      authorize_if actor_attribute_equals(:system, true)
+
+      authorize_if matches("actor can assign the requested roles", fn actor,
+                                                                      %{changeset: changeset} ->
+                     if changeset.action.name == :assign_roles or
+                          Map.has_key?(changeset.casted_attributes, :roles) or
+                          Ash.Changeset.changing_attribute?(changeset, :roles) do
+                       permissions = Elixirbits.AccessControl.Permissions.load(actor)
+
+                       Elixirbits.AccessControl.Permissions.can?(
+                         permissions,
+                         "/admin/roles",
+                         :su
+                       ) and
+                         ("superuser" not in Ash.Changeset.get_attribute(changeset, :roles) or
+                            Elixirbits.AccessControl.Permissions.superuser?(permissions.user) or
+                            Elixirbits.AccessControl.Permissions.superuser?(
+                              Ash.get!(__MODULE__, changeset.data.id,
+                                authorize?: false,
+                                not_found_error?: false
+                              )
+                            ))
+                     else
+                       true
+                     end
+                   end)
+    end
+
+    policy action(:seed_with_password) do
+      authorize_if actor_attribute_equals(:system, true)
+    end
+
+    bypass AshAuthentication.Checks.AshAuthenticationInteraction do
+      authorize_if always()
+    end
+
+    bypass action(:update_timezone) do
+      access_type :filter
+      authorize_if expr(id == ^actor(:id) and is_nil(archived_at))
+    end
+
+    policy action(:update_timezone) do
+      access_type :filter
+      authorize_if actor_attribute_equals(:system, true)
+      authorize_if expr(id == ^actor(:id) and is_nil(archived_at))
+    end
+  end
+
+  use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/users"
+
+  validations do
+    validate fn changeset, _context ->
+               roles = Ash.Changeset.get_attribute(changeset, :roles)
+
+               assigned_roles =
+                 Elixirbits.AccessControl.Role
+                 |> Ash.Query.filter(code in ^roles)
+                 |> Ash.Query.sort(code: :asc)
+                 |> Ash.Query.lock("FOR KEY SHARE")
+                 |> Ash.read!(authorize?: false)
+                 |> Enum.map(& &1.code)
+
+               if Enum.all?(roles, &(&1 in assigned_roles)) do
+                 :ok
+               else
+                 {:error, field: :roles, message: "must contain existing role codes"}
+               end
+             end,
+             on: :update,
+             where: changing(:roles, touching?: true),
+             before_action?: true,
+             only_when_valid?: true
+
+    validate match(:email, @email_format),
+      where: changing(:email),
+      message: "must be a valid email address"
+
+    validate fn changeset, _context ->
+               case Ash.Changeset.get_attribute(changeset, :timezone) do
+                 nil ->
+                   :ok
+
+                 timezone ->
+                   case DateTime.now(timezone) do
+                     {:ok, _datetime} ->
+                       :ok
+
+                     {:error, _reason} ->
+                       {:error, field: :timezone, message: "is not a known timezone"}
+                   end
+               end
+             end,
+             where: changing(:timezone),
+             only_when_valid?: true
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :email, :ci_string do
+      allow_nil? false
+      public? true
+    end
+
+    attribute :hashed_password, :string do
+      sensitive? true
+    end
+
+    attribute :confirmed_at, :utc_datetime_usec
+
+    attribute :roles, {:array, :string} do
+      allow_nil? false
+      default []
+    end
+
+    attribute :username, :string
+    attribute :display_name, :string
+    attribute :display_pic_url, :string
+    attribute :display_pic_name, :string
+    attribute :first_name, :string
+    attribute :middle_name, :string
+    attribute :last_name, :string
+    attribute :tel_no, :string
+    attribute :weight_kg, :decimal
+    attribute :height_cm, :decimal
+    attribute :dob, :date
+    attribute :sex, Elixirbits.CoreUtils.Options.UserSex
+    attribute :locale, :string
+    attribute :timezone, :string
+
+    timestamps()
+  end
+
+  relationships do
+    has_many :valid_api_keys, Elixirbits.Accounts.ApiKey do
+      filter expr(valid)
+    end
+
+    has_many :addresses, Elixirbits.Address do
+      destination_attribute :user_id
+      sort sequence: :asc, id: :asc
+    end
+  end
+
+  identities do
+    identity :unique_email, [:email]
+  end
+end

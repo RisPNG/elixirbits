@@ -35,7 +35,7 @@ defmodule ElixirbitsWeb do
     quote do
       use Phoenix.Controller, formats: [:html, :json]
       import Phoenix.Controller, except: [put_flash: 3]
-      import Elixirbits.CoreUtils.ComponentHelper, only: [put_flash: 3]
+      import ElixirbitsWeb.CoreComponents.Flash, only: [put_flash: 3]
 
       use Gettext, backend: ElixirbitsWeb.Gettext
 
@@ -49,12 +49,10 @@ defmodule ElixirbitsWeb do
     quote do
       use Phoenix.LiveView
       import Phoenix.LiveView, except: [put_flash: 3]
-      import Elixirbits.CoreUtils.ComponentHelper, only: [put_flash: 3]
+      import ElixirbitsWeb.CoreComponents.Flash, only: [put_flash: 3]
 
       on_mount {ElixirbitsWeb.LiveUserAuth, :timezone}
       on_mount {ElixirbitsWeb.CoreComponents, :inputs}
-
-      import Elixirbits.CoreUtils.ComponentHelper.Calendar, only: [calendar: 1]
 
       unquote(html_helpers())
     end
@@ -64,7 +62,7 @@ defmodule ElixirbitsWeb do
     quote do
       use Phoenix.LiveComponent
       import Phoenix.LiveView, except: [put_flash: 3]
-      import Elixirbits.CoreUtils.ComponentHelper, only: [put_flash: 3]
+      import ElixirbitsWeb.CoreComponents.Flash, only: [put_flash: 3]
 
       unquote(html_helpers())
     end

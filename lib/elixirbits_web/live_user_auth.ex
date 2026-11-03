@@ -1,11 +1,11 @@
 defmodule ElixirbitsWeb.LiveUserAuth do
   import Phoenix.Component
   import Phoenix.LiveView, except: [put_flash: 3]
-  import Elixirbits.CoreUtils.ComponentHelper, only: [put_flash: 3]
+  import ElixirbitsWeb.CoreComponents.Flash, only: [put_flash: 3]
   use ElixirbitsWeb, :verified_routes
 
   alias Elixirbits.AccessControl.Permissions
-  alias Elixirbits.Accounts
+  alias Elixirbits.Users.UserService
 
   def on_mount(:timezone, _params, _session, socket) do
     socket =
@@ -14,7 +14,7 @@ defmodule ElixirbitsWeb.LiveUserAuth do
         organization =
           case socket.assigns[:nav] do
             %{organization: organization} -> organization
-            _ -> Elixirbits.Organizations.current_organization!()
+            _ -> Elixirbits.Organizations.OrganizationService.current_organization!()
           end
 
         browser_timezone =
@@ -38,7 +38,7 @@ defmodule ElixirbitsWeb.LiveUserAuth do
             user ->
               timezone = if timezone == "", do: nil, else: timezone
 
-              case Accounts.update_user_timezone(user, %{timezone: timezone}, actor: user) do
+              case UserService.update_user_timezone(user, %{timezone: timezone}, actor: user) do
                 {:ok, _user} ->
                   {:halt,
                    socket
@@ -82,7 +82,7 @@ defmodule ElixirbitsWeb.LiveUserAuth do
       |> assign(:current_path, "/")
       |> assign(:nav, %{
         items: Permissions.visible_sitenav(permissions),
-        organization: Elixirbits.Organizations.current_organization!(),
+        organization: Elixirbits.Organizations.OrganizationService.current_organization!(),
         user: permissions.user,
         timezone_form:
           to_form(%{"timezone" => (permissions.user && permissions.user.timezone) || ""}),

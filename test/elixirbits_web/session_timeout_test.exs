@@ -30,8 +30,8 @@ defmodule ElixirbitsWeb.SessionTimeoutTest do
     assert get_session(conn, "user_token") == token
   end
 
-  test "ordinary sessions expire at the 365-day inactivity limit", %{conn: conn, token: token} do
-    timeout_seconds = 365 * 24 * 60 * 60
+  test "ordinary sessions expire at the 7-day inactivity limit", %{conn: conn, token: token} do
+    timeout_seconds = 7 * 24 * 60 * 60
 
     for {idle_seconds, active?} <- [
           {timeout_seconds - 60, true},

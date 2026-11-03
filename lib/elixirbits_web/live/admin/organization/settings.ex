@@ -3,7 +3,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
 
   alias Elixirbits.CoreUtils.Options.AddressLabel
   alias Elixirbits.CoreUtils.Resource
-  alias Elixirbits.Organizations
+  alias Elixirbits.Organizations.OrganizationService
   alias Elixirbits.Organizations.Organization
   alias ElixirbitsWeb.Admin.AuditLogLive.History
 
@@ -29,7 +29,7 @@ defmodule ElixirbitsWeb.Admin.OrganizationLive.Settings do
   @impl true
   def handle_params(params, _uri, socket) do
     organization =
-      Organizations.organization_settings!(
+      OrganizationService.organization_settings!(
         actor: socket.assigns.current_user,
         load: [:addresses]
       )

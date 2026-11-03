@@ -7,7 +7,7 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
   alias Elixirbits.AccessControl.RolePerm
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
-  alias Elixirbits.Organizations
+  alias Elixirbits.Organizations.OrganizationService
   alias Elixirbits.Organizations.Organization
 
   @system %{system: true}
@@ -197,7 +197,7 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
 
     {:ok, view, html} = follow_redirect(result, conn, ~p"/admin/organization")
     assert html =~ "Organization settings saved."
-    organization = Organizations.organization_settings!(actor: @system)
+    organization = OrganizationService.organization_settings!(actor: @system)
     assert organization.name == "Created from footer"
 
     for section <- ["header", "footer"] do
@@ -221,7 +221,7 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
              |> form("#organization-form", form: %{name: "Updated from footer"})
              |> render_submit()
 
-    updated = Organizations.organization_settings!(actor: @system)
+    updated = OrganizationService.organization_settings!(actor: @system)
     assert updated.id == organization.id
     assert updated.name == "Updated from footer"
   end
@@ -231,7 +231,7 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
     role = Ash.create!(Role, %{code: "view-draft-role", name: "Saved role"}, actor: @system)
 
     organization =
-      Organizations.create_organization!(%{name: "Saved organization"}, actor: @system)
+      OrganizationService.create_organization!(%{name: "Saved organization"}, actor: @system)
 
     for level <- [5, 13, 16] do
       operator_conn = grant(conn, %{"USERS" => level, "ROLES" => level, "ORG" => level})
@@ -319,7 +319,7 @@ defmodule ElixirbitsWeb.Admin.PageActionsTest do
   } do
     user = create_user()
     role = Ash.create!(Role, %{code: "reader-target", name: "Read only"}, actor: @system)
-    Organizations.create_organization!(%{name: "Read only"}, actor: @system)
+    OrganizationService.create_organization!(%{name: "Read only"}, actor: @system)
     conn = grant(conn, %{"USERS" => 4, "ROLES" => 4, "ORG" => 4})
 
     for {path, form_id, back_path} <- [

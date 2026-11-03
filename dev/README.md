@@ -76,6 +76,12 @@ To provision another administrator, set `ELIXIRBITS_ADMIN_EMAIL` and `ELIXIRBITS
 
 Configure the remember-me lifetime on the `User` authentication strategy. The sign-in tooltip and remembered-session inactivity limit read that setting through Ash authentication metadata and use the same duration conversion as its token and cookie. The tooltip uses CLDR to display a rounded duration in words, while expiry uses the exact configured seconds.
 
+## Backend structure
+
+Backend resources are organised by table under `lib/elixirbits/`. Each resource's service owns its native Ash domain or generated code interface. Access control and ledgers each keep one shared domain for their related resources. The access-control child services generate their interfaces from the resource declarations through `Ash.CodeInterface.define_interface/2`, so they do not add forwarding functions or separate domains. Cross-resource utilities live in `_core_utils/`, while application infrastructure remains directly under `lib/elixirbits/`.
+
+Resource module names remain stable when their files move because stored AshEvents records use those names for replay. For example, `users/user.ex` still defines `Elixirbits.Accounts.User`, while `Elixirbits.Users.UserService` owns its domain and public interface. The user service also groups login throttling and email sender modules. Shared permission resolution and policy modules live in `access_control/access_control_service.ex`, and shared history and version-policy modules live in `_core_utils/resource/audit_log.ex`.
+
 ## Permissions and administration
 
 Register each protected page in `Sitenav` and give its LiveView an `on_mount` declaration for `LiveUserAuth` with `{:require_page_access, "/your/page"}`. Apply `AccessControl.ResourcePolicies` to its Ash resource with the same `path:`. Declared protected pages without a navigation entry are denied, and disabled entries or branches remain inaccessible to superusers. Home and the component showcase are public routes. Their navigation entries control where links appear.
@@ -156,7 +162,7 @@ Leave the plug's `configuration` at its empty-map default for now. The 0.3.0 ren
 
 `CoreComponents` provides forms, actions, cards, collapse panels, entry panels, tables, and inputs, including native selects, searchable comboboxes, radios, switches, password visibility, and upload previews. Its imported `<.form>` disables browser submission validation by default and delegates native form behaviour to Phoenix. Colours live in `assets/css/app.css`. Fixed form grids use explicit tracks and `subgap` for aligned transparent fields. Keep private component geometry and one-off presentation in the owning template or theme configuration. The shared stylesheet owns theme calculations, reusable input states, browser integration, and dependency skins. The showcase demonstrates the supported input modes and interactions, with select and combobox examples together under Core Inputs. Separate selection controls let the combobox show multiple tags while the native select remains a single-choice dropdown.
 
-Application `put_flash/3` calls use `CoreUtils.ComponentHelper.put_flash/3`, imported by `ElixirbitsWeb`. Each notice replaces the previous flash, including across severity changes and redirects, while preserving structured payloads. Repeating a notice restarts its dismissal timer. Flash backgrounds use the central `flash-surface` theme utility for an opaque base and a severity tint.
+Application `put_flash/3` calls use `ElixirbitsWeb.CoreComponents.Flash.put_flash/3`, imported by `ElixirbitsWeb`. Each notice replaces the previous flash, including across severity changes and redirects, while preserving structured payloads. Repeating a notice restarts its dismissal timer. Flash backgrounds use the central `flash-surface` theme utility for an opaque base and a severity tint.
 
 Client controls target current Chromium, Firefox, and Safari releases. Colour and themed calendar popovers share one native CSS anchor positioning rule for placement and viewport width constraints, with a 0.25rem vertical gap and no horizontal offset from their triggers. Each control retains its own width and height limits. Their hooks connect the existing widgets to native popovers without measuring layout or adding JavaScript positioning fallbacks. Combobox panels use scoped CSS anchors and fixed positioning to escape scrolling containers, including the account menu. Petal's hook chooses whether to open above or below and caps the list height, while CSS handles horizontal placement and viewport width limits. Their appearance stays in the central theme. Native selects use the browser's customisable picker where supported and retain its standard picker elsewhere. Calendars retain the themed Vanilla Calendar interface, with native outside-click and Escape dismissal. Keyboard arrows enter the calendar, and Tab follows the browser's focus order. Calendar focus never changes `HTMLElement.prototype`.
 
@@ -295,11 +301,11 @@ The `text` and `text-enabled` input modes use plain values with stacked labels. 
 
 Placeholders appear only on editable fields and the deliberately editable-looking `like-enabled` mode. When a field has a floating label and a placeholder, the label takes priority while the empty field is inactive. Focusing the field floats the label and reveals the placeholder until a value is entered. File inputs are the exception when an explicit, non-empty placeholder is supplied: their label stays floated and the empty prompt remains visible before focus in editable-like modes. Text modes keep their stacked labels, and unlabelled fields retain their placeholders. Disabled and read-only fields omit empty-state hints, including file prompts and the telephone country hint, and keep their titles in the active position even without a value. Actual values and filenames remain visible. Native disabled fieldsets apply this presentation automatically, including picker and upload interaction guards, without repeating the disabled flag on each field. Controls inside the fieldset's first legend retain the browser's editable exception, and deliberately editable-looking display modes keep their appearance. Layout Test provides separate Disabled and Disabled fieldset controls to exercise both paths.
 
-`CoreUtils.ComponentHelper.Calendar.calendar/1` renders day, week, month, year, schedule, and resource views. It accepts plain event maps, converts UTC datetimes to the display timezone, clips events across local days, and emits `calendar_change` events for navigation and selection. Timed event controls support keyboard activation. `LiveTimer` displays elapsed or countdown time from an absolute `data-target` datetime.
+`ElixirbitsWeb.CoreComponents.calendar/1` renders day, week, month, year, schedule, and resource views. It accepts plain event maps, converts UTC datetimes to the display timezone, clips events across local days, and emits `calendar_change` events for navigation and selection. Timed event controls support keyboard activation. `LiveTimer` displays elapsed or countdown time from an absolute `data-target` datetime.
 
-`CoreUtils.Resource` owns Ash metadata, relationship loading, sequence allocation, and form integration. `CoreUtils.Parse` owns the application's value-conversion rules, `CoreUtils.Options` groups reusable enum types and selection catalogues, and `CoreUtils.Search` owns query construction and option filtering. The utility files group related operations into sections, with broadly shared behaviour first. Datetime conversion preserves microseconds by default and supports explicit precision.
+`CoreUtils.Resource` and its child utilities live together under `lib/elixirbits/_core_utils/resource/`. The parent owns Ash metadata, relationship loading, sequence allocation, and form integration. `CoreUtils.Resource.Search` owns query construction and option filtering, while `CoreUtils.Resource.AuditLog` owns history, revision previews, restoration, and version-policy support. `CoreUtils.Parse` owns value-conversion rules, and `CoreUtils.Options` groups reusable enum types and selection catalogues. Related operations are sectioned from broadly shared behaviour to narrower details. Datetime conversion preserves microseconds by default and supports explicit precision.
 
-`CoreUtils.ComponentHelper` groups support for shared components and forms in `lib/elixirbits/core_utils/component_helper.ex`. Its `put_flash/3` function owns notification replacement and dismissal signalling. Its `Upload` module handles public file persistence and cleanup. Its `Calendar` module owns the custom event calendar's rendering, view preparation, and layout, with sibling HEEx templates under `component_helper/calendar/`. Tailwind and development live reload include the core utilities directory. The Vanilla Calendar Pro input picker integration remains in `assets/js/vcalendar.js`.
+`ElixirbitsWeb.CoreComponents` groups shared UI components and their supporting modules in `lib/elixirbits_web/components/core_components/core_components.ex`. Its sibling `core_components.html.heex` contains the markup, organised into sections selected through native HEEx branches. Component functions prepare their assigns and retain Phoenix attribute, slot, and change tracking behaviour. The same Elixir file holds calendar calculations, flash replacement, public upload persistence and cleanup, and the native Cinder theme configuration as separate related modules. The Vanilla Calendar Pro input picker integration remains in `assets/js/vcalendar.js`, with styling in the calendar sections of `assets/css/app.css`.
 
 ### Colour inputs
 
@@ -371,10 +377,12 @@ For example, **09:30 in Kuala Lumpur becomes 01:30 UTC in storage and displays a
 Document numbers use a separate counter for each document type and full local date:
 
 ```elixir
-Elixirbits.Numbering.next_number("INV", ~D[2026-10-09])
+Elixirbits.NumberSequences.NumberSequenceService.next_number("INV", ~D[2026-10-09])
 # "INV-20261009-00001"
 
-Elixirbits.Numbering.next_number("INV", DateTime.utc_now(), timezone: "Asia/Kuala_Lumpur")
+Elixirbits.NumberSequences.NumberSequenceService.next_number("INV", DateTime.utc_now(),
+  timezone: "Asia/Kuala_Lumpur"
+)
 ```
 
 Allocation uses an atomic database increment. Formatting can change the prefix, suffix, separator, and padding, but cannot replace the allocated counter. Cancelled documents may leave gaps.
@@ -405,7 +413,7 @@ Before adding a new form, make sure its resource or action enforces the constrai
 
 ## Upload storage
 
-Public uploads are stored in `var/uploads/public` during development and `tmp/uploads/public` during tests. `CoreUtils.ComponentHelper.Upload` consumes LiveView uploads into the configured directory and returns `/uploads/...` URLs. The user editor validates before consuming files and removes new files when saving fails. Replaced pictures are removed after a successful save.
+Public uploads are stored in `var/uploads/public` during development and `tmp/uploads/public` during tests. `ElixirbitsWeb.CoreComponents.Upload` consumes LiveView uploads into the configured directory and returns `/uploads/...` URLs. The user editor validates before consuming files and removes new files when saving fails. Replaced pictures are removed after a successful save.
 
 In production, set `UPLOAD_DIRECTORY` to a writable, persistent directory outside the release. Files in this directory are served publicly. Private documents need a separate authorised storage and download flow.
 

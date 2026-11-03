@@ -1,6 +1,6 @@
 defmodule Elixirbits.Organizations.Organization do
   use Ash.Resource,
-    domain: Elixirbits.Organizations,
+    domain: Elixirbits.Organizations.OrganizationService,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events, AshPaperTrail.Resource]
@@ -26,11 +26,11 @@ defmodule Elixirbits.Organizations.Organization do
     only_when_changed? false
     store_action_name? true
     operation_id_field :operation_id
-    belongs_to_actor :actor, Elixirbits.Accounts.User, domain: Elixirbits.Accounts
+    belongs_to_actor :actor, Elixirbits.Accounts.User, domain: Elixirbits.Users.UserService
     metadata :actor_name, :string
     metadata :restored_from_version_id, :uuid
     version_extensions authorizers: [Ash.Policy.Authorizer]
-    mixin Elixirbits.AuditLog.Version
+    mixin Elixirbits.CoreUtils.Resource.AuditLog.Version
   end
 
   actions do

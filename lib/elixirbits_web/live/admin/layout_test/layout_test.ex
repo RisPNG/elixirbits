@@ -1,7 +1,7 @@
 defmodule ElixirbitsWeb.Admin.LayoutTestLive do
   use ElixirbitsWeb, :live_view
 
-  alias Elixirbits.CoreUtils.ComponentHelper.Calendar, as: CalendarUtils
+  alias ElixirbitsWeb.CoreComponents.Calendar, as: CalendarUtils
   alias Elixirbits.CoreUtils.Parse
   alias Elixirbits.CoreUtils.Parse.Color
 

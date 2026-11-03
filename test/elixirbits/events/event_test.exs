@@ -8,7 +8,7 @@ defmodule Elixirbits.Events.EventTest do
   alias Elixirbits.Events.Event
   alias Elixirbits.Accounts.User
   alias Elixirbits.AccessControl.Role
-  alias Elixirbits.Numbering
+  alias Elixirbits.NumberSequences.NumberSequenceService
   alias Elixirbits.Ledger.Account
   alias Elixirbits.Ledger.Transfer
 
@@ -111,7 +111,7 @@ defmodule Elixirbits.Events.EventTest do
 
     event_query = Ash.Query.for_read(Event, :read, %{}, actor: system)
     event_ids = event_query |> Ash.read!() |> Enum.map(& &1.id) |> Enum.sort()
-    assert Numbering.next_number(code, ~D[2026-07-08]) == "#{code}-20260708-00001"
+    assert NumberSequenceService.next_number(code, ~D[2026-07-08]) == "#{code}-20260708-00001"
 
     assert :ok = Elixirbits.Events.ClearAllRecords.clear_records!([])
     assert Ash.read!(version_query, actor: system) == []
@@ -143,6 +143,6 @@ defmodule Elixirbits.Events.EventTest do
            |> Enum.sort() == history
 
     assert event_query |> Ash.read!() |> Enum.map(& &1.id) |> Enum.sort() == event_ids
-    assert Numbering.next_number(code, ~D[2026-07-08]) == "#{code}-20260708-00002"
+    assert NumberSequenceService.next_number(code, ~D[2026-07-08]) == "#{code}-20260708-00002"
   end
 end

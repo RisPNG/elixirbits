@@ -8,7 +8,7 @@ defmodule ElixirbitsWeb.Admin.UserManagementTest do
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
   alias Elixirbits.Address
-  alias Elixirbits.AuditLog
+  alias Elixirbits.CoreUtils.Resource.AuditLog
 
   @system %{system: true}
 
