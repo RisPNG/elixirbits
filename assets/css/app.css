@@ -10,7 +10,7 @@
 @source "../css";
 @source "../js";
 @source "../../lib/elixirbits_web";
-@source "../../lib/elixirbits/_core_utils";
+@source "../../lib/elixirbits/core_utils";
 @source "../../priv/repo";
 
 @plugin "../vendor/heroicons";

@@ -61,7 +61,7 @@ config :elixirbits, ElixirbitsWeb.Endpoint,
       ~r"lib/elixirbits_web/router\.ex$"E,
       ~r"lib/elixirbits_web/(controllers|live|components)/.*\.(ex|heex)$"E,
       # Shared core utilities
-      ~r"lib/elixirbits/_core_utils/.*\.(ex|heex)$"E
+      ~r"lib/elixirbits/core_utils/.*\.(ex|heex)$"E
     ]
   ]
 
