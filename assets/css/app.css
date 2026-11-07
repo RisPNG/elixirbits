@@ -1,5 +1,7 @@
 /* Build inputs */
 
+@import url("/fonts/quanta-strike/quanta-strike.css");
+@import "../../priv/static/fonts/razor/fonts.css";
 @import "tailwindcss" source(none);
 @import "vanilla-calendar-pro/styles/index.css";
 @import "./subgap.css";
