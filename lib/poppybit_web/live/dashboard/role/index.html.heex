@@ -1,0 +1,56 @@
+<Layouts.dashboard user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <.page id="roles-collection" phx-hook="CinderPagination" class="space-y-4">
+    <:title>{@page_title}</:title>
+
+    <:actions :let={position} :if={can?(@permissions, @current_path, :create)}>
+      <.action_button
+        navigate={~p"/dashboard/admin/roles/create"}
+        id={if position == :top, do: "new-role", else: "new-role-bottom"}
+        action={:create}
+      />
+    </:actions>
+
+    <Cinder.Collection.collection
+      id="roles-table"
+      query={@query}
+      actor={@current_user}
+      query_opts={[authorize?: true]}
+      page_size={20}
+      show_filters={true}
+    >
+      <:col :let={r} field="code" label="Code" sort filter search>{r.code}</:col>
+
+      <:col :let={r} field="name" label="Name" sort filter search>{r.name}</:col>
+
+      <:col :let={r} field="description" label="Description">{r.description}</:col>
+
+      <:col :let={r} label="Actions">
+        <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center justify-start gap-2">
+          <.action_button
+            :if={can?(@permissions, @current_path, :read)}
+            action={:read}
+            navigate={~p"/dashboard/admin/roles/#{r.id}/read"}
+          />
+          <.action_button
+            :if={can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/dashboard/admin/roles/#{r.id}/update"}
+          />
+          <.action_button
+            :if={r.code != "superuser" and can?(@permissions, @current_path, :delete)}
+            action={:delete}
+            phx-click="request_delete"
+            phx-value-id={r.id}
+          />
+        </div>
+      </:col>
+    </Cinder.Collection.collection>
+  </.page>
+
+  <.delete_confirmation
+    :if={@to_delete}
+    label="role"
+    name={@to_delete.name}
+    remove_assignments?={@remove_assignments?}
+  />
+</Layouts.dashboard>

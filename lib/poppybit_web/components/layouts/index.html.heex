@@ -1,0 +1,32 @@
+<div class="grid min-h-screen grid-rows-[4rem_minmax(0,1fr)] bg-primary text-content">
+  <header class="shell-surface sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_max-content] items-center gap-6 px-6">
+    <a
+      href={~p"/"}
+      class="grid w-fit max-w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-2"
+    >
+      <img src={~p"/images/poppybit.png"} width="32" height="32" alt="" />
+      <span class="truncate text-sm font-semibold">
+        {(@organization && @organization.name) || "Poppybit"}
+      </span>
+    </a>
+
+    <div class="grid grid-cols-[max-content_max-content] items-center gap-6">
+      <nav aria-label="Main navigation">
+        <a
+          href={~p"/"}
+          aria-current={if @live_action == :index, do: "page"}
+          class="grid min-h-11 items-center rounded-default px-3 text-sm font-medium text-content transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+        >Home</a>
+      </nav>
+
+      <.theme_toggle />
+    </div>
+  </header>
+
+  <main class="min-w-0 px-8 py-10">
+    <div class="mx-auto min-w-0 max-w-[80rem]">
+      {@inner_content}
+    </div>
+  </main>
+</div>
+<.flash_group flash={@flash} />

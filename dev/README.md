@@ -55,6 +55,12 @@ npm 12 reads `allow-git=root` from `assets/.npmrc`, permitting Git dependencies 
 
 Open [localhost:4000](http://localhost:4000) for the public home page. Its topbar contains the application icon, organisation name, theme switcher, and Home link. The application workspace is at [localhost:4000/dashboard](http://localhost:4000/dashboard), and its existing sidebar, account menu, authentication pages, administration, and development tools use that prefix. Sign in at `/dashboard/sign-in`. The component showcase is at `/dashboard/dev_panel/layout_test`.
 
+The public route uses `PoppybitWeb.IndexLive.Index` in `lib/poppybit_web/live/index/index.ex`, with its content in the sibling `index.html.heex`. Its native LiveView layout is `lib/poppybit_web/components/layouts/index.html.heex`. The public live session accepts guests and signed-in visitors, and the page loads the organisation's public metadata. Dashboard navigation and account controls belong to the separate dashboard layout and live session.
+
+Dashboard pages use `Layouts.dashboard`, with the topbar, sidebar, and account controls in `lib/poppybit_web/components/layouts/dashboard.html.heex`. Both layouts share the HTML document in `lib/poppybit_web/components/layouts/root.html.heex`.
+
+Dashboard feature pages and authentication live under `lib/poppybit_web/live/dashboard/`, with their corresponding modules under `PoppybitWeb.Dashboard`. Shared history rendering and hooks live in `lib/poppybit_web/live/audit_log/` as `PoppybitWeb.AuditLogLive.History`. The public index stays in `lib/poppybit_web/live/index/`.
+
 Development uses `poppybit_template_dev` and tests use `poppybit_template_test`, with PostgreSQL credentials configured in `config/dev.exs` and `config/test.exs`. Set `DATABASE_NAME` or `TEST_DATABASE_NAME` to use another database. PostgreSQL connections use UTC, while forms and calendars apply the requested display timezone.
 
 Seeds register dashboard navigation entries and the `superuser` role, preserving existing grants and disabled navigation entries. Repeating the seeds updates older navigation URLs to their `/dashboard` destinations using the existing entry codes. They also provide these default accounts:
@@ -366,7 +372,7 @@ forms =
 
 Pass `forms: forms` to the constructor, using the actual relationship key and action. If the generated child options already contain a transform, retain it and compose datetime conversion in that native callback instead of replacing it. Construct or add child forms before validating their user inputs, as the current address editors do. Directly submitted new child params are converted before the child action runs. An initial child constructor's source is not a substitute for validation. Current address forms have no editable datetime fields.
 
-Inputs bound to an AshPhoenix field obtain the timezone from the form's shared context. Pass `timezone={@user_timezone}` to standalone datetime inputs and `timezone={@user_timezone}` to calendars. Pass `user_timezone={@user_timezone}` to `Layouts.app` so the account menu shows the effective setting. Date, time, week, and month inputs keep their calendar or clock values.
+Inputs bound to an AshPhoenix field obtain the timezone from the form's shared context. Pass `timezone={@user_timezone}` to standalone datetime inputs and `timezone={@user_timezone}` to calendars. Pass `user_timezone={@user_timezone}` to `Layouts.dashboard` so the account menu shows the effective setting. Date, time, week, and month inputs keep their calendar or clock values.
 
 Local clocks can be ambiguous or nonexistent when daylight-saving rules change. The server rejects those datetime inputs with a field error and preserves the entered text. An API caller can distinguish repeated clocks by supplying an explicit offset. `Parse.to_datetime(value, source_timezone: zone, on_invalid: :error)` returns tagged errors for invalid, ambiguous, and nonexistent input instead of choosing an instant silently.
 

@@ -1,0 +1,273 @@
+<Layouts.dashboard user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <% editable? =
+    @live_action == :update and can?(@permissions, @current_path, @form.source.type) %>
+  <History.history audit={@audit} user_timezone={@user_timezone} />
+  <.form
+    for={@form}
+    id="organization-form"
+    phx-change={if editable?, do: "validate"}
+    phx-submit={if editable?, do: "save"}
+    class="space-y-6"
+  >
+    <.page>
+      <:title>{@page_title}</:title>
+
+      <:actions :if={
+        @live_action == :update or can?(@permissions, @current_path, @form.source.type)
+      }>
+        <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
+          <.action_button
+            :if={@live_action == :update}
+            action={:read}
+            navigate={~p"/dashboard/admin/organization"}
+          />
+          <.action_button
+            :if={
+              @live_action == :read and @form.source.type == :update and
+                can?(@permissions, @current_path, :update)
+            }
+            action={:history}
+            patch={@audit.history_path}
+          />
+          <.action_button
+            :if={@live_action == :read and can?(@permissions, @current_path, @form.source.type)}
+            action={:update}
+            navigate={~p"/dashboard/admin/organization/update"}
+          />
+          <.action_button
+            :if={editable?}
+            action={:save}
+            type="submit"
+            tooltip="Save settings"
+          />
+        </div>
+      </:actions>
+
+      <.card>
+        <div class="grid grid-cols-[2fr_1fr_1fr] subgap-2">
+          <.input
+            field={@form[:name]}
+            type="text"
+            label="Name"
+            render_as={if editable?, do: "enabled", else: "disabled"}
+          />
+          <.input
+            field={@form[:registration_no]}
+            type="text"
+            label="Registration number"
+            render_as={if editable?, do: "enabled", else: "disabled"}
+          />
+          <.input
+            field={@form[:tax_identification_no]}
+            type="text"
+            label="Tax identification number"
+            render_as={if editable?, do: "enabled", else: "disabled"}
+          />
+        </div>
+
+        <div class="grid grid-cols-[1fr_1fr_2fr] subgap-2">
+          <.input
+            field={@form[:base_currency]}
+            type="combobox"
+            label="Base currency"
+            options={@currency_options}
+            clearable={false}
+            required
+            render_as={if editable?, do: "enabled", else: "disabled"}
+          />
+          <.input
+            field={@form[:locale]}
+            type="combobox"
+            label="Locale"
+            options={@locale_options}
+            clearable={false}
+            required
+            render_as={if editable?, do: "enabled", else: "disabled"}
+          />
+          <.input
+            field={@form[:timezone]}
+            type="combobox"
+            label="Timezone"
+            options={@timezone_options}
+            clearable={false}
+            required
+            render_as={if editable?, do: "enabled", else: "disabled"}
+          />
+        </div>
+
+        <div class="grid grid-cols-[2fr_2fr] subgap-2">
+          <.input
+            field={@form[:email]}
+            type="email"
+            label="Email"
+            render_as={if editable?, do: "enabled", else: "disabled"}
+          />
+          <.input
+            field={@form[:phone]}
+            type="tel"
+            label="Phone"
+            render_as={if editable?, do: "enabled", else: "disabled"}
+          />
+        </div>
+      </.card>
+
+      <.card>
+        <.header>
+          Addresses
+          <:actions>
+            <.action_button
+              :if={editable? and can?(@permissions, @current_path, :create)}
+              action={:create}
+              type="button"
+              phx-click="add_form"
+              tooltip="Add"
+            />
+          </:actions>
+        </.header>
+
+        <div class="grid grid-cols-[1fr_1fr] gap-y-4">
+          <.inputs_for :let={af} field={@form[:addresses]}>
+            <% recorded_fields =
+              af.source.data && Ash.Resource.get_metadata(af.source.data, :audit_recorded_fields)
+
+            position =
+              cond do
+                editable? ->
+                  af.index + 1
+
+                Ash.Resource.get_metadata(af.source.data, :audit_removed?) ->
+                  nil
+
+                recorded_fields && not MapSet.member?(recorded_fields, "sequence") ->
+                  Ash.Resource.get_metadata(af.source.data, :audit_position) + 1
+
+                true ->
+                  af[:sequence].value
+              end %>
+            <.entry_panel label="Address" index={af.index} columns={2}>
+              <:sequence>
+                <.input
+                  field={af[:sequence]}
+                  name={"address_position[#{af.index}]"}
+                  type={if editable?, do: "number", else: "text"}
+                  render_as={if editable?, do: "text", else: "text-disabled"}
+                  value={position || "nil"}
+                  min={1}
+                  max={length(@form.source.forms[:addresses] || [])}
+                  step={1}
+                  disabled={!editable?}
+                  aria-label={"Address #{position || "nil"} sequence"}
+                  phx-debounce={nil}
+                  class="min-w-0 w-full appearance-none border-0 bg-transparent p-0 py-1 text-left text-sm font-semibold text-content focus:outline-none focus:ring-0 focus-visible:underline disabled:text-subcontent disabled:cursor-not-allowed"
+                />
+              </:sequence>
+              <:actions>
+                <.action_button
+                  :if={
+                    editable? and
+                      (af.source.type == :create or can?(@permissions, @current_path, :delete))
+                  }
+                  action={:delete}
+                  type="button"
+                  phx-click="remove_form"
+                  phx-value-path={af.name}
+                  tooltip="Remove address"
+                />
+              </:actions>
+
+              <div class="grid grid-cols-[1fr_3fr] subgap-2">
+                <.input
+                  id={"#{af.id}_label_select"}
+                  field={af[:label]}
+                  type="combobox"
+                  label="Label"
+                  options={@label_options}
+                  prompt="None"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+                <.input
+                  field={af[:other_label]}
+                  type="text"
+                  label="Nickname"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+              </div>
+
+              <div class="grid grid-cols-[2fr_2fr] subgap-2">
+                <.input
+                  field={af[:contact_name]}
+                  type="text"
+                  label="Contact name"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+                <.input
+                  field={af[:contact_tel_no]}
+                  type="text"
+                  label="Contact"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+              </div>
+
+              <div class="grid grid-cols-[4fr] subgap-2">
+                <.input
+                  field={af[:line_1]}
+                  type="text"
+                  label="Line 1"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+              </div>
+
+              <div class="grid grid-cols-[4fr] subgap-2">
+                <.input
+                  field={af[:line_2]}
+                  type="text"
+                  label="Line 2"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+              </div>
+
+              <div class="grid grid-cols-[4fr] subgap-2">
+                <.input
+                  field={af[:line_3]}
+                  type="text"
+                  label="Line 3"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+              </div>
+
+              <div class="grid grid-cols-[1fr_3fr] subgap-2">
+                <.input
+                  field={af[:postal_code]}
+                  type="text"
+                  label="Postal code"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+                <.input
+                  field={af[:city]}
+                  type="text"
+                  label="City"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+              </div>
+
+              <div class="grid grid-cols-[2fr_2fr] subgap-2">
+                <.input
+                  field={af[:state]}
+                  type="text"
+                  label="State"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+                <.input
+                  field={af[:country]}
+                  type="text"
+                  label="Country"
+                  render_as={if editable?, do: "enabled", else: "disabled"}
+                />
+              </div>
+            </.entry_panel>
+          </.inputs_for>
+        </div>
+      </.card>
+    </.page>
+  </.form>
+</Layouts.dashboard>

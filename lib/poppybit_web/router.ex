@@ -33,7 +33,12 @@ defmodule PoppybitWeb.Router do
   scope "/", PoppybitWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    ash_authentication_live_session :public_routes,
+      layout: {PoppybitWeb.Layouts, :index},
+      on_mount: [{PoppybitWeb.LiveUserAuth, :live_user_optional}] do
+      live "/", IndexLive.Index, :index
+    end
+
     post "/rpc/run", AshTypescriptRpcController, :run
     post "/rpc/validate", AshTypescriptRpcController, :validate
   end
@@ -54,7 +59,7 @@ defmodule PoppybitWeb.Router do
       ] do
       live "/", DashboardLive, :index
 
-      scope "/admin", Admin do
+      scope "/admin", Dashboard do
         live "/users", UserLive.Index, :index
         live "/users/create", UserLive.Entry, :create
         live "/users/:id/read", UserLive.Entry, :read
@@ -67,7 +72,7 @@ defmodule PoppybitWeb.Router do
         live "/organization/update", OrganizationLive.Settings, :update
       end
 
-      scope "/dev_panel", Admin do
+      scope "/dev_panel", Dashboard do
         live "/layout_test", LayoutTestLive, :index
       end
     end
@@ -77,16 +82,16 @@ defmodule PoppybitWeb.Router do
 
     ash_authentication_live_session :login_routes,
       on_mount: [{PoppybitWeb.LiveUserAuth, :live_no_user}] do
-      live "/sign-in", LoginLive.Index, :sign_in
-      live "/register", LoginLive.Register, :register
-      live "/reset", LoginLive.ForgotPassword, :forgot_password
-      live "/password-reset/:token", LoginLive.ResetPassword, :reset_password
-      live "/magic_link/:token", LoginLive.MagicLink, :sign_in
+      live "/sign-in", Dashboard.LoginLive.Index, :sign_in
+      live "/register", Dashboard.LoginLive.Register, :register
+      live "/reset", Dashboard.LoginLive.ForgotPassword, :forgot_password
+      live "/password-reset/:token", Dashboard.LoginLive.ResetPassword, :reset_password
+      live "/magic_link/:token", Dashboard.LoginLive.MagicLink, :sign_in
     end
 
     ash_authentication_live_session :confirmation_routes,
       on_mount: [{PoppybitWeb.LiveUserAuth, :live_user_optional}] do
-      live "/confirm_new_user/:token", LoginLive.Confirm, :confirm
+      live "/confirm_new_user/:token", Dashboard.LoginLive.Confirm, :confirm
     end
   end
 
