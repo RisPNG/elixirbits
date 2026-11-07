@@ -1,6 +1,6 @@
-alias Elixirbits.AccessControl.Role
-alias Elixirbits.AccessControl.Sitenav
-alias Elixirbits.Accounts.User
+alias Poppybit.AccessControl.Role
+alias Poppybit.AccessControl.Sitenav
+alias Poppybit.Accounts.User
 
 require Ash.Query
 
@@ -24,7 +24,7 @@ Ash.create!(
     description: "Open your application workspace.",
     level: 1,
     parent: nil,
-    url: "",
+    url: "dashboard",
     sequence: 0,
     state: :ENABLED,
     roles_bypass: ["public"],
@@ -46,7 +46,7 @@ Ash.create!(
     description: "Manage account profiles and role assignments.",
     level: 2,
     parent: "ADMIN",
-    url: "admin/users",
+    url: "dashboard/admin/users",
     sequence: 110,
     state: :ENABLED
   },
@@ -56,7 +56,7 @@ Ash.create!(
     description: "Manage page permissions for each role.",
     level: 2,
     parent: "ADMIN",
-    url: "admin/roles",
+    url: "dashboard/admin/roles",
     sequence: 120,
     state: :ENABLED
   },
@@ -66,7 +66,7 @@ Ash.create!(
     description: "Manage application details and contact information.",
     level: 2,
     parent: "ADMIN",
-    url: "admin/organization",
+    url: "dashboard/admin/organization",
     sequence: 130,
     state: :ENABLED
   },
@@ -89,7 +89,7 @@ Ash.create!(
     description: "Showcases most, if not all, front-end components.",
     level: 2,
     parent: "DP",
-    url: "dev_panel/layout_test",
+    url: "dashboard/dev_panel/layout_test",
     sequence: 3000,
     state: :ENABLED,
     roles_bypass: ["public"],
@@ -107,12 +107,12 @@ Ash.create!(
 end)
 
 accounts = [
-  %{email: "admin@elixirbits.dev", password: "admin", administrator?: true},
-  %{email: "user@elixirbits.dev", password: "user", administrator?: false}
+  %{email: "admin@poppybit.dev", password: "admin", administrator?: true},
+  %{email: "user@poppybit.dev", password: "user", administrator?: false}
 ]
 
 accounts =
-  case System.get_env("ELIXIRBITS_ADMIN_EMAIL") do
+  case System.get_env("POPPYBIT_ADMIN_EMAIL") do
     nil ->
       accounts
 
@@ -121,7 +121,7 @@ accounts =
         [
           %{
             email: email,
-            password: System.get_env("ELIXIRBITS_ADMIN_PASSWORD"),
+            password: System.get_env("POPPYBIT_ADMIN_PASSWORD"),
             administrator?: true
           }
         ]

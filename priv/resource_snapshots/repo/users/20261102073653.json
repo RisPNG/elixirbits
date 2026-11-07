@@ -296,7 +296,7 @@
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.Elixirbits.Repo",
+  "repo": "Elixir.Poppybit.Repo",
   "schema": null,
   "table": "users",
   "temporal": null

@@ -160,7 +160,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": false,
-  "hash": "877CA007885075B4A43D2316E6F97F1A91DAB5760E268A756126C9043E092031",
+  "hash": "218757D94B36CF1245BE32F9E04691641E1DF8AED84461E7087920F84664EA78",
   "identities": [
     {
       "all_tenants?": false,
@@ -182,7 +182,7 @@
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.Elixirbits.Repo",
+  "repo": "Elixir.Poppybit.Repo",
   "schema": null,
   "table": "organizations",
   "temporal": null

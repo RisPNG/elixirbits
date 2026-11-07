@@ -4,11 +4,11 @@ config :ash, policies: [show_policy_breakdowns?: true]
 config :live_debugger, port: 5000, auto_port: true
 
 # Configure your database
-config :elixirbits, Elixirbits.Repo,
+config :poppybit, Poppybit.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: System.get_env("DATABASE_NAME", "elixirbits_template_dev"),
+  database: System.get_env("DATABASE_NAME", "poppybit_template_dev"),
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -16,7 +16,7 @@ config :elixirbits, Elixirbits.Repo,
 # For development, we disable any cache and enable debugging and code reloading.
 #
 # The watchers configuration can be used to run external watchers to your application. For example, we can use it to bundle .js and .css sources.
-config :elixirbits, ElixirbitsWeb.Endpoint,
+config :poppybit, PoppybitWeb.Endpoint,
   auto_port: true,
   # Binding to loopback ipv4 address prevents access from other machines. Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}],
@@ -25,8 +25,8 @@ config :elixirbits, ElixirbitsWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "RhJ/rdjiVvCHZXoK17Ge4LtQx9jwKBPEsoUYUvGesZn4KX7JmbnHf5R9YjGg4kQC",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:elixirbits, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:elixirbits, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:poppybit, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:poppybit, ~w(--watch)]}
   ]
 
 # ## SSL Support
@@ -49,7 +49,7 @@ config :elixirbits, ElixirbitsWeb.Endpoint,
 # If desired, both `http:` and `https:` keys can be configured to run both http and https servers on different ports.
 
 # Reload browser tabs when matching files change.
-config :elixirbits, ElixirbitsWeb.Endpoint,
+config :poppybit, PoppybitWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
@@ -58,15 +58,15 @@ config :elixirbits, ElixirbitsWeb.Endpoint,
       # Gettext translations
       ~r"priv/gettext/.*\.po$"E,
       # Router, Controllers, LiveViews and LiveComponents
-      ~r"lib/elixirbits_web/router\.ex$"E,
-      ~r"lib/elixirbits_web/(controllers|live|components)/.*\.(ex|heex)$"E,
+      ~r"lib/poppybit_web/router\.ex$"E,
+      ~r"lib/poppybit_web/(controllers|live|components)/.*\.(ex|heex)$"E,
       # Shared core utilities
-      ~r"lib/elixirbits/core_utils/.*\.(ex|heex)$"E
+      ~r"lib/poppybit/core_utils/.*\.(ex|heex)$"E
     ]
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :elixirbits, dev_routes: true, token_signing_secret: "1rBYG/+YK2YUh9CdFdenYgIemNpvliop"
+config :poppybit, dev_routes: true, token_signing_secret: "1rBYG/+YK2YUh9CdFdenYgIemNpvliop"
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

@@ -1,4 +1,4 @@
-defmodule Elixirbits.Repo.Migrations.InitialSchema do
+defmodule Poppybit.Repo.Migrations.InitialSchema do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 

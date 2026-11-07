@@ -100,7 +100,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": false,
-  "hash": "1AEFC69851B775894E14C1C57EDEB8FF0337248A1CA606A7EBE5DCEAAADFE970",
+  "hash": "EC8BE7428A4F63E4DE14F3F02513439F2FC60C520C72B95D3A40D393BAB3938A",
   "identities": [
     {
       "all_tenants?": false,
@@ -122,7 +122,7 @@
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.Elixirbits.Repo",
+  "repo": "Elixir.Poppybit.Repo",
   "schema": null,
   "table": "api_keys",
   "temporal": null

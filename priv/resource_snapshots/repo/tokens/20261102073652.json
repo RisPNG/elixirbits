@@ -91,14 +91,14 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "981F44F6A9F9A745B86ED561AE8B33ECF2EA6EBAA41FA4C3BE25BBCB017347FC",
+  "hash": "A58408803D7C12FA9F5D749179E8C59863F8E9BC8B536893413FDAFF1BF212FF",
   "identities": [],
   "multitenancy": {
     "attribute": null,
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.Elixirbits.Repo",
+  "repo": "Elixir.Poppybit.Repo",
   "schema": null,
   "table": "tokens",
   "temporal": null

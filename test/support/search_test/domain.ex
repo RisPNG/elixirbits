@@ -1,8 +1,8 @@
-defmodule Elixirbits.SearchTest.Domain do
-  use Ash.Domain, otp_app: :elixirbits, validate_config_inclusion?: false
+defmodule Poppybit.SearchTest.Domain do
+  use Ash.Domain, otp_app: :poppybit, validate_config_inclusion?: false
 
   resources do
-    resource Elixirbits.SearchTest.Category
-    resource Elixirbits.SearchTest.Record
+    resource Poppybit.SearchTest.Category
+    resource Poppybit.SearchTest.Record
   end
 end

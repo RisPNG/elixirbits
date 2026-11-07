@@ -9,8 +9,8 @@
 @source "../../deps/petal_components/lib/petal_components/combo_box.ex";
 @source "../css";
 @source "../js";
-@source "../../lib/elixirbits_web";
-@source "../../lib/elixirbits/core_utils";
+@source "../../lib/poppybit_web";
+@source "../../lib/poppybit/core_utils";
 @source "../../priv/repo";
 
 @plugin "../vendor/heroicons";
@@ -19,18 +19,20 @@
 /* Global theme tokens and light colors */
 
 @theme static {
-  --theme-light-content: oklch(24% 0.016 252.42);
-  --theme-light-subcontent: oklch(44% 0.024 252.42);
-  --theme-dark-content: oklch(96% 0.003 252.42);
-  --theme-dark-subcontent: oklch(78% 0.012 252.42);
+  --theme-light-content: #16181c;
+  --theme-light-subcontent: #535b65;
+  --theme-dark-content: #f0f0f0;
+  --theme-dark-subcontent: #b0bac5;
 
   --color-primary: #ffffff;
-  --color-secondary: #e3e1e5;
+  --color-secondary: #e5e7eb;
   --color-content: var(--theme-light-content);
   --color-subcontent: var(--theme-light-subcontent);
   --color-content-inverse: var(--theme-dark-content);
   --color-subcontent-inverse: var(--theme-dark-subcontent);
-  --color-brand: #7e49b3;
+  --color-brand: #ff496e;
+  --color-brand-content: var(--theme-light-content);
+  --color-brand-subcontent: #22252a;
   --color-info: #6b91b4;
   --color-success: #659780;
   --color-warning: #ad8340;
@@ -79,8 +81,8 @@
 /* Dark colors */
 
 [data-theme="dark"] {
-  --color-primary: #141414;
-  --color-secondary: #28252d;
+  --color-primary: #16181c;
+  --color-secondary: #26292f;
   --color-content: var(--theme-dark-content);
   --color-subcontent: var(--theme-dark-subcontent);
   --color-content-inverse: var(--theme-light-content);
@@ -90,7 +92,7 @@
   --color-warning: #8c642b;
   --color-error: #a24755;
 
-  --color-outline: #444444;
+  --color-outline: #535b65;
   --outline-target: var(--color-light);
   --outline-strength: 24%;
 }
@@ -99,8 +101,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-primary: #141414;
-    --color-secondary: #28252d;
+    --color-primary: #16181c;
+    --color-secondary: #26292f;
     --color-content: var(--theme-dark-content);
     --color-subcontent: var(--theme-dark-subcontent);
     --color-content-inverse: var(--theme-light-content);
@@ -110,7 +112,7 @@
     --color-warning: #8c642b;
     --color-error: #a24755;
 
-    --color-outline: #444444;
+    --color-outline: #535b65;
     --outline-target: var(--color-light);
     --outline-strength: 24%;
   }
@@ -553,7 +555,7 @@
 }
 
 @utility button-primary {
-  @apply border border-brand bg-brand text-content-inverse dark:text-content shadow-button hover:overlay-dark focus:border-brand active:shadow-none disabled:shadow-none;
+  @apply border border-brand bg-brand text-brand-content shadow-button hover:overlay-dark focus:border-brand active:shadow-none disabled:shadow-none;
 }
 
 @utility button-neutral {
@@ -1442,7 +1444,7 @@ input[type="file"]::file-selector-button {
 [data-vc=calendar][data-vc-theme] [data-vc-date-weekend][data-vc-date-selected] .vc-date__btn,
 [data-vc=calendar][data-vc-theme] [data-vc-date-selected] .vc-date__btn:hover,
 [data-vc=calendar][data-vc-theme] [data-vc-date-weekend][data-vc-date-selected] .vc-date__btn:hover {
-  @apply bg-brand text-content-inverse dark:text-content;
+  @apply bg-brand text-brand-content;
 }
 
 /* Calendar week selection */
@@ -1467,7 +1469,7 @@ input[type="file"]::file-selector-button {
   cursor: pointer;
 }
 [data-vc=calendar][data-vc-theme] [data-vc-week-number][data-vc-week-selected] {
-  @apply bg-brand text-content-inverse dark:text-content;
+  @apply bg-brand text-brand-content;
 }
 
 /* Calendar month and year selection */
@@ -1488,7 +1490,7 @@ input[type="file"]::file-selector-button {
 }
 [data-vc=calendar][data-vc-theme] [data-vc-months-month-selected],
 [data-vc=calendar][data-vc-theme] [data-vc-years-year-selected] {
-  @apply bg-brand text-content-inverse dark:text-content;
+  @apply bg-brand text-brand-content;
 }
 
 /* Calendar time controls */

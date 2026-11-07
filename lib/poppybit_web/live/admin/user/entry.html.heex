@@ -1,0 +1,416 @@
+<% editable? =
+  @live_action in [:create, :update] and can?(@permissions, @current_path, @live_action) %>
+<Layouts.app flash={@flash} nav={@nav} user_timezone={@user_timezone}>
+  <History.history audit={@audit} user_timezone={@user_timezone} />
+  <.form
+    for={@form}
+    id="user-form"
+    phx-change={if editable?, do: "validate"}
+    phx-submit={if editable?, do: "save"}
+    class="space-y-6"
+  >
+    <.page>
+      <:title>{@page_title}</:title>
+
+      <:actions>
+        <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
+          <.action_button action={:back} navigate={~p"/dashboard/admin/users"} />
+          <.action_button
+            :if={@live_action == :update and can?(@permissions, @current_path, :read)}
+            action={:read}
+            navigate={~p"/dashboard/admin/users/#{@user.id}/read"}
+          />
+          <.action_button
+            :if={
+              @live_action == :read and @user != nil and
+                can?(@permissions, @current_path, :update)
+            }
+            action={:history}
+            patch={@audit.history_path}
+          />
+          <.action_button
+            :if={@live_action == :read and can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/dashboard/admin/users/#{@user.id}/update"}
+          />
+          <.action_button
+            :if={editable?}
+            action={:save}
+            type="submit"
+          />
+          <.action_button
+            :if={@live_action == :update and can?(@permissions, @current_path, :delete)}
+            action={:delete}
+            type="button"
+            phx-click="request_delete"
+          />
+        </div>
+      </:actions>
+
+      <fieldset disabled={!editable?} class="space-y-6">
+        <.card>
+          <.header>
+            Account
+          </.header>
+
+          <div
+            class="group/profile-picture grid grid-cols-[8rem_minmax(0,1fr)] items-center gap-6 border-b border-outline pb-6"
+            data-audit-side={@audit.selected && to_string(@audit.side)}
+            data-audit-changed={
+              if @audit.selected &&
+                   Enum.any?(
+                     @audit.fields,
+                     &(&1.key in ["display_pic_url", "display_pic_name"] and &1.status == :changed)
+                   ),
+                 do: "true"
+            }
+          >
+            <div class="relative size-32">
+              <span
+                :if={@existing_display_pic == nil && @uploads.display_pic.entries == []}
+                role="img"
+                aria-label="No profile picture"
+                class="absolute inset-0 grid place-items-center rounded-full bg-secondary text-4xl font-medium text-brand"
+              >
+                {String.upcase(
+                  String.slice(@form[:display_name].value || to_string(@form[:email].value), 0, 1)
+                )}
+              </span>
+              <.file_preview
+                :if={@live_action != :read}
+                id="user-profile-picture-preview"
+                class="relative size-32 overflow-hidden rounded-full"
+              />
+              <img
+                :if={@live_action == :read && @existing_display_pic}
+                src={@existing_display_pic}
+                alt="Profile picture"
+                class="size-full rounded-full object-cover"
+              />
+            </div>
+
+            <div :if={@live_action != :read} class="space-y-3">
+              <label for={@uploads.display_pic.ref} class="block text-sm font-medium text-content">
+                Profile Picture
+              </label>
+
+              <div class="grid grid-cols-[max-content_max-content] items-center justify-start gap-3">
+                <label
+                  id="user-profile-picture-picker"
+                  for={@uploads.display_pic.ref}
+                  class={[
+                    "button-base button-neutral grid min-h-11 place-items-center rounded-default px-4 py-2 text-sm group-has-[input:focus-visible]/profile-picture:outline-2 group-has-[input:focus-visible]/profile-picture:outline-brand",
+                    if(editable?,
+                      do: "cursor-pointer",
+                      else: "cursor-not-allowed text-subcontent"
+                    )
+                  ]}
+                >
+                  {if @existing_display_pic || @uploads.display_pic.entries != [],
+                    do: "Change picture",
+                    else: "Upload picture"}
+                </label>
+                <.button
+                  :for={entry <- @uploads.display_pic.entries}
+                  id="user-profile-picture-cancel"
+                  type="button"
+                  variant={:text}
+                  phx-click="cancel_upload"
+                  phx-value-ref={entry.ref}
+                >
+                  Cancel
+                </.button>
+                <.button
+                  :if={@uploads.display_pic.entries == []}
+                  id="user-profile-picture-remove"
+                  type="button"
+                  variant={:text}
+                  phx-click="remove_upload"
+                  disabled={@existing_display_pic == nil}
+                >
+                  Remove
+                </.button>
+              </div>
+
+              <p class="text-sm text-subcontent">
+                128x128 pixels. Maximum {div(@uploads.display_pic.max_file_size, 1_000_000)} MB.
+              </p>
+              <.input
+                type="file"
+                name="display_pic"
+                aria-label="Profile Picture"
+                class="sr-only"
+                upload={@uploads.display_pic}
+                stored={List.wrap(@existing_display_pic)}
+                preview={true}
+                preview_id="user-profile-picture-preview"
+                editor={%{width: 128, height: 128}}
+                preview_as="thumbnail"
+                thumbnail_class="h-full w-full"
+                disabled={!editable?}
+              >
+                <:stored_preview :let={url}>
+                  <img src={url} alt="Profile picture" class="size-full object-cover" />
+                </:stored_preview>
+
+                <:pending_preview :let={entry}>
+                  <.live_img_preview
+                    entry={entry}
+                    alt="Selected profile picture"
+                    class="size-full object-cover"
+                  />
+                </:pending_preview>
+              </.input>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-[2fr_1fr_1fr] subgap-2 pt-2">
+            <.input
+              field={@form[:email]}
+              type="email"
+              label="Email"
+              disabled={!editable? or @live_action == :update}
+            />
+            <.input field={@form[:username]} type="text" label="Username" disabled={!editable?} />
+            <.input
+              field={@form[:display_name]}
+              type="text"
+              label="Display Name"
+              disabled={!editable?}
+            />
+          </div>
+
+          <div :if={@live_action == :create} class="grid grid-cols-[2fr_2fr] subgap-2">
+            <.input
+              field={@form[:password]}
+              type="password"
+              label="Password"
+              autocomplete="new-password"
+              disabled={!editable?}
+            />
+            <.input
+              field={@form[:password_confirmation]}
+              type="password"
+              label="Confirm Password"
+              autocomplete="new-password"
+              disabled={!editable?}
+            />
+          </div>
+        </.card>
+
+        <.card>
+          <.header>
+            Personal Details
+          </.header>
+
+          <div class="grid grid-cols-[1fr_1fr_2fr] subgap-2">
+            <.input
+              field={@form[:first_name]}
+              type="text"
+              label="First Name"
+              disabled={!editable?}
+            />
+            <.input
+              field={@form[:middle_name]}
+              type="text"
+              label="Middle Name"
+              disabled={!editable?}
+            />
+            <.input field={@form[:last_name]} type="text" label="Last Name" disabled={!editable?} />
+          </div>
+
+          <div class="grid grid-cols-[2fr_1fr_1fr] subgap-2">
+            <.input
+              field={@form[:tel_no]}
+              type="tel"
+              label="Phone"
+              render_as={if editable?, do: "enabled", else: "disabled"}
+            />
+            <.input
+              field={@form[:sex]}
+              type="combobox"
+              label="Sex"
+              options={@sex_options}
+              prompt="None"
+              disabled={!editable?}
+            />
+            <.input field={@form[:dob]} type="date" label="Date of Birth" disabled={!editable?} />
+          </div>
+
+          <div class="grid grid-cols-[1fr_3fr] subgap-2">
+            <.input
+              field={@form[:locale]}
+              type="combobox"
+              label="Locale"
+              options={@locale_options}
+              prompt="None"
+              disabled={!editable?}
+            />
+            <.input
+              field={@form[:timezone]}
+              type="combobox"
+              label="Timezone"
+              options={@nav.timezone_options}
+              placeholder="Automatic (browser)"
+              clearable={false}
+              disabled={!editable?}
+            />
+          </div>
+        </.card>
+
+        <.card>
+          <.header>
+            Addresses
+            <:actions>
+              <.action_button
+                :if={
+                  editable? and
+                    can?(@permissions, @current_path, :create)
+                }
+                type="button"
+                phx-click="add_form"
+                phx-value-field="addresses"
+                action={:create}
+                tooltip="Add"
+              />
+            </:actions>
+          </.header>
+
+          <div class="grid grid-cols-[1fr_1fr] gap-y-4">
+            <.inputs_for :let={af} field={@form[:addresses]}>
+              <% recorded_fields =
+                af.source.data &&
+                  Ash.Resource.get_metadata(af.source.data, :audit_recorded_fields)
+
+              position =
+                cond do
+                  editable? ->
+                    af.index + 1
+
+                  Ash.Resource.get_metadata(af.source.data, :audit_removed?) ->
+                    nil
+
+                  recorded_fields && not MapSet.member?(recorded_fields, "sequence") ->
+                    Ash.Resource.get_metadata(af.source.data, :audit_position) + 1
+
+                  true ->
+                    af[:sequence].value
+                end %>
+              <.entry_panel label="Address" index={af.index} columns={2}>
+                <:sequence>
+                  <.input
+                    field={af[:sequence]}
+                    name={"address_position[#{af.index}]"}
+                    type={if editable?, do: "number", else: "text"}
+                    render_as={if editable?, do: "text", else: "text-disabled"}
+                    value={position || "nil"}
+                    min={1}
+                    max={length(@form.source.forms[:addresses] || [])}
+                    step={1}
+                    disabled={!editable?}
+                    aria-label={"Address #{position || "nil"} sequence"}
+                    phx-debounce={nil}
+                    class="min-w-0 w-full appearance-none border-0 bg-transparent p-0 py-1 text-left text-sm font-semibold text-content focus:outline-none focus:ring-0 focus-visible:underline disabled:text-subcontent disabled:cursor-not-allowed"
+                  />
+                </:sequence>
+                <:actions>
+                  <.action_button
+                    :if={
+                      editable? and
+                        (af.source.type == :create or can?(@permissions, @current_path, :delete))
+                    }
+                    type="button"
+                    phx-click="remove_form"
+                    phx-value-path={af.name}
+                    action={:delete}
+                  />
+                </:actions>
+
+                <div class="grid grid-cols-[1fr_3fr] subgap-2">
+                  <.input
+                    id={"#{af.id}_label_select"}
+                    field={af[:label]}
+                    type="combobox"
+                    label="Label"
+                    options={@label_options}
+                    prompt="None"
+                    disabled={!editable?}
+                  />
+                  <.input
+                    field={af[:other_label]}
+                    type="text"
+                    label="Nickname"
+                    disabled={!editable?}
+                  />
+                </div>
+
+                <div class="grid grid-cols-[2fr_2fr] subgap-2">
+                  <.input
+                    field={af[:contact_name]}
+                    type="text"
+                    label="Contact Name"
+                    disabled={!editable?}
+                  />
+                  <.input
+                    field={af[:contact_tel_no]}
+                    type="text"
+                    label="Contact"
+                    render_as={if editable?, do: "enabled", else: "disabled"}
+                  />
+                </div>
+
+                <div class="grid grid-cols-[4fr] subgap-2">
+                  <.input field={af[:line_1]} type="text" label="Line 1" disabled={!editable?} />
+                </div>
+
+                <div class="grid grid-cols-[4fr] subgap-2">
+                  <.input field={af[:line_2]} type="text" label="Line 2" disabled={!editable?} />
+                </div>
+
+                <div class="grid grid-cols-[4fr] subgap-2">
+                  <.input field={af[:line_3]} type="text" label="Line 3" disabled={!editable?} />
+                </div>
+
+                <div class="grid grid-cols-[1fr_3fr] subgap-2">
+                  <.input
+                    field={af[:postal_code]}
+                    type="text"
+                    label="Postal Code"
+                    disabled={!editable?}
+                  />
+                  <.input field={af[:city]} type="text" label="City" disabled={!editable?} />
+                </div>
+
+                <div class="grid grid-cols-[2fr_2fr] subgap-2">
+                  <.input field={af[:state]} type="text" label="State" disabled={!editable?} />
+                  <.input field={af[:country]} type="text" label="Country" disabled={!editable?} />
+                </div>
+              </.entry_panel>
+            </.inputs_for>
+          </div>
+        </.card>
+      </fieldset>
+      <.card :if={@can_assign_roles? or @live_action == :read} id="user-roles">
+        <.header>
+          Roles
+        </.header>
+
+        <div class="grid grid-cols-[1fr] subgap-2">
+          <.input
+            field={@form[:roles]}
+            type="combobox"
+            multiple
+            label="Roles"
+            options={@role_options}
+            disabled={!editable?}
+          />
+        </div>
+      </.card>
+    </.page>
+  </.form>
+  <.delete_confirmation
+    :if={@to_delete}
+    label="user"
+    name={@to_delete.display_name || to_string(@to_delete.email)}
+  />
+</Layouts.app>

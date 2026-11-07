@@ -121,7 +121,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "4649C46DD8B2F9FD77DEAA881EF9F243901F2CB333D79274FA092BA6713E525C",
+  "hash": "F098C2753A309467615731E5CB9B626980AF8BA8B3AB85A55DF6F69B26B6DF18",
   "identities": [
     {
       "all_tenants?": false,
@@ -147,7 +147,7 @@
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.Elixirbits.Repo",
+  "repo": "Elixir.Poppybit.Repo",
   "schema": null,
   "table": "ledger_balances",
   "temporal": null

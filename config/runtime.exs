@@ -6,18 +6,18 @@ import Config
 #
 # If you use `mix release`, you need to explicitly enable the server by passing the PHX_SERVER=true when you start it:
 #
-#     PHX_SERVER=true bin/elixirbits start
+#     PHX_SERVER=true bin/poppybit start
 #
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server` script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
-  config :elixirbits, ElixirbitsWeb.Endpoint, server: true
+  config :poppybit, PoppybitWeb.Endpoint, server: true
 end
 
-config :elixirbits, ElixirbitsWeb.Endpoint,
+config :poppybit, PoppybitWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 if config_env() == :prod do
-  config :elixirbits,
+  config :poppybit,
     upload_directory:
       System.get_env("UPLOAD_DIRECTORY") ||
         raise("Missing environment variable `UPLOAD_DIRECTORY` for public uploads!")
@@ -31,7 +31,7 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
-  config :elixirbits, Elixirbits.Repo,
+  config :poppybit, Poppybit.Repo,
     # ssl: true,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
@@ -49,9 +49,9 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
-  config :elixirbits, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :poppybit, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  config :elixirbits, ElixirbitsWeb.Endpoint,
+  config :poppybit, PoppybitWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
       # Enable IPv6 and bind on all interfaces. Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access. See the documentation on https://hexdocs.pm/bandit/Bandit.html#t:options/0 for details about using IPv6 vs IPv4 and loopback vs public addresses.
@@ -59,7 +59,7 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 
-  config :elixirbits,
+  config :poppybit,
     token_signing_secret:
       System.get_env("TOKEN_SIGNING_SECRET") ||
         raise("Missing environment variable `TOKEN_SIGNING_SECRET`!")
@@ -68,7 +68,7 @@ if config_env() == :prod do
   #
   # To get SSL working, you will need to add the `https` key to your endpoint configuration:
   #
-  #     config :elixirbits, ElixirbitsWeb.Endpoint,
+  #     config :poppybit, PoppybitWeb.Endpoint,
   #       https: [
   #         ...,
   #         port: 443,
@@ -83,7 +83,7 @@ if config_env() == :prod do
   #
   # We also recommend setting `force_ssl` in your config/prod.exs, ensuring no data is ever sent via http, always redirecting to https:
   #
-  #     config :elixirbits, ElixirbitsWeb.Endpoint,
+  #     config :poppybit, PoppybitWeb.Endpoint,
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
@@ -92,7 +92,7 @@ if config_env() == :prod do
   #
   # In production you need to configure the mailer to use a different adapter. Here is an example configuration for Mailgun:
   #
-  #     config :elixirbits, Elixirbits.Mailer,
+  #     config :poppybit, Poppybit.Mailer,
   #       adapter: Swoosh.Adapters.Mailgun,
   #       api_key: System.get_env("MAILGUN_API_KEY"),
   #       domain: System.get_env("MAILGUN_DOMAIN")

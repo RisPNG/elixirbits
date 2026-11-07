@@ -1,0 +1,76 @@
+<Layouts.app user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <.header level={1}>
+    {(@nav.organization && @nav.organization.name) || "Poppybit"}
+  </.header>
+
+  <.card :if={!@current_user} class="max-w-[36rem]">
+    <.header>
+      Open your workspace
+    </.header>
+
+    <div>
+      <.button href={~p"/dashboard/sign-in"} variant={:primary}>Sign in</.button>
+    </div>
+  </.card>
+
+  <section :if={@current_user} class="grid grid-cols-[3fr_1fr] items-start gap-6">
+    <div class="min-w-0 space-y-5">
+      <.header>
+        Workspace sections
+      </.header>
+
+      <div class="grid grid-cols-[1fr_1fr] gap-4">
+        <.link
+          :for={item <- @nav.items}
+          :if={item.url not in [nil, "dashboard"]}
+          navigate={"/" <> item.url}
+          class="grid grid-cols-[2.75rem_minmax(0,1fr)_1.25rem] items-center gap-3 rounded-default panel-surface shadow-card p-5 text-content transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+        >
+          <span class="grid size-11 place-items-center rounded-default inset-surface">
+            <.icon
+              name={
+                case item.url do
+                  "dashboard/admin/users" -> "hero-users"
+                  "dashboard/admin/roles" -> "hero-key"
+                  "dashboard/admin/organization" -> "hero-building-office-2"
+                  "dashboard/dev_panel/layout_test" -> "hero-squares-2x2"
+                  _ -> "hero-arrow-top-right-on-square"
+                end
+              }
+              class="size-5"
+            />
+          </span>
+
+          <span class="min-w-0 font-medium">{item.name}</span>
+          <.icon name="hero-arrow-up-right-micro" class="size-4 text-subcontent" />
+        </.link>
+      </div>
+    </div>
+
+    <.card class="min-w-0">
+      <.header>Your account</.header>
+
+      <dl class="space-y-5 text-sm">
+        <div class="space-y-1">
+          <dt class="text-subcontent">Signed in as</dt>
+
+          <dd class="break-words font-medium text-content">
+            {@nav.user.display_name || to_string(@nav.user.email)}
+          </dd>
+        </div>
+
+        <div :if={@nav.user.roles != []} class="space-y-1">
+          <dt class="text-subcontent">Roles</dt>
+
+          <dd class="text-content">{Enum.join(@nav.user.roles, ", ")}</dd>
+        </div>
+
+        <div class="space-y-1">
+          <dt class="text-subcontent">Timezone</dt>
+
+          <dd class="break-words text-content">{@user_timezone}</dd>
+        </div>
+      </dl>
+    </.card>
+  </section>
+</Layouts.app>

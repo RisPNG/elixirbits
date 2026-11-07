@@ -1,11 +1,11 @@
-defmodule Elixirbits.MixProject do
+defmodule Poppybit.MixProject do
   use Mix.Project
 
   @version "0.0.1"
 
   def project do
     [
-      app: :elixirbits,
+      app: :poppybit,
       version: @version,
       elixir: ">= 1.18.0",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -32,7 +32,7 @@ defmodule Elixirbits.MixProject do
 
   def releases do
     [
-      elixirbits: [
+      poppybit: [
         burrito: [
           targets: [
             macos: [os: :darwin, cpu: :x86_64],
@@ -40,7 +40,7 @@ defmodule Elixirbits.MixProject do
             windows: [os: :windows, cpu: :x86_64]
           ]
         ],
-        applications: [elixirbits: :permanent],
+        applications: [poppybit: :permanent],
         steps: [:assemble, &Burrito.wrap/1]
       ]
     ]
@@ -80,7 +80,7 @@ defmodule Elixirbits.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {Elixirbits.Application, []},
+      mod: {Poppybit.Application, []},
       extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
@@ -209,10 +209,10 @@ defmodule Elixirbits.MixProject do
         "esbuild.install --if-missing",
         "cmd --cd assets --shell npm install"
       ],
-      "assets.build": ["compile", "tailwind elixirbits", "esbuild elixirbits"],
+      "assets.build": ["compile", "tailwind poppybit", "esbuild poppybit"],
       "assets.deploy": [
-        "tailwind elixirbits --minify",
-        "esbuild elixirbits --minify",
+        "tailwind poppybit --minify",
+        "esbuild poppybit --minify",
         "phx.digest"
       ],
       precommit: [

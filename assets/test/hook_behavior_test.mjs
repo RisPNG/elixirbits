@@ -280,7 +280,7 @@ test("delegated tooltip describes focused controls across patches and restores n
     document.dispatchEvent(focus)
     assert.equal(tip.hidden, false)
     assert.equal(tip.getAttribute("role"), "tooltip")
-    assert.equal(control.getAttribute("aria-describedby"), "validation-help elixirbits-tooltip")
+    assert.equal(control.getAttribute("aria-describedby"), "validation-help poppybit-tooltip")
     control.dataset.tooltip = "Updated description"
     observerCallback([])
     assert.equal(tip.textContent, "Updated description")
@@ -309,16 +309,16 @@ test("delegated tooltip describes focused controls across patches and restores n
     Object.defineProperty(fieldFocus, "target", {value: input})
     document.dispatchEvent(fieldFocus)
     assert.equal(wrapper.getAttribute("aria-describedby"), null)
-    assert.equal(input.getAttribute("aria-describedby"), "email-help elixirbits-tooltip")
+    assert.equal(input.getAttribute("aria-describedby"), "email-help poppybit-tooltip")
 
     input.setAttribute("aria-describedby", "updated-email-help")
     wrapper.dataset.tooltip = "Updated email description"
     observerCallback([])
-    assert.equal(input.getAttribute("aria-describedby"), "updated-email-help elixirbits-tooltip")
+    assert.equal(input.getAttribute("aria-describedby"), "updated-email-help poppybit-tooltip")
     assert.equal(tip.textContent, "Updated email description")
     input.removeAttribute("aria-describedby")
     observerCallback([])
-    assert.equal(input.getAttribute("aria-describedby"), "elixirbits-tooltip")
+    assert.equal(input.getAttribute("aria-describedby"), "poppybit-tooltip")
     document.dispatchEvent(event("keydown", {key: "Escape"}))
     input.isConnected = false
     observerCallback([])
@@ -338,7 +338,7 @@ test("delegated tooltip describes focused controls across patches and restores n
     assert.equal(tip.textContent, "Close details")
     assert.equal(native.getAttribute("title"), null)
     assert.equal(native.getAttribute("aria-label"), "Close details")
-    assert.equal(native.getAttribute("aria-describedby"), "elixirbits-tooltip")
+    assert.equal(native.getAttribute("aria-describedby"), "poppybit-tooltip")
 
     dispose()
     assert.equal(disconnected, true)
@@ -400,15 +400,15 @@ test("clipped text tooltips follow rendered text, input values, patches, and ele
     const initialize = await loadHook("tooltip")
     const dispose = initialize()
     const navigation = new Element()
-    navigation.textContent = "admin@elixirbits.dev"
-    navigation.renderedText = "ADMIN@ELIXIRBITS.DEV"
+    navigation.textContent = "admin@poppybit.dev"
+    navigation.renderedText = "ADMIN@POPPYBIT.DEV"
     navigation.computedStyle.overflowX = "hidden"
     navigation.scrollWidth = 240
     navigation.setAttribute("aria-describedby", "account-help")
     dispatch("mousemove", navigation, {clientX: 30, clientY: 50})
     assert.equal(tip.hidden, false)
-    assert.equal(tip.textContent, "ADMIN@ELIXIRBITS.DEV")
-    assert.equal(navigation.getAttribute("aria-describedby"), "account-help elixirbits-tooltip")
+    assert.equal(tip.textContent, "ADMIN@POPPYBIT.DEV")
+    assert.equal(navigation.getAttribute("aria-describedby"), "account-help poppybit-tooltip")
     assert.equal(navigation.dataset.tooltip, undefined)
     assert.equal(navigation.getAttribute("title"), null)
     assert.equal(observed.has(navigation), true)
@@ -420,9 +420,9 @@ test("clipped text tooltips follow rendered text, input values, patches, and ele
     navigation.clientWidth = 80
     resizeCallback()
     assert.equal(tip.hidden, false)
-    navigation.renderedText = "OTHER@ELIXIRBITS.DEV"
+    navigation.renderedText = "OTHER@POPPYBIT.DEV"
     mutationCallback([{target: navigation}])
-    assert.equal(tip.textContent, "OTHER@ELIXIRBITS.DEV")
+    assert.equal(tip.textContent, "OTHER@POPPYBIT.DEV")
     navigation.computedStyle.overflowX = "visible"
     mutationCallback([{target: navigation}])
     assert.equal(tip.hidden, true)
@@ -447,7 +447,7 @@ test("clipped text tooltips follow rendered text, input values, patches, and ele
     label.scrollWidth = 200
     dispatch("focusin", button)
     assert.equal(tip.textContent, label.textContent)
-    assert.equal(button.getAttribute("aria-describedby"), "elixirbits-tooltip")
+    assert.equal(button.getAttribute("aria-describedby"), "poppybit-tooltip")
     assert.equal(label.getAttribute("aria-describedby"), null)
     assert.equal(observed.has(label), true)
     document.dispatchEvent(event("focusout"))
@@ -579,7 +579,7 @@ test("automatic tooltips require actual clipping and preserve explicit descripti
     describedButton.dataset.tooltip = "Open details"
     hover(icon)
     assert.equal(tip.textContent, "Open details")
-    assert.equal(describedButton.getAttribute("aria-describedby"), "elixirbits-tooltip")
+    assert.equal(describedButton.getAttribute("aria-describedby"), "poppybit-tooltip")
     assert.equal(icon.getAttribute("aria-describedby"), null)
 
     hover(tip)
@@ -651,7 +651,7 @@ test("ISO week input preserves year identity through boundaries and calendar nav
       neighbor.dataset.vcWeekYear = String(scenario.neighborYear)
       neighbor.dataset.vcWeekNumber = String(scenario.neighborWeek)
       popover = new CalendarElement()
-      popover.dataset.vcTheme = "elixirbits"
+      popover.dataset.vcTheme = "poppybit"
       popover.setAttribute("aria-label", "Week")
       popover.weekButtons = [neighbor, selected]
       const context = {...hook, el: input}
@@ -659,7 +659,7 @@ test("ISO week input preserves year identity through boundaries and calendar nav
       await context.mounted()
       const calendar = context.calendar
       assert.equal(calendar.options.inputMode, false)
-      assert.equal(calendar.options.selectedTheme, "elixirbits")
+      assert.equal(calendar.options.selectedTheme, "poppybit")
       assert.equal(calendar.options.labels.application, "Week")
       assert.equal(calendar.context.mainElement, popover)
       assert.deepEqual(calendar.options.extensions, [weeks])

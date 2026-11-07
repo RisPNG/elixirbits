@@ -7,17 +7,17 @@ import Config
 
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
-config :elixirbits, Elixirbits.Repo, parameters: [timezone: "UTC"]
+config :poppybit, Poppybit.Repo, parameters: [timezone: "UTC"]
 
-config :elixirbits,
+config :poppybit,
   upload_directory: Path.expand("../var/uploads/public", __DIR__)
 
-config :elixirbits, Elixirbits.Scheduler, jobs: []
+config :poppybit, Poppybit.Scheduler, jobs: []
 
-config :cinder, default_theme: ElixirbitsWeb.CinderTheme
+config :cinder, default_theme: PoppybitWeb.CinderTheme
 
 config :ash_typescript,
-  manifest: Elixirbits.AshTypescriptManifest,
+  manifest: Poppybit.AshTypescriptManifest,
   output_file: "assets/js/ash_rpc.ts",
   run_endpoint: "/rpc/run",
   validate_endpoint: "/rpc/validate",
@@ -31,7 +31,7 @@ config :ash_typescript,
   zod_schema_suffix: "ZodSchema",
   phoenix_import_path: "phoenix"
 
-config :ex_cldr, default_backend: Elixirbits.Cldr
+config :ex_cldr, default_backend: Poppybit.Cldr
 
 config :ex_money, auto_start_exchange_rate_service: false
 
@@ -102,31 +102,31 @@ config :spark,
     ]
   ]
 
-config :elixirbits,
-  ecto_repos: [Elixirbits.Repo],
+config :poppybit,
+  ecto_repos: [Poppybit.Repo],
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [
-    Elixirbits.Ledgers.LedgerService,
-    Elixirbits.Users.UserService,
-    Elixirbits.Addresses.AddressService,
-    Elixirbits.ApiKeys.ApiKeyService,
-    Elixirbits.Tokens.TokenService,
-    Elixirbits.Events.EventService,
-    Elixirbits.AccessControl.AccessControlService,
-    Elixirbits.Organizations.OrganizationService,
-    Elixirbits.NumberSequences.NumberSequenceService
+    Poppybit.Ledgers.LedgerService,
+    Poppybit.Users.UserService,
+    Poppybit.Addresses.AddressService,
+    Poppybit.ApiKeys.ApiKeyService,
+    Poppybit.Tokens.TokenService,
+    Poppybit.Events.EventService,
+    Poppybit.AccessControl.AccessControlService,
+    Poppybit.Organizations.OrganizationService,
+    Poppybit.NumberSequences.NumberSequenceService
   ],
   ash_authentication: [return_error_on_invalid_magic_link_token?: true]
 
 # Configure the endpoint
-config :elixirbits, ElixirbitsWeb.Endpoint,
+config :poppybit, PoppybitWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: ElixirbitsWeb.ErrorHTML, json: ElixirbitsWeb.ErrorJSON],
+    formats: [html: PoppybitWeb.ErrorHTML, json: PoppybitWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Elixirbits.PubSub,
+  pubsub_server: Poppybit.PubSub,
   live_view: [signing_salt: "aPYv4iIq"]
 
 # Configure the mailer
@@ -134,12 +134,12 @@ config :elixirbits, ElixirbitsWeb.Endpoint,
 # By default it uses the "Local" adapter which stores the emails locally. You can see the emails in your browser, at "/dev/mailbox".
 #
 # For production it's recommended to configure a different adapter at the `config/runtime.exs`.
-config :elixirbits, Elixirbits.Mailer, adapter: Swoosh.Adapters.Local
+config :poppybit, Poppybit.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.28.2",
-  elixirbits: [
+  poppybit: [
     args:
       ~w(app=js/app.js --bundle --format=esm --splitting --legal-comments=linked --target=es2022 --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
@@ -159,7 +159,7 @@ config :esbuild,
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.3.3",
-  elixirbits: [
+  poppybit: [
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css

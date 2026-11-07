@@ -184,14 +184,14 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "D32A4903FE504FB8C1E894F234442DCE9B8F2932989928ACC8A66FC54299118D",
+  "hash": "E203B1276BEA156215421C6790C568B4533BCA19A9C4C256D7EBB60322E2FD5C",
   "identities": [],
   "multitenancy": {
     "attribute": null,
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.Elixirbits.Repo",
+  "repo": "Elixir.Poppybit.Repo",
   "schema": null,
   "table": "addresses_versions",
   "temporal": null

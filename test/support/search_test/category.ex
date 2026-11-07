@@ -1,11 +1,11 @@
-defmodule Elixirbits.SearchTest.Category do
+defmodule Poppybit.SearchTest.Category do
   use Ash.Resource,
-    domain: Elixirbits.SearchTest.Domain,
+    domain: Poppybit.SearchTest.Domain,
     data_layer: AshPostgres.DataLayer
 
   postgres do
     table "search_test_categories"
-    repo Elixirbits.Repo
+    repo Poppybit.Repo
   end
 
   actions do
@@ -27,7 +27,7 @@ defmodule Elixirbits.SearchTest.Category do
   end
 
   relationships do
-    has_many :records, Elixirbits.SearchTest.Record do
+    has_many :records, Poppybit.SearchTest.Record do
       destination_attribute :category_id
     end
   end

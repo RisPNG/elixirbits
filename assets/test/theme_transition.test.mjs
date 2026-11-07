@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import {readFile} from "node:fs/promises"
 import {runInNewContext} from "node:vm"
 
-const template = await readFile(new URL("../../lib/elixirbits_web/components/layouts/root.html.heex", import.meta.url), "utf8")
+const template = await readFile(new URL("../../lib/poppybit_web/components/layouts/root.html.heex", import.meta.url), "utf8")
 const script = template.match(/<script>\s*([\s\S]*?)<\/script>/)[1]
 
 function openPage({saved, initial, dark = false, reduced = false, supported = true} = {}) {

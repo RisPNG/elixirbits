@@ -25,7 +25,7 @@ erl_crash.dump
 /tmp/
 
 # Ignore package tarball (built via "mix hex.build").
-elixirbits-*.tar
+poppybit-*.tar
 
 # Ignore assets that are produced by build tools.
 /priv/static/assets/
@@ -258,7 +258,7 @@ vite.config.ts.timestamp-*
 # Since we are building assets from web/static,
 # we ignore priv/static. You may want to comment
 # this depending on your deployment strategy.
-/priv/static/
+/priv/static/*
 
 # Installer-related files
 /installer/_build

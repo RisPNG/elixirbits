@@ -181,14 +181,14 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "156367BFBD3B802EB37EF5EE39FA79334EECD003D88C7A7D8A77895700606093",
+  "hash": "3BADF2C13F2AFE3E8F860D31F484A1792EC9B4F884006FC1808B59341D7AD9AA",
   "identities": [],
   "multitenancy": {
     "attribute": null,
     "global": null,
     "strategy": null
   },
-  "repo": "Elixir.Elixirbits.Repo",
+  "repo": "Elixir.Poppybit.Repo",
   "schema": null,
   "table": "ledger_transfers_versions",
   "temporal": null
