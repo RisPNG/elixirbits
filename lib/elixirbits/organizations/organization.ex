@@ -108,7 +108,7 @@ defmodule Elixirbits.Organizations.Organization do
     end
   end
 
-  use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/organization"
+  use Elixirbits.AccessControl.ResourcePolicies, path: "/dashboard/admin/organization"
 
   validations do
     validate one_of(:base_currency, Enum.map(Cldr.Currency.known_currency_codes(), &to_string/1))

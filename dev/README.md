@@ -53,11 +53,17 @@ The date/time picker library loads when a `VCalendar` input mounts, and the RGBA
 
 npm 12 reads `allow-git=root` from `assets/.npmrc`, permitting Git dependencies directly declared by the project. The `allowScripts` entry for `github:RisPNG/super-image-cropper` in `assets/package.json` approves that source's preparation script, which builds its worker. These project permissions apply to the existing `npm install` and `npm ci` commands.
 
-Open [localhost:4000](http://localhost:4000). The component showcase is at `/dev_panel/layout_test`.
+Open [localhost:4000](http://localhost:4000) for the blank public home page. The application workspace is at [localhost:4000/dashboard](http://localhost:4000/dashboard), and its existing sidebar, account menu, authentication pages, administration, and development tools use that prefix. Sign in at `/dashboard/sign-in`. The component showcase is at `/dashboard/dev_panel/layout_test`.
+
+The public route uses `ElixirbitsWeb.IndexLive.Index` in `lib/elixirbits_web/live/index/index.ex`, with its content in the sibling `index.html.heex`. Its native LiveView layout is `lib/elixirbits_web/components/layouts/index.html.heex`. The public live session accepts guests and signed-in visitors, and renders no page content or navigation. Dashboard navigation and account controls belong to the separate dashboard layout and live session.
+
+Dashboard pages use `Layouts.dashboard`, with the topbar, sidebar, and account controls in `lib/elixirbits_web/components/layouts/dashboard.html.heex`. Both layouts share the HTML document in `lib/elixirbits_web/components/layouts/root.html.heex`.
+
+Dashboard feature pages and authentication live under `lib/elixirbits_web/live/dashboard/`, with their corresponding modules under `ElixirbitsWeb.Dashboard`. Shared history rendering and hooks live in `lib/elixirbits_web/live/audit_log/` as `ElixirbitsWeb.AuditLogLive.History`. The public index stays in `lib/elixirbits_web/live/index/`.
 
 Development uses `elixirbits_template_dev` and tests use `elixirbits_template_test`, with PostgreSQL credentials configured in `config/dev.exs` and `config/test.exs`. Set `DATABASE_NAME` or `TEST_DATABASE_NAME` to use another database. PostgreSQL connections use UTC, while forms and calendars apply the requested display timezone.
 
-Seeds register navigation entries and the `superuser` role, preserving existing grants and disabled navigation entries. They also provide these default accounts:
+Seeds register dashboard navigation entries and the `superuser` role, preserving existing grants and disabled navigation entries. Repeating the seeds updates older navigation URLs to their `/dashboard` destinations using the existing entry codes. They also provide these default accounts:
 
 | Email | Password | Access |
 | --- | --- | --- |
@@ -72,7 +78,7 @@ Repeating the seeds preserves existing accounts, profile values, passwords, and 
 mise exec -- mix run priv/repo/seeds.exs
 ```
 
-To provision another administrator, set `ELIXIRBITS_ADMIN_EMAIL` and `ELIXIRBITS_ADMIN_PASSWORD` before running the same command. The password is required only when creating that account. An existing account keeps its password and receives the `superuser` role. After signing in as an administrator, open `/admin/users`, `/admin/roles`, or `/admin/organization`.
+To provision another administrator, set `ELIXIRBITS_ADMIN_EMAIL` and `ELIXIRBITS_ADMIN_PASSWORD` before running the same command. The password is required only when creating that account. An existing account keeps its password and receives the `superuser` role. After signing in as an administrator, open `/dashboard/admin/users`, `/dashboard/admin/roles`, or `/dashboard/admin/organization`.
 
 Configure the remember-me lifetime on the `User` authentication strategy. The sign-in tooltip and remembered-session inactivity limit read that setting through Ash authentication metadata and use the same duration conversion as its token and cookie. The tooltip uses CLDR to display a rounded duration in words, while expiry uses the exact configured seconds.
 
@@ -84,7 +90,7 @@ Resource module names remain stable when their files move because stored AshEven
 
 ## Permissions and administration
 
-Register each protected page in `Sitenav` and give its LiveView an `on_mount` declaration for `LiveUserAuth` with `{:require_page_access, "/your/page"}`. Apply `AccessControl.ResourcePolicies` to its Ash resource with the same `path:`. Declared protected pages without a navigation entry are denied, and disabled entries or branches remain inaccessible to superusers. Home and the component showcase are public routes. Their navigation entries control where links appear.
+Register each protected page in `Sitenav` and give its LiveView an `on_mount` declaration for `LiveUserAuth` with `{:require_page_access, "/dashboard/your/page"}`. Apply `AccessControl.ResourcePolicies` to its Ash resource with the same `path:`. Store navigation URLs without the leading slash, such as `dashboard/admin/users`. Declared protected pages without a navigation entry are denied, and disabled entries or branches remain inaccessible to superusers. Dashboard Home and the component showcase remain public routes. Their navigation entries control where dashboard links appear. The Home entry applies only to `/dashboard`, so it does not grant access to unregistered descendants. The separate public home page does not load dashboard navigation or account controls.
 
 Read (`4`), create (`2`), update (`1`), and delete (`8`) are independent bits. Page access requires read, so levels without that bit are invalid, except for no access (`0`) and SU (`16`):
 
@@ -112,11 +118,11 @@ The numbers are combinations, rather than an increasing authority scale: level `
 
 Use `Permissions.can?(permissions, path, capability)` with `:create`, `:read`, `:update`, `:delete`, or `:su` for capability checks. For a special rule requiring the exact effective SU level, use `Permissions.perm_level(permissions, path) == 16`, then define what that protected operation permits. Level `15` alone cannot satisfy an SU rule. Public access grants read only, but roles can add capabilities on public pages. Disabled pages and branches still deny access.
 
-User and role listings provide View through `<.action_button action={:read} />`, linking to `/admin/users/:id/read` and `/admin/roles/:id/read` with the `:read` LiveView action. Their Update screens also provide View beside Back in both action rows, opening the saved record without submitting unsaved changes. Organization Update uses View in both action rows to return to its read-only settings page, including during first-time setup. These screens reuse the entry layouts with disabled fields, including assigned user roles and role permission grants. Shared core inputs honour both their own disabled state and a surrounding disabled fieldset, so empty titles retain their active position. View remains read-only for every permission level, including SU, and rejects record-changing events. Back returns to the user or role listing, and Update appears when the account has update permission.
+User and role listings provide View through `<.action_button action={:read} />`, linking to `/dashboard/admin/users/:id/read` and `/dashboard/admin/roles/:id/read` with the `:read` LiveView action. Their Update screens also provide View beside Back in both action rows, opening the saved record without submitting unsaved changes. Organization Update uses View in both action rows to return to its read-only settings page, including during first-time setup. These screens reuse the entry layouts with disabled fields, including assigned user roles and role permission grants. Shared core inputs honour both their own disabled state and a surrounding disabled fieldset, so empty titles retain their active position. View remains read-only for every permission level, including SU, and rejects record-changing events. Back returns to the user or role listing, and Update appears when the account has update permission.
 
-User and role update screens use `/admin/users/:id/update` and `/admin/roles/:id/update`, with the `:update` LiveView action. Shared record controls use `<.action_button action={:update} />`.
+User and role update screens use `/dashboard/admin/users/:id/update` and `/dashboard/admin/roles/:id/update`, with the `:update` LiveView action. Shared record controls use `<.action_button action={:update} />`.
 
-User and role creation screens use `/admin/users/create` and `/admin/roles/create`, with the `:create` LiveView action. User creation requires create permission for users and uses the shared profile, address, and upload form with an email, a password of at least eight characters, and password confirmation. New accounts follow the existing email confirmation process and start without roles. Assign roles from the account's update form after creating the account.
+User and role creation screens use `/dashboard/admin/users/create` and `/dashboard/admin/roles/create`, with the `:create` LiveView action. User creation requires create permission for users and uses the shared profile, address, and upload form with an email, a password of at least eight characters, and password confirmation. New accounts follow the existing email confirmation process and start without roles. Assign roles from the account's update form after creating the account.
 
 Successful User and Role creates and updates open the saved record's View screen. Validation errors keep the current form open with its entered values.
 
@@ -130,7 +136,7 @@ Nested address changes also need the relevant capability. Updating an existing p
 
 Address Contact fields accept free text, such as a phone number, email address, or another contact detail. Dedicated user and organisation phone fields retain the telephone control.
 
-The organisation screen stores one application's identity, currency, locale, timezone, contacts, and addresses. `/admin/organization` uses the `:read` LiveView action and opens read-only for every permission level, including SU. Update opens `/admin/organization/update` with the `:update` action, requiring create permission before the first settings record exists and update permission afterwards. The update screen provides Back and Save above and below the form, and a successful save returns to the read-only screen. When no settings record exists, the read-only screen displays the resource defaults. Public navigation receives only its name and regional metadata. Contact details and addresses require settings access. Addresses belong to exactly one user or the organisation, with ownership supplied through the parent relationship.
+The organisation screen stores one application's identity, currency, locale, timezone, contacts, and addresses. `/dashboard/admin/organization` uses the `:read` LiveView action and opens read-only for every permission level, including SU. Update opens `/dashboard/admin/organization/update` with the `:update` action, requiring create permission before the first settings record exists and update permission afterwards. The update screen provides Back and Save above and below the form, and a successful save returns to the read-only screen. When no settings record exists, the read-only screen displays the resource defaults. Public navigation receives only its name and regional metadata. Contact details and addresses require settings access. Addresses belong to exactly one user or the organisation, with ownership supplied through the parent relationship.
 
 ## Audit history
 
@@ -170,7 +176,7 @@ Telephone inputs keep separate country and national-number controls. The country
 
 ### Interface patterns
 
-The application's existing pages, layouts, shared components, and central theme define its interface patterns together. [Layout Test](http://localhost:4000/dev_panel/layout_test) demonstrates shared component behaviour and states. Follow the existing page pattern that fits the new page's purpose and action hierarchy, and implement reusable colour and control behaviour through the central theme and existing component APIs.
+The application's existing pages, layouts, shared components, and central theme define its interface patterns together. [Layout Test](http://localhost:4000/dashboard/dev_panel/layout_test) demonstrates shared component behaviour and states. Follow the existing page pattern that fits the new page's purpose and action hierarchy, and implement reusable colour and control behaviour through the central theme and existing component APIs.
 
 Use `<.page>` for a page title, content, and page-level actions. Its actions slot renders the same controls above and below the content, preserving their order and permission checks. The slot receives `:top` or `:bottom` so controls with IDs can keep each rendered ID unique. Place the page inside its form so both Save controls submit the same fields. Keep section-level actions, such as adding an address, in their existing `<.header>` slots. Page and section headings use titles only. Do not add subtitles or descriptions listing their contents, since those sentences need rewriting whenever the available features change. Keep useful field instructions, constraints, and state messages beside the controls they explain. Apply the same maintenance principle throughout the project: avoid decorative feature inventories, duplicated configuration, and layout bookkeeping that must change alongside the feature itself. Use the existing source of truth for supported values and constraints, and let action layouts follow the rendered controls. Keep necessary behavioural guidance without restating configurable implementation details.
 
@@ -366,7 +372,7 @@ forms =
 
 Pass `forms: forms` to the constructor, using the actual relationship key and action. If the generated child options already contain a transform, retain it and compose datetime conversion in that native callback instead of replacing it. Construct or add child forms before validating their user inputs, as the current address editors do. Directly submitted new child params are converted before the child action runs. An initial child constructor's source is not a substitute for validation. Current address forms have no editable datetime fields.
 
-Inputs bound to an AshPhoenix field obtain the timezone from the form's shared context. Pass `timezone={@user_timezone}` to standalone datetime inputs and `timezone={@user_timezone}` to calendars. Pass `user_timezone={@user_timezone}` to `Layouts.app` so the account menu shows the effective setting. Date, time, week, and month inputs keep their calendar or clock values.
+Inputs bound to an AshPhoenix field obtain the timezone from the form's shared context. Pass `timezone={@user_timezone}` to standalone datetime inputs and `timezone={@user_timezone}` to calendars. Pass `user_timezone={@user_timezone}` to `Layouts.dashboard` so the account menu shows the effective setting. Date, time, week, and month inputs keep their calendar or clock values.
 
 Local clocks can be ambiguous or nonexistent when daylight-saving rules change. The server rejects those datetime inputs with a field error and preserves the entered text. An API caller can distinguish repeated clocks by supplying an explicit offset. `Parse.to_datetime(value, source_timezone: zone, on_invalid: :error)` returns tagged errors for invalid, ambiguous, and nonexistent input instead of choosing an instant silently.
 

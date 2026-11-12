@@ -16,9 +16,9 @@ defmodule Elixirbits.CoreUtils.Resource.AuditLogVersionTest do
 
   setup do
     for {code, url} <- [
-          {"ROLES", "admin/roles"},
-          {"USERS", "admin/users"},
-          {"ORG", "admin/organization"}
+          {"ROLES", "dashboard/admin/roles"},
+          {"USERS", "dashboard/admin/users"},
+          {"ORG", "dashboard/admin/organization"}
         ] do
       Ash.create!(Sitenav, %{code: code, name: code, url: url, level: 1}, actor: @system)
     end

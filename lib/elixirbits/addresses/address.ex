@@ -94,22 +94,22 @@ defmodule Elixirbits.Address do
 
     policy [action_type(:read), accessing_from(Elixirbits.Accounts.User, :addresses)] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/users"], capability: :read}
+                    paths: ["/dashboard/admin/users"], capability: :read}
     end
 
     policy [action_type(:create), accessing_from(Elixirbits.Accounts.User, :addresses)] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/users"], capability: :create}
+                    paths: ["/dashboard/admin/users"], capability: :create}
     end
 
     policy [action_type(:update), accessing_from(Elixirbits.Accounts.User, :addresses)] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/users"], capability: :update}
+                    paths: ["/dashboard/admin/users"], capability: :update}
     end
 
     policy [action_type(:destroy), accessing_from(Elixirbits.Accounts.User, :addresses)] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/users"], capability: :delete}
+                    paths: ["/dashboard/admin/users"], capability: :delete}
     end
 
     policy [
@@ -117,7 +117,7 @@ defmodule Elixirbits.Address do
       accessing_from(Elixirbits.Organizations.Organization, :addresses)
     ] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/organization"], capability: :read}
+                    paths: ["/dashboard/admin/organization"], capability: :read}
     end
 
     policy [
@@ -125,7 +125,7 @@ defmodule Elixirbits.Address do
       accessing_from(Elixirbits.Organizations.Organization, :addresses)
     ] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/organization"], capability: :create}
+                    paths: ["/dashboard/admin/organization"], capability: :create}
     end
 
     policy [
@@ -133,7 +133,7 @@ defmodule Elixirbits.Address do
       accessing_from(Elixirbits.Organizations.Organization, :addresses)
     ] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/organization"], capability: :update}
+                    paths: ["/dashboard/admin/organization"], capability: :update}
     end
 
     policy [
@@ -141,7 +141,7 @@ defmodule Elixirbits.Address do
       accessing_from(Elixirbits.Organizations.Organization, :addresses)
     ] do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/organization"], capability: :delete}
+                    paths: ["/dashboard/admin/organization"], capability: :delete}
     end
   end
 

@@ -16,9 +16,9 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
 
   setup do
     for {code, url} <- [
-          {"ROLES", "admin/roles"},
-          {"USERS", "admin/users"},
-          {"ORG", "admin/organization"}
+          {"ROLES", "dashboard/admin/roles"},
+          {"USERS", "dashboard/admin/users"},
+          {"ORG", "dashboard/admin/organization"}
         ] do
       Ash.create!(Sitenav, %{code: code, name: code, url: url, level: 1}, actor: %{system: true})
     end
@@ -52,7 +52,7 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
 
     on_exit(fn -> :telemetry.detach(handler) end)
 
-    opts = [paths: ["/admin/roles"], capability: :read]
+    opts = [paths: ["/dashboard/admin/roles"], capability: :read]
 
     refute ResourcePolicy.match?(nil, %{}, opts)
     assert ResourcePolicy.match?(%{system: true}, %{}, opts)
@@ -196,7 +196,7 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
     assert "superuser" in admin.roles
 
     Ash.update!(admin, %{roles: normal_roles}, action: :assign_roles, actor: %{system: true})
-    assert Permissions.can?(admin, "/admin/roles", :su)
+    assert Permissions.can?(admin, "/dashboard/admin/roles", :su)
 
     target = create_user(roles: [])
 
@@ -632,7 +632,7 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
                %{
                  code: "BYPASS",
                  name: "Bypass",
-                 url: "admin/bypass",
+                 url: "dashboard/admin/bypass",
                  level: 1,
                  roles_bypass: [code]
                },
@@ -641,7 +641,7 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
 
     assert Ash.get!(RolePerm, grant.id, actor: %{system: true}).level == 15
     assert Ash.get!(Sitenav, page.id, actor: %{system: true}).roles_bypass == []
-    refute Elixirbits.AccessControl.Permissions.can?(updater, "/admin/roles", :su)
+    refute Elixirbits.AccessControl.Permissions.can?(updater, "/dashboard/admin/roles", :su)
   end
 
   test "SU authority can atomically administer grants and navigation" do
@@ -736,8 +736,8 @@ defmodule Elixirbits.AccessControl.ResourcePolicyTest do
         actor: %{system: true}
       )
 
-    refute Permissions.can?(admin, "/admin/users", :update)
-    refute Permissions.can?(admin, "/admin/roles", :su)
+    refute Permissions.can?(admin, "/dashboard/admin/users", :update)
+    refute Permissions.can?(admin, "/dashboard/admin/roles", :su)
 
     changeset =
       Ash.Changeset.for_destroy(role, :destroy, %{remove_assignments?: true}, actor: admin)

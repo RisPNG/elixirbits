@@ -6,6 +6,7 @@ defmodule Elixirbits.Accounts.SeedsTest do
 
   alias Elixirbits.AccessControl.Permissions
   alias Elixirbits.AccessControl.Role
+  alias Elixirbits.AccessControl.RolePerm
   alias Elixirbits.AccessControl.Sitenav
   alias Elixirbits.Accounts.User
 
@@ -80,11 +81,11 @@ defmodule Elixirbits.Accounts.SeedsTest do
       assert Ash.load!(user, :addresses, actor: @system).addresses == []
 
       conn =
-        post(conn, ~p"/auth/user/password/sign_in", %{
+        post(conn, ~p"/dashboard/auth/user/password/sign_in", %{
           "user" => %{"email" => email, "password" => password}
         })
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/dashboard"
       assert get_session(conn, "user_token")
     end
 
@@ -98,8 +99,8 @@ defmodule Elixirbits.Accounts.SeedsTest do
       |> Ash.Query.filter(email == "user@elixirbits.dev")
       |> Ash.read_one!(actor: @system)
 
-    assert Permissions.can?(admin, "/admin/users", :su)
-    refute Permissions.can?(user, "/admin/users", :read)
+    assert Permissions.can?(admin, "/dashboard/admin/users", :su)
+    refute Permissions.can?(user, "/dashboard/admin/users", :read)
     assert_no_email_sent()
   end
 
@@ -142,6 +143,44 @@ defmodule Elixirbits.Accounts.SeedsTest do
     assert Ash.count!(User, actor: @system) == 2
     assert Ash.get!(Sitenav, page.id, actor: @system).state == :DISABLED
     assert_no_email_sent()
+  end
+
+  test "repeated seeds move existing navigation into the dashboard without changing grants" do
+    Code.eval_file(@seeds_file)
+
+    Ash.create!(Role, %{code: "editor", name: "Editor"}, actor: @system)
+
+    grant =
+      Ash.create!(RolePerm, %{roles_code: "editor", sitenav_code: "USERS", level: 5},
+        actor: @system
+      )
+
+    paths = [
+      {"HOME", "", "dashboard"},
+      {"USERS", "admin/users", "dashboard/admin/users"},
+      {"ROLES", "admin/roles", "dashboard/admin/roles"},
+      {"ORG", "admin/organization", "dashboard/admin/organization"},
+      {"LT", "dev_panel/layout_test", "dashboard/dev_panel/layout_test"}
+    ]
+
+    for {code, previous_url, _url} <- paths do
+      Sitenav
+      |> Ash.get!(%{code: code}, actor: @system)
+      |> Ash.update!(%{url: previous_url}, actor: @system)
+    end
+
+    page = Ash.get!(Sitenav, %{code: "USERS"}, actor: @system)
+    Ash.update!(page, %{}, action: :disable, actor: @system)
+    Code.eval_file(@seeds_file)
+
+    for {code, _previous_url, url} <- paths do
+      assert Ash.get!(Sitenav, %{code: code}, actor: @system).url == url
+    end
+
+    assert %{state: :DISABLED} = Ash.get!(Sitenav, page.id, actor: @system)
+
+    assert %{roles_code: "editor", sitenav_code: "USERS", level: 5} =
+             Ash.get!(RolePerm, grant.id, actor: @system)
   end
 
   test "optional environment administrators use the same confirmed provisioning action" do

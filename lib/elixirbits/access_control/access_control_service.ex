@@ -263,7 +263,8 @@ defmodule Elixirbits.AccessControl.Permissions do
       prefix = entry.url |> to_string() |> String.trim("/")
 
       not is_nil(entry.url) and
-        (normalized == prefix or (prefix != "" and String.starts_with?(normalized, prefix <> "/")))
+        (normalized == prefix or
+           (prefix not in ["", "dashboard"] and String.starts_with?(normalized, prefix <> "/")))
     end)
     |> Enum.max_by(&String.length(&1.url), fn -> nil end)
   end

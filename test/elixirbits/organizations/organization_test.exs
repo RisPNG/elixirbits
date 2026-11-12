@@ -13,7 +13,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
   setup do
     Ash.create!(
       Sitenav,
-      %{code: "ORG", name: "Organization", url: "admin/organization", level: 1},
+      %{code: "ORG", name: "Organization", url: "dashboard/admin/organization", level: 1},
       actor: @system
     )
 
@@ -133,7 +133,7 @@ defmodule Elixirbits.Organizations.OrganizationTest do
   test "user and organization address positions survive reordering, removal, and insertion", %{
     actor: actor
   } do
-    Ash.create!(Sitenav, %{code: "USERS", name: "Users", url: "admin/users", level: 1},
+    Ash.create!(Sitenav, %{code: "USERS", name: "Users", url: "dashboard/admin/users", level: 1},
       actor: @system
     )
 

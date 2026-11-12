@@ -503,7 +503,7 @@ defmodule Elixirbits.Accounts.User do
 
                        Elixirbits.AccessControl.Permissions.can?(
                          permissions,
-                         "/admin/roles",
+                         "/dashboard/admin/roles",
                          :su
                        ) and
                          ("superuser" not in Ash.Changeset.get_attribute(changeset, :roles) or
@@ -540,7 +540,7 @@ defmodule Elixirbits.Accounts.User do
     end
   end
 
-  use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/users"
+  use Elixirbits.AccessControl.ResourcePolicies, path: "/dashboard/admin/users"
 
   validations do
     validate fn changeset, _context ->

@@ -28,7 +28,7 @@ defmodule ElixirbitsWeb.LiveUserAuth do
         (socket.assigns[:current_user] && socket.assigns.current_user.timezone) ||
           browser_timezone || (organization && organization.timezone) || "Etc/UTC"
       end)
-      |> assign(:current_url, "/")
+      |> assign(:current_url, "/dashboard")
       |> attach_hook(:user_timezone_preference, :handle_event, fn
         "change_timezone", %{"timezone" => timezone}, socket ->
           case socket.assigns[:current_user] do
@@ -79,7 +79,7 @@ defmodule ElixirbitsWeb.LiveUserAuth do
     socket =
       socket
       |> assign(:permissions, permissions)
-      |> assign(:current_path, "/")
+      |> assign(:current_path, "/dashboard")
       |> assign(:nav, %{
         items: Permissions.visible_sitenav(permissions),
         organization: Elixirbits.Organizations.OrganizationService.current_organization!(),
@@ -96,12 +96,12 @@ defmodule ElixirbitsWeb.LiveUserAuth do
               |> then(&[{"Automatic (browser)", ""} | &1]),
             else: []
           ),
-        path: "/",
+        path: "/dashboard",
         open?: true,
         open_codes: nil
       })
       |> attach_hook(:app_nav_path, :handle_params, fn _params, uri, socket ->
-        path = URI.parse(uri).path
+        path = String.trim_trailing(URI.parse(uri).path, "/")
 
         {:cont,
          socket
@@ -256,13 +256,13 @@ defmodule ElixirbitsWeb.LiveUserAuth do
     if socket.assigns[:current_user] do
       {:cont, socket}
     else
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/dashboard/sign-in")}
     end
   end
 
   def on_mount(:live_no_user, _params, _session, socket) do
     if socket.assigns[:current_user] do
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/")}
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/dashboard")}
     else
       {:cont, assign(socket, :current_user, nil)}
     end
@@ -278,19 +278,19 @@ defmodule ElixirbitsWeb.LiveUserAuth do
           {:halt,
            socket
            |> put_flash(:error, "You do not have permission to create that.")
-           |> redirect(to: ~p"/")}
+           |> redirect(to: ~p"/dashboard")}
         else
           {:cont, socket}
         end
 
       is_nil(permissions.user) and not Permissions.public_path?(permissions, path) ->
-        {:halt, redirect(socket, to: ~p"/sign-in")}
+        {:halt, redirect(socket, to: ~p"/dashboard/sign-in")}
 
       true ->
         {:halt,
          socket
          |> put_flash(:error, "You do not have access to that page.")
-         |> redirect(to: ~p"/")}
+         |> redirect(to: ~p"/dashboard")}
     end
   end
 end

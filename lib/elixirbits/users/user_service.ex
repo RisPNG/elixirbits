@@ -99,7 +99,7 @@ defmodule Elixirbits.Accounts.User.Senders.SendNewUserConfirmationEmail do
   end
 
   defp body(params) do
-    url = url(~p"/confirm_new_user/#{params[:token]}")
+    url = url(~p"/dashboard/confirm_new_user/#{params[:token]}")
 
     """
     <p>Click this link to confirm your email:</p>
@@ -132,7 +132,7 @@ defmodule Elixirbits.Accounts.User.Senders.SendPasswordResetEmail do
   end
 
   defp body(params) do
-    url = url(~p"/password-reset/#{params[:token]}")
+    url = url(~p"/dashboard/password-reset/#{params[:token]}")
 
     """
     <p>Click this link to reset your password:</p>
@@ -177,7 +177,7 @@ defmodule Elixirbits.Accounts.User.Senders.SendMagicLinkEmail do
 
     """
     <p>Hello, #{params[:email]}! Click this link to sign in:</p>
-    <p><a href="#{url(~p"/magic_link/#{params[:token]}")}">#{url(~p"/magic_link/#{params[:token]}")}</a></p>
+    <p><a href="#{url(~p"/dashboard/magic_link/#{params[:token]}")}">#{url(~p"/dashboard/magic_link/#{params[:token]}")}</a></p>
     """
   end
 end

@@ -11,7 +11,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
     home =
       Ash.create!(
         Sitenav,
-        %{code: "HOME", name: "Home", url: "", level: 1, roles_bypass: ["public"]},
+        %{code: "HOME", name: "Home", url: "dashboard", level: 1, roles_bypass: ["public"]},
         actor: @system
       )
 
@@ -78,7 +78,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
       assert Ash.get!(Sitenav, entry.id, actor: @system).icon == icon
     end
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     for {code, icon} <- icons do
       assert has_element?(view, "#app-navigation a[href='/icons/#{code}'] .#{icon}")
@@ -89,9 +89,9 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
     Ash.update!(home, %{icon: "tabler-device-floppy"}, actor: @system)
     assert Ash.get!(Sitenav, home.id, actor: @system).icon == "tabler-device-floppy"
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-    assert has_element?(view, "#app-navigation a[href='/'] .tabler-device-floppy")
+    assert has_element?(view, "#app-navigation a[href='/dashboard'] .tabler-device-floppy")
   end
 
   test "Tabler filled icons persist and render on root groups", %{conn: conn} do
@@ -109,7 +109,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
       )
 
     assert Ash.get!(Sitenav, group.id, actor: @system).icon == "tabler-heart-filled"
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     assert has_element?(
              view,
@@ -132,9 +132,9 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
       actor: @system
     )
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-    assert has_element?(view, "#app-navigation a[href='/'] .hero-beaker")
+    assert has_element?(view, "#app-navigation a[href='/dashboard'] .hero-beaker")
 
     assert has_element?(
              view,
@@ -157,9 +157,9 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
       )
 
     assert is_nil(group.icon)
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-    assert has_element?(view, "#app-navigation a[href='/'] .hero-slash")
+    assert has_element?(view, "#app-navigation a[href='/dashboard'] .hero-slash")
 
     assert has_element?(
              view,
@@ -195,7 +195,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
         actor: @system
       )
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
     render_click(view, "toggle_nav_section", %{"code" => "REPORTS"})
 
     assert has_element?(view, "#app-navigation a[href='/reports/details']", "Details")
@@ -206,7 +206,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
 
   test "the collapsed Home link uses its stored icon", %{conn: conn, home: home} do
     Ash.update!(home, %{icon: "hero-beaker"}, actor: @system)
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     render_click(view, "toggle_nav")
 
@@ -215,7 +215,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
   end
 
   test "the collapsed Home link uses the slash icon when none is assigned", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     render_click(view, "toggle_nav")
 

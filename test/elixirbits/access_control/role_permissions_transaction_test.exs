@@ -20,7 +20,10 @@ defmodule Elixirbits.AccessControl.RolePermissionsTransactionTest do
 
     admin =
       Sandbox.unboxed_run(Elixirbits.Repo, fn ->
-        for {code, url} <- [{"ROLES", "admin/roles"}, {"USERS", "admin/users"}] do
+        for {code, url} <- [
+              {"ROLES", "dashboard/admin/roles"},
+              {"USERS", "dashboard/admin/users"}
+            ] do
           Ash.create!(Sitenav, %{code: code, name: code, url: url, level: 1},
             actor: %{system: true}
           )

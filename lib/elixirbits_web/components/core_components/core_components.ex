@@ -195,7 +195,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
       <.button phx-click="toggle_details" aria-pressed={@show_details}>Details</.button>
       <.button variant={:primary} type="submit">Sign in</.button>
-      <.button variant={:text} navigate={~p"/register"}>Create an account</.button>
+      <.button variant={:text} navigate={~p"/dashboard/register"}>Create an account</.button>
 
   ## Variant
 
@@ -206,7 +206,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   Use `:text` for a text action, `:primary` for the preferred action, `:neutral` for an outlined secondary action, and `:danger` for destructive confirmations. These choices describe visual emphasis for both navigation and event actions.
 
       <.button variant={:text} phx-click="request_magic_link">Email me a magic link</.button>
-      <.button variant={:text} navigate={~p"/register"}>Create an account</.button>
+      <.button variant={:text} navigate={~p"/dashboard/register"}>Create an account</.button>
 
   Navigation attributes render a link, while other actions render a button. Inline and hierarchical navigation links can use `<.link>` directly. Input-owned compact controls use native buttons with the shared base styling.
   """
@@ -2861,14 +2861,14 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :pagination_wrapper_class, "py-4"
 
   set :pagination_container_class,
-      "grid grid-cols-[1fr_max-content] items-center gap-4 [&>.flex.items-center]:grid [&>.flex.items-center]:grid-cols-[max-content_max-content] [&>.flex.items-center]:justify-between [&>.flex.items-center]:gap-x-6 [&>.flex.items-center>*]:mx-0"
+      "grid grid-cols-[1fr_max-content] items-center gap-4 [&>.flex.items-center]:grid [&>.flex.items-center]:grid-cols-[max-content] [&>.flex.items-center]:grid-flow-col [&>.flex.items-center]:auto-cols-max [&>.flex.items-center]:justify-between [&>.flex.items-center]:gap-x-6 [&>.flex.items-center>*]:mx-0"
 
   set :pagination_info_class, "text-subcontent text-sm"
 
   set :pagination_count_class, "text-subcontent text-xs ml-2"
 
   set :pagination_nav_class,
-      "grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center justify-end gap-2 [&>button[phx-value-page]]:text-2xl [&>button[phx-value-page]]:leading-none"
+      "grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center justify-end gap-2"
 
   set :pagination_button_class,
       "inline-grid place-items-center min-h-11 min-w-11 px-3 rounded-default text-sm font-medium button-neutral transition-colors"

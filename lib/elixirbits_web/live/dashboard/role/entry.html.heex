@@ -1,0 +1,153 @@
+<Layouts.dashboard user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <% editable? =
+    @live_action in [:create, :update] and can?(@permissions, @current_path, @live_action) %>
+  <History.history audit={@audit} user_timezone={@user_timezone} />
+  <.form
+    for={@form}
+    id="role-form"
+    phx-change={if editable?, do: "validate"}
+    phx-submit={if editable?, do: "save"}
+    class="space-y-6"
+  >
+    <.page>
+      <:title>{@page_title}</:title>
+
+      <:actions>
+        <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
+          <.action_button action={:back} navigate={~p"/dashboard/admin/roles"} />
+          <.action_button
+            :if={@live_action == :update and can?(@permissions, @current_path, :read)}
+            action={:read}
+            navigate={~p"/dashboard/admin/roles/#{@role.id}/read"}
+          />
+          <.action_button
+            :if={
+              @live_action == :read and @role != nil and
+                can?(@permissions, @current_path, :update)
+            }
+            action={:history}
+            patch={@audit.history_path}
+          />
+          <.action_button
+            :if={editable?}
+            action={:save}
+            type="submit"
+          />
+          <.action_button
+            :if={@live_action == :read and can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/dashboard/admin/roles/#{@role.id}/update"}
+          />
+          <.action_button
+            :if={
+              @live_action == :update and @role.code != "superuser" and
+                can?(@permissions, @current_path, :delete)
+            }
+            action={:delete}
+            type="button"
+            phx-click="request_delete"
+          />
+        </div>
+      </:actions>
+
+      <.card>
+        <.header>
+          Details
+        </.header>
+
+        <fieldset
+          disabled={!editable?}
+          class="space-y-4"
+        >
+          <div class="grid grid-cols-[1fr_3fr] subgap-2">
+            <.input :if={is_nil(@role)} field={@form[:code]} type="text" label="Code" />
+            <.input
+              :if={@role}
+              name="role_code"
+              value={@role.code}
+              type="text"
+              label="Code"
+              disabled
+            /> <.input field={@form[:name]} type="text" label="Name" />
+          </div>
+
+          <div class="grid grid-cols-[1fr] subgap-2">
+            <.input field={@form[:description]} type="textarea" label="Description" />
+          </div>
+        </fieldset>
+      </.card>
+
+      <.card>
+        <.header>
+          Page permissions
+        </.header>
+
+        <div class="listing-surface">
+          <div class="grid grid-cols-[2fr_3fr] gap-2 listing-heading rounded-t-default">
+            <div class="listing-cell">Page</div>
+
+            <div class="listing-cell">Access level</div>
+          </div>
+
+          <div
+            :for={page <- @pages}
+            class="grid grid-cols-[2fr_3fr] gap-2 border-t border-outline"
+          >
+            <div class="listing-cell">
+              <p :if={page.group} class="text-xs text-subcontent">{page.group}</p>
+
+              <label
+                id={"permission-label-#{page.code}"}
+                for={
+                  if editable? and can?(@permissions, @current_path, :su),
+                    do: "permission-level-#{page.code}-input",
+                    else: "permission-level-#{page.code}"
+                }
+                class="block text-content"
+              >
+                {page.name}
+              </label>
+
+              <p
+                :if={page.public?}
+                id={"permission-hint-#{page.code}"}
+                class="text-xs text-subcontent"
+              >
+                Public read access
+              </p>
+            </div>
+
+            <div class="listing-cell">
+              <.input
+                field={@permission_form[page.code]}
+                type="combobox"
+                id={"permission-level-#{page.code}"}
+                options={@levels}
+                role="group"
+                aria-labelledby={"permission-label-#{page.code}"}
+                aria-describedby={if page.public?, do: "permission-hint-#{page.code}"}
+                clearable={false}
+                disabled={!editable? or !can?(@permissions, @current_path, :su)}
+                data-audit-side={@audit.selected && to_string(@audit.side)}
+                data-audit-changed={
+                  if @audit.selected &&
+                       Enum.any?(
+                         @audit.fields,
+                         &(&1.key == "role_perms.#{page.code}.level" and &1.status == :changed)
+                       ),
+                     do: "true"
+                }
+              />
+            </div>
+          </div>
+        </div>
+      </.card>
+    </.page>
+  </.form>
+  <.delete_confirmation
+    :if={@to_delete}
+    label="role"
+    name={@to_delete.name}
+    remove_assignments?={@remove_assignments?}
+  />
+</Layouts.dashboard>

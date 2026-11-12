@@ -33,7 +33,7 @@ defmodule Elixirbits.AccessControl.RolePerm do
     mixin Elixirbits.CoreUtils.Resource.AuditLog.Version
   end
 
-  use Elixirbits.AccessControl.ResourcePolicies, path: "/admin/roles"
+  use Elixirbits.AccessControl.ResourcePolicies, path: "/dashboard/admin/roles"
 
   code_interface do
     define? false
@@ -57,7 +57,7 @@ defmodule Elixirbits.AccessControl.RolePerm do
   policies do
     policy action_type([:create, :update, :destroy]) do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/roles"], capability: :su}
+                    paths: ["/dashboard/admin/roles"], capability: :su}
     end
   end
 

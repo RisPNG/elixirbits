@@ -224,24 +224,29 @@ defmodule Elixirbits.AccessControl.PermissionsTest do
     end
   end
 
-  test "unknown paths deny even a superuser and root public access does not cover descendants" do
-    page(%{code: "HOME", name: "Home", url: "", roles_bypass: ["public"]})
-    permissions = Permissions.load(%{id: Ash.UUID.generate(), roles: ["superuser"]})
+  test "unknown paths deny even a superuser and dashboard home access does not cover descendants" do
+    page(%{code: "HOME", name: "Home", url: "dashboard", roles_bypass: ["public"]})
 
-    assert Permissions.can_access_path?(permissions, "/")
-    refute Permissions.can_access_path?(permissions, "/admin/unregistered")
-    assert Permissions.perm_level(permissions, "/admin/unregistered") == 0
+    for user <- [nil, %{id: Ash.UUID.generate(), roles: ["superuser"]}] do
+      permissions = Permissions.load(user)
 
-    for capability <- [:read, :create, :update, :delete, :su] do
-      refute Permissions.can?(permissions, "/admin/unregistered", capability)
+      assert Permissions.can_access_path?(permissions, "/dashboard")
+      assert Permissions.public_path?(permissions, "/dashboard")
+      refute Permissions.can_access_path?(permissions, "/dashboard/admin/unregistered")
+      refute Permissions.public_path?(permissions, "/dashboard/admin/unregistered")
+      assert Permissions.perm_level(permissions, "/dashboard/admin/unregistered") == 0
+
+      for capability <- [:read, :create, :update, :delete, :su] do
+        refute Permissions.can?(permissions, "/dashboard/admin/unregistered", capability)
+      end
+
+      refute Permissions.can?(permissions.user, "/dashboard/admin/unregistered", :read)
     end
-
-    refute Permissions.can?(permissions.user, "/admin/unregistered", :read)
   end
 
   test "longest matching path and role grant levels determine access" do
-    page(%{code: "ADMIN", name: "Admin", url: "admin", roles_bypass: ["public"]})
-    page(%{code: "USERS", name: "Users", url: "admin/users"})
+    page(%{code: "ADMIN", name: "Admin", url: "dashboard/admin", roles_bypass: ["public"]})
+    page(%{code: "USERS", name: "Users", url: "dashboard/admin/users"})
     Ash.create!(Role, %{code: "viewer", name: "Viewer"}, actor: %{system: true})
 
     Ash.create!(RolePerm, %{roles_code: "viewer", sitenav_code: "USERS", level: 4},
@@ -250,10 +255,10 @@ defmodule Elixirbits.AccessControl.PermissionsTest do
 
     permissions = Permissions.load(%{id: Ash.UUID.generate(), roles: ["viewer"]})
 
-    assert Permissions.can?(permissions, "/admin/users/123/update", :read)
-    refute Permissions.public_path?(permissions, "/admin/users/123/update")
-    refute Permissions.can?(permissions, "/admin/users/123/update", :update)
-    assert Permissions.public_path?(permissions, "/admin/users-other")
+    assert Permissions.can?(permissions, "/dashboard/admin/users/123/update", :read)
+    refute Permissions.public_path?(permissions, "/dashboard/admin/users/123/update")
+    refute Permissions.can?(permissions, "/dashboard/admin/users/123/update", :update)
+    assert Permissions.public_path?(permissions, "/dashboard/admin/users-other")
   end
 
   test "navigation retains ancestors and branch state without querying per check" do

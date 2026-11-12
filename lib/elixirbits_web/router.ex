@@ -33,26 +33,10 @@ defmodule ElixirbitsWeb.Router do
   scope "/", ElixirbitsWeb do
     pipe_through :browser
 
-    ash_authentication_live_session :authenticated_routes,
-      on_mount: [
-        {ElixirbitsWeb.LiveUserAuth, :live_user_optional},
-        {ElixirbitsWeb.LiveUserAuth, :app_nav}
-      ] do
-      # in each liveview, add one of the following at the top of the module:
-      #
-      # If an authenticated user must be present:
-      # on_mount {ElixirbitsWeb.LiveUserAuth, :live_user_required}
-      #
-      # If an authenticated user *may* be present:
-      # on_mount {ElixirbitsWeb.LiveUserAuth, :live_user_optional}
-      #
-      # If an authenticated user must *not* be present:
-      # on_mount {ElixirbitsWeb.LiveUserAuth, :live_no_user}
-      scope "/dev_panel", Admin do
-        # live "/", DevPanelLive, :index
-        live "/layout_test", LayoutTestLive, :index
-        # live "/users", UsersLive, :index
-      end
+    ash_authentication_live_session :public_routes,
+      layout: {ElixirbitsWeb.Layouts, :index},
+      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
+      live "/", IndexLive.Index, :index
     end
 
     post "/rpc/run", AshTypescriptRpcController, :run
@@ -65,23 +49,17 @@ defmodule ElixirbitsWeb.Router do
     forward "/", ElixirbitsWeb.AshJsonApiRouter
   end
 
-  scope "/", ElixirbitsWeb do
+  scope "/dashboard", ElixirbitsWeb do
     pipe_through :browser
 
-    ash_authentication_live_session :public_routes,
+    ash_authentication_live_session :dashboard_routes,
       on_mount: [
         {ElixirbitsWeb.LiveUserAuth, :live_user_optional},
         {ElixirbitsWeb.LiveUserAuth, :app_nav}
       ] do
-      live "/", HomeLive, :index
-    end
+      live "/", DashboardLive, :index
 
-    ash_authentication_live_session :app_routes,
-      on_mount: [
-        {ElixirbitsWeb.LiveUserAuth, :live_user_optional},
-        {ElixirbitsWeb.LiveUserAuth, :app_nav}
-      ] do
-      scope "/admin", Admin do
+      scope "/admin", Dashboard do
         live "/users", UserLive.Index, :index
         live "/users/create", UserLive.Entry, :create
         live "/users/:id/read", UserLive.Entry, :read
@@ -93,6 +71,10 @@ defmodule ElixirbitsWeb.Router do
         live "/organization", OrganizationLive.Settings, :read
         live "/organization/update", OrganizationLive.Settings, :update
       end
+
+      scope "/dev_panel", Dashboard do
+        live "/layout_test", LayoutTestLive, :index
+      end
     end
 
     auth_routes AuthController, Elixirbits.Accounts.User, path: "/auth"
@@ -100,30 +82,25 @@ defmodule ElixirbitsWeb.Router do
 
     ash_authentication_live_session :login_routes,
       on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_no_user}] do
-      live "/sign-in", LoginLive.Index, :sign_in
-      live "/register", LoginLive.Register, :register
-      live "/reset", LoginLive.ForgotPassword, :forgot_password
-      live "/password-reset/:token", LoginLive.ResetPassword, :reset_password
-      live "/magic_link/:token", LoginLive.MagicLink, :sign_in
+      live "/sign-in", Dashboard.LoginLive.Index, :sign_in
+      live "/register", Dashboard.LoginLive.Register, :register
+      live "/reset", Dashboard.LoginLive.ForgotPassword, :forgot_password
+      live "/password-reset/:token", Dashboard.LoginLive.ResetPassword, :reset_password
+      live "/magic_link/:token", Dashboard.LoginLive.MagicLink, :sign_in
     end
 
     ash_authentication_live_session :confirmation_routes,
       on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
-      live "/confirm_new_user/:token", LoginLive.Confirm, :confirm
+      live "/confirm_new_user/:token", Dashboard.LoginLive.Confirm, :confirm
     end
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", ElixirbitsWeb do
-  #   pipe_through :api
-  # end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:elixirbits, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put it behind authentication and allow only admins to access it. If your application does not have an admins-only section yet, you can use Plug.BasicAuth to set up some basic authentication as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
 
-    scope "/dev" do
+    scope "/dashboard/dev" do
       pipe_through :browser
 
       live_dashboard "/dashboard", metrics: ElixirbitsWeb.Telemetry
@@ -134,7 +111,7 @@ defmodule ElixirbitsWeb.Router do
   if Application.compile_env(:elixirbits, :dev_routes) do
     import AshAdmin.Router
 
-    scope "/admin" do
+    scope "/dashboard/admin" do
       pipe_through :browser
 
       ash_admin "/"

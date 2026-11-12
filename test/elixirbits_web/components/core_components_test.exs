@@ -145,7 +145,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
       html =
         rendered_to_string(~H"""
-        <CoreComponents.button id="create-account" variant={:text} navigate="/register">
+        <CoreComponents.button id="create-account" variant={:text} navigate="/dashboard/register">
           Create an account
         </CoreComponents.button>
 
@@ -161,7 +161,10 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       document = Floki.parse_document!(html)
 
       assert [_] =
-               Floki.find(document, "a#create-account[href='/register'][data-phx-link=redirect]")
+               Floki.find(
+                 document,
+                 "a#create-account[href='/dashboard/register'][data-phx-link=redirect]"
+               )
 
       assert [_] =
                Floki.find(
@@ -1170,7 +1173,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           selection: "singles",
           preview: true,
           editor: %{ratio: 1},
-          stored: ["/uploads/previous.png", "/images/logo.svg"]
+          stored: ["/uploads/previous.png", "/uploads/vector.svg"]
         )
         |> Floki.parse_document!()
 
@@ -1223,7 +1226,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
       assert Floki.find(
                document,
-               "[data-file-key='/images/logo.svg'] [data-file-edit], [data-file-key=picked-pdf] [data-file-edit]"
+               "[data-file-key='/uploads/vector.svg'] [data-file-edit], [data-file-key=picked-pdf] [data-file-edit]"
              ) == []
 
       assert Floki.find(
@@ -1705,7 +1708,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             editor: true,
             preview_as: preview_as,
             render_as: mode,
-            stored: ["/uploads/previous.webp", "/images/logo.svg", "/uploads/document.pdf"]
+            stored: ["/uploads/previous.webp", "/uploads/vector.svg", "/uploads/document.pdf"]
           )
           |> Floki.parse_document!()
 
@@ -1716,7 +1719,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(
                  document,
-                 "[data-file-key='/images/logo.svg'] [data-file-edit], [data-file-key='/uploads/document.pdf'] [data-file-edit]"
+                 "[data-file-key='/uploads/vector.svg'] [data-file-edit], [data-file-key='/uploads/document.pdf'] [data-file-edit]"
                ) == []
       end
     end

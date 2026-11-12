@@ -16,9 +16,9 @@ defmodule Elixirbits.CoreUtils.Resource.AuditLogTest do
 
   setup do
     for {code, url} <- [
-          {"USERS", "admin/users"},
-          {"ROLES", "admin/roles"},
-          {"ORG", "admin/organization"}
+          {"USERS", "dashboard/admin/users"},
+          {"ROLES", "dashboard/admin/roles"},
+          {"ORG", "dashboard/admin/organization"}
         ] do
       Ash.create!(Sitenav, %{code: code, name: code, url: url, level: 1}, actor: @system)
     end
@@ -149,7 +149,8 @@ defmodule Elixirbits.CoreUtils.Resource.AuditLogTest do
         actor: @system
       )
 
-    assert {:error, _} = AuditLog.history(Sitenav, entry.id, reader, path: "/admin/users")
+    assert {:error, _} =
+             AuditLog.history(Sitenav, entry.id, reader, path: "/dashboard/admin/users")
 
     updater = editor(%{"ROLES" => 5, "USERS" => 15})
     role = Ash.create!(Role, %{code: "path-protected", name: "Original role"}, actor: @system)
@@ -158,10 +159,10 @@ defmodule Elixirbits.CoreUtils.Resource.AuditLogTest do
     Ash.update!(role, %{name: "Current role"}, actor: @system)
 
     assert {:error, _} =
-             AuditLog.preview(Role, role.id, original.id, updater, path: "/admin/users")
+             AuditLog.preview(Role, role.id, original.id, updater, path: "/dashboard/admin/users")
 
     assert {:error, _} =
-             AuditLog.restore(Role, role.id, original.id, updater, path: "/admin/users")
+             AuditLog.restore(Role, role.id, original.id, updater, path: "/dashboard/admin/users")
 
     assert Ash.get!(Role, role.id, actor: @system).name == "Current role"
   end

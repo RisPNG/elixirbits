@@ -13,7 +13,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     home =
       Ash.create!(
         Sitenav,
-        %{code: "HOME", name: "Home", url: "", level: 1, roles_bypass: ["public"]},
+        %{code: "HOME", name: "Home", url: "dashboard", level: 1, roles_bypass: ["public"]},
         actor: @system
       )
 
@@ -22,7 +22,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
   test "anonymous visitors use their browser timezone but cannot save a preference", %{conn: conn} do
     conn = put_connect_params(conn, %{"user_timezone" => "America/New_York"})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     assert has_element?(view, "[data-user-timezone='America/New_York']")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
@@ -46,7 +46,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
       |> log_in_user(user)
       |> put_connect_params(%{"user_timezone" => "America/New_York"})
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
     assert has_element?(view, "[data-user-timezone='Europe/London']")
 
     assert has_element?(
@@ -97,13 +97,13 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     )
 
     conn = put_connect_params(conn, %{"user_timezone" => "Unknown/Zone"})
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
     assert has_element?(view, "[data-user-timezone='Pacific/Auckland']")
   end
 
   test "missing or invalid browser timezone uses UTC when settings are absent", %{conn: conn} do
     for params <- [%{}, %{"user_timezone" => "Unknown/Zone"}, %{"user_timezone" => 42}] do
-      {:ok, view, _html} = conn |> put_connect_params(params) |> live(~p"/")
+      {:ok, view, _html} = conn |> put_connect_params(params) |> live(~p"/dashboard")
       assert has_element?(view, "[data-user-timezone='Etc/UTC']")
     end
   end
@@ -120,7 +120,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
       |> log_in_user(user)
       |> put_connect_params(%{"user_timezone" => "America/New_York"})
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
     assert has_element?(view, "[data-user-timezone='America/New_York']")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
     assert has_element?(view, "#user-timezone input[type=text][value='Automatic (browser)']")
@@ -139,9 +139,9 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     refute has_element?(view, "#user-timezone [data-pc-combo-clear]")
 
     result = view |> form("#user-timezone-form", timezone: "Europe/London") |> render_submit()
-    assert {:error, {:live_redirect, %{to: "/"}}} = result
+    assert {:error, {:live_redirect, %{to: "/dashboard"}}} = result
     assert Ash.get!(User, user.id, actor: @system).timezone == "Europe/London"
-    {:ok, view, html} = follow_redirect(result, conn, ~p"/")
+    {:ok, view, html} = follow_redirect(result, conn, ~p"/dashboard")
     assert html =~ "Timezone saved."
     assert has_element?(view, "[data-user-timezone='Europe/London']")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
@@ -156,9 +156,9 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     assert has_element?(view, "#user-timezone-select[name=timezone] option[selected][value='']")
 
     result = view |> form("#user-timezone-form", timezone: "") |> render_submit()
-    assert {:error, {:live_redirect, %{to: "/"}}} = result
+    assert {:error, {:live_redirect, %{to: "/dashboard"}}} = result
     assert Ash.get!(User, user.id, actor: @system).timezone == nil
-    {:ok, view, _html} = follow_redirect(result, conn, ~p"/")
+    {:ok, view, _html} = follow_redirect(result, conn, ~p"/dashboard")
     assert has_element?(view, "[data-user-timezone='America/New_York']")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
     assert has_element?(view, "#user-timezone input[type=text][value='Automatic (browser)']")
@@ -173,7 +173,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
       |> log_in_user(user)
       |> put_connect_params(%{"user_timezone" => "America/New_York"})
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
 
     assert render_submit(view, "change_timezone", %{"timezone" => "Unknown/Zone"}) =~
@@ -182,7 +182,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     assert has_element?(view, "[data-user-timezone='Europe/London']")
     assert Ash.get!(User, user.id, actor: @system).timezone == "Europe/London"
 
-    assert {:error, {:live_redirect, %{to: "/"}}} =
+    assert {:error, {:live_redirect, %{to: "/dashboard"}}} =
              render_submit(view, "change_timezone", %{
                "timezone" => "Asia/Kuala_Lumpur",
                "id" => target.id,
@@ -198,12 +198,15 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
   end
 
   test "navigation timezone choices stay separate from a page's own comboboxes", %{conn: conn} do
-    Ash.create!(Sitenav, %{code: "USERS", name: "Users", url: "admin/users", level: 1},
+    Ash.create!(Sitenav, %{code: "USERS", name: "Users", url: "dashboard/admin/users", level: 1},
       actor: @system
     )
 
     user = create_user(roles: ["superuser"])
-    {:ok, view, _html} = conn |> log_in_user(user) |> live(~p"/admin/users/#{user.id}/update")
+
+    {:ok, view, _html} =
+      conn |> log_in_user(user) |> live(~p"/dashboard/admin/users/#{user.id}/update")
+
     view |> element("button[phx-click='toggle_nav']") |> render_click()
 
     assert has_element?(view, "#user-timezone-select option[value='Europe/London']")
@@ -230,7 +233,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
       |> log_in_user(user)
       |> put_connect_params(%{"user_timezone" => "America/New_York"})
 
-    path = ~p"/confirm_new_user/confirmation-token?#{%{scope: "timezone"}}"
+    path = ~p"/dashboard/confirm_new_user/confirmation-token?#{%{scope: "timezone"}}"
     {:ok, view, _html} = live(conn, path)
     assert has_element?(view, "[data-user-timezone='America/New_York']")
     refute has_element?(view, "#user-timezone-form")
@@ -244,7 +247,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
   test "the component showcase exposes the shared account preference form", %{conn: conn} do
     conn = log_in_user(conn, create_user())
-    {:ok, view, _html} = live(conn, ~p"/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
 
     assert has_element?(view, "#app-navigation")
     assert has_element?(view, "button[popovertarget=account-menu]")

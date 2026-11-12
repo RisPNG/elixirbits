@@ -31,8 +31,8 @@ defmodule Elixirbits.AccessControl.Role do
   end
 
   use Elixirbits.AccessControl.ResourcePolicies,
-    path: "/admin/roles",
-    read_paths: ["/admin/roles", "/admin/users"]
+    path: "/dashboard/admin/roles",
+    read_paths: ["/dashboard/admin/roles", "/dashboard/admin/users"]
 
   code_interface do
     define? false
@@ -181,7 +181,7 @@ defmodule Elixirbits.AccessControl.Role do
   policies do
     policy changing_relationship(:role_perms) do
       authorize_if {Elixirbits.AccessControl.ResourcePolicy,
-                    paths: ["/admin/roles"], capability: :su}
+                    paths: ["/dashboard/admin/roles"], capability: :su}
     end
   end
 

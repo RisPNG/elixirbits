@@ -11,17 +11,17 @@ defmodule ElixirbitsWeb.AuthController do
       :info,
       "If an account exists for that email, password reset instructions have been sent."
     )
-    |> redirect(to: ~p"/sign-in")
+    |> redirect(to: ~p"/dashboard/sign-in")
   end
 
   def success(conn, {:magic_link, :request}, _user, _token) do
     conn
     |> put_flash(:info, "If your email is valid, a sign-in link has been sent.")
-    |> redirect(to: ~p"/sign-in")
+    |> redirect(to: ~p"/dashboard/sign-in")
   end
 
   def success(conn, activity, user, _token) do
-    return_to = get_session(conn, :return_to) || ~p"/"
+    return_to = get_session(conn, :return_to) || ~p"/dashboard"
 
     lock =
       if activity == {:password, :sign_in},
@@ -35,7 +35,7 @@ defmodule ElixirbitsWeb.AuthController do
           :error,
           "Too many failed attempts. Try again in #{div(seconds + 59, 60)} minutes."
         )
-        |> redirect(to: ~p"/sign-in")
+        |> redirect(to: ~p"/dashboard/sign-in")
 
       :ok ->
         LoginGuard.record_success(user.email)
@@ -105,8 +105,8 @@ defmodule ElixirbitsWeb.AuthController do
 
     redirect_to =
       case activity do
-        {:password, :reset} -> ~p"/reset"
-        _ -> ~p"/sign-in"
+        {:password, :reset} -> ~p"/dashboard/reset"
+        _ -> ~p"/dashboard/sign-in"
       end
 
     conn
@@ -115,7 +115,7 @@ defmodule ElixirbitsWeb.AuthController do
   end
 
   def sign_out(conn, _params) do
-    return_to = get_session(conn, :return_to) || ~p"/"
+    return_to = get_session(conn, :return_to) || ~p"/dashboard"
 
     conn
     |> clear_session(:elixirbits)
