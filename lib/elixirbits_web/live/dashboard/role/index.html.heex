@@ -1,5 +1,5 @@
 <Layouts.dashboard user_timezone={@user_timezone} flash={@flash} nav={@nav}>
-  <.page id="roles-collection" phx-hook="CinderPagination" class="space-y-4">
+  <.page id="roles-collection" class="space-y-4">
     <:title>{@page_title}</:title>
 
     <:actions :let={position} :if={can?(@permissions, @current_path, :create)}>
@@ -10,7 +10,7 @@
       />
     </:actions>
 
-    <Cinder.Collection.collection
+    <.cinder_collection
       id="roles-table"
       query={@query}
       actor={@current_user}
@@ -47,7 +47,7 @@
           />
         </div>
       </:col>
-    </Cinder.Collection.collection>
+    </.cinder_collection>
   </.page>
 
   <.delete_confirmation

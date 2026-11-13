@@ -1871,10 +1871,9 @@
 
       <div
         id="layout-test-cinder-collection"
-        phx-hook="CinderPagination"
         data-layout={@showcase["cinder"]["layout"]}
       >
-        <Cinder.Collection.collection
+        <.cinder_collection
           id={"layout-test-cinder-component-#{@showcase["cinder"]["layout"]}"}
           query={@showcase_query}
           actor={nil}
@@ -1954,7 +1953,7 @@
               <p class="text-xs text-subcontent">{entry.url}</p>
             </div>
           </:item>
-        </Cinder.Collection.collection>
+        </.cinder_collection>
       </div>
     </section>
 

@@ -503,6 +503,53 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   @doc """
+  Renders a Cinder collection with shared pagination enabled by default. Accepts Cinder's attributes and slots, with a stable resource-based ID unless an explicit ID is supplied.
+  """
+  def cinder_collection(assigns) do
+    resource = Ash.Query.new(assigns[:query] || assigns[:resource]).resource
+
+    collection_assigns =
+      assigns
+      |> Map.put(:id, assigns[:id] || "cinder-#{Phoenix.Naming.resource_name(resource)}")
+      |> Map.put_new(:show_pagination, true)
+
+    page_size_config = Cinder.PageSize.parse(assigns[:page_size])
+
+    page_size_config =
+      case assigns[:url_state] do
+        %{filters: %{"page_size" => selected}} ->
+          selected = Cinder.UrlManager.decode_page_size(selected)
+
+          %{
+            page_size_config
+            | selected_page_size: Cinder.PageSize.validate(selected, page_size_config)
+          }
+
+        _ ->
+          page_size_config
+      end
+
+    theme =
+      case assigns[:theme] do
+        theme when theme in [nil, "default"] -> Cinder.Theme.get_default_theme()
+        theme when is_binary(theme) or is_atom(theme) -> theme
+        _ -> "default"
+      end
+
+    assigns =
+      assign(assigns,
+        component: :cinder_collection,
+        collection_assigns: collection_assigns,
+        collection_id: collection_assigns.id,
+        show_pagination: collection_assigns.show_pagination,
+        page_size_config: page_size_config,
+        cinder_theme: Cinder.Theme.merge(theme)
+      )
+
+    core_components_template(assigns)
+  end
+
+  @doc """
   Renders Cinder collection controls with the shared input components.
   """
   attr :controls, :map, required: true

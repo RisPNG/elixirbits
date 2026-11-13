@@ -1,7 +1,174 @@
+defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest.CollectionPreview do
+  use Phoenix.LiveView, layout: false
+
+  alias ElixirbitsWeb.CoreComponents
+  alias ElixirbitsWeb.Dashboard.LayoutTestLive.CinderEntry
+
+  def mount(_params, session, socket) do
+    {:ok,
+     assign(socket,
+       query: Ash.Query.sort(CinderEntry, sequence: :asc),
+       options: Map.get(session, "options", %{}),
+       show_pagination: Map.get(session, "show_pagination", true),
+       second_collection: Map.get(session, "second_collection", false),
+       revision: 0
+     )}
+  end
+
+  def handle_event("rerender", _params, socket) do
+    {:noreply, assign(socket, :revision, socket.assigns.revision + 1)}
+  end
+
+  def handle_event("toggle_pagination", _params, socket) do
+    {:noreply, assign(socket, :show_pagination, not socket.assigns.show_pagination)}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div>
+      <button id="rerender-collection" phx-click="rerender">Update surrounding content</button>
+      <button id="toggle-pagination" phx-click="toggle_pagination">Toggle pagination</button>
+      <span id="collection-revision">{@revision}</span>
+      <CoreComponents.cinder_collection
+        query={@query}
+        show_pagination={@show_pagination}
+        {@options}
+      >
+        <:controls :let={controls}>
+          <CoreComponents.cinder_controls controls={controls} />
+        </:controls>
+        <:col :let={entry} field="code" label="Code" filter sort search>
+          <strong data-fixture-code>{entry.code}</strong>
+        </:col>
+        <:col :let={entry} field="name" label="Name" search>{entry.name}</:col>
+        <:empty><span id="empty-fixture-records">No fixture records</span></:empty>
+      </CoreComponents.cinder_collection>
+      <CoreComponents.cinder_collection
+        :if={@second_collection}
+        id="second-records"
+        query={@query}
+      >
+        <:col :let={entry} field="code" label="Code">{entry.code}</:col>
+      </CoreComponents.cinder_collection>
+    </div>
+    """
+  end
+end
+
 defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   use ElixirbitsWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+
+  alias __MODULE__.CollectionPreview
+
+  test "collection IDs and hooks are automatic and remain stable while native state changes", %{
+    conn: conn
+  } do
+    {:ok, view, _html} = live_isolated(conn, CollectionPreview)
+    selector = "#cinder-cinder_entry-pagination"
+
+    assert has_element?(view, "#{selector}[phx-hook=CinderPagination]")
+    assert has_element?(view, "#{selector} template[data-cinder-summary]")
+    assert has_element?(view, "#{selector} strong[data-fixture-code]", "EX001")
+    assert has_element?(view, "#cinder-cinder_entry-filters input[name=search]")
+
+    render_click(element(view, "#{selector} button[title='Go to page 2']"))
+    render_click(element(view, "#rerender-collection"))
+
+    assert has_element?(view, "#collection-revision", "1")
+    assert has_element?(view, "#{selector} [data-key=pagination_info_class]", "Page 2 of 12")
+    assert has_element?(view, selector, "EX011")
+    refute has_element?(view, selector, "EX001")
+
+    render_change(form(view, "#cinder-cinder_entry-filters", search: "EX001"))
+    render_click(element(view, "#rerender-collection"))
+
+    assert has_element?(view, "#{selector}[phx-hook=CinderPagination]")
+    assert has_element?(view, "#collection-revision", "2")
+    assert has_element?(view, "#{selector} input[name=search][value=EX001]")
+    assert has_element?(view, selector, "EX001")
+    refute has_element?(view, selector, "EX002")
+
+    render_change(form(view, "#cinder-cinder_entry-filters", search: "no matching record"))
+    assert has_element?(view, "#{selector} #empty-fixture-records", "No fixture records")
+  end
+
+  test "show_pagination alone hides native controls and one-page summaries and can be reenabled",
+       %{conn: conn} do
+    {:ok, view, _html} = live_isolated(conn, CollectionPreview)
+    selector = "#cinder-cinder_entry-pagination"
+
+    for search <- ["", "EX001"] do
+      render_change(form(view, "#cinder-cinder_entry-filters", search: search))
+      render_click(element(view, "#toggle-pagination"))
+
+      refute has_element?(view, "#{selector} template[data-cinder-summary]")
+      refute has_element?(view, "#{selector} [data-key=pagination_info_class]")
+      assert has_element?(view, selector, "EX001")
+
+      render_click(element(view, "#toggle-pagination"))
+      assert has_element?(view, "#{selector} template[data-cinder-summary]")
+      assert has_element?(view, selector, "EX001")
+    end
+  end
+
+  test "explicit IDs keep repeated resources independent", %{conn: conn} do
+    {:ok, view, _html} =
+      live_isolated(conn, CollectionPreview,
+        session: %{"options" => %{id: "first-records"}, "second_collection" => true}
+      )
+
+    for id <- ~w(first-records second-records) do
+      assert has_element?(view, "##{id}-pagination[phx-hook=CinderPagination]")
+      assert has_element?(view, "##{id}-pagination template[data-cinder-summary]")
+    end
+
+    render_click(element(view, "#first-records-pagination button[title='Go to page 2']"))
+
+    assert has_element?(
+             view,
+             "#first-records-pagination [data-key=pagination_info_class]",
+             "Page 2 of 12"
+           )
+
+    assert has_element?(
+             view,
+             "#second-records-pagination [data-key=pagination_info_class]",
+             "Page 1 of 12"
+           )
+
+    assert has_element?(view, "#first-records-pagination", "EX011")
+    assert has_element?(view, "#second-records-pagination", "EX001")
+  end
+
+  test "the collection's native page-size and saved-state assigns configure its summary", %{
+    conn: conn
+  } do
+    for {options, selected, configurable, presets} <- [
+          {%{
+             page_size: [default: 20, options: [10, 20, 100]],
+             url_state: %{filters: %{"page_size" => "100"}}
+           }, 100, true, [10, 20, 100]},
+          {%{page_size: 50, url_state: %{filters: %{"page_size" => "100"}}}, 50, false, []}
+        ] do
+      {:ok, view, _html} =
+        live_isolated(conn, CollectionPreview, session: %{"options" => options})
+
+      document = render(view) |> Floki.parse_document!()
+
+      [template] =
+        Floki.find(document, "#cinder-cinder_entry-pagination template[data-cinder-summary]")
+
+      [config] = Floki.attribute(template, "data-cinder-page-size-config")
+      config = Jason.decode!(config)
+
+      assert config["selected_page_size"] == selected
+      assert config["configurable"] == configurable
+      assert config["page_size_options"] == presets
+      assert Floki.find(template, "button, input, select, [phx-click]") == []
+    end
+  end
 
   test "all Cinder layouts default to ten records per page", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
@@ -40,7 +207,14 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
       render_click(element(view, "#{selector} button[phx-click=goto_page][phx-value-page='12']"))
       render_change(form(view, filter_form, search: "Core inputs"))
 
-      refute has_element?(view, "#{selector} [data-key=pagination_info_class]")
+      assert has_element?(view, "#{selector} [phx-hook=CinderPagination]")
+      assert has_element?(view, "#{selector} template[data-cinder-summary]")
+
+      refute has_element?(
+               view,
+               "#{selector} [data-key=container_class] [data-key=pagination_info_class]"
+             )
+
       assert has_element?(view, selector, "EX001")
       assert has_element?(view, selector, "EX109")
       refute has_element?(view, selector, "EX002")
@@ -223,6 +397,44 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
     assert has_element?(view, selector, "EX020")
     assert has_element?(view, selector, "EX004")
     refute has_element?(view, selector, "EX120")
+  end
+
+  test "one-page presets can restore multiple pages while retaining filters and sorting", %{
+    conn: conn
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    render_click(element(view, "#layout-test-ecosystem-tab"))
+
+    for layout <- ~w(table list grid) do
+      render_click(element(view, "#cinder-layout-#{layout}"))
+      selector = "#layout-test-cinder-collection"
+      render_change(form(view, "#{selector} form[phx-change=filter_change]", search: "Cinder"))
+      render_click(element(view, "#{selector} [phx-click=toggle_sort][phx-value-key=sequence]"))
+      render_click(element(view, "#{selector} [phx-value-page_size='100']"))
+
+      [config] =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute(
+          "#{selector} template[data-cinder-summary]",
+          "data-cinder-page-size-config"
+        )
+
+      assert Jason.decode!(config)["selected_page_size"] == 100
+      assert has_element?(view, "#{selector} input[name=search][value=Cinder]")
+      assert has_element?(view, selector, "EX116")
+      assert has_element?(view, selector, "EX006")
+
+      view
+      |> with_target("#{selector} [data-key=container_class]")
+      |> render_hook("change_page_size", %{page_size: "10"})
+
+      assert has_element?(view, "#{selector} [data-key=pagination_info_class]", "Page 1 of 3")
+      assert has_element?(view, "#{selector} input[name=search][value=Cinder]")
+      assert has_element?(view, selector, "EX116")
+      refute has_element?(view, selector, "EX006")
+    end
   end
 
   test "unconfigured or invalid native page sizes leave the current results unchanged", %{
