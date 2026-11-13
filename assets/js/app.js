@@ -18,7 +18,7 @@ import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
-import {PetalComboBox} from "../../deps/petal_components/assets/js/petal_components"
+import PetalComboBox from "./combo_box"
 import {hooks as colocatedHooks} from "phoenix-colocated/elixirbits"
 import FlashAutoDismiss from "./flash_auto_dismiss"
 import VCalendar from "./vcalendar"
@@ -31,6 +31,7 @@ import FileInput, {FilePreview} from "./file_input"
 import ColorInput from "./color_input"
 import NumberInput from "./number_input"
 import CinderPagination from "./cinder_pagination"
+import initInputControls from "./input_controls"
 import topbar from "topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -57,6 +58,7 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 
+initInputControls()
 initTooltips()
 
 // expose liveSocket on window for web console debug logs and latency simulation:

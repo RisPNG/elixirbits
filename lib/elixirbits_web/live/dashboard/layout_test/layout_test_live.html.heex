@@ -824,6 +824,8 @@
                 <%= cond do %>
                   <% @input_config["render_as"] == "hidden-disabled" -> %>
                     The control and its value are omitted.
+                  <% type == "hidden" and @input_config["render_as"] == "like-enabled" -> %>
+                    The control is hidden and its value does not submit.
                   <% @input_config["render_as"] in ~w(hidden hidden-enabled) or (type == "hidden" and @input_config["render_as"] in ~w(enabled text text-enabled)) -> %>
                     The control is hidden and its value submits unless disabled.
                   <% true -> %>
@@ -903,12 +905,13 @@
             </div>
           </.collapse>
 
-          <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+          <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max justify-start gap-2">
             <.button
               :for={
                 {option, label} <- [
                   {"prompt", "Prompt"},
-                  {"clearable", "Clearable"},
+                  {"clear_button", "Clear button"},
+                  {"allow_custom", "Custom input"},
                   {"disabled", "Disabled"}
                 ]
               }
@@ -935,7 +938,8 @@
             multiple={@showcase["combobox"]["mode"] == "multiple"}
             render_as={@showcase["combobox"]["render_as"]}
             prompt={if @showcase["combobox"]["prompt"], do: "Search dependency pages"}
-            clearable={@showcase["combobox"]["clearable"]}
+            clear_button={@showcase["combobox"]["clear_button"]}
+            allow_custom={@showcase["combobox"]["allow_custom"]}
             disabled={@showcase["combobox"]["disabled"]}
           />
         </.form>
@@ -1113,7 +1117,7 @@
         "grid items-start",
         if(@showcase["uploads"]["selection"] == "multiple",
           do: "grid-cols-[1fr]",
-          else: "grid-cols-[1fr_1fr] subgap-4"
+          else: "grid-cols-[1fr_1fr] subgap-3"
         )
       ]}>
         <.form
@@ -1252,44 +1256,52 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-[1fr_max-content_max-content_max-content] items-start gap-2">
-          <.collapse id="record-selected-entry">
-            <:summary>
-              Selected entry: {if @record_selected, do: "##{@record_selected}", else: "None"}
-            </:summary>
+        <div class="grid grid-cols-[3fr_1fr] items-start subgap-3">
+          <div>
+            <.collapse id="record-selected-entry">
+              <:summary>
+                Selected entry: {if @record_selected, do: "##{@record_selected}", else: "None"}
+              </:summary>
 
-            <div class="grid grid-cols-[1fr_1fr] gap-2">
-              <.button
-                :for={entry <- @record_entries}
-                id={"record-select-#{entry["id"]}"}
-                type="button"
-                aria-pressed={to_string(@record_selected == entry["id"])}
-                phx-click="record_action"
-                phx-value-action="read"
-                phx-value-id={entry["id"]}
-              >
-                #{entry["id"]}: {entry["name"]}
-              </.button>
-            </div>
-          </.collapse>
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
+                <.button
+                  :for={entry <- @record_entries}
+                  id={"record-select-#{entry["id"]}"}
+                  type="button"
+                  aria-pressed={to_string(@record_selected == entry["id"])}
+                  phx-click="record_action"
+                  phx-value-action="read"
+                  phx-value-id={entry["id"]}
+                >
+                  #{entry["id"]}: {entry["name"]}
+                </.button>
+              </div>
+            </.collapse>
+          </div>
 
-          <.button
-            :for={
-              {option, label} <- [
-                {"disabled", "Disabled"},
-                {"custom_icon", "Custom icon"},
-                {"tooltip", "Tooltip"}
-              ]
-            }
-            id={"showcase-actions-#{option}"}
-            type="button"
-            aria-pressed={to_string(@showcase["actions"][option])}
-            phx-click="toggle_showcase_option"
-            phx-value-section="actions"
-            phx-value-option={option}
+          <div
+            role="group"
+            aria-label="Record action options"
+            class="grid grid-cols-[auto_auto_auto] gap-2"
           >
-            {label}
-          </.button>
+            <.button
+              :for={
+                {option, label} <- [
+                  {"disabled", "Disabled"},
+                  {"custom_icon", "Custom icon"},
+                  {"tooltip", "Tooltip"}
+                ]
+              }
+              id={"showcase-actions-#{option}"}
+              type="button"
+              aria-pressed={to_string(@showcase["actions"][option])}
+              phx-click="toggle_showcase_option"
+              phx-value-section="actions"
+              phx-value-option={option}
+            >
+              {label}
+            </.button>
+          </div>
         </div>
       </div>
 
@@ -1420,8 +1432,8 @@
         Calendar and timers
       </.header>
 
-      <div class="space-y-3 mb-4">
-        <div class="grid grid-cols-[max-content_max-content_max-content] items-start gap-2">
+      <div class="grid grid-cols-[max-content_max-content_max-content] grid-rows-[auto_auto] gap-x-2 gap-y-3 mb-4">
+        <div class="row-span-2 grid grid-cols-[minmax(0,1fr)] grid-rows-subgrid items-start">
           <.button
             type="button"
             aria-pressed={to_string(@showcase["calendar"]["events"])}
@@ -1429,6 +1441,18 @@
             phx-value-section="calendar"
             phx-value-option="events"
           >Events</.button>
+          <.button
+            id="timer-mode-elapsed"
+            type="button"
+            aria-pressed={to_string(@showcase["calendar"]["timer"] == "elapsed")}
+            phx-click="set_showcase_option"
+            phx-value-section="calendar"
+            phx-value-option="timer"
+            phx-value-choice="elapsed"
+          >Elapsed</.button>
+        </div>
+
+        <div class="row-span-2 grid grid-cols-[minmax(0,1fr)] grid-rows-subgrid items-start">
           <.collapse>
             <:summary>
               Event style: {@showcase["calendar"]["variant"]}
@@ -1447,6 +1471,21 @@
             </div>
           </.collapse>
 
+          <div class="grid grid-cols-[1fr_1fr] gap-2">
+            <.button
+              id="timer-mode-countdown"
+              type="button"
+              aria-pressed={to_string(@showcase["calendar"]["timer"] == "countdown")}
+              phx-click="set_showcase_option"
+              phx-value-section="calendar"
+              phx-value-option="timer"
+              phx-value-choice="countdown"
+            >Countdown</.button>
+            <.button id="timer-reset" type="button" variant={:neutral} phx-click="reset_timer">Restart timer</.button>
+          </div>
+        </div>
+
+        <div class="row-span-2 grid grid-cols-[minmax(0,1fr)] grid-rows-subgrid items-start">
           <.collapse>
             <:summary>
               Event color: {@showcase["calendar"]["color"]}
@@ -1464,21 +1503,7 @@
               >{Phoenix.Naming.humanize(color)}</.button>
             </div>
           </.collapse>
-        </div>
-
-        <div class="grid grid-cols-[max-content_max-content_max-content_1fr] items-center gap-2">
-          <.button
-            :for={mode <- ~w(elapsed countdown)}
-            id={"timer-mode-#{mode}"}
-            type="button"
-            aria-pressed={to_string(@showcase["calendar"]["timer"] == mode)}
-            phx-click="set_showcase_option"
-            phx-value-section="calendar"
-            phx-value-option="timer"
-            phx-value-choice={mode}
-          >{Phoenix.Naming.humanize(mode)}</.button>
-          <.button id="timer-reset" type="button" variant={:neutral} phx-click="reset_timer">Restart timer</.button>
-          <p class="text-sm text-content">
+          <p class="self-center text-sm text-content">
             {Phoenix.Naming.humanize(@showcase["calendar"]["timer"])}:
             <span
               id={"demo-#{@showcase["calendar"]["timer"]}-timer"}
@@ -1783,7 +1808,7 @@
       </.header>
 
       <div id="layout-test-cinder-controls" class="space-y-3">
-        <div class="grid grid-cols-[1fr_1fr_1fr] items-start gap-4">
+        <div class="grid grid-cols-[2fr_2fr] items-start gap-2">
           <.collapse id="cinder-layout-choices">
             <:summary>
               Layout: {String.capitalize(@showcase["cinder"]["layout"])}
@@ -1800,25 +1825,6 @@
                 phx-value-option="layout"
                 phx-value-choice={layout}
               >{String.capitalize(layout)}</.button>
-            </div>
-          </.collapse>
-
-          <.collapse id="cinder-page-size-choices">
-            <:summary>
-              Records per page: {@showcase["cinder"]["page_size"]}
-            </:summary>
-
-            <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
-              <.button
-                :for={size <- ~w(6 12 24)}
-                id={"cinder-page-size-#{size}"}
-                type="button"
-                aria-pressed={to_string(@showcase["cinder"]["page_size"] == size)}
-                phx-click="set_showcase_option"
-                phx-value-section="cinder"
-                phx-value-option="page_size"
-                phx-value-choice={size}
-              >{size}</.button>
             </div>
           </.collapse>
 
@@ -1869,13 +1875,12 @@
         data-layout={@showcase["cinder"]["layout"]}
       >
         <Cinder.Collection.collection
-          id={"layout-test-cinder-component-#{@showcase["cinder"]["layout"]}-#{@showcase["cinder"]["page_size"]}"}
+          id={"layout-test-cinder-component-#{@showcase["cinder"]["layout"]}"}
           query={@showcase_query}
           actor={nil}
           url_state={%{filters: @cinder_preview_state}}
           on_state_change={:cinder_preview_state_change}
           layout={@showcase["cinder"]["layout"]}
-          page_size={String.to_integer(@showcase["cinder"]["page_size"])}
           show_filters={@showcase["cinder"]["filters"] or @showcase["cinder"]["search"]}
           show_sort={@showcase["cinder"]["sort"]}
           show_pagination={@showcase["cinder"]["pagination"]}
@@ -1895,6 +1900,10 @@
           }
           query_opts={[authorize?: false]}
         >
+          <:controls :let={controls}>
+            <.cinder_controls controls={controls} />
+          </:controls>
+
           <:col
             :let={entry}
             field="code"

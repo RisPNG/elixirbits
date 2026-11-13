@@ -251,6 +251,232 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
     end
   end
 
+  describe "input clear controls" do
+    test "editable value fields expose one shared clear action even before a value is entered" do
+      for type <-
+            ~w(text email password search url number textarea date datetime-local time week month color tel),
+          render_as <- ~w(enabled text text-enabled) do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "contact",
+            name: "contact",
+            type: type,
+            label: "Contact",
+            value: "",
+            render_as: render_as
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(
+                 document,
+                 "[data-core-input][data-input-type=#{type}][data-input-clearable=true]"
+               ) != []
+
+        assert length(Floki.find(document, "button[data-input-clear]")) == 1
+        assert Floki.find(document, "input[data-input-value], textarea[data-input-value]") != []
+        assert Floki.find(document, "button[data-input-clear] .hero-x-mark-mini.size-5") != []
+      end
+    end
+
+    test "caller restrictions and static modes do not expose an editable clear action" do
+      for options <- [
+            [clear_button: false],
+            [disabled: true],
+            [readonly: true],
+            [render_as: "disabled"],
+            [render_as: "like-enabled"],
+            [render_as: "like-disabled"],
+            [render_as: "text-disabled"]
+          ] do
+        document =
+          render_component(
+            &CoreComponents.input/1,
+            [id: "contact", name: "contact", type: "text", value: "Layout Test"] ++ options
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "[data-core-input][data-input-clearable=true]") == []
+        assert Floki.find(document, "button[data-input-clear]") == []
+      end
+
+      for type <- ~w(checkbox switch) do
+        document =
+          render_component(&CoreComponents.input/1, id: "contact", name: "contact", type: type)
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "[data-core-input][data-input-clearable=true]") == []
+        assert Floki.find(document, "button[data-input-clear]") == []
+      end
+    end
+
+    test "radio groups submit an empty value when their selected choice is cleared" do
+      for variant <- ["default", "card"] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "contact",
+            name: "contact",
+            type: "radio",
+            variant: variant,
+            options: [{"Email", "email"}, {"Telephone", "tel"}],
+            value: "email"
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "fieldset[data-input-type=radio][data-input-clearable=true]") !=
+                 []
+
+        assert Floki.find(document, "input[type=hidden][name=contact][value='']") != []
+
+        assert Floki.find(document, "input[type=radio][data-input-value][value=email][checked]") !=
+                 []
+
+        assert Floki.find(document, "button[data-input-clear]") == []
+      end
+    end
+
+    test "select and combobox triggers keep their native submitted choices" do
+      for type <- ~w(select combobox), multiple <- [false, true] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "contact",
+            name: "contact",
+            type: type,
+            options: [{"Email", "email"}, {"Telephone", "tel"}],
+            value: if(multiple, do: ["email", "tel"], else: "email"),
+            multiple: multiple
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "#contact.core-selection-input button[data-pc-combo-trigger]") !=
+                 []
+
+        assert Floki.find(document, "#contact .pc-combo-box__panel input[type=text]") != []
+        assert Floki.find(document, "#contact-select option[value=email][selected]") != []
+
+        assert Floki.attribute(document, "#contact-select", "name") ==
+                 [if(multiple, do: "contact[]", else: "contact")]
+
+        if multiple do
+          assert Floki.text(Floki.find(document, "#contact-trigger")) =~ "2 selected"
+          assert Floki.find(document, "button[data-input-clear]") != []
+        else
+          assert Floki.find(document, "#contact button[data-pc-combo-clear]") != []
+          assert Floki.find(document, "button[data-input-clear]") == []
+        end
+
+        assert Floki.find(document, "#contact-trigger button") == []
+      end
+    end
+
+    test "selection options retain keyword choices, disabled states, groups, and prompts" do
+      document =
+        render_component(&CoreComponents.input/1,
+          id: "role",
+          name: "role",
+          type: "select",
+          label: "Role",
+          prompt: "Choose a role",
+          options: [
+            {"People", [[key: "Member", value: "member"], {"Approver", "approver"}]},
+            :hr,
+            {:hr, nil},
+            [key: "Unavailable", value: "unavailable", disabled: true]
+          ],
+          value: "member"
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(
+               document,
+               "#role-select optgroup[label=People] option[value=member][selected]"
+             ) != []
+
+      assert Floki.find(document, "#role-select option[value=unavailable][disabled]") != []
+      assert Floki.find(document, "#role [role=group][aria-label=People]") != []
+
+      assert Floki.find(
+               document,
+               "#role [role=option][data-value=unavailable][aria-disabled=true]"
+             ) != []
+
+      assert Floki.attribute(
+               document,
+               "#role [data-pc-combo-trigger-label]",
+               "data-placeholder-text"
+             ) ==
+               ["Choose a role"]
+    end
+
+    test "meaningful empty choices retain their labels while prompts own the unselected display" do
+      for type <- ~w(select combobox), render_as <- ~w(enabled like-enabled) do
+        attributes = [
+          id: "role",
+          name: "role",
+          type: type,
+          render_as: render_as,
+          options: [[key: "No role", value: ""], {"Member", "member"}],
+          value: ""
+        ]
+
+        document =
+          render_component(&CoreComponents.input/1, attributes)
+          |> Floki.parse_document!()
+
+        assert Floki.text(Floki.find(document, "#role .pc-combo-box__trigger-label"))
+               |> String.trim() == "No role"
+
+        if render_as == "enabled" do
+          assert Floki.find(document, "#role-select option[value=''][selected]") != []
+          assert Floki.find(document, "#role-select[name=role]") != []
+        end
+
+        prompted =
+          render_component(
+            &CoreComponents.input/1,
+            Keyword.put(attributes, :prompt, "Choose a role")
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.text(Floki.find(prompted, "#role .pc-combo-box__trigger-label"))
+               |> String.trim() == "Choose a role"
+      end
+    end
+
+    test "custom combobox choices survive parent rendering through native options" do
+      for value <- ["approver", ["member", "approver"]] do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "role",
+            name: "role",
+            type: "combobox",
+            options: [{"Member", "member"}],
+            value: value,
+            multiple: is_list(value),
+            allow_custom: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "#role[data-free-text=true]") != []
+        assert Floki.find(document, "#role-select option[value=approver][selected]") != []
+      end
+    end
+
+    test "file clearing can be disabled without replacing the native picker" do
+      document =
+        render_component(&CoreComponents.input/1,
+          id: "portrait",
+          name: "portrait",
+          type: "file",
+          clear_button: false
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.find(document, "input[type=file][data-file-input]") != []
+      assert Floki.find(document, "[data-file-clear], [data-file-remove]") == []
+      assert Floki.find(document, "[data-core-input][data-input-clearable=false]") != []
+    end
+  end
+
   describe "combobox option states" do
     test "explicit empty choices retain their selected label in native option formats" do
       for options <- [
@@ -269,7 +495,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             type="combobox"
             options={@options}
             value=""
-            clearable={false}
+            clear_button={false}
           />
           """)
 
@@ -277,10 +503,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(document, "#preference[data-has-value=true]") != []
 
-        assert Floki.find(
-                 document,
-                 "#preference-input[value='Automatic (browser)']"
-               ) != []
+        assert Floki.text(Floki.find(document, "#preference-trigger")) =~ "Automatic (browser)"
 
         assert document
                |> Floki.find("#preference-select option[value=''][selected]")
@@ -414,6 +637,150 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
     end
   end
 
+  describe "Cinder controls" do
+    setup do
+      columns = [
+        %{
+          field: "code",
+          label: "Code",
+          filterable: true,
+          filter_type: :text,
+          filter_options: [placeholder: "Find a code"]
+        },
+        %{
+          field: "state",
+          label: "State",
+          filterable: true,
+          filter_type: :select,
+          filter_options: [
+            options: [{"Enabled", "ENABLED"}, {"Disabled", "DISABLED"}],
+            prompt: "Any state"
+          ]
+        }
+      ]
+
+      filters =
+        Cinder.FilterManager.params_to_filters(%{"code" => "EX0", "state" => "DISABLED"}, columns)
+
+      controls =
+        Cinder.Controls.build_controls_data(%{
+          columns: columns,
+          filters: filters,
+          table_id: "records",
+          target: 23,
+          theme: ElixirbitsWeb.CinderTheme.resolve_theme(),
+          filters_label: "Find records",
+          filter_mode: :toggle,
+          show_search: true,
+          search_term: "Cinder",
+          search_label: "Search records",
+          search_placeholder: "Code or name"
+        })
+
+      %{controls: controls}
+    end
+
+    test "core fields retain Cinder's names, values, options, and clearing controls", %{
+      controls: controls
+    } do
+      document =
+        render_component(&CoreComponents.cinder_controls/1, controls: controls)
+        |> Floki.parse_document!()
+
+      assert Floki.find(
+               document,
+               "input#records-filter-search[type=search][name=search][value=Cinder][placeholder='Code or name']"
+             ) != []
+
+      assert Floki.find(
+               document,
+               "input#records-filter-code[name='filters[code]'][value=EX0][placeholder='Find a code']"
+             ) != []
+
+      assert Floki.find(document, "select#records-filter-state-select[name='filters[state]']") !=
+               []
+
+      assert Floki.attribute(document, "#records-filter-state-select option", "value") == [
+               "",
+               "ENABLED",
+               "DISABLED"
+             ]
+
+      assert Floki.find(document, "#records-filter-state-select option[value=DISABLED][selected]") !=
+               []
+
+      assert Floki.text(Floki.find(document, "#records-filter-state-trigger")) =~ "Disabled"
+
+      for type <- ~w(search text) do
+        assert Floki.find(
+                 document,
+                 "[data-core-input][data-input-type=#{type}][data-input-clearable=true] button[data-input-clear][aria-label]"
+               ) != []
+      end
+
+      assert Floki.find(document, "#records-filter-state button[data-pc-combo-clear]") != []
+      assert Floki.find(document, "button[phx-click=clear_filter]") == []
+
+      assert Floki.find(document, "label[for=records-filter-search]") != []
+      assert Floki.find(document, "label[for=records-filter-code]") != []
+      assert Floki.find(document, "label[for=records-filter-state-trigger]") != []
+    end
+
+    test "empty filters retain native blank values and shared clear controls", %{
+      controls: controls
+    } do
+      controls = %{
+        controls
+        | filters:
+            Enum.map(controls.filters, fn {key, filter} -> {key, %{filter | value: ""}} end),
+          search: %{controls.search | value: ""},
+          active_filter_count: 0
+      }
+
+      document =
+        render_component(&CoreComponents.cinder_controls/1, controls: controls)
+        |> Floki.parse_document!()
+
+      assert Floki.find(document, "#records-filter-state-select option[value='']") != []
+      assert Floki.find(document, "#records-filter-state-select option[selected]") == []
+      assert length(Floki.find(document, "button[data-input-clear]")) == 2
+      assert Floki.find(document, "#records-filter-state[data-has-value]") == []
+      assert Floki.find(document, "button[phx-click=clear_filter]") == []
+    end
+
+    test "Cinder's header and toggle continue to target the filter body", %{controls: controls} do
+      for {mode, collapsed?} <- [{:toggle, true}, {:toggle_open, false}] do
+        document =
+          render_component(&CoreComponents.cinder_controls/1,
+            controls: %{controls | filter_mode: mode}
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.text(Floki.find(document, "[data-key=filter_header_class]")) =~
+                 "Find records"
+
+        assert Floki.text(Floki.find(document, "[data-key=filter_count_class]")) =~ "2 active"
+
+        assert Floki.find(document, "button[phx-click=clear_all_filters][phx-target='23']") != []
+
+        body_classes =
+          document
+          |> Floki.attribute("#records-filter-body", "class")
+          |> Enum.flat_map(&String.split/1)
+
+        assert "hidden" in body_classes == collapsed?
+
+        [toggle] =
+          Floki.attribute(document, "[data-key=filter_title_class][phx-click]", "phx-click")
+
+        assert Enum.any?(Jason.decode!(toggle), fn
+                 ["toggle", %{"to" => "#records-filter-body"}] -> true
+                 _ -> false
+               end)
+      end
+    end
+  end
+
   describe "color inputs" do
     test "standalone labels target the named color field when no ID is supplied" do
       {:ok, _view, html} =
@@ -539,8 +906,14 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         document = Floki.parse_document!(html)
 
         if render_as == "enabled" do
-          assert Floki.attribute(document, "#accent_color_space_select input[type=text]", "value") ==
-                   [format]
+          assert Floki.text(
+                   Floki.find(
+                     document,
+                     "#accent_color_space_select [data-pc-combo-trigger-label]"
+                   )
+                 )
+                 |> String.trim() ==
+                   format
         else
           assert Floki.text(Floki.find(document, "[data-color-format]")) |> String.trim() ==
                    format
@@ -597,7 +970,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
       assert Floki.find(
                document,
-               "#settings_accent_color_space_select input[type=text][disabled]"
+               "#settings_accent_color_space_select button[data-pc-combo-trigger][disabled]"
              ) != []
 
       assert Floki.text(document) =~ "Accent is invalid"
@@ -621,7 +994,11 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(document, "input#accent[type=text][name=accent][#{restriction}]") != []
         assert Floki.find(document, "button[data-color-trigger][disabled]") != []
-        assert Floki.find(document, "#accent_color_space_select input[type=text][disabled]") != []
+
+        assert Floki.find(
+                 document,
+                 "#accent_color_space_select button[data-pc-combo-trigger][disabled]"
+               ) != []
       end
     end
 
@@ -681,8 +1058,11 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(
                  document,
-                 "[data-color-space-select], [data-color-cycle], [data-color-trigger], [data-color-popover], [data-color-picker]"
+                 "[data-color-cycle], [data-color-trigger], [data-color-popover], [data-color-picker]"
                ) == []
+
+        assert length(Floki.find(document, "[data-color-space-select]")) ==
+                 if(render_as == "like-enabled", do: 1, else: 0)
 
         if render_as == "hidden-disabled" do
           assert document == []
@@ -2541,11 +2921,17 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         assert title |> Floki.text() |> String.trim() == "Contact"
         assert Floki.find(document, ".input-floating-label-hidden") == []
 
-        assert Floki.attribute(
-                 document,
-                 "input#contact, textarea#contact, input#contact-input",
-                 "placeholder"
-               ) == ["Enter contact"]
+        if input[:type] in ~w(select combobox) do
+          assert Floki.attribute(
+                   document,
+                   "#contact [data-pc-combo-trigger-label]",
+                   "data-placeholder-text"
+                 ) ==
+                   ["Enter contact"]
+        else
+          assert Floki.attribute(document, "input#contact, textarea#contact", "placeholder") ==
+                   ["Enter contact"]
+        end
 
         if input[:type] in ~w(select combobox) do
           assert Floki.find(document, "#contact[data-has-value]") == []
@@ -2593,22 +2979,28 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         control =
           Floki.find(
             document,
-            "input#contact, textarea#contact, select#contact, input#contact-input"
+            "input#contact, textarea#contact, button#contact-trigger"
           )
 
-        if restriction do
-          assert Floki.attribute(control, "placeholder") == []
+        if input[:type] in ~w(select combobox) and
+             Floki.find(document, "#contact-trigger") != [] do
+          assert Floki.attribute(
+                   document,
+                   "#contact [data-pc-combo-trigger-label]",
+                   "data-placeholder-text"
+                 ) ==
+                   if(restriction, do: [], else: ["Enter contact"])
         else
-          unless input[:type] == "select" and input[:multiple] in [nil, false] do
-            assert Floki.attribute(control, "placeholder") == ["Enter contact"]
-          end
+          assert Floki.attribute(control, "placeholder") ==
+                   if(restriction, do: [], else: ["Enter contact"])
         end
 
         if input[:type] == "select" and input[:multiple] in [nil, false] do
-          assert Floki.text(Floki.find(document, "select#contact option[value='']")) ==
-                   if(restriction, do: "", else: "Choose contact")
+          assert Floki.find(document, "select#contact-select option[value='']") != []
 
-          assert Floki.text(Floki.find(document, "select#contact option[value=email]")) == "Email"
+          assert Floki.text(Floki.find(document, "select#contact-select option[value=email]"))
+                 |> String.trim() ==
+                   "Email"
         end
 
         if input[:type] == "tel" and restriction do
@@ -2677,6 +3069,9 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
                  (label || "")
 
         assert Floki.find(document, ".input-floating-label-hidden") == []
+        assert Floki.find(document, ".color-input-control .border-l.border-outline") != []
+        assert Floki.find(document, "[data-color-space-select] .pc-combo-box__chevron") != []
+        assert Floki.find(document, "input, select, textarea") == []
       end
     end
 
@@ -2810,6 +3205,65 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           end
 
         assert String.trim(Floki.text(display)) == expected_display
+      end
+    end
+
+    test "like-enabled file fields retain the enabled chooser across selection and preview modes" do
+      for selection <- ~w(single singles multiple),
+          preview <- [false, true],
+          live_upload? <- [false, true],
+          label <- [nil, "Portrait"] do
+        upload =
+          if live_upload? do
+            %Phoenix.LiveView.UploadConfig{
+              name: :attachment,
+              ref: "attachment-upload",
+              accept: :any,
+              max_entries: if(selection == "single", do: 1, else: 3)
+            }
+          end
+
+        assigns = [
+          id: "portrait",
+          name: "portrait",
+          type: "file",
+          upload: upload,
+          selection: selection,
+          preview: preview,
+          label: label
+        ]
+
+        enabled =
+          render_component(&CoreComponents.input/1, assigns)
+          |> Floki.parse_document!()
+
+        display =
+          render_component(&CoreComponents.input/1, assigns ++ [render_as: "like-enabled"])
+          |> Floki.parse_document!()
+
+        assert Floki.attribute(display, "[data-file-control]", "class") ==
+                 Floki.attribute(enabled, "[data-file-control]", "class")
+
+        assert Floki.find(display, "[data-file-control]:not(.hidden)") != []
+
+        assert Floki.find(
+                 display,
+                 "[data-file-control] [data-file-name][data-file-display].text-content:not(.hidden)"
+               ) != []
+
+        assert Floki.find(display, "input[type=file][disabled].sr-only") != []
+        assert Floki.find(display, "input:not([disabled]), select, textarea") == []
+
+        assert Floki.find(
+                 display,
+                 "button[phx-click=remove_upload], button[phx-click=cancel_upload]"
+               ) == []
+
+        assert display
+               |> Floki.find("[data-file-control] .input-floating-label")
+               |> Floki.text()
+               |> String.trim() ==
+                 if(label, do: label, else: "")
       end
     end
 
@@ -2972,8 +3426,98 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       refute html =~ "Enter city"
       assert html =~ "bg-transparent"
       assert html =~ "text-content"
-      refute html =~ "cursor-not-allowed"
-      refute html =~ "overlay-dark"
+
+      assert html
+             |> Floki.parse_document!()
+             |> Floki.find(".cursor-not-allowed, .overlay-dark") == []
+    end
+
+    test "unavailable like-enabled comboboxes retain values without submitting controls" do
+      for multiple <- [false, true], state <- [:disabled, :readonly] do
+        document =
+          render_component(
+            &CoreComponents.input/1,
+            [
+              id: "contact",
+              name: "contact",
+              type: "combobox",
+              value: if(multiple, do: ["email", "phone"], else: "email"),
+              label: "Contact",
+              render_as: "like-enabled",
+              options: [{"Email", "email"}, {"Telephone", "phone"}],
+              multiple: multiple
+            ] ++ [{state, true}]
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.text(document) =~
+                 if(multiple and state == :readonly, do: "2 selected", else: "Email")
+
+        if state == :disabled do
+          assert Floki.find(document, "span#contact[disabled].overlay-dark") != []
+        else
+          assert Floki.find(document, "[data-input-disabled=true] .pc-combo-box__trigger") !=
+                   []
+        end
+
+        assert Floki.find(document, "input, select, textarea, [name]") == []
+      end
+    end
+
+    test "explicitly disabled like-enabled booleans use the disabled checked state" do
+      for type <- ~w(checkbox switch), variant <- ~w(default alt) do
+        document =
+          render_component(&CoreComponents.input/1,
+            id: "contact",
+            name: "contact",
+            type: type,
+            checked: true,
+            label: "Contact",
+            render_as: "like-enabled",
+            variant: variant,
+            disabled: true
+          )
+          |> Floki.parse_document!()
+
+        assert Floki.find(document, "span.bg-secondary.border-secondary") != []
+        assert Floki.find(document, ".overlay-dark") != []
+        assert Floki.find(document, "input, select, textarea, [name]") == []
+      end
+    end
+
+    test "empty like-enabled fields preserve explicit unavailable state for title rendering" do
+      for type <- ~w(text number textarea date select color), state <- [:disabled, :readonly] do
+        document =
+          render_component(
+            &CoreComponents.input/1,
+            [
+              id: "contact",
+              name: "contact",
+              type: type,
+              value: "",
+              label: "Contact",
+              render_as: "like-enabled",
+              options: [{"Email", "email"}],
+              prompt: "Choose a contact"
+            ] ++ [{state, true}]
+          )
+          |> Floki.parse_document!()
+
+        if type == "select" do
+          assert Floki.find(
+                   document,
+                   "[data-input-disabled=true] .pc-combo-box__trigger[data-placeholder=true]"
+                 ) != []
+        else
+          assert Floki.find(
+                   document,
+                   "span.input-floating-control[#{state}][data-input-empty=true]"
+                 ) != []
+        end
+
+        assert Floki.find(document, ".input-floating-label") != []
+        assert Floki.find(document, "input, select, textarea, [name]") == []
+      end
     end
 
     test "like-disabled renders a lookalike span plus the real input hidden" do
@@ -3239,8 +3783,10 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       end
     end
 
-    test "text password modes expose an editable plain value without a visibility action" do
-      for render_as <- ~w(text text-enabled), label <- ["Password", nil] do
+    test "text password modes keep a masked editable value and the shared visibility action" do
+      for render_as <- ~w(text text-enabled),
+          label <- ["Password", nil],
+          disabled <- [false, true] do
         document =
           render_component(&CoreComponents.input/1,
             id: "secret",
@@ -3249,19 +3795,25 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             value: "visible-secret",
             label: label,
             render_as: render_as,
+            disabled: disabled,
             required: true
           )
           |> Floki.parse_document!()
 
         assert Floki.find(
                  document,
-                 "input#secret[type=text][name=secret][value=visible-secret][required]"
+                 "input#secret[type=password][name=secret][value=visible-secret][required]"
                ) != []
+
+        assert Floki.find(document, "#secret-password-wrapper[phx-hook=PasswordVisibility]") != []
 
         assert Floki.find(
                  document,
-                 "input#secret[disabled], [phx-hook=PasswordVisibility], button"
-               ) == []
+                 "button#secret-password-toggle[aria-controls=secret] .hero-eye"
+               ) != []
+
+        assert Floki.find(document, "button#secret-password-toggle[disabled]") != [] == disabled
+        assert Floki.find(document, "input#secret[disabled]") != [] == disabled
 
         assert Floki.find(document, "input#secret.border-0") != []
         assert Floki.find(document, ".input-floating-control, .input-floating-label") == []
@@ -3311,7 +3863,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
         assert Floki.attribute(document, "input#schedule", "phx-mounted") != []
 
         if label do
-          assert Floki.find(document, "label[for=schedule] + input#schedule") != []
+          assert Floki.find(document, "label[for=schedule]") != []
 
           assert Floki.text(Floki.find(document, "label[for=schedule]")) |> String.trim() ==
                    "Schedule*"
@@ -3729,7 +4281,12 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           )
 
         document = Floki.parse_document!(html)
-        assert Floki.text(document) =~ "23 Apr 2026, 21:30"
+
+        assert Floki.text(document) =~
+                 if(render_as == "like-enabled",
+                   do: "2026-04-23T21:30:00",
+                   else: "23 Apr 2026, 21:30"
+                 )
 
         assert Floki.attribute(document, "input", "value") ==
                  if(render_as in ~w(like-disabled text-disabled),

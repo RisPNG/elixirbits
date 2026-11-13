@@ -71,7 +71,7 @@
             type="combobox"
             label="Base currency"
             options={@currency_options}
-            clearable={false}
+            clear_button={false}
             required
             render_as={if editable?, do: "enabled", else: "disabled"}
           />
@@ -80,7 +80,7 @@
             type="combobox"
             label="Locale"
             options={@locale_options}
-            clearable={false}
+            clear_button={false}
             required
             render_as={if editable?, do: "enabled", else: "disabled"}
           />
@@ -89,7 +89,7 @@
             type="combobox"
             label="Timezone"
             options={@timezone_options}
-            clearable={false}
+            clear_button={false}
             required
             render_as={if editable?, do: "enabled", else: "disabled"}
           />

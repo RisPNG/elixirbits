@@ -185,7 +185,7 @@ defmodule ElixirbitsWeb.Dashboard.AdminPagesTest do
 
     assert has_element?(
              view,
-             "label#permission-label-USERS[for=permission-level-USERS-input]",
+             "label#permission-label-USERS[for=permission-level-USERS-trigger]",
              "USERS"
            )
 
@@ -211,7 +211,12 @@ defmodule ElixirbitsWeb.Dashboard.AdminPagesTest do
                "#permission-level-USERS-select[name='page_levels[USERS]'] option[selected][value='#{level}']"
              )
 
-      assert has_element?(view, "#permission-level-USERS input[type=text][value='#{label}']")
+      assert has_element?(
+               view,
+               "#permission-level-USERS-trigger [data-pc-combo-trigger-label]",
+               label
+             )
+
       refute has_element?(view, "#permission-level-USERS [data-pc-combo-clear]")
     end
 
@@ -232,7 +237,12 @@ defmodule ElixirbitsWeb.Dashboard.AdminPagesTest do
     conn = grant(conn, %{"ROLES" => 16})
     {:ok, view, _} = live(conn, ~p"/dashboard/admin/roles/create")
     assert has_element?(view, "#permission-level-USERS[phx-hook=PetalComboBox]")
-    assert has_element?(view, "#permission-level-USERS input[type=text][value=None]")
+
+    assert has_element?(
+             view,
+             "#permission-level-USERS-trigger [data-pc-combo-trigger-label]",
+             "None"
+           )
 
     assert has_element?(
              view,
@@ -250,7 +260,8 @@ defmodule ElixirbitsWeb.Dashboard.AdminPagesTest do
 
     assert has_element?(
              view,
-             "#permission-level-USERS input[type=text][value='Superuser Access']"
+             "#permission-level-USERS-trigger [data-pc-combo-trigger-label]",
+             "Superuser Access"
            )
 
     refute has_element?(view, "#permission-level-USERS [data-pc-combo-clear]")
@@ -263,7 +274,12 @@ defmodule ElixirbitsWeb.Dashboard.AdminPagesTest do
            )
 
     view |> form("#role-form", page_levels: %{"USERS" => "0"}) |> render_change()
-    assert has_element?(view, "#permission-level-USERS input[type=text][value=None]")
+
+    assert has_element?(
+             view,
+             "#permission-level-USERS-trigger [data-pc-combo-trigger-label]",
+             "None"
+           )
 
     view |> form("#role-form", form: %{code: "no-access", name: "No access"}) |> render_submit()
     role = Ash.get!(Role, %{code: "no-access"}, actor: %{system: true}, load: [:role_perms])

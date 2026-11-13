@@ -502,6 +502,24 @@ defmodule ElixirbitsWeb.CoreComponents do
     core_components_template(assign(assigns, :component, :list))
   end
 
+  @doc """
+  Renders Cinder collection controls with the shared input components.
+  """
+  attr :controls, :map, required: true
+
+  def cinder_controls(assigns) do
+    fields = Enum.map(assigns.controls.filters, fn {_name, filter} -> filter end)
+
+    fields =
+      case assigns.controls.search do
+        nil -> fields
+        search -> [Map.merge(search, %{field: "search", type: :text, options: []}) | fields]
+      end
+
+    assigns = assign(assigns, :fields, fields)
+    core_components_template(assign(assigns, :component, :cinder_controls))
+  end
+
   # Forms and inputs
 
   @color_space_options Elixirbits.CoreUtils.Parse.color_options()
@@ -550,9 +568,9 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   This function accepts all HTML input types, considering that:
 
-    * `type="select"` renders a native HTML select for single choices and a searchable dropdown with tags for multiple choices.
+    * `type="select"` renders a selection trigger with search inside its popup. Multiple choices show their selected count in the trigger.
 
-    * `type="combobox"` renders the PetalComponents searchable combobox.
+    * `type="combobox"` shares the selection trigger and can offer new choices when `allow_custom` is `true`.
 
     * `type="checkbox"` is used exclusively to render boolean values.
 
@@ -621,11 +639,11 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     * `"enabled"`: the real input (default)
     * `"disabled"`: a lookalike span with the disabled input visual. No input is rendered, so the value does not submit
-    * `"like-enabled"`: a lookalike span with the enabled input visual. No input is rendered, so the value does not submit
+    * `"like-enabled"`: a non-editable display with the enabled input's layout and visual details. No input is rendered, so the value does not submit
     * `"like-disabled"`: a lookalike span with the disabled input visual plus the real input rendered hidden, so native input behavior (submission) still works
     * `"hidden"` / `"hidden-enabled"`: the real input rendered hidden, so native input behavior still works
     * `"hidden-disabled"`: nothing is rendered, except file fields retain their disabled input and previews inside a hidden field to preserve picked files
-    * `"text"` / `"text-enabled"`: the real editable input with a plain text visual; picker controls retain their popups, passwords show plain text without a visibility action, checkbox and switch show clickable state sentences, and radio shows only its selected value while preserving submission
+    * `"text"` / `"text-enabled"`: the real editable input with a plain text visual; picker controls retain their popups, passwords stay masked with a visibility action, checkbox and switch show clickable state sentences, and radio shows only its selected value while preserving submission
     * `"text-disabled"`: plain text plus the real input rendered hidden, so native input behavior (submission) still works
   """
   attr :id, :any, default: nil
@@ -665,7 +683,16 @@ defmodule ElixirbitsWeb.CoreComponents do
     doc:
       "select and combobox options, or radio {label, value} tuples with optional description and disabled metadata in a third keyword list"
 
-  attr :clearable, :boolean, default: true, doc: "allows clearing a single combobox selection"
+  attr :clear_button, :boolean, default: true, doc: "allows clearing an editable field"
+
+  attr :input_clearable, :boolean,
+    default: nil,
+    doc: "internal: whether the rendered field permits clearing"
+
+  attr :allow_custom, :boolean,
+    default: false,
+    doc: "allows adding combobox choices from the search text"
+
   attr :max_items, :integer, default: nil, doc: "maximum number of combobox selections"
 
   attr :class, :any, default: nil, doc: "the input class to use over defaults"
@@ -801,6 +828,58 @@ defmodule ElixirbitsWeb.CoreComponents do
       end
     end)
     |> input()
+  end
+
+  def input(%{input_clearable: nil} = assigns) do
+    assigns =
+      if assigns.type in ["select", "combobox"] do
+        options =
+          Enum.flat_map(assigns.options, fn
+            separator when separator in [:hr, {:hr, nil}] ->
+              []
+
+            {label, entries} when is_list(entries) or is_map(entries) ->
+              [
+                {label,
+                 Enum.flat_map(entries, fn
+                   separator when separator in [:hr, {:hr, nil}] ->
+                     []
+
+                   options when is_list(options) ->
+                     [
+                       {Keyword.fetch!(options, :key), Keyword.fetch!(options, :value),
+                        Keyword.drop(options, [:key, :value])}
+                     ]
+
+                   option ->
+                     [option]
+                 end)}
+              ]
+
+            options when is_list(options) ->
+              [
+                {Keyword.fetch!(options, :key), Keyword.fetch!(options, :value),
+                 Keyword.drop(options, [:key, :value])}
+              ]
+
+            option ->
+              [option]
+          end)
+
+        assign(assigns, :options, options)
+      else
+        assigns
+      end
+
+    input(
+      assign(
+        assigns,
+        :input_clearable,
+        assigns.clear_button && assigns.type not in ["checkbox", "switch", "hidden"] &&
+          assigns.render_as in ["enabled", "text", "text-enabled"] &&
+          assigns.rest[:disabled] in [nil, false] && assigns.rest[:readonly] in [nil, false]
+      )
+    )
   end
 
   # Tooltip wrapper
@@ -999,7 +1078,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   def input(%{render_as: render_as, type: "number"} = assigns)
-      when render_as in ["enabled", "text", "text-enabled"] do
+      when render_as in ["enabled", "like-enabled", "text", "text-enabled"] do
     placeholder = assigns.rest[:placeholder]
     text_look = render_as in ["text", "text-enabled"]
     base_id = assigns.id || assigns.name
@@ -1039,6 +1118,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     assigns =
       assigns
       |> assign(:render_as, "enabled")
+      |> assign(:id, if(type == "password", do: assigns.id || assigns.name, else: assigns.id))
       |> assign(:rest, Map.put_new(rest, :"phx-debounce", "blur"))
       |> assign(
         :text_input_class,
@@ -1046,6 +1126,7 @@ defmodule ElixirbitsWeb.CoreComponents do
           [
             "block w-full appearance-none bg-transparent border-0 text-sm text-content overflow-hidden text-ellipsis whitespace-nowrap focus:outline-none focus:ring-0 focus-visible:underline disabled:overlay-dark disabled:cursor-not-allowed disabled:text-subcontent",
             if(assigns[:label], do: "min-h-6 py-1", else: "min-h-11 text-center"),
+            type == "password" && "pr-12",
             assigns.errors != [] && (assigns.error_class || "text-error")
           ]
       )
@@ -1087,9 +1168,13 @@ defmodule ElixirbitsWeb.CoreComponents do
     requested_format = format || parent_form[format_field_key].value
 
     {format_label, format} =
-      Enum.find(@color_space_options, {"HEX", "hex"}, fn {_label, mode} ->
-        mode == requested_format
-      end)
+      if is_nil(format) and Map.get(parent_form.params, to_string(format_field_key)) == "" do
+        {"", ""}
+      else
+        Enum.find(@color_space_options, {"HEX", "hex"}, fn {_label, mode} ->
+          mode == requested_format
+        end)
+      end
 
     format_field = %{parent_form[format_field_key] | value: format}
 
@@ -1206,7 +1291,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   def input(%{render_as: render_as, type: "radio"} = assigns)
       when render_as in ["text", "text-enabled"] do
-    input(assign(assigns, :render_as, "text-disabled"))
+    input(assign(assigns, render_as: "text-disabled", input_clearable: false))
   end
 
   def input(%{render_as: render_as, type: type} = assigns)
@@ -1220,7 +1305,10 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     checked = assigns.checked
-    disabled_look = render_as in ["disabled", "like-disabled"]
+
+    disabled_look =
+      render_as in ["disabled", "like-disabled"] or assigns.rest[:disabled] not in [nil, false]
+
     display_alt = assigns.variant == "alt"
 
     box_class =
@@ -1271,7 +1359,6 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{render_as: render_as} = assigns)
       when render_as in [
              "disabled",
-             "like-enabled",
              "like-disabled",
              "text-disabled"
            ] do
@@ -1335,11 +1422,6 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     filled = display not in [nil, ""]
 
-    placeholder =
-      if render_as == "like-enabled" && assigns.rest[:disabled] in [nil, false] &&
-           assigns.rest[:readonly] in [nil, false] && assigns.label in [nil, ""],
-         do: assigns.rest[:placeholder]
-
     disabled_look = render_as in ["disabled", "like-disabled"]
     text_look = render_as == "text-disabled"
     include_hidden_input = render_as in ["like-disabled", "text-disabled"]
@@ -1370,25 +1452,16 @@ defmodule ElixirbitsWeb.CoreComponents do
           ),
           "w-full min-h-11 px-3 rounded-default border bg-transparent",
           (assigns.errors == [] || assigns.error_class) && "border-outline",
-          if(filled || render_as != "like-enabled",
-            do: [
-              "input-floating-control",
-              assigns.type == "textarea" && "input-floating-textarea"
-            ],
-            else: "py-2"
-          ),
-          cond do
-            disabled_look -> "overlay-dark cursor-not-allowed text-subcontent"
-            not filled and placeholder not in [nil, ""] -> "text-subcontent"
-            true -> "text-content"
-          end,
+          "input-floating-control",
+          assigns.type == "textarea" && "input-floating-textarea",
+          disabled_look && "overlay-dark cursor-not-allowed text-subcontent",
           assigns.errors != [] && (assigns.error_class || "border-error")
         ]
       end
 
     assigns =
       assigns
-      |> assign(:display, if(filled, do: display, else: placeholder))
+      |> assign(:display, if(filled, do: display))
       |> assign(:text_look, text_look)
       |> assign(:include_hidden_input, include_hidden_input)
       |> assign(:span_class, span_class)
@@ -1398,6 +1471,10 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   # Native controls and option pickers
+
+  def input(%{type: "hidden", render_as: "like-enabled"} = assigns) do
+    ~H""
+  end
 
   def input(%{type: "hidden"} = assigns) do
     core_components_template(assign(assigns, :component, :input_hidden))
@@ -1519,33 +1596,35 @@ defmodule ElixirbitsWeb.CoreComponents do
     core_components_template(assign(assigns, :component, :input_combobox_disabled))
   end
 
-  def input(%{type: "select", rest: rest} = assigns)
-      when not is_map_key(rest, :multiple) or rest.multiple in [false, nil] do
-    assigns =
-      assigns
-      |> assign_new(:value, fn -> nil end)
-      |> assign(:text_look, assigns.render_as in ["text", "text-enabled"])
-      |> assign(
-        :select_prompt,
-        if(rest[:disabled] in [nil, false] && rest[:readonly] in [nil, false], do: assigns.prompt)
-      )
-      |> assign(
-        :rest,
-        if(rest[:disabled] in [nil, false] && rest[:readonly] in [nil, false],
-          do: rest,
-          else: Map.delete(rest, :placeholder)
-        )
-      )
-
-    core_components_template(assign(assigns, :component, :input_select))
-  end
-
   def input(%{type: type} = assigns) when type in ~w(select combobox) do
     text_look = assigns.render_as in ["text", "text-enabled"]
     placeholder = assigns.rest[:placeholder]
 
     value =
-      case assigns[:value] do
+      if type == "select" && is_nil(assigns[:value]) && assigns.prompt in [nil, ""] &&
+           assigns.rest[:multiple] in [nil, false] do
+        default =
+          assigns.options
+          |> Enum.flat_map(fn
+            {_label, entries} when is_list(entries) -> entries
+            option -> [option]
+          end)
+          |> Enum.find_value(fn
+            {_label, value, options} -> if !options[:disabled], do: {value}
+            {_label, value} -> {value}
+            value -> {value}
+          end)
+
+        case default do
+          {value} -> value
+          nil -> nil
+        end
+      else
+        assigns[:value]
+      end
+
+    value =
+      case value do
         "" ->
           blank_choice? =
             assigns.options
@@ -1559,15 +1638,49 @@ defmodule ElixirbitsWeb.CoreComponents do
               value -> to_string(value) == ""
             end)
 
-          if blank_choice?, do: "", else: nil
+          if blank_choice? && assigns.prompt in [nil, ""], do: "", else: nil
 
         value ->
           value
       end
 
+    options =
+      if type == "combobox" && assigns.allow_custom do
+        known_values =
+          assigns.options
+          |> Enum.flat_map(fn
+            {_label, entries} when is_list(entries) -> entries
+            option -> [option]
+          end)
+          |> Enum.map(fn
+            {_label, value, _options} -> to_string(value)
+            {_label, value} -> to_string(value)
+            value -> to_string(value)
+          end)
+
+        custom_options =
+          value
+          |> List.wrap()
+          |> Enum.reject(&(is_nil(&1) || to_string(&1) in ["" | known_values]))
+          |> Enum.uniq()
+          |> Enum.map(&{to_string(&1), &1})
+
+        assigns.options ++ custom_options
+      else
+        assigns.options
+      end
+
     assigns =
       assigns
+      |> assign(:options, options)
       |> assign(:value, value)
+      |> assign(
+        :selected_labels,
+        value
+        |> List.wrap()
+        |> Enum.uniq()
+        |> Enum.map(&option_display_label(&1, options))
+      )
       |> assign(:text_look, text_look)
       |> assign(:picker_id, assigns.id || assigns.name)
       |> assign(
@@ -1597,6 +1710,9 @@ defmodule ElixirbitsWeb.CoreComponents do
           assigns.rest[:disabled] not in [nil, false] ||
               assigns.rest[:readonly] not in [nil, false] ->
             nil
+
+          assigns.prompt not in [nil, ""] && placeholder in [nil, ""] ->
+            assigns.prompt
 
           text_look ->
             placeholder || assigns.prompt || "Choose an option"
@@ -1698,6 +1814,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:countries_json, Elixirbits.CoreUtils.Options.Phones.dial_codes_json())
       |> assign(:country_options, Elixirbits.CoreUtils.Options.Phones.options())
       |> assign(:number_value, number)
+      |> assign(:dial_code, dial_code)
       |> assign(:composite_value, composite_value)
 
     core_components_template(assign(assigns, :component, :input_tel))
@@ -1732,9 +1849,19 @@ defmodule ElixirbitsWeb.CoreComponents do
     end
   end
 
+  @doc """
+  Renders the shared clear action inside an editable input.
+  """
+  attr :class, :any, default: "right-3"
+  attr :rest, :global
+
+  def input_clear_button(assigns) do
+    core_components_template(assign(assigns, :component, :input_clear_button))
+  end
+
   # Choice labels
 
-  defp option_display_label(value, options) when value not in [nil, ""] do
+  defp option_display_label(value, options) when not is_nil(value) do
     options
     |> Enum.flat_map(fn
       {_label, entries} when is_list(entries) -> entries
@@ -1755,12 +1882,14 @@ defmodule ElixirbitsWeb.CoreComponents do
     end)
   end
 
-  defp option_display_label(value, _options) when value in [nil, ""], do: ""
+  defp option_display_label(nil, _options), do: ""
 
   # Password controls
 
   attr :id, :any, required: true
   attr :disabled, :any, default: false
+  attr :display_only, :boolean, default: false
+  attr :text_look, :boolean, default: false
 
   defp password_visibility_toggle(assigns) do
     core_components_template(assign(assigns, :component, :password_visibility_toggle))
@@ -1877,8 +2006,14 @@ defmodule ElixirbitsWeb.CoreComponents do
             result =
               if String.ends_with?(id, "-color-input") and
                    selector_id == String.replace_suffix(id, "-color-input", "_color_space_select") and
-                   Enum.any?(@color_space_options, fn {_label, mode} -> mode == format end) do
+                   (Enum.any?(@color_space_options, fn {_label, mode} -> mode == format end) or
+                      (format == "" and operation in ["clear", "validate", "pick"])) do
                 case operation do
+                  "clear" ->
+                    if value == "" and format == "",
+                      do: {:ok, nil},
+                      else: {:error, "must be a supported color value"}
+
                   "validate" ->
                     source
 
@@ -1902,7 +2037,10 @@ defmodule ElixirbitsWeb.CoreComponents do
                          alpha =
                            if(previous && !params["alpha_changed"], do: previous.rgba.a, else: a),
                          {:ok, picked} <- Color.new([r / 255, g / 255, b / 255, alpha * 1.0]) do
-                      Elixirbits.CoreUtils.Parse.convert_color(picked, format)
+                      Elixirbits.CoreUtils.Parse.convert_color(
+                        picked,
+                        if(format == "", do: "hex", else: format)
+                      )
                     else
                       _ -> {:error, "must be a supported color value"}
                     end
@@ -1923,7 +2061,7 @@ defmodule ElixirbitsWeb.CoreComponents do
                   Phoenix.LiveView.put_private(socket, :core_colors, Map.put(colors, id, state))
 
                 label =
-                  Enum.find_value(@color_space_options, fn {label, mode} ->
+                  Enum.find_value(@color_space_options, "", fn {label, mode} ->
                     if mode == state.format, do: label
                   end)
 
@@ -2865,7 +3003,7 @@ defmodule ElixirbitsWeb.CinderTheme do
 
   set :pagination_info_class, "text-subcontent text-sm"
 
-  set :pagination_count_class, "text-subcontent text-xs ml-2"
+  set :pagination_count_class, "text-subcontent text-sm ml-2"
 
   set :pagination_nav_class,
       "grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center justify-end gap-2"
@@ -2882,7 +3020,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :page_size_label_class, "text-subcontent text-sm"
 
   set :page_size_dropdown_class,
-      "inline-grid grid-cols-[max-content_1rem] items-center gap-2 min-h-11 px-3 rounded-default text-sm font-medium button-neutral shadow-none transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand [&>svg]:mx-0"
+      "input-native-select inline-grid! field-sizing-content border-0 bg-transparent p-0 text-sm text-brand leading-5 focus:outline-none focus:ring-0 focus-visible:underline"
 
   set :page_size_dropdown_container_class,
       "bg-surface border border-outline rounded-default shadow-lg"

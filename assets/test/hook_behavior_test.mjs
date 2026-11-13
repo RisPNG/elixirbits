@@ -34,9 +34,18 @@ class Element extends EventTarget {
   setAttribute(name, value) { this.attributes.set(name, String(value)) }
   getAttribute(name) { return this.attributes.get(name) ?? null }
   removeAttribute(name) { this.attributes.delete(name) }
+  toggleAttribute(name, force = this.getAttribute(name) === null) {
+    if (force) this.setAttribute(name, "")
+    else this.removeAttribute(name)
+    return force
+  }
   get innerText() { return this.renderedText ?? this.textContent }
-  closest() {
+  closest(selector) {
     for (let el = this; el; el = el.parentElement) {
+      if (selector === "[data-core-input]") {
+        if (el.getAttribute("data-core-input") !== null) return el
+        continue
+      }
       if (el.dataset.tooltip !== undefined || el.getAttribute("title") !== null) return el
     }
     return null
@@ -62,9 +71,19 @@ class Element extends EventTarget {
     for (let el = node; el; el = el.parentElement) if (el === this) return true
     return false
   }
-  getBoundingClientRect() { return {left: 20, bottom: 40} }
+  getBoundingClientRect() { return {left: 20, top: 16, bottom: 40, right: 100, width: 80, height: 24} }
   remove() { this.isConnected = false }
   focus() { this.focused = true }
+}
+
+function wrapCoreInput(control, type) {
+  const root = new Element()
+  root.setAttribute("data-core-input", "")
+  root.dataset.inputType = type
+  root.dataset.inputClearable = "true"
+  root.children = [control]
+  control.parentElement = root
+  return root
 }
 
 const event = (name, values = {}) => Object.assign(new Event(name, {cancelable: true}), values)
@@ -590,7 +609,20 @@ test("automatic tooltips require actual clipping and preserve explicit descripti
   }
 })
 
+function calendarBrowser() {
+  const saved = {window: globalThis.window, getComputedStyle: globalThis.getComputedStyle}
+  globalThis.window = Object.assign(new EventTarget(), {innerHeight: 800})
+  globalThis.getComputedStyle = element => ({...element.computedStyle, marginTop: "4px", marginBottom: "4px"})
+  return () => {
+    for (const [name, value] of Object.entries(saved)) {
+      if (value === undefined) delete globalThis[name]
+      else globalThis[name] = value
+    }
+  }
+}
+
 test("ISO week input preserves year identity through boundaries and calendar navigation", async () => {
+  const restoreBrowser = calendarBrowser()
   const originalElement = globalThis.HTMLElement
   const originalDocument = globalThis.document
   const originalObserver = globalThis.MutationObserver
@@ -643,6 +675,7 @@ test("ISO week input preserves year identity through boundaries and calendar nav
       input.tagName = "INPUT"
       input.dataset.vcMode = "week"
       input.value = scenario.value
+      const root = wrapCoreInput(input, "week")
       const selected = new CalendarElement()
       selected.dataset.vcWeekYear = String(scenario.year)
       selected.dataset.vcWeekNumber = String(scenario.week)
@@ -696,6 +729,7 @@ test("ISO week input preserves year identity through boundaries and calendar nav
       }
 
       context.destroyed()
+      assert.equal(getEventListeners(root, "input:clear").length, 0)
       assert.equal(context.weekObserver.disconnected, true)
       assert.equal(calendar.destroyed, true)
     }
@@ -707,10 +741,12 @@ test("ISO week input preserves year identity through boundaries and calendar nav
     globalThis.document = originalDocument
     globalThis.MutationObserver = originalObserver
     globalThis.vcalendarTestDependencies = originalDependencies
+    restoreBrowser()
   }
 })
 
 test("calendar loading uses the latest patch and leaves removed inputs uninitialized", async () => {
+  const restoreBrowser = calendarBrowser()
   const originalDocument = globalThis.document
   const originalDependencies = globalThis.vcalendarTestDependencies
   const popover = new Element()
@@ -734,6 +770,7 @@ test("calendar loading uses the latest patch and leaves removed inputs uninitial
     const input = new Element()
     input.tagName = "INPUT"
     input.dataset = {vcMode: "date", vcValue: "2026-04-23", vcToday: "2026-04-23"}
+    wrapCoreInput(input, "date")
     const context = {...hook, el: input}
     contexts.push(context)
     const mounting = context.mounted()
@@ -751,6 +788,7 @@ test("calendar loading uses the latest patch and leaves removed inputs uninitial
     globalThis.vcalendarTestDependencies = new Promise(resolve => { resolveLibrary = resolve })
     const removedInput = new Element()
     removedInput.tagName = "INPUT"
+    const removedRoot = wrapCoreInput(removedInput, "date")
     const removed = {...hook, el: removedInput}
     contexts.push(removed)
     const removedMounting = removed.mounted()
@@ -761,14 +799,17 @@ test("calendar loading uses the latest patch and leaves removed inputs uninitial
     assert.equal(removed.calendar, undefined)
     assert.equal(getEventListeners(removedInput, "click").length, 0)
     assert.equal(getEventListeners(removedInput, "keydown").length, 0)
+    assert.equal(getEventListeners(removedRoot, "input:clear").length, 0)
   } finally {
     for (const context of contexts) if (!context.disposed) context.destroyed()
     globalThis.document = originalDocument
     globalThis.vcalendarTestDependencies = originalDependencies
+    restoreBrowser()
   }
 })
 
 test("calendar patches refresh native selections and preserve edits when server values are unchanged", async () => {
+  const restoreBrowser = calendarBrowser()
   const originalElement = globalThis.HTMLElement
   const originalDocument = globalThis.document
   const originalObserver = globalThis.MutationObserver
@@ -841,6 +882,7 @@ test("calendar patches refresh native selections and preserve edits when server 
       vcTimezone: "America/New_York",
       vcToday: "2026-04-23",
     }
+    const root = wrapCoreInput(input, "datetime-local")
     let changes = 0
     input.addEventListener("change", () => changes++)
     const context = {...hook, el: input}
@@ -1023,6 +1065,7 @@ test("calendar patches refresh native selections and preserve edits when server 
       control.tagName = "INPUT"
       control.value = scenario.initial
       control.dataset = {vcMode: scenario.mode, vcValue: scenario.initial, vcTimezone: "Etc/UTC"}
+      wrapCoreInput(control, scenario.mode)
       popover = new CalendarElement()
       popover.dataset.vcMode = scenario.mode
       popover.setAttribute("aria-label", "Calendar")
@@ -1044,6 +1087,7 @@ test("calendar patches refresh native selections and preserve edits when server 
     assert.equal(context.popover.open, false)
     assert.equal(getEventListeners(input, "click").length, 0)
     assert.equal(getEventListeners(input, "keydown").length, 0)
+    assert.equal(getEventListeners(root, "input:clear").length, 0)
     assert.equal(getEventListeners(context.popover, "beforetoggle").length, 0)
   } finally {
     for (const context of contexts) if (!context.calendar.destroyed) context.destroyed()
@@ -1051,6 +1095,7 @@ test("calendar patches refresh native selections and preserve edits when server 
     globalThis.document = originalDocument
     globalThis.MutationObserver = originalObserver
     globalThis.vcalendarTestDependencies = originalDependencies
+    restoreBrowser()
   }
 })
 
@@ -1059,6 +1104,7 @@ test("telephone composition follows country and number edits while the combobox 
   const wrapper = new Element()
   wrapper.dataset.countries = JSON.stringify({MY: "+60", US: "+1"})
   wrapper.dataset.countryName = "form[phone_country_code]"
+  const root = wrapCoreInput(wrapper, "tel")
   const country = new Element()
   country.name = wrapper.dataset.countryName
   country.value = "MY"
@@ -1106,6 +1152,7 @@ test("telephone composition follows country and number edits while the combobox 
   }
   assert.equal(getEventListeners(wrapper, "input").length, 0)
   assert.equal(getEventListeners(wrapper, "change").length, 0)
+  assert.equal(getEventListeners(root, "input:clear").length, 0)
   country.value = "MY"
   emit("input", country)
   assert.equal(composite.value, "")

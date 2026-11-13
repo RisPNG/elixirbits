@@ -63,7 +63,12 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
              "#user-timezone-select[name=timezone] option[selected][value='Europe/London']"
            )
 
-    assert has_element?(view, "#user-timezone input[type=text][value='Europe/London']")
+    assert has_element?(
+             view,
+             "#user-timezone-trigger [data-pc-combo-trigger-label]",
+             "Europe/London"
+           )
+
     assert render(view) =~ "Currently using Europe/London"
 
     names =
@@ -123,8 +128,23 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard")
     assert has_element?(view, "[data-user-timezone='America/New_York']")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
-    assert has_element?(view, "#user-timezone input[type=text][value='Automatic (browser)']")
-    assert has_element?(view, "#user-timezone-input[placeholder='Automatic (browser)']")
+
+    assert has_element?(
+             view,
+             "#user-timezone-trigger [data-pc-combo-trigger-label]",
+             "Automatic (browser)"
+           )
+
+    assert has_element?(
+             view,
+             "#user-timezone-trigger [data-placeholder-text='Automatic (browser)']"
+           )
+
+    assert has_element?(
+             view,
+             "#user-timezone [data-pc-combo-panel] #user-timezone-input[role=combobox]"
+           )
+
     assert has_element?(view, "#user-timezone-select[name=timezone] option[selected][value='']")
     assert has_element?(view, "#user-timezone-select option[value='Europe/London']")
     assert has_element?(view, "#user-timezone-select option[value='America/New_York']")
@@ -161,7 +181,12 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     {:ok, view, _html} = follow_redirect(result, conn, ~p"/dashboard")
     assert has_element?(view, "[data-user-timezone='America/New_York']")
     view |> element("button[phx-click='toggle_nav']") |> render_click()
-    assert has_element?(view, "#user-timezone input[type=text][value='Automatic (browser)']")
+
+    assert has_element?(
+             view,
+             "#user-timezone-trigger [data-pc-combo-trigger-label]",
+             "Automatic (browser)"
+           )
   end
 
   test "invalid preferences show an error and forged fields cannot alter profiles", %{conn: conn} do

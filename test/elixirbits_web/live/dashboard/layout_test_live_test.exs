@@ -208,7 +208,12 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
              )
 
       document = view |> render() |> Floki.parse_document!()
-      assert Floki.attribute(document, "##{selector_id} input[type=text]", "value") == [label]
+
+      assert document
+             |> Floki.find("##{selector_id} [data-pc-combo-trigger-label]")
+             |> Floki.text()
+             |> String.trim() == label
+
       assert Floki.attribute(document, "#local_accent[data-color-value]", "value") == [""]
       assert length(Floki.find(document, "[name='local[accent]']")) == 1
     end
@@ -232,7 +237,10 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
              "xyz-d50"
            ]
 
-    assert Floki.attribute(document, "#{selector} input[type=text]", "value") == ["XYZ D50"]
+    assert document
+           |> Floki.find("#{selector} [data-pc-combo-trigger-label]")
+           |> Floki.text()
+           |> String.trim() == "XYZ D50"
 
     render_change(view, "local_change", %{
       "local" => %{"accent" => "oklch(", "accent_color_space" => "xyz-d50"}
@@ -245,7 +253,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
              "xyz-d50"
            ]
 
-    assert Floki.attribute(document, "#{selector} input[type=text]", "value") == ["XYZ D50"]
+    assert document
+           |> Floki.find("#{selector} [data-pc-combo-trigger-label]")
+           |> Floki.text()
+           |> String.trim() == "XYZ D50"
+
     assert has_element?(view, "#local_accent[aria-invalid=true]")
 
     render_change(view, "local_change", %{
@@ -255,7 +267,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
     document = view |> render() |> Floki.parse_document!()
     assert Floki.attribute(document, "#local_accent", "value") == [""]
     assert Floki.attribute(document, "#{selector} select option[selected]", "value") == ["hex"]
-    assert Floki.attribute(document, "#{selector} input[type=text]", "value") == ["HEX"]
+
+    assert document
+           |> Floki.find("#{selector} [data-pc-combo-trigger-label]")
+           |> Floki.text()
+           |> String.trim() == "HEX"
   end
 
   test "native validation detects pasted syntax without rewriting the parent form", %{
@@ -289,7 +305,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
              "hex"
            ]
 
-    assert Floki.attribute(document, "##{selector_id} input[type=text]", "value") == ["HEX"]
+    assert document
+           |> Floki.find("##{selector_id} [data-pc-combo-trigger-label]")
+           |> Floki.text()
+           |> String.trim() == "HEX"
+
     assert Floki.attribute(document, "#local_accent", "value") == ["#c9822b"]
 
     for {input, format} <- [{"oklch(", "oklch"}, {value, "unsupported"}] do
@@ -308,7 +328,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
                "hex"
              ]
 
-      assert Floki.attribute(document, "##{selector_id} input[type=text]", "value") == ["HEX"]
+      assert document
+             |> Floki.find("##{selector_id} [data-pc-combo-trigger-label]")
+             |> Floki.text()
+             |> String.trim() == "HEX"
+
       assert Floki.attribute(document, "#local_accent", "value") == ["#c9822b"]
     end
   end
@@ -363,6 +387,106 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
 
       assert has_element?(view, "#local_accent[value='']")
     end
+  end
+
+  test "explicit color clearing keeps both fields empty through parent form updates", %{
+    conn: conn
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    selector_id = "local_accent_color_space_select"
+
+    render_hook(view, "color_input", %{
+      "id" => "local_accent-color-input",
+      "selector_id" => selector_id,
+      "value" => "",
+      "format" => "",
+      "operation" => "clear"
+    })
+
+    assert_reply view, %{valid: true, value: "", format: "", label: "", swatch: nil, rgba: nil}
+
+    view
+    |> form("#layout-test-form", local: %{accent: "", accent_color_space: ""})
+    |> render_change()
+
+    view
+    |> form("#layout-test-form", local: %{project_name: "Updated after clearing"})
+    |> render_change()
+
+    document = view |> render() |> Floki.parse_document!()
+    assert Floki.attribute(document, "#local_accent", "value") == [""]
+    assert Floki.find(document, "##{selector_id} select option[value='']") != []
+
+    assert document
+           |> Floki.attribute("##{selector_id} select option[selected]", "value")
+           |> Enum.reject(&(&1 == "")) == []
+
+    [state] = Floki.attribute(document, "#local_accent-color-input", "data-color-state")
+    assert %{"value" => "", "format" => "", "label" => "", "swatch" => nil} = Jason.decode!(state)
+
+    render_hook(view, "color_input", %{
+      "id" => "local_accent-color-input",
+      "selector_id" => selector_id,
+      "value" => "",
+      "format" => "",
+      "operation" => "validate"
+    })
+
+    assert_reply view, %{valid: true, value: "", format: "", label: "", swatch: nil, rgba: nil}
+
+    render_hook(view, "color_input", %{
+      "id" => "local_accent-color-input",
+      "selector_id" => selector_id,
+      "value" => "hsl(30 50% 50%)",
+      "format" => "",
+      "operation" => "validate"
+    })
+
+    assert_reply view, %{valid: true, value: "hsl(30 50% 50%)", format: "hsl", label: "HSL"}
+
+    view
+    |> form("#layout-test-form", local: %{accent: "hsl(30 50% 50%)"})
+    |> render_change()
+
+    assert has_element?(view, "##{selector_id} select option[value=hsl][selected]")
+  end
+
+  test "a picker color uses HEX when its format was explicitly cleared", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    selector_id = "local_accent_color_space_select"
+
+    render_hook(view, "color_input", %{
+      "id" => "local_accent-color-input",
+      "selector_id" => selector_id,
+      "value" => "",
+      "format" => "",
+      "operation" => "clear"
+    })
+
+    assert_reply view, %{valid: true, value: "", format: ""}
+
+    view
+    |> form("#layout-test-form", local: %{accent: "", accent_color_space: ""})
+    |> render_change()
+
+    render_hook(view, "color_input", %{
+      "id" => "local_accent-color-input",
+      "selector_id" => selector_id,
+      "value" => "",
+      "format" => "",
+      "operation" => "pick",
+      "rgba" => %{"r" => 24, "g" => 68, "b" => 102, "a" => 1},
+      "alpha_changed" => true
+    })
+
+    assert_reply view, %{valid: true, value: "#184466", format: "hex", label: "HEX"}
+
+    view
+    |> form("#layout-test-form", local: %{accent: "#184466", accent_color_space: "hex"})
+    |> render_change()
+
+    assert has_element?(view, "#local_accent[value='#184466']")
+    assert has_element?(view, "##{selector_id} select option[value=hex][selected]")
   end
 
   test "picker edits retain source transparency until the alpha control changes", %{conn: conn} do
@@ -639,7 +763,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
              "#layout-test-local-role select[name='local[role]'] option[value=viewer][selected]"
            )
 
-    assert has_element?(view, "#layout-test-local-role input[type=text][value=Viewer]")
+    assert has_element?(view, "#layout-test-local-role [data-pc-combo-trigger-label]", "Viewer")
   end
 
   test "upload previews become read-only and finished uploads consume entries", %{

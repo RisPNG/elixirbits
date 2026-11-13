@@ -83,6 +83,8 @@ function fixture(options = {}, mount = true) {
   const window = new Element()
   const form = new Element(window)
   const root = new Element(form)
+  root.dataset.coreInput = ""
+  root.dataset.inputClearable = "true"
   const input = new Element(root)
   input.id = `file-${++fixtureId}`
   input.files = []
@@ -181,6 +183,22 @@ function detachedPreview(setup, mount = true) {
   if (mount) context.mounted()
   return {context, collection, source}
 }
+
+test("clear-button preference hides file removal and preserves the accepted files", () => {
+  const setup = fixture({inputClearable: "false"})
+  try {
+    const file = new File(["notes"], "notes.txt", {type: "text/plain"})
+    setup.select(file)
+    assert.equal(setup.clear.hidden, true)
+    setup.clear.click()
+    assert.deepEqual(setup.input.files, [file])
+    setup.root.dataset.inputClearable = "true"
+    setup.context.updated()
+    assert.equal(setup.clear.hidden, false)
+    setup.clear.click()
+    assert.deepEqual(setup.input.files, [])
+  } finally { setup.cleanup() }
+})
 
 function serverItem(setup, {url, ref, type = "image/png", name = "image.png"}) {
   const element = new Element(setup.root)

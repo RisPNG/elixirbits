@@ -16,12 +16,14 @@ const ColorInput = {
       this.renderColor()
     }
     this.onSpaceSelection = event => {
-      if (!this.editable || event.target.name !== this.el.dataset.colorSpaceName) return
+      if (!this.editable || this.applying || event.target.name !== this.el.dataset.colorSpaceName) return
       event.stopPropagation()
       if (event.type !== "change") return
       if (this.input.matches(":disabled") || this.input.readOnly) {
         event.target.value = this.format
-        if (this.state.format === this.format && document.activeElement !== this.spaceText) this.spaceText.value = this.state.label
+        this.applying = true
+        event.target.dispatchEvent(new Event("change"))
+        this.applying = false
         return
       }
       const format = event.target.value
@@ -73,6 +75,33 @@ const ColorInput = {
       if (event.target !== this.popover) return
       if (!this.popover.matches(":popover-open")) this.editingAlpha = false
     }
+    this.clearRoot = this.el.closest("[data-core-input]")
+    this.onClear = event => {
+      if (event.target !== this.clearRoot) return
+      event.preventDefault()
+      if (!this.editable || this.clearRoot.dataset.inputClearable !== "true" || this.input.matches(":disabled") || this.input.readOnly) return
+      this.pending?.resolve(null)
+      this.pending = null
+      this.revision++
+      this.value = ""
+      this.format = ""
+      this.state = {valid: true, value: "", format: "", label: "", swatch: null, rgba: null}
+      this.draft = false
+      this.error = ""
+      this.validationVisible = false
+      this.preview = null
+      this.input.value = ""
+      this.spaceInput.value = ""
+      this.applying = true
+      this.spaceInput.dispatchEvent(new Event("change"))
+      this.renderColor()
+      if (this.popover.matches(":popover-open")) this.popover.hidePopover()
+      this.requestColor("clear")
+      this.input.dispatchEvent(new Event("input", {bubbles: true}))
+      this.input.dispatchEvent(new Event("change", {bubbles: true}))
+      this.input.dispatchEvent(new Event("blur"))
+      this.applying = false
+    }
 
     this.el.addEventListener("input", this.onInput)
     this.el.addEventListener("input", this.onSpaceSelection, true)
@@ -85,6 +114,7 @@ const ColorInput = {
     this.el.addEventListener("keydown", this.onInteraction, true)
     this.el.addEventListener("beforetoggle", this.onBeforeToggle, true)
     this.el.addEventListener("toggle", this.onToggle, true)
+    this.clearRoot.addEventListener("input:clear", this.onClear)
     this.synchronize()
   },
 
@@ -108,6 +138,7 @@ const ColorInput = {
     this.el.removeEventListener("keydown", this.onInteraction, true)
     this.el.removeEventListener("beforetoggle", this.onBeforeToggle, true)
     this.el.removeEventListener("toggle", this.onToggle, true)
+    this.clearRoot.removeEventListener("input:clear", this.onClear)
     if (this.form) {
       const shared = colorForms.get(this.form)
       shared.hooks.delete(this)
@@ -135,6 +166,7 @@ const ColorInput = {
     this.spaceInput = this.editable ? this.el.querySelector(`select[name='${this.el.dataset.colorSpaceName}']`) : null
     this.spaceSelect = this.el.querySelector("[data-color-space-select]")
     this.spaceText = this.spaceSelect?.querySelector("input[type=text]")
+    this.spaceTrigger = this.spaceSelect?.querySelector("[data-pc-combo-trigger]")
     this.errorText = this.el.querySelector("[data-color-error]")
     const popover = this.el.querySelector("[data-color-popover]")
     if (popover !== this.popover) {
@@ -254,10 +286,14 @@ const ColorInput = {
           this.error = ""
           this.preview = null
           input.value = reply.value
-          if (this.spaceInput) this.spaceInput.value = reply.format
-          if (this.spaceText) this.spaceText.value = reply.label
+          if (this.spaceInput) {
+            this.spaceInput.value = reply.format
+            this.applying = true
+            this.spaceInput.dispatchEvent(new Event("change"))
+            this.applying = false
+          }
           this.renderColor()
-          if (operation !== "validate" || request.draft || reply.format !== request.format) {
+          if (operation !== "clear" && (operation !== "validate" || request.draft || reply.format !== request.format)) {
             this.applying = true
             input.dispatchEvent(new Event("input", {bubbles: true}))
             input.dispatchEvent(new Event("blur"))
@@ -308,6 +344,7 @@ const ColorInput = {
     this.trigger.disabled = unavailable
     this.spaceText.disabled = unavailable
     this.spaceInput.disabled = unavailable
+    this.spaceTrigger.disabled = unavailable
     if ((this.input.matches(":disabled") || this.input.readOnly) && this.popover.matches(":popover-open")) this.popover.hidePopover()
     if (preview?.rgba) {
       this.updatingPicker = true

@@ -118,7 +118,7 @@ defmodule ElixirbitsWeb.CoreFoundationsTest do
     end
   end
 
-  test "native single selects render prompts and disabled controls" do
+  test "single selects preserve prompts and disabled controls in searchable popups" do
     assigns = %{}
 
     html =
@@ -144,22 +144,38 @@ defmodule ElixirbitsWeb.CoreFoundationsTest do
       """)
 
     document = Floki.parse_document!(html)
-    assert Floki.find(document, "select#native-role[name=role][required]") != []
+    assert Floki.find(document, "select#native-role-select[name=role][required]") != []
 
-    assert Floki.find(document, "select#native-role option[value='']") |> Floki.text() ==
-             "Choose a role"
+    assert Floki.find(document, "select#native-role-select option[value='']") != []
 
-    assert Floki.find(document, "select#native-role option[value=viewer][selected]") != []
-    assert Floki.find(document, "label[for=native-role]") |> Floki.text() =~ "Role"
-    assert Floki.find(document, "select#native-disabled-role[name=disabled_role][disabled]") != []
-
-    assert Floki.find(document, "select#native-disabled-role option[value=editor][selected]") !=
+    assert Floki.find(document, "#native-role-trigger [data-placeholder-text='Choose a role']") !=
              []
 
-    assert Floki.find(document, "[phx-hook=PetalComboBox]") == []
+    assert Floki.find(document, "select#native-role-select option[value=viewer][selected]") != []
+    assert Floki.find(document, "label[for=native-role-trigger]") |> Floki.text() =~ "Role"
+
+    assert Floki.find(
+             document,
+             "select#native-disabled-role-select[name=disabled_role][disabled]"
+           ) != []
+
+    assert Floki.find(
+             document,
+             "select#native-disabled-role-select option[value=editor][selected]"
+           ) !=
+             []
+
+    assert Floki.find(document, "#native-role-trigger[role=combobox]") != []
+
+    assert Floki.find(
+             document,
+             "#native-role [data-pc-combo-panel] #native-role-input[role=combobox]"
+           ) != []
+
+    assert Floki.find(document, "#native-disabled-role-trigger[disabled]") != []
   end
 
-  test "multiple selects render a searchable picker with selected tags and native array values" do
+  test "multiple selects render a searchable picker with selected counts and native array values" do
     assigns = %{
       form: Phoenix.Component.to_form(%{"roles" => ["editor", "viewer"]}, as: :account)
     }
@@ -189,20 +205,16 @@ defmodule ElixirbitsWeb.CoreFoundationsTest do
 
     assert Floki.find(
              document,
-             "#account-roles-input[role=combobox][aria-autocomplete=list]:not([readonly])"
+             "#account-roles [data-pc-combo-panel] #account-roles-input[role=combobox][aria-autocomplete=list]:not([readonly])"
            ) != []
 
     assert Floki.find(document, "#account-roles-select[name='account[roles][]'][multiple]") != []
     assert length(Floki.find(document, "#account-roles-select option[selected]")) == 2
     assert Floki.find(document, "input[type=hidden][name='account[roles][]'][value='']") != []
-    assert Floki.find(document, "label[for=account-roles-input]") |> Floki.text() =~ "Roles"
+    assert Floki.find(document, "label[for=account-roles-trigger]") |> Floki.text() =~ "Roles"
 
-    for role <- ~w(editor viewer) do
-      assert Floki.find(
-               document,
-               "#account-roles-chips > [data-pc-combo-chip][data-value=#{role}]"
-             ) != []
-    end
+    assert Floki.find(document, "#account-roles-trigger [data-pc-combo-trigger-label]")
+           |> Floki.text() =~ "2 selected"
 
     assert Floki.find(document, "#account-roles-select optgroup[label=Available]") != []
     assert Floki.find(document, "#account-roles-select option[value=blocked][disabled]") != []
@@ -270,8 +282,14 @@ defmodule ElixirbitsWeb.CoreFoundationsTest do
 
     document = Floki.parse_document!(html)
 
-    assert Floki.find(document, "select#native-choice[name=native_choice].input-floating-control") !=
+    assert Floki.find(document, "select#native-choice-select[name=native_choice]") !=
              []
+
+    assert Floki.find(document, "#native-choice-trigger[role=combobox]") != []
+    assert Floki.find(document, "#native-choice-select option[value=editor][selected]") != []
+
+    assert Floki.find(document, "#native-choice-trigger [data-pc-combo-trigger-label]")
+           |> Floki.text() =~ "Editor"
 
     assert Floki.find(document, "#search-choice-select[name=search_choice]") != []
     assert Floki.find(document, "#search-choice-select option[selected]") == []
@@ -453,13 +471,13 @@ defmodule ElixirbitsWeb.CoreSelectTest do
 
     assert has_element?(
              view,
-             "label[for=item_quantity-input] span[aria-hidden=true]",
+             "label[for=item_quantity-trigger] span[aria-hidden=true]",
              "*"
            )
 
     assert has_element?(
              view,
-             "label[for=custom-role-input] span[aria-hidden=true]",
+             "label[for=custom-role-trigger] span[aria-hidden=true]",
              "*"
            )
 
@@ -503,11 +521,20 @@ defmodule ElixirbitsWeb.CoreSelectTest do
              "#custom-role-select[name='account[role]'] option[value=admin][selected]"
            )
 
-    assert has_element?(view, "#custom-role input[type=text][value=Administrator]")
+    assert has_element?(
+             view,
+             "#custom-role-trigger [data-pc-combo-trigger-label]",
+             "Administrator"
+           )
+
     refute has_element?(view, "#account_role")
     assert has_element?(view, "[role=group][aria-describedby=role-help] #custom-role")
-    assert has_element?(view, "label[for=custom-role-input]")
-    assert has_element?(view, "input#custom-role-input[role=combobox]")
+    assert has_element?(view, "label[for=custom-role-trigger]")
+
+    assert has_element?(
+             view,
+             "#custom-role [data-pc-combo-panel] input#custom-role-input[role=combobox]"
+           )
   end
 
   test "disabled comboboxes retain their labeled group, help, and submitted zero value" do

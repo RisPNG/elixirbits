@@ -51,18 +51,23 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.EcosystemControlsTest do
 
     assert has_element?(
              view,
-             "#layout-test-dependency-combobox input[placeholder='Search dependency pages']"
+             "#layout-test-dependency-combobox-trigger [data-placeholder-text='Search dependency pages']"
            )
 
     render_click(element(view, "#dependency-select-option-prompt"))
 
     refute has_element?(
              view,
-             "#layout-test-dependency-combobox input[placeholder='Search dependency pages']"
+             "#layout-test-dependency-combobox-trigger [data-placeholder-text='Search dependency pages']"
            )
 
-    render_click(element(view, "#dependency-select-option-clearable"))
-    assert has_element?(view, "#dependency-select-option-clearable[aria-pressed=false]")
+    assert has_element?(
+             view,
+             "#layout-test-dependency-combobox [data-pc-combo-panel] input[role=combobox]"
+           )
+
+    render_click(element(view, "#dependency-select-option-clear_button"))
+    assert has_element?(view, "#dependency-select-option-clear_button[aria-pressed=false]")
     refute has_element?(view, "#layout-test-dependency-combobox [data-pc-combo-clear]")
 
     render_change(view, "dependency_change", %{

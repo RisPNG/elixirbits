@@ -15,9 +15,12 @@
       query={@query}
       actor={@current_user}
       query_opts={[authorize?: true]}
-      page_size={20}
       show_filters={true}
     >
+      <:controls :let={controls}>
+        <.cinder_controls controls={controls} />
+      </:controls>
+
       <:col :let={user} field="display_pic_url" label="Profile Picture">
         <img
           :if={user.display_pic_url}

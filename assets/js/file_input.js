@@ -83,7 +83,7 @@ const FileInput = {
         event.preventDefault()
         const element = event.target.closest("[data-file-item]")
         this.editSelection(element?.dataset.fileKey || this.activeKey)
-      } else if (event.target.closest("[data-file-clear]") && !this.input.matches(":disabled")) {
+      } else if (event.target.closest("[data-file-clear]") && this.el.closest("[data-core-input]").dataset.inputClearable === "true" && !this.input.matches(":disabled")) {
         event.preventDefault()
         if (this.el.dataset.fileUploadName) {
           const active = this.items.find(item => item.key === this.activeKey)
@@ -425,7 +425,7 @@ const FileInput = {
     }
     const file = !this.el.dataset.fileUploadName && (carousel ? active?.file : this.files[0])
     const clear = this.el.querySelector("[data-file-clear]")
-    if (clear) clear.hidden = this.input.matches(":disabled") || (this.el.dataset.fileUploadName ? !active?.element?.querySelector("button[phx-click='cancel_upload'], button[phx-click='remove_upload']") : !file)
+    if (clear) clear.hidden = this.el.closest("[data-core-input]").dataset.inputClearable !== "true" || this.input.matches(":disabled") || (this.el.dataset.fileUploadName ? !active?.element?.querySelector("button[phx-click='cancel_upload'], button[phx-click='remove_upload']") : !file)
     if (!this.el.dataset.fileUploadName) {
       for (const stored of surface?.querySelectorAll("[data-file-stored]") || []) {
         if (stored.dataset.fileItem === undefined) stored.hidden = this.selection === "single" && this.files.length > 0

@@ -80,6 +80,12 @@ class Element extends EventTarget {
     for (let element = node; element; element = element.parentElement) if (element === this) return true
     return false
   }
+  closest(selector) {
+    for (let element = this; element; element = element.parentElement) {
+      if (selector === "[data-core-input]" && element.hasAttribute("data-core-input")) return element
+    }
+    return null
+  }
   focus() { this.focused = true }
   requestSubmit(submitter) {
     const event = Object.assign(new Event("submit", {bubbles: true, cancelable: true}), {submitter})
@@ -110,15 +116,19 @@ function nativeColor(value = "#c9822b", format = "hex", extra = {}) {
 }
 
 function openInput(state = nativeColor(), options = {}) {
+  const root = new Element()
   const wrapper = new Element()
   const form = options.form || new Element()
+  root.setAttribute("data-core-input", "")
+  root.dataset.inputClearable = String(options.clearable !== false)
+  root.parentElement = form
   wrapper.id = `test_color_${++fieldId}`
   wrapper.dataset.colorEditable = String(options.editable !== false)
   wrapper.dataset.colorSpaceName = `test[color_${fieldId}_color_space]`
   wrapper.dataset.colorSpaceId = `${wrapper.id}_color_space_select`
   wrapper.dataset.colorState = JSON.stringify(state)
-  wrapper.parentElement = form
-  const controls = Object.fromEntries(["input", "picker", "trigger", "popover", "swatch", "format", "error", "spaceInput", "spaceText", "spaceSelect", "option"].map(name => [name, new Element()]))
+  wrapper.parentElement = root
+  const controls = Object.fromEntries(["input", "picker", "trigger", "popover", "swatch", "format", "error", "spaceInput", "spaceText", "spaceTrigger", "spaceLabel", "spaceSelect", "option"].map(name => [name, new Element()]))
   const selectors = {
     "[data-color-value]": "input",
     "[data-color-picker]": "picker",
@@ -137,12 +147,13 @@ function openInput(state = nativeColor(), options = {}) {
   Object.assign(controls.input, options)
   controls.spaceInput.name = wrapper.dataset.colorSpaceName
   controls.spaceInput.value = state.format
-  controls.spaceText.value = state.format.toUpperCase()
+  controls.spaceLabel.textContent = state.label
+  controls.spaceInput.addEventListener("change", () => { controls.spaceLabel.textContent = nativeColor("", controls.spaceInput.value).label })
   for (const control of Object.values(controls)) control.parentElement = wrapper
   controls.picker.parentElement = controls.popover
   controls.spaceText.parentElement = controls.spaceSelect
   controls.option.parentElement = controls.spaceSelect
-  controls.spaceSelect.querySelector = selector => selector === "input[type=text]" ? controls.spaceText : null
+  controls.spaceSelect.querySelector = selector => selector === "input[type=text]" ? controls.spaceText : selector === "[data-pc-combo-trigger]" ? controls.spaceTrigger : null
   wrapper.querySelector = selector => {
     const control = selectors[selector]
     if ((wrapper.dataset.colorEditable === "false" && ["picker", "trigger", "popover", "spaceInput", "spaceSelect"].includes(control)) || (wrapper.dataset.colorEditable !== "false" && control === "format")) return null
@@ -159,12 +170,12 @@ function openInput(state = nativeColor(), options = {}) {
   controls.input.addEventListener("blur", event => notifications.push({type: event.type, value: event.target.value}))
   context.mounted()
   const field = {
-    wrapper, form, controls, context, notifications, requests,
+    root, wrapper, form, controls, context, notifications, requests,
     reply(index, value) { requests[index].resolve(value); return finishReplies() },
     reject(index, error) { requests[index].reject(error); return finishReplies() },
     echoSpace(value) {
       controls.spaceInput.value = value
-      controls.spaceText.value = value.toUpperCase()
+      controls.spaceLabel.textContent = nativeColor("", value).label
     },
     selectSpace(value) {
       this.echoSpace(value)
@@ -176,6 +187,11 @@ function openInput(state = nativeColor(), options = {}) {
       controls.input.dispatchEvent(new Event("input", {bubbles: true}))
     },
     blur() { controls.input.dispatchEvent(new Event("blur")) },
+    clear() {
+      const event = new CustomEvent("input:clear", {bubbles: true, cancelable: true})
+      root.dispatchEvent(event)
+      return event
+    },
     pick(value, part) {
       if (part) {
         const slider = new Element()
@@ -271,7 +287,7 @@ test("manual drafts validate on capture blur and use the native detected format 
   await field.reply(0, nativeColor(value, "oklch"))
   assert.equal(field.controls.input.value, value)
   assert.equal(field.controls.spaceInput.value, "oklch")
-  assert.equal(field.controls.spaceText.value, "OKLCH")
+  assert.equal(field.controls.spaceLabel.textContent, "OKLCH")
   assert.equal(field.controls.input.validity.valid, true)
   assert.equal(field.requests.length, 1)
   assert.deepEqual(field.notifications.slice(-2).map(event => event.type), ["input", "blur"])
@@ -532,6 +548,71 @@ test("blank fields keep the selected native format and required validation still
   const required = openInput(nativeColor("", "hex"), {required: true})
   assert.equal(required.submit().defaultPrevented, true)
   assert.equal(required.controls.error.textContent, "Enter a color.")
+})
+
+test("explicit clear empties the color and format together without restoring an older reply", async () => {
+  const field = openInput(nativeColor("lab(60 10 30)", "lab"))
+  field.controls.spaceText.value = "format search"
+  field.type("not a color")
+  field.blur()
+  field.open()
+  assert.equal(field.clear().defaultPrevented, true)
+  assert.equal(field.controls.input.value, "")
+  assert.equal(field.controls.spaceInput.value, "")
+  assert.equal(field.controls.spaceLabel.textContent, "")
+  assert.equal(field.controls.spaceText.value, "format search")
+  assert.equal(field.controls.swatch.style.get("--input-color"), undefined)
+  assert.equal(field.controls.error.hidden, true)
+  assert.equal(field.controls.input.validity.valid, true)
+  assert.equal(field.controls.popover.popoverOpen, false)
+  assert.deepEqual(field.requests[1].payload, {id: field.wrapper.id, selector_id: field.wrapper.dataset.colorSpaceId, value: "", format: "", operation: "clear"})
+  assert.equal(field.notifications.at(-2).color, "")
+  assert.equal(field.notifications.at(-2).format, "")
+  const count = field.notifications.length
+  await field.reply(0, nativeColor("rgb(255 0 0)", "rgb"))
+  assert.equal(field.controls.input.value, "")
+  assert.equal(field.controls.spaceInput.value, "")
+  await field.reply(1, nativeColor("", ""))
+  field.wrapper.dataset.colorState = JSON.stringify(nativeColor("", ""))
+  field.context.updated()
+  assert.equal(field.controls.spaceLabel.textContent, "")
+  assert.equal(field.notifications.length, count)
+  assert.equal(field.submit().defaultPrevented, false)
+  field.type("oklch(.65 .14 65)")
+  field.blur()
+  assert.equal(field.requests[2].payload.format, "")
+  await field.reply(2, nativeColor("oklch(.65 .14 65)", "oklch"))
+  assert.equal(field.controls.spaceLabel.textContent, "OKLCH")
+  assert.equal(field.controls.spaceText.value, "format search")
+})
+
+test("picking after a whole-control clear lets the native endpoint choose the initial format", async () => {
+  const field = openInput()
+  field.clear()
+  await field.reply(0, nativeColor("", ""))
+  field.pick({r: 24, g: 68, b: 102, a: 1})
+  assert.equal(field.requests[1].payload.operation, "pick")
+  assert.equal(field.requests[1].payload.format, "")
+  assert.equal(field.requests[1].payload.value, "")
+  await field.reply(1, nativeColor("#184466", "hex"))
+  assert.equal(field.controls.input.value, "#184466")
+  assert.equal(field.controls.spaceInput.value, "hex")
+  assert.equal(field.controls.spaceLabel.textContent, "HEX")
+})
+
+test("required color clearing retains validation and unavailable controls cannot clear", async () => {
+  const required = openInput(nativeColor(), {required: true})
+  required.clear()
+  await required.reply(0, nativeColor("", ""))
+  assert.equal(required.submit().defaultPrevented, true)
+  assert.equal(required.controls.error.textContent, "Enter a color.")
+  for (const options of [{readOnly: true}, {disabled: true}, {inheritedDisabled: true}, {clearable: false}, {editable: false}]) {
+    const field = openInput(nativeColor(), options)
+    field.clear()
+    assert.equal(field.controls.input.value, "#c9822b")
+    assert.equal(field.controls.spaceInput.value, "hex")
+    assert.equal(field.requests.length, 0)
+  }
 })
 
 test("picker opening awaits native validation and lets a valid pick recover an invalid draft", async () => {

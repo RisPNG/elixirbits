@@ -100,7 +100,7 @@
                 id={"permission-label-#{page.code}"}
                 for={
                   if editable? and can?(@permissions, @current_path, :su),
-                    do: "permission-level-#{page.code}-input",
+                    do: "permission-level-#{page.code}-trigger",
                     else: "permission-level-#{page.code}"
                 }
                 class="block text-content"
@@ -126,7 +126,7 @@
                 role="group"
                 aria-labelledby={"permission-label-#{page.code}"}
                 aria-describedby={if page.public?, do: "permission-hint-#{page.code}"}
-                clearable={false}
+                clear_button={false}
                 disabled={!editable? or !can?(@permissions, @current_path, :su)}
                 data-audit-side={@audit.selected && to_string(@audit.side)}
                 data-audit-changed={

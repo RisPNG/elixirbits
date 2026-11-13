@@ -8,28 +8,54 @@ const CinderPagination = (await import(`data:text/javascript;base64,${Buffer.fro
 const originalGlobals = Object.fromEntries(["document", "MutationObserver"].map(name => [name, globalThis[name]]))
 const fixtures = new Set()
 
+class TextNode {
+  constructor(value) { this.nodeType = 3; this.textContent = String(value); this.parentElement = null }
+  detach() {
+    if (this.parentElement) this.parentElement.childNodes.splice(this.parentElement.childNodes.indexOf(this), 1)
+    this.parentElement = null
+  }
+  remove() { this.detach() }
+  cloneNode() { return new TextNode(this.textContent) }
+  isEqualNode(other) { return other instanceof TextNode && this.textContent === other.textContent }
+}
+
 class Element extends EventTarget {
   constructor(tagName = "div") {
     super()
+    this.nodeType = 1
     this.tagName = tagName.toUpperCase()
     this.attributeValues = new Map()
-    this.children = []
+    this.childNodes = []
     this.parentElement = null
     this.content = ""
-    this.value = ""
+    this.inputValue = ""
     this.dataset = new Proxy({}, {
       get: (_target, key) => this.getAttribute(`data-${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`) ?? undefined,
       set: (_target, key, value) => { this.setAttribute(`data-${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`, value); return true },
     })
     this.classList = {
       contains: value => this.className.split(/\s+/).includes(value),
-      remove: (...values) => { this.className = this.className.split(/\s+/).filter(value => !values.includes(value)).join(" ") },
+      remove: (...values) => { if (this.hasAttribute("class")) this.className = this.className.split(/\s+/).filter(value => !values.includes(value)).join(" ") },
       add: (...values) => { this.className = [...new Set([...this.className.split(/\s+/).filter(Boolean), ...values])].join(" ") },
     }
   }
   get attributes() { return Array.from(this.attributeValues, ([name, value]) => ({name, value})) }
-  get textContent() { return this.content + this.children.map(child => child.textContent).join("") }
+  get children() { return this.childNodes.filter(child => child.nodeType === 1) }
+  get textContent() { return this.content + this.childNodes.map(child => child.textContent).join("") }
   set textContent(value) { this.replaceChildren(); this.content = String(value) }
+  get value() {
+    if (this.tagName === "SELECT") return (this.options.find(option => option.selected) ?? this.options[0])?.value ?? ""
+    if (this.tagName === "OPTION") return this.getAttribute("value") ?? this.textContent
+    return this.inputValue
+  }
+  set value(value) {
+    if (this.tagName === "SELECT") for (const option of this.options) option.selected = option.value === String(value)
+    else if (this.tagName === "OPTION") this.setAttribute("value", value)
+    else this.inputValue = String(value)
+  }
+  get options() { return this.querySelectorAll("option") }
+  get selected() { return this.selectedState ?? this.hasAttribute("selected") }
+  set selected(value) { this.selectedState = !!value }
   get firstElementChild() { return this.children[0] ?? null }
   get nextElementSibling() { return this.parentElement?.children[this.parentElement.children.indexOf(this) + 1] ?? null }
   get previousElementSibling() { return this.parentElement?.children[this.parentElement.children.indexOf(this) - 1] ?? null }
@@ -37,10 +63,17 @@ class Element extends EventTarget {
   get valueAsNumber() { return this.value.trim() === "" ? NaN : Number(this.value) }
   get disabled() { return this.hasAttribute("disabled") }
   set disabled(value) { if (value) this.setAttribute("disabled", ""); else this.removeAttribute("disabled") }
+  get hidden() { return this.hasAttribute("hidden") }
+  set hidden(value) { if (value) this.setAttribute("hidden", ""); else this.removeAttribute("hidden") }
   setAttribute(name, value) { this.attributeValues.set(name, String(value)) }
   getAttribute(name) { return this.attributeValues.get(name) ?? null }
   hasAttribute(name) { return this.attributeValues.has(name) }
   removeAttribute(name) { this.attributeValues.delete(name) }
+  toggleAttribute(name, force = !this.hasAttribute(name)) {
+    if (force) this.setAttribute(name, "")
+    else this.removeAttribute(name)
+    return force
+  }
   matches(selector) {
     if (selector.includes(",")) return selector.split(",").some(part => this.matches(part.trim()))
     const exclusions = [...selector.matchAll(/:not\(([^)]+)\)/g)]
@@ -63,25 +96,26 @@ class Element extends EventTarget {
     return false
   }
   append(...children) {
-    for (const child of children) {
+    for (let child of children) {
+      if (typeof child === "string") child = new TextNode(child)
       child.detach()
       child.parentElement = this
-      this.children.push(child)
+      this.childNodes.push(child)
     }
   }
-  prepend(child) { child.detach(); child.parentElement = this; this.children.unshift(child) }
+  prepend(child) { child.detach(); child.parentElement = this; this.childNodes.unshift(child) }
   before(child) {
     child.detach()
     child.parentElement = this.parentElement
-    this.parentElement.children.splice(this.parentElement.children.indexOf(this), 0, child)
+    this.parentElement.childNodes.splice(this.parentElement.childNodes.indexOf(this), 0, child)
   }
   after(child) {
     child.detach()
     child.parentElement = this.parentElement
-    this.parentElement.children.splice(this.parentElement.children.indexOf(this) + 1, 0, child)
+    this.parentElement.childNodes.splice(this.parentElement.childNodes.indexOf(this) + 1, 0, child)
   }
   detach() {
-    if (this.parentElement) this.parentElement.children.splice(this.parentElement.children.indexOf(this), 1)
+    if (this.parentElement) this.parentElement.childNodes.splice(this.parentElement.childNodes.indexOf(this), 1)
     this.parentElement = null
   }
   remove() {
@@ -89,20 +123,25 @@ class Element extends EventTarget {
     this.detach()
   }
   replaceChildren(...children) {
-    for (const child of [...this.children]) child.remove()
+    for (const child of [...this.childNodes]) child.remove()
     this.content = ""
     this.append(...children)
+  }
+  replaceWith(...children) {
+    for (const child of children) this.before(typeof child === "string" ? new TextNode(child) : child)
+    this.remove()
   }
   cloneNode(deep) {
     const clone = new Element(this.tagName)
     for (const {name, value} of this.attributes) clone.setAttribute(name, value)
     clone.content = this.content
-    clone.value = this.value
-    if (deep) clone.append(...this.children.map(child => child.cloneNode(true)))
+    clone.inputValue = this.inputValue
+    clone.selectedState = this.selectedState
+    if (deep) clone.append(...this.childNodes.map(child => child.cloneNode(true)))
     return clone
   }
   isEqualNode(other) {
-    return !!other && this.tagName === other.tagName && this.content === other.content && this.attributeValues.size === other.attributeValues.size && this.attributes.every(({name, value}) => other.getAttribute(name) === value) && this.children.length === other.children.length && this.children.every((child, index) => child.isEqualNode(other.children[index]))
+    return !!other && this.tagName === other.tagName && this.content === other.content && this.attributeValues.size === other.attributeValues.size && this.attributes.every(({name, value}) => other.getAttribute(name) === value) && this.childNodes.length === other.childNodes.length && this.childNodes.every((child, index) => child.isEqualNode(other.childNodes[index]))
   }
   focus() {
     if (globalThis.document.activeElement === this) return
@@ -130,7 +169,7 @@ for (const [property, attribute] of Object.entries({id: "id", className: "class"
   })
 }
 
-globalThis.document = {body: new Element("body"), createElement: tag => new Element(tag)}
+globalThis.document = {body: new Element("body"), createElement: tag => new Element(tag), createTextNode: value => new TextNode(value)}
 globalThis.document.activeElement = globalThis.document.body
 globalThis.MutationObserver = class {
   constructor(callback) { this.callback = callback; this.observing = false }
@@ -152,7 +191,7 @@ test.after(() => {
   }
 })
 
-function openCollection(current = 1, maximum = 20) {
+function openCollection(current = 1, maximum = 20, configuration = {}) {
   const root = new Element()
   root.id = "test-collection"
   const collection = new Element()
@@ -166,18 +205,45 @@ function openCollection(current = 1, maximum = 20) {
   const context = {...CinderPagination, el: root, pushEventTo: (target, event, payload) => requests.push({target, event, payload})}
   const fixture = {
     root, collection, controls, context, requests,
-    patch(page, total = maximum) {
+    patch(page, total = maximum, {pageSize = this.pageSize ?? 10, options = this.pageSizeOptions ?? [10, 25, 50, 100], count = total * pageSize} = {}) {
+      this.pageSize = pageSize
+      this.pageSizeOptions = options
       this.bottom?.remove()
       const bottom = new Element()
       bottom.dataset.key = "pagination_wrapper_class"
       const info = new Element()
       info.dataset.key = "pagination_info_class"
       info.textContent = `Page ${page} of ${total}`
+      const countInfo = new Element("span")
+      countInfo.dataset.key = "pagination_count_class"
+      countInfo.textContent = `(showing ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, count)} of ${count})`
+      info.append(countInfo)
       const navigation = new Element()
       navigation.dataset.key = "pagination_nav_class"
-      const pageSize = new Element()
-      pageSize.dataset.key = "page_size_container_class"
-      bottom.append(info, pageSize, navigation)
+      const pageSizeControl = new Element()
+      pageSizeControl.dataset.key = "page_size_container_class"
+      if (options.length > 1) {
+        const trigger = new Element("button")
+        trigger.dataset.key = "page_size_dropdown_class"
+        trigger.className = "input-native-select text-brand"
+        trigger.textContent = this.pageSize
+        const dropdown = new Element()
+        dropdown.dataset.key = "page_size_dropdown_container_class"
+        dropdown.id = "test-component-page-size-options"
+        for (const size of options) {
+          const option = new Element("button")
+          option.dataset.key = "page_size_option_class"
+          option.setAttribute("phx-click", "change_page_size")
+          option.setAttribute("phx-value-page_size", size)
+          option.setAttribute("phx-target", "17")
+          option.textContent = size
+          dropdown.append(option)
+        }
+        pageSizeControl.append(trigger, dropdown)
+        bottom.append(pageSizeControl)
+      }
+      bottom.prepend(info)
+      bottom.append(navigation)
       for (const [visible, target, title, text] of [
         [page > 2, 1, "First page", "«"],
         [page > 1, page - 1, "Previous page", "‹"],
@@ -201,11 +267,36 @@ function openCollection(current = 1, maximum = 20) {
       this.navigation = navigation
       if (context.observer) context.updated()
     },
+    setLoading(active, content) {
+      this.loading?.remove()
+      this.loading = null
+      if (active) {
+        const loading = new Element()
+        loading.dataset.key = "loading_overlay_class"
+        loading.className = "absolute top-4 right-4"
+        if (!content) {
+          content = new Element()
+          content.dataset.key = "loading_container_class"
+          const spinner = new Element("svg")
+          spinner.dataset.key = "loading_spinner_class"
+          spinner.setAttribute("aria-hidden", "true")
+          content.append(spinner, "Loading...")
+        }
+        loading.append(content)
+        if (this.bottom?.isConnected) this.bottom.before(loading)
+        else collection.append(loading)
+        this.loading = loading
+      }
+      context.updated()
+    },
     gap(position = "bottom", side = "after") {
       return (position === "top" ? context.topPagination : this.bottom).querySelector(`[data-cinder-pagination-gap=${side}]`)
     },
+    pageSizeSelect(position = "bottom") {
+      return (position === "top" ? context.topPagination : this.bottom)?.querySelector("[data-cinder-page-size]")
+    },
   }
-  fixture.patch(current, maximum)
+  fixture.patch(current, maximum, configuration)
   fixtures.add(fixture)
   context.mounted()
   return fixture
@@ -244,6 +335,177 @@ test("both pagination bars render bounded page inputs for omitted pages, includi
     assert.ok(fixture.bottom.querySelector("[data-key=page_size_container_class]"))
     assert.equal(fixture.controls.nextElementSibling, fixture.context.topPagination)
   }
+})
+
+test("both count summaries offer the configured page sizes with distinct accessible selectors", () => {
+  const fixture = openCollection()
+  const ids = []
+  for (const position of ["top", "bottom"]) {
+    const bar = position === "top" ? fixture.context.topPagination : fixture.bottom
+    const count = bar.querySelector("[data-key=pagination_count_class]")
+    const select = fixture.pageSizeSelect(position)
+    assert.equal(select.tagName, "SELECT")
+    assert.deepEqual(select.options.map(option => option.value), ["10", "25", "50", "100"])
+    assert.equal(select.value, "10")
+    assert.ok(select.getAttribute("aria-label"))
+    assert.ok(select.id)
+    ids.push(select.id)
+    assert.equal(count.childNodes.map(node => node === select ? select.value : node.textContent).join(""), "(showing 10 of 200)")
+  }
+  assert.equal(new Set(ids).size, ids.length)
+  assert.equal(fixture.bottom.querySelector("[data-key=page_size_container_class]").hidden, true)
+})
+
+test("changing either count selector uses Cinder's page-size event without affecting unrelated changes", () => {
+  const fixture = openCollection()
+  for (const [position, value] of [["top", "25"], ["bottom", "50"]]) {
+    const select = fixture.pageSizeSelect(position)
+    select.focus()
+    select.value = value
+    const count = fixture.requests.length
+    select.dispatchEvent(new Event("change", {bubbles: true}))
+    assert.equal(fixture.requests.length, count + 1)
+    const request = fixture.requests.at(-1)
+    assert.equal(request.target, "17")
+    assert.equal(request.event, "change_page_size")
+    assert.equal(String(request.payload.page_size), value)
+  }
+  const count = fixture.requests.length
+  fixture.controls.dispatchEvent(new Event("change", {bubbles: true}))
+  assert.equal(fixture.requests.length, count)
+})
+
+test("page-size patches update both summaries, available options, and focused selectors", () => {
+  const fixture = openCollection()
+  for (const [position, pageSize, total, options] of [
+    ["top", 25, 8, [10, 25, 50, 100]],
+    ["bottom", 40, 5, [10, 40, 80]],
+  ]) {
+    const previous = fixture.pageSizeSelect(position)
+    previous.focus()
+    fixture.patch(1, total, {pageSize, options, count: 200})
+    const replacement = fixture.pageSizeSelect(position)
+    assert.notEqual(replacement, previous)
+    assert.equal(document.activeElement, replacement)
+    for (const bar of [fixture.context.topPagination, fixture.bottom]) {
+      const select = bar.querySelector("[data-cinder-page-size]")
+      assert.equal(select.value, String(pageSize))
+      assert.deepEqual(select.options.map(option => option.value), options.map(String))
+      assert.equal(bar.querySelector("[data-key=pagination_count_class]").childNodes.map(node => node === select ? select.value : node.textContent).join(""), `(showing ${pageSize} of 200)`)
+    }
+    assert.deepEqual(fixture.requests, [])
+  }
+})
+
+test("a size change updates the top selector when both presets have the same number of pages", () => {
+  const fixture = openCollection(1, 2, {pageSize: 40, options: [40, 50], count: 80})
+  assert.equal(fixture.pageSizeSelect("top").value, "40")
+  fixture.patch(1, 2, {pageSize: 50, count: 80})
+  assert.equal(fixture.pageSizeSelect("top").value, "50")
+  assert.equal(fixture.pageSizeSelect().value, "50")
+})
+
+test("fixed page sizes retain the native range text without adding a selector", () => {
+  const fixture = openCollection(1, 20, {options: []})
+  for (const bar of [fixture.context.topPagination, fixture.bottom]) {
+    assert.equal(bar.querySelector("[data-cinder-page-size]"), null)
+    assert.equal(bar.querySelector("[data-key=pagination_count_class]").textContent, "(showing 1-10 of 200)")
+  }
+})
+
+test("loading feedback appears beside both result counts and clears when results arrive", () => {
+  const fixture = openCollection()
+  fixture.setLoading(true)
+  const source = fixture.loading
+  assert.equal(source.parentElement, fixture.collection)
+  assert.equal(source.hidden, true)
+  for (let update = 0; update < 3; update++) {
+    if (update === 1) fixture.patch(2)
+    else fixture.context.updated()
+    assert.equal(fixture.root.querySelectorAll("[data-cinder-loading]").length, 2)
+    for (const bar of [fixture.context.topPagination, fixture.bottom]) {
+      const indicator = bar.querySelector("[data-key=pagination_count_class]").nextElementSibling
+      assert.ok(indicator.matches("[data-cinder-loading]"))
+      assert.equal(indicator.hidden, false)
+      assert.equal(indicator.textContent, "Loading...")
+      assert.ok(indicator.firstElementChild.isEqualNode(source.firstElementChild))
+    }
+  }
+  fixture.setLoading(false)
+  assert.equal(fixture.root.querySelectorAll("[data-cinder-loading]").length, 0)
+  assert.ok(fixture.context.topPagination)
+  assert.ok(fixture.pageSizeSelect())
+})
+
+test("inline feedback retains the native custom loading content in both bars", () => {
+  const fixture = openCollection()
+  const content = new Element("section")
+  content.setAttribute("role", "status")
+  content.setAttribute("aria-live", "polite")
+  content.dataset.phxId = "m2-test-component"
+  content.className = "loading-content phx-click-loading"
+  const message = new Element("strong")
+  message.dataset.phxLoc = "14"
+  message.textContent = "Refreshing records"
+  const detail = new Element("span")
+  detail.textContent = "Please wait"
+  content.append(message, detail)
+  fixture.setLoading(true, content)
+  fixture.loading.dataset.phxId = "m1-test-component"
+  fixture.loading.dataset.phxLoc = "12"
+  fixture.loading.classList.add("phx-click-loading")
+  fixture.context.updated()
+  for (const bar of [fixture.context.topPagination, fixture.bottom]) {
+    const indicator = bar.querySelector("[data-cinder-loading]")
+    assert.ok(indicator)
+    assert.notEqual(indicator, fixture.loading)
+    const status = indicator.firstElementChild
+    assert.equal(status.tagName, "SECTION")
+    assert.equal(status.getAttribute("role"), "status")
+    assert.equal(status.getAttribute("aria-live"), "polite")
+    assert.ok(status.classList.contains("loading-content"))
+    assert.deepEqual(status.children.map(child => [child.tagName, child.textContent]), [["STRONG", "Refreshing records"], ["SPAN", "Please wait"]])
+    for (const element of [indicator, ...indicator.querySelectorAll("*")]) {
+      assert.equal(element.attributes.some(attribute => attribute.name.startsWith("data-phx-")), false)
+      assert.equal(element.classList.contains("phx-click-loading"), false)
+    }
+  }
+  assert.equal(content.parentElement, fixture.loading)
+  assert.equal(fixture.loading.dataset.phxId, "m1-test-component")
+  assert.equal(fixture.loading.dataset.phxLoc, "12")
+  assert.equal(content.dataset.phxId, "m2-test-component")
+  assert.equal(message.dataset.phxLoc, "14")
+  assert.ok(fixture.loading.classList.contains("phx-click-loading"))
+  assert.ok(content.classList.contains("phx-click-loading"))
+})
+
+test("loading retains the native fallback when pagination or its count is unavailable", () => {
+  const fixture = openCollection()
+  fixture.bottom.querySelector("[data-key=pagination_count_class]").remove()
+  fixture.setLoading(true)
+  assert.equal(fixture.loading.hidden, false)
+  assert.equal(fixture.root.querySelectorAll("[data-cinder-loading]").length, 0)
+  fixture.patch(2)
+  assert.equal(fixture.loading.hidden, true)
+  assert.equal(fixture.root.querySelectorAll("[data-cinder-loading]").length, 2)
+  fixture.bottom.remove()
+  fixture.context.updated()
+  assert.equal(fixture.context.topPagination, null)
+  assert.equal(fixture.loading.hidden, false)
+  assert.equal(fixture.root.querySelectorAll("[data-cinder-loading]").length, 0)
+})
+
+test("destroying pagination during loading restores its native feedback", () => {
+  const fixture = openCollection()
+  fixture.setLoading(true)
+  assert.equal(fixture.loading.hidden, true)
+  fixture.context.destroyed()
+  fixture.destroyed = true
+  assert.equal(fixture.loading.parentElement, fixture.collection)
+  assert.equal(fixture.loading.hidden, false)
+  assert.equal(fixture.loading.textContent, "Loading...")
+  assert.equal(fixture.root.querySelectorAll("[data-cinder-loading]").length, 0)
+  assert.equal(fixture.bottom.querySelector("[data-key=pagination_count_class]").textContent, "(showing 1-10 of 200)")
 })
 
 test("blur jumps from either bar, clamps page bounds, and ignores empty or invalid values", () => {
@@ -302,6 +564,7 @@ test("updates preserve existing inputs and listeners without submitting pending 
     assert.equal(input.value, "9")
     assert.equal(getEventListeners(fixture.root, "focusout").length, 1)
     assert.equal(getEventListeners(fixture.root, "keydown").length, 1)
+    assert.equal(getEventListeners(fixture.root, "change").length, 1)
     const count = fixture.requests.length
     input.blur()
     assert.equal(fixture.requests.length, count + 1)
@@ -361,6 +624,9 @@ test("hiding pagination removes its top copy and destroying removes listeners an
   fixture.destroyed = true
   assert.equal(fixture.root.querySelectorAll("[data-cinder-pagination-gap]").length, 0)
   assert.equal(fixture.root.querySelectorAll("[data-cinder-pagination]").length, 0)
-  for (const name of ["focusin", "focusout", "keydown"]) assert.equal(getEventListeners(fixture.root, name).length, 0)
+  assert.equal(fixture.root.querySelectorAll("[data-cinder-page-size]").length, 0)
+  assert.equal(fixture.bottom.querySelector("[data-key=pagination_count_class]").textContent, "(showing 1-10 of 200)")
+  assert.equal(fixture.bottom.querySelector("[data-key=page_size_container_class]").hidden, false)
+  for (const name of ["focusin", "focusout", "keydown", "change"]) assert.equal(getEventListeners(fixture.root, name).length, 0)
   assert.equal(fixture.context.observer.observing, false)
 })

@@ -45,16 +45,45 @@ const VCalendar = {
   async mounted() {
     const input = this.el
     this.popover = document.getElementById(`${input.id}-calendar`)
-    const {Calendar, time, weeks} = await import("vanilla-calendar-pro")
-    if (this.disposed) return
     input.value = input.dataset.vcValue ?? input.value
     input.setAttribute("value", input.value)
-    const mode = input.dataset.vcMode
-    const initial = parseInitial(mode, input.value)
-
+    this.value = input.value
     this.serverValue = input.dataset.vcValue ?? input.value
     this.serverTimezone = input.dataset.vcTimezone
     this.serverToday = input.dataset.vcToday
+    this.clearRoot = input.closest("[data-core-input]")
+    this.onInput = event => {
+      if (event.target !== input || input.value === this.value) return
+      this.value = input.value
+      if (input.value) return
+      this.selectedWeek = null
+      this.calendar?.set({selectedDates: [], selectedTime: "00:00"}, {year: false, month: false, dates: true, time: true, locale: false})
+      if (this.popover.matches(":popover-open")) this.popover.hidePopover()
+    }
+    this.onClear = event => {
+      if (event.target !== this.clearRoot) return
+      event.preventDefault()
+      if (this.clearRoot.dataset.inputClearable !== "true" || input.matches(":disabled")) return
+      setValue(input, "")
+      input.dispatchEvent(new Event("blur"))
+    }
+    input.addEventListener("input", this.onInput)
+    input.addEventListener("change", this.onInput)
+    this.clearRoot.addEventListener("input:clear", this.onClear)
+    const {Calendar, time, weeks} = await import("vanilla-calendar-pro")
+    if (this.disposed) return
+    const serverValue = input.dataset.vcValue ?? input.value
+    if (serverValue !== this.serverValue) {
+      input.value = serverValue
+      input.setAttribute("value", serverValue)
+      this.value = serverValue
+    }
+    this.serverValue = serverValue
+    this.serverTimezone = input.dataset.vcTimezone
+    this.serverToday = input.dataset.vcToday
+    const mode = input.dataset.vcMode
+    const initial = parseInitial(mode, input.value)
+
     this.selectedWeek = initial.selectedWeek ?? null
 
     const markWeek = (main) => {
@@ -77,6 +106,7 @@ const VCalendar = {
       if (main instanceof HTMLElement && main.dataset.vc === "calendar") {
         main.setAttribute("role", "dialog")
         markWeek(main)
+        this.positionPopover()
         if (mode === "week" && !this.weekObserver) {
           this.weekObserver = new MutationObserver(() => markWeek(main))
           this.weekObserver.observe(main, {childList: true, subtree: true})
@@ -174,9 +204,12 @@ const VCalendar = {
     this.calendar = new Calendar(this.popover, opts)
     this.calendar.init()
 
+    this.viewport = window.visualViewport
+    this.onReposition = () => this.positionPopover()
     this.onClick = () => {
       if (!input.matches(":disabled") && !this.popover.matches(":popover-open")) {
         this.popover.showPopover({source: input})
+        this.positionPopover()
       }
     }
     this.onKeydown = event => {
@@ -196,10 +229,37 @@ const VCalendar = {
         return
       }
       input.setAttribute("aria-expanded", String(event.newState === "open"))
+      if (event.newState === "open") {
+        window.addEventListener("scroll", this.onReposition, true)
+        window.addEventListener("resize", this.onReposition)
+        this.viewport?.addEventListener("scroll", this.onReposition)
+        this.viewport?.addEventListener("resize", this.onReposition)
+      } else {
+        window.removeEventListener("scroll", this.onReposition, true)
+        window.removeEventListener("resize", this.onReposition)
+        this.viewport?.removeEventListener("scroll", this.onReposition)
+        this.viewport?.removeEventListener("resize", this.onReposition)
+        this.popover.removeAttribute("data-flip")
+        this.popover.style.maxHeight = ""
+      }
     }
     input.addEventListener("click", this.onClick)
     input.addEventListener("keydown", this.onKeydown)
     this.popover.addEventListener("beforetoggle", this.onBeforeToggle)
+  },
+  positionPopover() {
+    if (!this.popover.matches(":popover-open")) return
+    const control = this.el.getBoundingClientRect()
+    const height = this.popover.scrollHeight + this.popover.offsetHeight - this.popover.clientHeight
+    const style = getComputedStyle(this.popover)
+    const gap = (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0)
+    const viewportTop = window.visualViewport?.offsetTop || 0
+    const viewportHeight = window.visualViewport?.height || window.innerHeight
+    const below = viewportTop + viewportHeight - control.bottom - gap
+    const above = control.top - viewportTop - gap
+    const flip = below < height && above > below
+    this.popover.toggleAttribute("data-flip", flip)
+    this.popover.style.maxHeight = `${Math.max(flip ? above : below, 0)}px`
   },
   updated() {
     if (!this.calendar) return
@@ -221,6 +281,7 @@ const VCalendar = {
     }
 
     input.value = value
+    this.value = value
     input.setAttribute("value", value)
     const initial = parseInitial(input.dataset.vcMode, value)
     this.selectedWeek = initial.selectedWeek ?? null
@@ -236,7 +297,14 @@ const VCalendar = {
     this.disposed = true
     this.el.removeEventListener("click", this.onClick)
     this.el.removeEventListener("keydown", this.onKeydown)
+    this.el.removeEventListener("input", this.onInput)
+    this.el.removeEventListener("change", this.onInput)
+    this.clearRoot.removeEventListener("input:clear", this.onClear)
     this.popover.removeEventListener("beforetoggle", this.onBeforeToggle)
+    window.removeEventListener("scroll", this.onReposition, true)
+    window.removeEventListener("resize", this.onReposition)
+    this.viewport?.removeEventListener("scroll", this.onReposition)
+    this.viewport?.removeEventListener("resize", this.onReposition)
     if (this.popover.matches(":popover-open")) this.popover.hidePopover()
     this.weekObserver?.disconnect()
     this.calendar?.destroy()

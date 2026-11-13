@@ -98,14 +98,14 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
       "search" => true,
       "sort" => true,
       "pagination" => true,
-      "page_size" => "6",
       "columns" => "3"
     },
     "combobox" => %{
       "mode" => "single",
       "render_as" => "enabled",
       "prompt" => true,
-      "clearable" => true,
+      "clear_button" => true,
+      "allow_custom" => false,
       "disabled" => false
     },
     "ui_kit" => %{
@@ -774,10 +774,8 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
     socket =
       case section do
         "cinder" ->
-          if Enum.any?(~w(layout page_size), fn option ->
-               Map.has_key?(options, option) and
-                 options[option] != socket.assigns.showcase["cinder"][option]
-             end) do
+          if Map.has_key?(options, "layout") and
+               options["layout"] != socket.assigns.showcase["cinder"]["layout"] do
             assign(socket, :cinder_preview_state, %{})
           else
             socket

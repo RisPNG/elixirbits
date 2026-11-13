@@ -35,7 +35,9 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
     attributes = CoreComponents.__components__().input.attrs
     types = Enum.find(attributes, &(&1.name == :type)).opts[:values]
 
-    specimens = Floki.find(document, "#layout-test-input-examples [data-input-type]")
+    specimens =
+      Floki.find(document, "#layout-test-input-examples [data-input-mode][data-input-type]")
+
     assert length(specimens) == length(types) + 1
 
     assert specimens
@@ -82,7 +84,10 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   test "changing display modes keeps the same specimens and applies their submission semantics",
        %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
-    specimen_ids = Floki.attribute(Floki.parse_document!(html), "[data-input-type]", "id")
+
+    specimen_ids =
+      Floki.attribute(Floki.parse_document!(html), "[data-input-mode][data-input-type]", "id")
+
     attributes = CoreComponents.__components__().input.attrs
     modes = Enum.find(attributes, &(&1.name == :render_as)).opts[:values]
 
@@ -93,9 +98,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
         |> render_click()
         |> Floki.parse_document!()
 
-      assert Floki.attribute(document, "[data-input-type]", "id") == specimen_ids
+      assert Floki.attribute(document, "[data-input-mode][data-input-type]", "id") == specimen_ids
 
-      assert Enum.uniq(Floki.attribute(document, "[data-input-type]", "data-input-mode")) == [
+      assert Enum.uniq(
+               Floki.attribute(document, "[data-input-mode][data-input-type]", "data-input-mode")
+             ) == [
                mode
              ]
 
@@ -155,6 +162,238 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
     assert has_element?(view, "#local_compute_plan input[value='6-core'][checked]")
     assert has_element?(view, "#local_contact_method input[value=phone][checked]")
+  end
+
+  test "like-enabled specimens retain each input's visible controls without submitting fields", %{
+    conn: conn
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    render_click(element(view, "#layout-test-input-render-like-enabled"))
+
+    assert has_element?(view, "#layout-test-input-example-password [data-password-display]")
+
+    refute has_element?(
+             view,
+             "#layout-test-input-example-password [data-password-display]",
+             "password123"
+           )
+
+    assert has_element?(view, "#layout-test-input-example-password .hero-eye")
+
+    assert has_element?(view, "#layout-test-input-example-number .number-input-control .border-l")
+
+    for step <- ~w(1 -1) do
+      assert has_element?(
+               view,
+               "#layout-test-input-example-number span[data-number-step='#{step}']"
+             )
+    end
+
+    for type <- ~w(select combobox) do
+      assert has_element?(view, "#layout-test-input-example-#{type}", "Administrator")
+      assert has_element?(view, "#layout-test-input-example-#{type} .pc-combo-box__chevron")
+    end
+
+    assert has_element?(view, "#layout-test-input-example-tel", "+60")
+    assert has_element?(view, "#layout-test-input-example-tel span[data-tel-number]", "123456789")
+    assert has_element?(view, "#layout-test-input-example-tel .pc-combo-box__chevron")
+
+    assert has_element?(
+             view,
+             "#layout-test-input-example-textarea span[data-input-rows='4']",
+             "Core components, layout flow, dependency surfaces."
+           )
+
+    assert view
+           |> render()
+           |> Floki.parse_document!()
+           |> Floki.find("#layout-test-input-example-textarea span[data-input-rows='4']")
+           |> Floki.text() == "Core components, layout flow, dependency surfaces."
+
+    refute has_element?(view, "#layout-test-input-example-hidden #local_hidden_token")
+    refute has_element?(view, "#layout-test-input-example-hidden", "LT-LOCAL")
+
+    for type <-
+          ~w(text email password number date time week month datetime-local search url tel select combobox textarea checkbox switch radio radio-card hidden) do
+      refute has_element?(
+               view,
+               "#layout-test-input-example-#{type} input, #layout-test-input-example-#{type} select, #layout-test-input-example-#{type} textarea"
+             )
+    end
+  end
+
+  test "like-enabled radio groups retain all choices and the selected state", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+
+    view
+    |> form("#layout-test-form", local: %{compute_plan: "8-core", contact_method: "phone"})
+    |> render_change()
+
+    render_click(element(view, "#layout-test-input-render-like-enabled"))
+
+    assert has_element?(view, "#local_contact_method", "Email")
+    assert has_element?(view, "#local_contact_method", "Telephone")
+    assert has_element?(view, "#local_contact_method [data-radio-checked=true]", "Telephone")
+    assert has_element?(view, "#local_contact_method [data-radio-checked=false]", "Email")
+
+    assert view
+           |> render()
+           |> Floki.parse_document!()
+           |> Floki.find("#local_contact_method [data-radio-option]")
+           |> length() == 2
+
+    for {label, description} <- [
+          {"8-core CPU", "32 GB RAM"},
+          {"6-core CPU", "24 GB RAM"},
+          {"4-core CPU", "16 GB RAM"}
+        ] do
+      assert has_element?(view, "#local_compute_plan", label)
+      assert has_element?(view, "#local_compute_plan", description)
+    end
+
+    assert has_element?(view, "#local_compute_plan [data-radio-checked=true]", "8-core CPU")
+    refute has_element?(view, "#local_compute_plan [data-radio-checked=true]", "6-core CPU")
+  end
+
+  test "like-enabled multiple choices and textarea sizing follow the enabled specimens", %{
+    conn: conn
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+
+    for control <- ~w(select combobox) do
+      render_click(element(view, "#layout-test-input-#{control}-mode-multiple"))
+    end
+
+    render_click(element(view, "#layout-test-input-state-textarea_size"))
+
+    view
+    |> form("#layout-test-form",
+      local: %{role: ["designer", "viewer"], native_role: ["admin", "viewer"]}
+    )
+    |> render_change()
+
+    assert has_element?(view, "textarea#local_notes[rows='6']")
+
+    for type <- ~w(select combobox) do
+      assert has_element?(
+               view,
+               "#layout-test-input-example-#{type} [data-pc-combo-trigger-label]",
+               "2 selected"
+             )
+    end
+
+    render_click(element(view, "#layout-test-input-render-like-enabled"))
+
+    for type <- ~w(select combobox) do
+      assert has_element?(
+               view,
+               "#layout-test-input-example-#{type} .pc-combo-box__trigger-label",
+               "2 selected"
+             )
+
+      refute has_element?(view, "#layout-test-input-example-#{type} input")
+      refute has_element?(view, "#layout-test-input-example-#{type} select")
+    end
+
+    assert has_element?(view, "span#local_notes[data-input-rows='6']")
+
+    view
+    |> form("#layout-test-form")
+    |> render_submit()
+
+    render_click(element(view, "#layout-test-input-render-enabled"))
+
+    for role <- ~w(designer viewer) do
+      assert has_element?(
+               view,
+               "#layout-test-local-role select option[value=#{role}][selected]"
+             )
+    end
+
+    for role <- ~w(admin viewer) do
+      assert has_element?(
+               view,
+               "select#local_native_role-select option[value=#{role}][selected]"
+             )
+    end
+  end
+
+  test "like-enabled calendar values use the enabled field's timezone and format" do
+    for type <- ~w(date time week month datetime-local) do
+      attributes = [
+        type: type,
+        id: "schedule",
+        name: "schedule",
+        value: ~U[2026-12-31 20:15:00Z],
+        timezone: "Asia/Singapore"
+      ]
+
+      enabled =
+        render_component(&CoreComponents.input/1, attributes)
+        |> Floki.parse_document!()
+
+      [expected] = Floki.attribute(enabled, "input#schedule", "value")
+
+      static =
+        render_component(
+          &CoreComponents.input/1,
+          Keyword.put(attributes, :render_as, "like-enabled")
+        )
+        |> Floki.parse_document!()
+
+      assert Floki.text(Floki.find(static, "span#schedule")) == expected
+      assert Floki.find(static, "input, select, textarea") == []
+    end
+  end
+
+  test "single select displays preserve keyword choices and groups without turning separators into choices" do
+    options = [
+      [key: "Unavailable", value: "unavailable", disabled: true],
+      :hr,
+      {"Available roles", [{"Viewer", "viewer"}, {"Administrator", "admin"}]},
+      {:hr, nil},
+      [key: "No role", value: ""]
+    ]
+
+    for {value, label} <- [
+          {nil, "Viewer"},
+          {"", "No role"},
+          {"unavailable", "Unavailable"},
+          {"admin", "Administrator"}
+        ] do
+      attributes = [type: "select", id: "role", name: "role", options: options, value: value]
+
+      enabled =
+        render_component(&CoreComponents.input/1, attributes)
+        |> Floki.parse_document!()
+
+      assert Floki.attribute(enabled, "select#role-select option", "value") ==
+               ["", "unavailable", "viewer", "admin", ""]
+
+      assert Floki.attribute(enabled, "select#role-select optgroup", "label") == [
+               "Available roles"
+             ]
+
+      assert Floki.find(enabled, "#role [data-pc-combo-item][data-label=hr]") == []
+      assert Floki.find(enabled, "option[value=unavailable][disabled]") != []
+
+      assert Floki.attribute(enabled, "select#role-select option[selected]", "value") ==
+               if(is_nil(value), do: ["viewer"], else: [value])
+
+      display =
+        render_component(
+          &CoreComponents.input/1,
+          Keyword.put(attributes, :render_as, "like-enabled")
+        )
+        |> Floki.parse_document!()
+
+      assert display
+             |> Floki.find("#role .pc-combo-box__trigger-label")
+             |> Floki.text()
+             |> String.trim() == label
+
+      assert Floki.find(display, "input, select, textarea") == []
+    end
   end
 
   test "radio cards share required, error, empty, and disabled showcase states", %{conn: conn} do
@@ -422,7 +661,13 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
     assert has_element?(
              view,
-             "#layout-test-local-role input[type=text][placeholder='Choose a role']"
+             "#layout-test-local-role-trigger [data-placeholder-text='Choose a role']",
+             "Administrator"
+           )
+
+    assert has_element?(
+             view,
+             "#layout-test-local-role-select[name='local[role]'] option[value=admin][selected]"
            )
 
     refute has_element?(view, "#layout-test-input-example-combobox .input-floating-label")
@@ -473,7 +718,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
     assert has_element?(
              view,
-             "#layout-test-form-section select#local_native_role[name='local[native_role]'] option[value=admin][selected]"
+             "#layout-test-form-section select#local_native_role-select[name='local[native_role]'] option[value=admin][selected]"
            )
 
     assert has_element?(
@@ -490,7 +735,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
     assert has_element?(
              view,
-             "select#local_native_role:not([multiple])[name='local[native_role]'] option[value=admin][selected]"
+             "select#local_native_role-select:not([multiple])[name='local[native_role]'] option[value=admin][selected]"
            )
 
     view
@@ -510,11 +755,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
     assert has_element?(
              view,
-             "#local_native_role-chips [data-pc-combo-chip][data-value=viewer]",
-             "Viewer"
+             "#local_native_role-trigger [data-pc-combo-trigger-label]",
+             "1 selected"
            )
 
-    assert has_element?(view, "label[for=local_native_role-input]", "Select")
+    assert has_element?(view, "label[for=local_native_role-trigger]", "Select")
     refute has_element?(view, "select#local_native_role")
 
     for role <- ~w(designer viewer) do
@@ -550,7 +795,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
     assert has_element?(
              view,
-             "select#local_native_role:not([multiple])[name='local[native_role]'] option[value=admin][selected]"
+             "select#local_native_role-select:not([multiple])[name='local[native_role]'] option[value=admin][selected]"
            )
 
     assert has_element?(

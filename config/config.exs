@@ -14,7 +14,9 @@ config :elixirbits,
 
 config :elixirbits, Elixirbits.Scheduler, jobs: []
 
-config :cinder, default_theme: ElixirbitsWeb.CinderTheme
+config :cinder,
+  default_theme: ElixirbitsWeb.CinderTheme,
+  default_page_size: [default: 10, options: [10, 25, 50, 100]]
 
 config :ash_typescript,
   manifest: Elixirbits.AshTypescriptManifest,
