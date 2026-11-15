@@ -1,8 +1,6 @@
 defmodule Elixirbits.CoreUtils.Resource do
   @moduledoc false
 
-  alias Ash.Page.Keyset
-  alias Ash.Page.Offset
   alias Elixirbits.CoreUtils.Parse
 
   @text_types [:string, :ci_string]
@@ -35,89 +33,6 @@ defmodule Elixirbits.CoreUtils.Resource do
     case Enum.find(Ash.Type.short_names(), &(elem(&1, 1) == type)) do
       {short_name, _module} -> short_name
       nil -> type
-    end
-  end
-
-  # Relationship loading
-
-  def ensure_loaded_associations(data, preloads \\ true)
-
-  def ensure_loaded_associations(nil, _preloads), do: nil
-
-  def ensure_loaded_associations(%Offset{results: results} = page, preloads) do
-    %{page | results: ensure_loaded_associations(results, preloads)}
-  end
-
-  def ensure_loaded_associations(%Keyset{results: results} = page, preloads) do
-    %{page | results: ensure_loaded_associations(results, preloads)}
-  end
-
-  def ensure_loaded_associations([], _preloads), do: []
-
-  def ensure_loaded_associations([record | _] = records, preloads) do
-    loads = normalize_relationship_loads(record.__struct__, preloads)
-
-    if loads == [] do
-      records
-    else
-      Ash.load!(records, loads, domain: Ash.Resource.Info.domain(record.__struct__))
-    end
-  end
-
-  def ensure_loaded_associations(%resource{} = record, preloads) do
-    loads = normalize_relationship_loads(resource, preloads)
-
-    if loads == [] do
-      record
-    else
-      Ash.load!(record, loads, domain: Ash.Resource.Info.domain(resource))
-    end
-  end
-
-  def normalize_relationship_loads(resource, true) do
-    Enum.map(Ash.Resource.Info.relationships(resource), & &1.name)
-  end
-
-  def normalize_relationship_loads(resource, preload) when is_list(preload) do
-    preload
-    |> Enum.reduce([], fn load, loads ->
-      case normalize_relationship_load(resource, load) do
-        nil -> loads
-        normalized -> [normalized | loads]
-      end
-    end)
-    |> Enum.reverse()
-  end
-
-  def normalize_relationship_loads(resource, preload) when preload not in [false, nil] do
-    case normalize_relationship_load(resource, preload) do
-      nil -> []
-      normalized -> [normalized]
-    end
-  end
-
-  def normalize_relationship_loads(_resource, preload) when preload in [false, nil], do: []
-
-  def normalize_relationship_load(resource, {relationship, nested}) do
-    case Ash.Resource.Info.relationship(resource, relationship) do
-      nil ->
-        nil
-
-      relationship_info ->
-        normalized_nested = normalize_relationship_loads(relationship_info.destination, nested)
-
-        if normalized_nested == [] do
-          relationship_info.name
-        else
-          {relationship_info.name, normalized_nested}
-        end
-    end
-  end
-
-  def normalize_relationship_load(resource, relationship) do
-    case Ash.Resource.Info.relationship(resource, relationship) do
-      nil -> nil
-      relationship_info -> relationship_info.name
     end
   end
 

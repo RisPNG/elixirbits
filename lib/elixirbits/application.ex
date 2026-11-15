@@ -35,17 +35,14 @@ defmodule Elixirbits.Application do
 
     children = [
       ElixirbitsWeb.Telemetry,
-      Elixirbits.Repo,
       {DNSCluster, query: Application.get_env(:elixirbits, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Elixirbits.PubSub},
       ElixirbitsWeb.Presence,
       Elixirbits.Scheduler,
-      Elixirbits.Accounts.LoginGuard,
       # Start a worker by calling: Elixirbits.Worker.start_link(arg)
       # {Elixirbits.Worker, arg},
       # Start to serve requests, typically the last entry
-      ElixirbitsWeb.Endpoint,
-      {AshAuthentication.Supervisor, [otp_app: :elixirbits]}
+      ElixirbitsWeb.Endpoint
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html for other strategies and supported options

@@ -5,13 +5,11 @@
 @import "./subgap.css";
 
 @source "../../deps/cinder";
-@source "../../deps/ash_authentication_phoenix";
 @source "../../deps/petal_components/lib/petal_components/combo_box.ex";
 @source "../css";
 @source "../js";
 @source "../../lib/elixirbits_web";
 @source "../../lib/elixirbits/core_utils";
-@source "../../priv/repo";
 
 @plugin "../vendor/heroicons";
 @plugin "../vendor/tabler";

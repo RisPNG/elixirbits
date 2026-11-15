@@ -145,17 +145,17 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
       html =
         rendered_to_string(~H"""
-        <CoreComponents.button id="create-account" variant={:text} navigate="/dashboard/register">
-          Create an account
+        <CoreComponents.button id="open-dashboard" variant={:text} navigate="/dashboard">
+          Open dashboard
         </CoreComponents.button>
 
         <CoreComponents.button
-          id="request-link"
+          id="send-message"
           variant={:text}
           type="button"
-          phx-click="request_magic_link"
+          phx-click="send_message"
           phx-disable-with="Sending..."
-        >Email me a magic link</CoreComponents.button>
+        >Send a message</CoreComponents.button>
         """)
 
       document = Floki.parse_document!(html)
@@ -163,20 +163,20 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       assert [_] =
                Floki.find(
                  document,
-                 "a#create-account[href='/dashboard/register'][data-phx-link=redirect]"
+                 "a#open-dashboard[href='/dashboard'][data-phx-link=redirect]"
                )
 
       assert [_] =
                Floki.find(
                  document,
-                 "button#request-link[type=button][phx-click=request_magic_link][phx-disable-with='Sending...']"
+                 "button#send-message[type=button][phx-click=send_message][phx-disable-with='Sending...']"
                )
 
-      assert Floki.find(document, "button#create-account, a#request-link") == []
-      assert Floki.text(Floki.find(document, "#create-account")) =~ "Create an account"
+      assert Floki.find(document, "button#open-dashboard, a#send-message") == []
+      assert Floki.text(Floki.find(document, "#open-dashboard")) =~ "Open dashboard"
 
-      assert document |> Floki.find("#request-link") |> Floki.text() |> String.trim() ==
-               "Email me a magic link"
+      assert document |> Floki.find("#send-message") |> Floki.text() |> String.trim() ==
+               "Send a message"
     end
   end
 
@@ -2474,7 +2474,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
           type="email"
           label="Email"
           placeholder="Enter an email address"
-          tooltip="Used for signing in"
+          tooltip="Used for replies"
           required
         />
         """)
@@ -2482,7 +2482,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       document = Floki.parse_document!(html)
       assert length(Floki.find(document, "span[aria-hidden=true].text-error")) == 1
 
-      assert Floki.find(document, "[data-tooltip='Used for signing in'] label[for=account_email]") !=
+      assert Floki.find(document, "[data-tooltip='Used for replies'] label[for=account_email]") !=
                []
 
       assert Floki.find(

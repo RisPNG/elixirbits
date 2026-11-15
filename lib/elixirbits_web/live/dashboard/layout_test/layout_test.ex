@@ -26,13 +26,6 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
       source: "Swoosh",
       path: "/dashboard/dev/mailbox",
       availability: "dev only"
-    },
-    %{
-      id: "ash-admin",
-      name: "Ash Admin",
-      source: "AshAdmin",
-      path: "/dashboard/admin",
-      availability: "dev only"
     }
   ]
 

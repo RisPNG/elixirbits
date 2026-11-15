@@ -51,7 +51,7 @@ defmodule ElixirbitsWeb do
       import Phoenix.LiveView, except: [put_flash: 3]
       import ElixirbitsWeb.CoreComponents.Flash, only: [put_flash: 3]
 
-      on_mount {ElixirbitsWeb.LiveUserAuth, :timezone}
+      on_mount {ElixirbitsWeb.LiveNavigation, :timezone}
       on_mount {ElixirbitsWeb.CoreComponents, :inputs}
 
       unquote(html_helpers())
@@ -91,7 +91,6 @@ defmodule ElixirbitsWeb do
       # Core UI components
       import Phoenix.Component, except: [form: 1]
       import ElixirbitsWeb.CoreComponents
-      import Elixirbits.AccessControl.Permissions, only: [can?: 3]
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

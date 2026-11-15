@@ -22,23 +22,6 @@ if config_env() == :prod do
       System.get_env("UPLOAD_DIRECTORY") ||
         raise("Missing environment variable `UPLOAD_DIRECTORY` for public uploads!")
 
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
-
-  maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
-
-  config :elixirbits, Elixirbits.Repo,
-    # ssl: true,
-    url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    # For machines with several cores, consider starting multiple pools of `pool_size`
-    # pool_count: 4,
-    socket_options: maybe_ipv6
-
   # The secret key base is used to sign/encrypt cookies and other secrets. A default value is used in config/dev.exs and config/test.exs but you want to use a different value for prod and you most likely don't want to check this value into version control, so we use an environment variable instead.
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
@@ -58,11 +41,6 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
     secret_key_base: secret_key_base
-
-  config :elixirbits,
-    token_signing_secret:
-      System.get_env("TOKEN_SIGNING_SECRET") ||
-        raise("Missing environment variable `TOKEN_SIGNING_SECRET`!")
 
   # ## SSL Support
   #

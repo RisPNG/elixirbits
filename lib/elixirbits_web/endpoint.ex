@@ -34,7 +34,6 @@ defmodule ElixirbitsWeb.Endpoint do
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
     plug AshPhoenix.Plug.CheckCodegenStatus
-    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :elixirbits
   end
 
   plug Phoenix.LiveDashboard.RequestLogger,

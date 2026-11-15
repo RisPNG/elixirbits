@@ -3,16 +3,6 @@ config :ash, policies: [show_policy_breakdowns?: true]
 
 config :live_debugger, port: 5000, auto_port: true
 
-# Configure your database
-config :elixirbits, Elixirbits.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: System.get_env("DATABASE_NAME", "elixirbits_template_dev"),
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
-
 # For development, we disable any cache and enable debugging and code reloading.
 #
 # The watchers configuration can be used to run external watchers to your application. For example, we can use it to bundle .js and .css sources.
@@ -66,7 +56,7 @@ config :elixirbits, ElixirbitsWeb.Endpoint,
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :elixirbits, dev_routes: true, token_signing_secret: "1rBYG/+YK2YUh9CdFdenYgIemNpvliop"
+config :elixirbits, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

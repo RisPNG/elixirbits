@@ -210,9 +210,8 @@ defmodule Elixirbits.CoreUtils.Parse.ColorTest do
              Parse.convert_color(source, "lab")
   end
 
-  test "the storage type generates a PostgreSQL text column" do
+  test "the color type stores text" do
     assert Ash.Type.storage_type(Color) == :string
-    assert AshPostgres.MigrationGenerator.get_migration_type(Color, []) == :text
   end
 
   test "optional color attributes accept nil and blank form input" do

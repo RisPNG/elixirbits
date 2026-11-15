@@ -1,20 +1,5 @@
 import Config
-config :elixirbits, token_signing_secret: "8YuYSkLBTQBCx4OouCMyG3OqM+AHy0lz"
-config :bcrypt_elixir, log_rounds: 1
 config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
-
-# Configure your database
-#
-# The MIX_TEST_PARTITION environment variable can be used to provide built-in test partitioning in CI environment. Run `mix help test` for more information.
-config :elixirbits, Elixirbits.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database:
-    System.get_env("TEST_DATABASE_NAME", "elixirbits_template_test") <>
-      to_string(System.get_env("MIX_TEST_PARTITION")),
-  pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: System.schedulers_online() * 2
 
 config :elixirbits,
   upload_directory: Path.expand("../tmp/uploads/public", __DIR__)

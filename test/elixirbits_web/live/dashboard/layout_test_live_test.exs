@@ -3,27 +3,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias Elixirbits.AccessControl.AccessControlService
-  alias Elixirbits.AccessControl.Sitenav
-
   test "renders local tab by default and switches to ecosystem tab", %{conn: conn} do
-    Ash.create!(
-      Sitenav,
-      %{
-        code: "LT",
-        name: "Layout Test",
-        description: "Showcases most, if not all, front-end components.",
-        level: 2,
-        parent: "DP",
-        url: "dashboard/dev_panel/layout_test",
-        sequence: 3000,
-        state: :ENABLED
-      },
-      action: :create,
-      domain: AccessControlService,
-      actor: %{system: true}
-    )
-
     {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
 
     assert has_element?(view, "#layout-test-local-tab[aria-selected=\"true\"]")
@@ -743,7 +723,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
            )
 
     document = view |> render() |> Floki.parse_document!()
-    assert length(Floki.find(document, "#layout-test-dependency-combobox [role=option]")) == 4
+    assert length(Floki.find(document, "#layout-test-dependency-combobox [role=option]")) == 3
   end
 
   test "core combobox retains its explicit ID and updates the matching form field", %{conn: conn} do

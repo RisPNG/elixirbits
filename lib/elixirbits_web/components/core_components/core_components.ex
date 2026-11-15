@@ -194,8 +194,8 @@ defmodule ElixirbitsWeb.CoreComponents do
   ## Examples
 
       <.button phx-click="toggle_details" aria-pressed={@show_details}>Details</.button>
-      <.button variant={:primary} type="submit">Sign in</.button>
-      <.button variant={:text} navigate={~p"/dashboard/register"}>Create an account</.button>
+      <.button variant={:primary} type="submit">Save changes</.button>
+      <.button variant={:text} navigate={~p"/dashboard"}>Open dashboard</.button>
 
   ## Variant
 
@@ -205,8 +205,8 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   Use `:text` for a text action, `:primary` for the preferred action, `:neutral` for an outlined secondary action, and `:danger` for destructive confirmations. These choices describe visual emphasis for both navigation and event actions.
 
-      <.button variant={:text} phx-click="request_magic_link">Email me a magic link</.button>
-      <.button variant={:text} navigate={~p"/dashboard/register"}>Create an account</.button>
+      <.button variant={:text} phx-click="send_message">Send a message</.button>
+      <.button variant={:text} navigate={~p"/dashboard"}>Open dashboard</.button>
 
   Navigation attributes render a link, while other actions render a button. Inline and hierarchical navigation links can use `<.link>` directly. Input-owned compact controls use native buttons with the shared base styling.
   """
@@ -269,7 +269,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   ## Examples
 
       <.action_button action={:read} navigate={~p"/inventory/categories"} />
-      <.action_button action={:history} patch={@audit.history_path} />
+      <.action_button action={:history} phx-click="show_history" />
       <.action_button action={:archive} phx-click="request_delete" phx-value-id={c.id} />
       <.action_button action={:save} type="submit" />
       <.action_button action={:create} icon="tabler-calendar-plus" tooltip="Add" />
@@ -337,11 +337,10 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   @doc """
-  Renders the deletion confirmation and the additional role-assignment warning when needed.
+  Renders a deletion confirmation.
   """
   attr :label, :string, required: true
   attr :name, :string, required: true
-  attr :remove_assignments?, :boolean, default: false
 
   def delete_confirmation(assigns) do
     core_components_template(assign(assigns, :component, :delete_confirmation))

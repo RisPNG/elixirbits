@@ -13,35 +13,6 @@ defmodule Elixirbits.CoreUtils.ResourceTest.SequenceRow do
   end
 end
 
-defmodule Elixirbits.CoreUtils.Resource.SearchDatetimeTest.Record do
-  use Ash.Resource,
-    domain: Elixirbits.CoreUtils.Resource.SearchDatetimeTest.Domain,
-    data_layer: Ash.DataLayer.Ets
-
-  ets do
-    private? true
-  end
-
-  actions do
-    defaults [:read, create: [:name, :at, :native_at]]
-  end
-
-  attributes do
-    uuid_primary_key :id
-    attribute :name, :string
-    attribute :at, :utc_datetime_usec
-    attribute :native_at, :datetime, constraints: [precision: :microsecond]
-  end
-end
-
-defmodule Elixirbits.CoreUtils.Resource.SearchDatetimeTest.Domain do
-  use Ash.Domain, otp_app: :elixirbits, validate_config_inclusion?: false
-
-  resources do
-    resource Elixirbits.CoreUtils.Resource.SearchDatetimeTest.Record
-  end
-end
-
 defmodule Elixirbits.CoreUtils.ResourceTest.PreciseInstant do
   use Ash.Type.NewType, subtype_of: :datetime, constraints: [precision: :microsecond]
 end

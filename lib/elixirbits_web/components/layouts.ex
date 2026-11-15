@@ -10,10 +10,6 @@ defmodule ElixirbitsWeb.Layouts do
 
   @no_nav %{
     items: [],
-    organization: nil,
-    user: nil,
-    timezone_form: nil,
-    timezone_options: [],
     path: nil,
     open?: false,
     open_codes: []
@@ -33,7 +29,7 @@ defmodule ElixirbitsWeb.Layouts do
 
   attr :nav, :map,
     default: @no_nav,
-    doc: "the navigation chrome state assigned by `LiveUserAuth`'s `:app_nav` hook"
+    doc: "the navigation chrome state assigned by `LiveNavigation`'s `:app_nav` hook"
 
   attr :user_timezone, :string, default: "Etc/UTC"
 
@@ -47,7 +43,7 @@ defmodule ElixirbitsWeb.Layouts do
     assigns =
       assigns
       |> assign(:by_parent, Enum.group_by(assigns.nav.items, & &1.parent))
-      |> assign(:show_nav?, assigns.nav.items != [] or not is_nil(assigns.nav.user))
+      |> assign(:show_nav?, assigns.nav.items != [])
 
     dashboard_template(assign(assigns, :component, :dashboard))
   end

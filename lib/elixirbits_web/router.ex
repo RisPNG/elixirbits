@@ -1,41 +1,23 @@
 defmodule ElixirbitsWeb.Router do
   use ElixirbitsWeb, :router
 
-  use AshAuthentication.Phoenix.Router
-
-  import AshAuthentication.Plug.Helpers
-
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug ElixirbitsWeb.SessionTimeout
-    plug :sign_in_with_remember_me
     plug :fetch_live_flash
     plug :put_root_layout, html: {ElixirbitsWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :load_from_session
-    plug :set_actor, :user
   end
 
   pipeline :api do
     plug :accepts, ["json"]
-
-    plug AshAuthentication.Strategy.ApiKey.Plug,
-      resource: Elixirbits.Accounts.User,
-      # if you want to require an api key to be supplied, set `required?` to true
-      required?: false
-
-    plug :load_from_bearer
-    plug :set_actor, :user
   end
 
   scope "/", ElixirbitsWeb do
     pipe_through :browser
 
-    ash_authentication_live_session :public_routes,
-      layout: {ElixirbitsWeb.Layouts, :index},
-      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
+    live_session :public_routes, layout: {ElixirbitsWeb.Layouts, :index} do
       live "/", IndexLive.Index, :index
     end
 
@@ -52,46 +34,13 @@ defmodule ElixirbitsWeb.Router do
   scope "/dashboard", ElixirbitsWeb do
     pipe_through :browser
 
-    ash_authentication_live_session :dashboard_routes,
-      on_mount: [
-        {ElixirbitsWeb.LiveUserAuth, :live_user_optional},
-        {ElixirbitsWeb.LiveUserAuth, :app_nav}
-      ] do
+    live_session :dashboard_routes,
+      on_mount: [{ElixirbitsWeb.LiveNavigation, :app_nav}] do
       live "/", DashboardLive, :index
-
-      scope "/admin", Dashboard do
-        live "/users", UserLive.Index, :index
-        live "/users/create", UserLive.Entry, :create
-        live "/users/:id/read", UserLive.Entry, :read
-        live "/users/:id/update", UserLive.Entry, :update
-        live "/roles", RoleLive.Index, :index
-        live "/roles/create", RoleLive.Entry, :create
-        live "/roles/:id/read", RoleLive.Entry, :read
-        live "/roles/:id/update", RoleLive.Entry, :update
-        live "/organization", OrganizationLive.Settings, :read
-        live "/organization/update", OrganizationLive.Settings, :update
-      end
 
       scope "/dev_panel", Dashboard do
         live "/layout_test", LayoutTestLive, :index
       end
-    end
-
-    auth_routes AuthController, Elixirbits.Accounts.User, path: "/auth"
-    get "/sign-out", AuthController, :sign_out
-
-    ash_authentication_live_session :login_routes,
-      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_no_user}] do
-      live "/sign-in", Dashboard.LoginLive.Index, :sign_in
-      live "/register", Dashboard.LoginLive.Register, :register
-      live "/reset", Dashboard.LoginLive.ForgotPassword, :forgot_password
-      live "/password-reset/:token", Dashboard.LoginLive.ResetPassword, :reset_password
-      live "/magic_link/:token", Dashboard.LoginLive.MagicLink, :sign_in
-    end
-
-    ash_authentication_live_session :confirmation_routes,
-      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
-      live "/confirm_new_user/:token", Dashboard.LoginLive.Confirm, :confirm
     end
   end
 
@@ -105,16 +54,6 @@ defmodule ElixirbitsWeb.Router do
 
       live_dashboard "/dashboard", metrics: ElixirbitsWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
-    end
-  end
-
-  if Application.compile_env(:elixirbits, :dev_routes) do
-    import AshAdmin.Router
-
-    scope "/dashboard/admin" do
-      pipe_through :browser
-
-      ash_admin "/"
     end
   end
 end

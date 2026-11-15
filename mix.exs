@@ -101,22 +101,14 @@ defmodule Elixirbits.MixProject do
   defp deps do
     [
       {:ash, ">= 3.37.2"},
-      {:ash_admin, ">= 1.4.0"},
       {:ash_archival, ">= 2.0.5"},
-      {:ash_authentication, ">= 4.15.0"},
-      {:ash_authentication_phoenix, ">= 2.17.4"},
       {:ash_cloak, ">= 0.5.0"},
-      {:ash_double_entry, ">= 1.1.1"},
-      {:ash_events, ">= 0.8.2"},
       {:ash_json_api, ">= 1.8.0"},
-      {:ash_money, ">= 0.2.7"},
       {:ash_paper_trail, ">= 0.8.1"},
       {:ash_phoenix, ">= 2.3.26"},
-      {:ash_postgres, ">= 2.15.2"},
       {:ash_state_machine, ">= 0.3.0"},
       {:ash_typescript, ">= 0.19.3"},
       {:bandit, ">= 1.14.0"},
-      {:bcrypt_elixir, ">= 3.3.2"},
       {:burrito, ">= 1.6.0"},
       {:chromic_pdf, ">= 1.17.2"},
       {:cinder, ">= 0.17.0"},
@@ -124,7 +116,6 @@ defmodule Elixirbits.MixProject do
       {:color, ">= 0.13.0"},
       {:dialyxir, ">= 1.4.8", only: [:dev, :test], runtime: false},
       {:dns_cluster, ">= 0.3.1"},
-      {:ecto_sql, ">= 3.14.0"},
       {:esbuild, ">= 0.10.1", runtime: Mix.env() == :dev},
       {:ex_cldr, ">= 2.47.5"},
       {:ex_cldr_calendars, ">= 2.4.3"},
@@ -144,7 +135,7 @@ defmodule Elixirbits.MixProject do
       {:ex_cldr_units, ">= 3.20.4"},
       {:ex_doc, ">= 0.40.4"},
       {:ex_json_schema, ">= 0.11.5"},
-      {:ex_money_sql, ">= 2.1.0"},
+      {:ex_money, ">= 6.2.1"},
       {:faker, ">= 0.19.0", only: [:dev]},
       {:finch, ">= 0.24.0"},
       {:floki, ">= 0.38.4"},
@@ -161,7 +152,6 @@ defmodule Elixirbits.MixProject do
       {:open_api_spex, ">= 3.22.4"},
       {:petal_components, ">= 4.17.1"},
       {:phoenix, ">= 1.8.16"},
-      {:phoenix_ecto, ">= 4.7.0"},
       {:phoenix_html, ">= 4.3.0"},
       {:phoenix_live_dashboard, ">= 0.9.1"},
       {:phoenix_live_reload, ">= 1.7.0", only: :dev},
@@ -169,7 +159,6 @@ defmodule Elixirbits.MixProject do
       {:phoenix_pubsub, ">= 2.4.1"},
       {:picosat_elixir, ">= 0.2.3"},
       {:plug, ">= 1.20.3"},
-      {:postgrex, ">= 0.22.4"},
       {:qr_code, ">= 3.2.0"},
       {:quantum, ">= 3.5.3"},
       {:req, ">= 0.7.5"},
@@ -200,10 +189,7 @@ defmodule Elixirbits.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ash.setup", "assets.setup", "assets.build", "run priv/repo/seeds.exs"],
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ash.setup --quiet", "test"],
+      setup: ["deps.get", "assets.setup", "assets.build"],
       "assets.setup": [
         "tailwind.install --if-missing",
         "esbuild.install --if-missing",
@@ -218,7 +204,7 @@ defmodule Elixirbits.MixProject do
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --unused",
-        "ash.codegen --check",
+        "ash_typescript.codegen --check",
         "format",
         "test",
         "dialyzer"

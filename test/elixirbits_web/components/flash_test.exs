@@ -60,25 +60,26 @@ defmodule ElixirbitsWeb.CoreComponents.FlashTest do
     assert assert_redirect(view, "/") == %{"error" => "Latest message"}
   end
 
-  test "authentication controller notices replace existing controller flash", %{conn: conn} do
+  test "controller redirects carry only the latest notice", %{conn: conn} do
     conn =
       conn
       |> Plug.Test.init_test_session(%{})
       |> Phoenix.Controller.fetch_flash()
       |> Phoenix.Controller.put_flash(:error, "Earlier error")
-      |> ElixirbitsWeb.AuthController.success({:magic_link, :request}, nil, nil)
+      |> Flash.put_flash(:info, "Changes saved.")
+      |> Phoenix.Controller.redirect(to: "/dashboard")
 
     assert conn.status == 302
 
     assert Plug.Conn.get_session(conn, "phoenix_flash") == %{
-             "info" => "If your email is valid, a sign-in link has been sent."
+             "info" => "Changes saved."
            }
   end
 
   test "replacement preserves structured message options and native redirect flash state" do
     payload = %{
       title: "Heads up",
-      msg: "Review the account",
+      msg: "Review the changes",
       icon: "hero-bell",
       duration: 1200,
       show_spinner: true
@@ -99,7 +100,7 @@ defmodule ElixirbitsWeb.CoreComponents.FlashTest do
 
     html = render_component(&CoreComponents.flash_group/1, flash: socket.assigns.flash)
     document = Floki.parse_document!(html)
-    assert Floki.text(Floki.find(document, "#flash-warning")) =~ "Review the account"
+    assert Floki.text(Floki.find(document, "#flash-warning")) =~ "Review the changes"
     assert Floki.text(Floki.find(document, "#flash-warning")) =~ "Heads up"
     assert Floki.find(document, "#flash-warning .hero-bell") != []
     assert Floki.find(document, "#flash-warning .hero-arrow-path") != []

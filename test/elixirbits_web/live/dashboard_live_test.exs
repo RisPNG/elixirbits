@@ -1,38 +1,60 @@
 defmodule ElixirbitsWeb.DashboardLiveTest do
   use ElixirbitsWeb.ConnCase, async: true
 
-  test "dashboard renders inside the app layout", %{conn: conn} do
-    conn = get(conn, ~p"/dashboard")
+  import Phoenix.LiveViewTest
 
-    document = conn |> html_response(200) |> Floki.parse_document!()
-    assert [_] = Floki.find(document, "main h1")
-    assert Floki.text(Floki.find(document, "main h1")) =~ "Elixirbits"
-  end
-
-  test "signed-in dashboard keeps its navigation and account controls", %{conn: conn} do
-    user = create_user(roles: ["superuser"])
-
-    Ash.create!(
-      Elixirbits.AccessControl.Sitenav,
-      %{code: "HOME", name: "Home", url: "dashboard", level: 1, roles_bypass: ["public"]},
-      actor: %{system: true}
-    )
-
+  test "dashboard renders its workspace and navigation without an account", %{conn: conn} do
     for path <- ["/dashboard", "/dashboard/"] do
-      document =
-        conn
-        |> log_in_user(user)
-        |> get(path)
-        |> html_response(200)
-        |> Floki.parse_document!()
+      document = conn |> get(path) |> html_response(200) |> Floki.parse_document!()
 
+      assert Floki.text(Floki.find(document, "main h1")) =~ "Elixirbits"
       assert [_] = Floki.find(document, "aside#app-navigation")
-      assert [_] = Floki.find(document, "#account-menu")
 
       assert [_] =
                Floki.find(document, "#app-navigation a[href='/dashboard'][aria-current='page']")
 
-      assert Floki.text(Floki.find(document, "main")) =~ "Your account"
+      assert Floki.text(Floki.find(document, "main")) =~ "Workspace sections"
+      assert [_] = Floki.find(document, "main a[href='/dashboard/dev_panel/layout_test']")
+      assert Floki.find(document, "#account-menu") == []
+      assert Floki.find(document, "a[href='/dashboard/sign-in']") == []
+      assert Floki.find(document, "a[href='/dashboard/admin/users']") == []
     end
+  end
+
+  test "navigation opens the component showcase without signing in", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+    result = view |> element("main a[href='/dashboard/dev_panel/layout_test']") |> render_click()
+    {:ok, showcase, _html} = follow_redirect(result, conn, ~p"/dashboard/dev_panel/layout_test")
+
+    assert has_element?(showcase, "#app-navigation a[aria-current=page]", "Layout Test")
+    assert has_element?(showcase, "main h1", "Layout Test")
+  end
+
+  test "account and administration routes are absent", %{conn: conn} do
+    for path <- [
+          "/dashboard/sign-in",
+          "/dashboard/sign-out",
+          "/dashboard/register",
+          "/dashboard/reset",
+          "/dashboard/password-reset/token",
+          "/dashboard/magic_link/token",
+          "/dashboard/confirm_new_user/token",
+          "/dashboard/admin",
+          "/dashboard/admin/users",
+          "/dashboard/admin/users/create",
+          "/dashboard/admin/users/id/read",
+          "/dashboard/admin/users/id/update",
+          "/dashboard/admin/roles",
+          "/dashboard/admin/roles/create",
+          "/dashboard/admin/roles/id/read",
+          "/dashboard/admin/roles/id/update",
+          "/dashboard/admin/organization",
+          "/dashboard/admin/organization/update"
+        ] do
+      assert conn |> get(path) |> response(404)
+    end
+
+    assert conn |> post("/dashboard/auth/user/password/sign_in", %{}) |> response(404)
   end
 end
