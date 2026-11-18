@@ -1182,15 +1182,16 @@ test("changing editor configuration cancels stale preparation and the next edit 
   try {
     const accepted = new File(["accepted"], "accepted.png", {type: "image/png"})
     setup.select(accepted)
-    setup.root.dataset.fileEditor = "true"
+    setup.root.dataset.fileEditor = JSON.stringify({presets: [[16, 9]]})
     setup.context.updated()
     setup.context.editSelection(setup.context.activeKey)
     await settled()
-    const freeEditor = Editor.instances.at(-1)
-    const staleResult = freeEditor.resolve
-    setup.root.dataset.fileEditor = "false"
+    const presetEditor = Editor.instances.at(-1)
+    assert.deepEqual(presetEditor.options, {presets: [[16, 9]], template: setup.editorTemplate})
+    const staleResult = presetEditor.resolve
+    setup.root.dataset.fileEditor = JSON.stringify({presets: [[3, 2]]})
     setup.context.updated()
-    assert.equal(freeEditor.destroyed, true)
+    assert.equal(presetEditor.destroyed, true)
     assert.equal(setup.context.preparing, false)
     staleResult(new File(["stale"], "stale.png", {type: "image/png"}))
     await settled()

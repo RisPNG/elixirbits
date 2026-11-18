@@ -1404,7 +1404,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
     end
 
     test "editor configuration preserves native multipart selection with previews enabled" do
-      for editor <- [false, true, %{width: 512, height: 256}, %{ratio: 16 / 9}] do
+      for editor <- [false, true, %{presets: []}, %{width: 512, height: 256}, %{ratio: 16 / 9}] do
         document =
           render_component(&CoreComponents.input/1,
             id: "portrait",
@@ -1426,6 +1426,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(document, "input#portrait[value]") == []
         assert Floki.find(document, "[data-file-preview-region]") != []
+        assert Floki.find(document, "template select[data-editor-action=aspect-ratio]") == []
 
         if editor == false do
           assert Floki.find(document, "template[data-file-editor-template]") == []
@@ -1464,9 +1465,13 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             %{width: 1, height: 1, ratio: 1},
             %{ratio: 0},
             %{ratio: -1},
-            %{ratio: "1"}
+            %{ratio: "1"},
+            %{ratio: 1, presets: [{1, 1}]},
+            %{presets: {1, 1}},
+            %{presets: [{16, 0}]},
+            %{presets: [{1, 1.5}]}
           ] do
-        assert_raise ArgumentError, ~r/editor must be/, fn ->
+        assert_raise ArgumentError, ~r/editor (presets )?must be/, fn ->
           render_component(&CoreComponents.input/1,
             id: "portrait",
             name: "portrait",

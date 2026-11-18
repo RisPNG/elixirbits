@@ -2512,7 +2512,10 @@
       <% else %>
         {file_previews(assigns)}
       <% end %>
-      <.image_editor :if={@file_editor} free_crop={@file_editor == true} />
+      <.image_editor
+        :if={@file_editor}
+        presets={if is_map(@file_editor), do: Map.get(@file_editor, :presets, []), else: []}
+      />
       <div id={"#{@file_id}-file-replacements"} phx-update="ignore" data-file-replacements />
       <p data-file-error hidden role="alert" class="mt-2 text-sm text-error" />
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -2942,7 +2945,7 @@
         </div>
 
         <label
-          :if={@free_crop}
+          :if={@presets != []}
           class="grid w-fit grid-cols-[max-content_6rem] items-center gap-2 text-sm font-medium"
         >
           Aspect ratio
@@ -2952,7 +2955,7 @@
             disabled
           >
             <option value="">Free</option>
-            <option :for={{width, height} <- [{16, 9}, {9, 16}, {1, 1}]} value={width / height}>
+            <option :for={[width, height] <- @presets} value={width / height}>
               {width}:{height}
             </option>
           </select>
