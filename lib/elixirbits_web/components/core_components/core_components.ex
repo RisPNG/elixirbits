@@ -654,7 +654,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   `preview` defaults to `false`, which shows filenames. Setting it to `true` supplies image previews and the browser's native PDF viewer. The `stored_preview` and `pending_preview` slots override media rendering for stored URLs and pending upload entries. `preview_as` defaults to `"thumbnail"` when previews are enabled and `"tag"` otherwise. Explicit `"tag"` hides the media and shows its filename chip; `"thumbnail"` supplies the media frame and corner clear button. Single and singles thumbnail filenames appear inside the top-left corner on hover or keyboard focus, while multiple thumbnail filenames stay below the frame. Both layouts reveal the clear button on hover or keyboard focus. Use `thumbnail_class` to size the displayed frame, and `preview_caption` or `pending_caption` to override filenames.
 
-  `editor` defaults to `false`. `true` opens a free crop with selectable aspect ratios, `%{width: 512, height: 512}` requires that exact output size, and `%{ratio: 16 / 9}` requires that crop ratio. Maps enable editing and re-encode the accepted crop in the browser. Editing requires `preview: true`, a `"single"` or `"singles"` selection, and LiveView's `auto_upload` to remain `false`. An image preview's Edit button prepares a replacement for that image; edits to stored files submit the original URL as `<upload.name>_replacements[entry.ref]` so the save handler can replace the right stored item. PDFs and other file types skip the image editor. Canceling the editor preserves the previous selection.
+  `editor` defaults to `false`. `true` opens a free crop without a ratio picker. Use `%{presets: [{16, 9}, {3, 2}]}` to offer aspect ratios for that field. Each preset is a `{width, height}` pair of positive integers. The editor starts in Free, and an empty preset list hides the picker. `%{width: 512, height: 512}` requires that exact output size, and `%{ratio: 16 / 9}` requires that crop ratio. Editing requires `preview: true`, a `"single"` or `"singles"` selection, and LiveView's `auto_upload` to remain `false`. An image preview's Edit button prepares a replacement for that image. Edits to stored files submit the original URL as `<upload.name>_replacements[entry.ref]` so the save handler can replace the right stored item. PDFs and other file types skip the image editor. Canceling the editor preserves the previous selection.
 
   Give `preview_id` the ID of a `<.file_preview>` destination to place a single or singles preview elsewhere in the same LiveView. Keep the destination mounted, including when previews are turned off. The input still owns the upload configuration, stored files, editor, and all media and caption slots; LiveView's native portal renders that one preview collection into the destination. Multiple selection keeps its previews inline. The destination's `class` controls its placement and size; use `thumbnail_class="h-full w-full"` on the input when the destination sets the thumbnail dimensions.
 
@@ -788,7 +788,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :editor, :any,
     default: false,
     doc:
-      "with previews and single or singles selection, false, true for a free crop, or a map containing positive width and height or a positive ratio"
+      "with previews and single or singles selection, enables free crop with true or a presets map, or a constrained crop with width and height or ratio"
 
   attr :preview_as, :string,
     default: nil,
@@ -963,6 +963,20 @@ defmodule ElixirbitsWeb.CoreComponents do
         true ->
           true
 
+        %{presets: presets} = options when map_size(options) == 1 and is_list(presets) ->
+          %{
+            presets:
+              Enum.map(presets, fn
+                {width, height}
+                when is_integer(width) and width > 0 and is_integer(height) and height > 0 ->
+                  [width, height]
+
+                _ ->
+                  raise ArgumentError,
+                        "editor presets must be {width, height} pairs of positive integers"
+              end)
+          }
+
         %{width: width, height: height} = options
         when map_size(options) == 2 and is_integer(width) and width > 0 and
                is_integer(height) and height > 0 ->
@@ -974,7 +988,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
         _ ->
           raise ArgumentError,
-                "editor must be false, true, %{width: positive_integer, height: positive_integer}, or %{ratio: positive_number}"
+                "editor must be false, true, %{presets: [{width, height}]}, %{width: positive_integer, height: positive_integer}, or %{ratio: positive_number}"
       end
 
     if editor != false and selection == "multiple",
@@ -2262,7 +2276,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   # Image editing
 
-  attr :free_crop, :boolean, default: true
+  attr :presets, :list, default: []
 
   def image_editor(assigns) do
     core_components_template(assign(assigns, :component, :image_editor))

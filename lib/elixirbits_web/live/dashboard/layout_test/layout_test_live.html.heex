@@ -1064,6 +1064,7 @@
                   {choice, label} <- [
                     {"false", "Editor off"},
                     {"true", "Free crop"},
+                    {"presets", "Free crop with presets"},
                     {"exact", "512 × 512 pixels"},
                     {"ratio", "16:9 crop"}
                   ]
@@ -1154,6 +1155,7 @@
               editor={
                 case @showcase["uploads"]["editor"] do
                   "true" -> true
+                  "presets" -> %{presets: [{16, 9}, {3, 2}]}
                   "exact" -> %{width: 512, height: 512}
                   "ratio" -> %{ratio: 16 / 9}
                   _ -> false
