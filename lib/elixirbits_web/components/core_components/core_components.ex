@@ -6,7 +6,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
     * [Tailwind CSS](https://tailwindcss.com) - the foundational framework we build on. You will use it for layout, sizing, flexbox, grid, and spacing.
 
-    * [Heroicons](https://heroicons.com) - see `icon/1` for usage.
+    * [Heroicons](https://heroicons.com), [Tabler Icons](https://tabler.io/icons), and [Simple Icons](https://simpleicons.org) - see `icon/1` for usage.
 
     * [Phoenix.Component](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html) - the component system used by Phoenix. Components such as `<.link>` are defined there. The shared `<.form>` below applies the application's validation default and uses Phoenix's form renderer.
 
@@ -28,21 +28,24 @@ defmodule ElixirbitsWeb.CoreComponents do
   # Icons
 
   @doc """
-  Renders a [Heroicon](https://heroicons.com) or a [Tabler icon](https://tabler.io/icons).
+  Renders a [Heroicon](https://heroicons.com), [Tabler icon](https://tabler.io/icons), or [Simple Icon](https://simpleicons.org).
 
-  Heroicons come in three styles – outline, solid, and mini. By default, the outline style is used, but solid and mini may be applied by using the `-solid` and `-mini` suffix.
+  Heroicons use a `hero-` prefix. Outline is the default style. Use the `-solid`, `-mini`, or `-micro` suffix for the other styles.
 
   Tabler icons use a `tabler-` prefix and include icons that Heroicons does not provide, such as a floppy disk. They come in outline and filled styles. Outline is the default, and `-filled` selects the filled style.
 
+  Simple Icons are brand icons. Use the `simple-` prefix followed by the icon's SVG filename without the extension.
+
   You can customize the size and colors of the icons by setting width, height, and theme color classes.
 
-  Icons are extracted from the `deps/heroicons` and `deps/tabler_icons` directories and bundled within your compiled app.css by the plugins in `assets/vendor/heroicons.js` and `assets/vendor/tabler.js`.
+  The Tailwind plugin in `assets/vendor/icons.js` bundles referenced SVGs into the compiled stylesheet. Write the full icon name in a scanned source file so Tailwind can include it.
 
   ## Examples
 
       <.icon name="hero-x-mark" />
       <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       <.icon name="tabler-device-floppy" />
+      <.icon name="simple-gitlab" />
   """
   attr :name, :string, required: true
   attr :class, :any, default: "size-4"
@@ -52,6 +55,10 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   def icon(%{name: "tabler-" <> _} = assigns) do
+    core_components_template(assign(assigns, :component, :icon))
+  end
+
+  def icon(%{name: "simple-" <> _} = assigns) do
     core_components_template(assign(assigns, :component, :icon))
   end
 
@@ -647,7 +654,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   `preview` defaults to `false`, which shows filenames. Setting it to `true` supplies image previews and the browser's native PDF viewer. The `stored_preview` and `pending_preview` slots override media rendering for stored URLs and pending upload entries. `preview_as` defaults to `"thumbnail"` when previews are enabled and `"tag"` otherwise. Explicit `"tag"` hides the media and shows its filename chip; `"thumbnail"` supplies the media frame and corner clear button. Single and singles thumbnail filenames appear inside the top-left corner on hover or keyboard focus, while multiple thumbnail filenames stay below the frame. Both layouts reveal the clear button on hover or keyboard focus. Use `thumbnail_class` to size the displayed frame, and `preview_caption` or `pending_caption` to override filenames.
 
-  `editor` defaults to `false`. `true` opens a free crop for image selections, `%{width: 512, height: 512}` requires that exact output size, and `%{ratio: 16 / 9}` requires that crop ratio. Maps enable editing and re-encode the accepted crop in the browser. Editing requires `preview: true`, a `"single"` or `"singles"` selection, and LiveView's `auto_upload` to remain `false`. An image preview's Edit button prepares a replacement for that image; edits to stored files submit the original URL as `<upload.name>_replacements[entry.ref]` so the save handler can replace the right stored item. PDFs and other file types skip the image editor. Canceling the editor preserves the previous selection.
+  `editor` defaults to `false`. `true` opens a free crop with selectable aspect ratios, `%{width: 512, height: 512}` requires that exact output size, and `%{ratio: 16 / 9}` requires that crop ratio. Maps enable editing and re-encode the accepted crop in the browser. Editing requires `preview: true`, a `"single"` or `"singles"` selection, and LiveView's `auto_upload` to remain `false`. An image preview's Edit button prepares a replacement for that image; edits to stored files submit the original URL as `<upload.name>_replacements[entry.ref]` so the save handler can replace the right stored item. PDFs and other file types skip the image editor. Canceling the editor preserves the previous selection.
 
   Give `preview_id` the ID of a `<.file_preview>` destination to place a single or singles preview elsewhere in the same LiveView. Keep the destination mounted, including when previews are turned off. The input still owns the upload configuration, stored files, editor, and all media and caption slots; LiveView's native portal renders that one preview collection into the destination. Multiple selection keeps its previews inline. The destination's `class` controls its placement and size; use `thumbnail_class="h-full w-full"` on the input when the destination sets the thumbnail dimensions.
 
@@ -1065,8 +1072,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         "#{file_count} #{if(file_count == 1, do: "file", else: "files")}"
       )
       |> assign(:file_entry_refs, Jason.encode!(Enum.map(entries, & &1.ref)))
-      |> assign(:file_editor, Jason.encode!(editor))
-      |> assign(:file_editor_enabled, editor != false)
+      |> assign(:file_editor, editor)
       |> assign(:file_editable, editable)
       |> assign(:file_editable_like, editable_like)
       |> assign(:preview_as, preview_as)
@@ -2255,6 +2261,8 @@ defmodule ElixirbitsWeb.CoreComponents do
   end
 
   # Image editing
+
+  attr :free_crop, :boolean, default: true
 
   def image_editor(assigns) do
     core_components_template(assign(assigns, :component, :image_editor))

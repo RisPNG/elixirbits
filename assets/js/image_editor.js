@@ -48,7 +48,6 @@ export default class ImageEditor {
     if (!Number.isNaN(ratio)) dialog.querySelector("cropper-selection").setAttribute("aspect-ratio", ratio)
     document.body.appendChild(dialog)
     dialog.showModal()
-    for (const button of dialog.querySelectorAll("[data-editor-action]")) button.disabled = button.dataset.editorAction !== "cancel"
     this.cropper = new Cropper(image, {
       container: dialog.querySelector(".file-editor-canvas"),
       template: null,
@@ -56,6 +55,8 @@ export default class ImageEditor {
     const cropperImage = this.cropper.getCropperImage()
     const selection = this.cropper.getCropperSelection()
     const canvas = this.cropper.getCropperCanvas()
+    const ratioInput = dialog.querySelector("[data-editor-action=aspect-ratio]")
+    let initialCrop
     cropperImage.addEventListener("change", event => {
       if (this.dialog !== dialog || this.adjustingImage || !selection.width || !selection.height) return
       const {x, y, width, height} = event.detail
@@ -73,7 +74,9 @@ export default class ImageEditor {
     cropperImage.$ready().then(() => {
       if (this.dialog !== dialog) return
       this.fitCropSelection()
-      for (const button of dialog.querySelectorAll("[data-editor-action]")) button.disabled = false
+      const {x, y, width, height} = selection
+      initialCrop = {x, y, width, height}
+      for (const control of dialog.querySelectorAll("[data-editor-action]")) control.disabled = false
       dialog.querySelector("[data-editor-status]").textContent = "Choose the area to keep."
     }).catch(() => {
       if (this.dialog !== dialog) return
@@ -86,8 +89,12 @@ export default class ImageEditor {
       event.preventDefault()
       this.destroy()
     })
+    ratioInput?.addEventListener("change", () => {
+      selection.aspectRatio = Number(ratioInput.value)
+      if (selection.aspectRatio > 0) this.fitCropSelection(selection, true)
+    })
     dialog.addEventListener("click", event => {
-      const action = event.target.closest("[data-editor-action]")?.dataset.editorAction
+      const action = event.target.closest("button[data-editor-action]")?.dataset.editorAction
       if (!action || this.dialog !== dialog) return
       if (action === "cancel") this.destroy()
       else if (action === "rotate-left" || action === "rotate-right") {
@@ -102,15 +109,18 @@ export default class ImageEditor {
         this.adjustingImage = true
         cropperImage.$resetTransform().$center("contain")
         this.adjustingImage = false
-        selection.$reset()
-        this.fitCropSelection()
+        if (ratioInput) {
+          ratioInput.value = ""
+          selection.aspectRatio = 0
+        }
+        this.fitCropSelection(initialCrop)
       }
       else if (action === "confirm") this.prepareImage()
     })
     return new Promise(resolve => { this.resolve = resolve })
   }
 
-  fitCropSelection() {
+  fitCropSelection(region = this.cropper.getCropperSelection(), preserveCenter = false) {
     const canvas = this.cropper.getCropperCanvas().getBoundingClientRect()
     const image = this.cropper.getCropperImage().getBoundingClientRect()
     const selection = this.cropper.getCropperSelection()
@@ -118,15 +128,16 @@ export default class ImageEditor {
     const top = Math.max(0, image.top - canvas.top)
     const right = Math.min(canvas.width, image.right - canvas.left)
     const bottom = Math.min(canvas.height, image.bottom - canvas.top)
-    let width = Math.min(selection.width, right - left)
-    let height = Math.min(selection.height, bottom - top)
-    if (Number.isFinite(selection.aspectRatio)) {
+    const span = Math.max(region.width, region.height)
+    let width = Math.min(preserveCenter ? span : region.width, right - left)
+    let height = Math.min(preserveCenter ? span : region.height, bottom - top)
+    if (selection.aspectRatio > 0) {
       if (width / height > selection.aspectRatio) width = height * selection.aspectRatio
       else height = width / selection.aspectRatio
     }
-    const x = Math.min(Math.max(selection.x, left), right - width)
-    const y = Math.min(Math.max(selection.y, top), bottom - height)
-    selection.$change(x, y, width, height)
+    const x = preserveCenter ? region.x + (region.width - width) / 2 : region.x
+    const y = preserveCenter ? region.y + (region.height - height) / 2 : region.y
+    selection.$change(Math.min(Math.max(x, left), right - width), Math.min(Math.max(y, top), bottom - height), width, height)
   }
 
   async prepareImage() {
@@ -135,7 +146,7 @@ export default class ImageEditor {
     const dialog = this.dialog
     const canvas = this.cropper.getCropperCanvas()
     canvas.disabled = true
-    for (const button of dialog.querySelectorAll("[data-editor-action]")) button.disabled = button.dataset.editorAction !== "cancel"
+    for (const control of dialog.querySelectorAll("[data-editor-action]")) control.disabled = control.dataset.editorAction !== "cancel"
     const status = dialog.querySelector("[data-editor-status]")
     const alert = dialog.querySelector("[data-editor-error]")
     alert.hidden = true
@@ -165,7 +176,7 @@ export default class ImageEditor {
       alert.hidden = false
       status.textContent = "Adjust the image or try again."
       canvas.disabled = false
-      for (const button of dialog.querySelectorAll("[data-editor-action]")) button.disabled = false
+      for (const control of dialog.querySelectorAll("[data-editor-action]")) control.disabled = false
     } finally {
       if (this.processor === processor) {
         processor.destroy()

@@ -2192,7 +2192,7 @@
       phx-hook="FileInput"
       data-file-preview={to_string(@preview)}
       data-file-preview-as={@preview_as}
-      data-file-editor={@file_editor}
+      data-file-editor={Jason.encode!(@file_editor)}
       data-file-selection={@selection}
       data-file-upload-name={@upload && @upload.name}
       data-file-entry-refs={@file_entry_refs}
@@ -2484,7 +2484,7 @@
       <% else %>
         {file_previews(assigns)}
       <% end %>
-      <.image_editor :if={@file_editor_enabled} />
+      <.image_editor :if={@file_editor} free_crop={@file_editor == true} />
       <div id={"#{@file_id}-file-replacements"} phx-update="ignore" data-file-replacements />
       <p data-file-error hidden role="alert" class="mt-2 text-sm text-error" />
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -2546,7 +2546,7 @@
               @clear_button && @file_editable && @upload != nil &&
                 @rest[:readonly] in [nil, false]
             }
-            edit_enabled={@file_editor_enabled && @file_editable}
+            edit_enabled={@file_editor && @file_editable}
             disabled={@rest[:disabled]}
             text_look={@text_look}
             hidden={
@@ -2566,7 +2566,7 @@
             media_slot={@pending_preview}
             caption_slot={@pending_caption}
             editable={@clear_button && @file_editable && @rest[:readonly] in [nil, false]}
-            edit_enabled={@file_editor_enabled && @file_editable}
+            edit_enabled={@file_editor && @file_editable}
             disabled={@rest[:disabled]}
             text_look={@text_look}
             hidden={
@@ -2912,6 +2912,23 @@
             </cropper-selection>
           </cropper-canvas>
         </div>
+
+        <label
+          :if={@free_crop}
+          class="grid w-fit grid-cols-[max-content_6rem] items-center gap-2 text-sm font-medium"
+        >
+          Aspect ratio
+          <select
+            data-editor-action="aspect-ratio"
+            class="input-native-select min-h-10 rounded-default border border-outline bg-primary px-3 text-content focus-visible:outline-2 focus-visible:outline-brand"
+            disabled
+          >
+            <option value="">Free</option>
+            <option :for={{width, height} <- [{16, 9}, {9, 16}, {1, 1}]} value={width / height}>
+              {width}:{height}
+            </option>
+          </select>
+        </label>
 
         <div class="grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-2">
           <.button type="button" variant={:neutral} data-editor-action="rotate-left" disabled>Rotate left</.button>

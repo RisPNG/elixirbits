@@ -103,8 +103,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLocalControlsTest do
              "#layout-test-icon-preview .tabler-device-floppy.size-12.text-success"
            )
 
+    render_click(element(view, "#icon-name-simple-gitlab"))
+    assert has_element?(view, "#layout-test-icon-preview .simple-gitlab.size-12.text-success")
+
     render_click(element(view, "#icon-option-label"))
-    refute has_element?(view, "#layout-test-icon-preview", "tabler-device-floppy")
+    refute has_element?(view, "#layout-test-icon-preview", "simple-gitlab")
     render_click(view, "toggle_showcase_option", %{"section" => "theme", "option" => "inset"})
     refute has_element?(view, "#layout-test-theme-preview.border")
   end
