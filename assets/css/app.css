@@ -13,8 +13,7 @@
 @source "../../lib/elixirbits/core_utils";
 @source "../../priv/repo";
 
-@plugin "../vendor/heroicons";
-@plugin "../vendor/tabler";
+@plugin "../vendor/icons";
 
 /* Global theme tokens and light colors */
 

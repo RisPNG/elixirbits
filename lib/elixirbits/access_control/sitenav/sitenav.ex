@@ -11,7 +11,8 @@ defmodule Elixirbits.AccessControl.Sitenav do
     {"hero-", Path.expand("../../../../deps/heroicons/optimized/20/solid", __DIR__), "-mini"},
     {"hero-", Path.expand("../../../../deps/heroicons/optimized/16/solid", __DIR__), "-micro"},
     {"tabler-", Path.expand("../../../../deps/tabler_icons/icons/outline", __DIR__), ""},
-    {"tabler-", Path.expand("../../../../deps/tabler_icons/icons/filled", __DIR__), "-filled"}
+    {"tabler-", Path.expand("../../../../deps/tabler_icons/icons/filled", __DIR__), "-filled"},
+    {"simple-", Path.expand("../../../../deps/simple_icons/icons", __DIR__), ""}
   ]
   @icon_catalog for {prefix, directory, suffix} <- @icon_sets,
                     file <- Path.wildcard(Path.join(directory, "*.svg")),

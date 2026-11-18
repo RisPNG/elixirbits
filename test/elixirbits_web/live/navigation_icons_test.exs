@@ -46,8 +46,9 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
 
     home = Ash.update!(home, %{icon: "hero-beaker"}, actor: @system)
 
-    assert {:error, %Ash.Error.Invalid{}} =
-             Ash.update(home, %{icon: "tabler-not-a-real-icon"}, actor: @system)
+    for icon <- ["tabler-not-a-real-icon", "simple-not-a-real-icon"] do
+      assert {:error, %Ash.Error.Invalid{}} = Ash.update(home, %{icon: icon}, actor: @system)
+    end
 
     assert Ash.get!(Sitenav, home.id, actor: @system).icon == "hero-beaker"
   end
@@ -118,7 +119,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
   end
 
   test "root links and groups render their stored icons", %{conn: conn, home: home} do
-    Ash.update!(home, %{icon: "hero-beaker"}, actor: @system)
+    Ash.update!(home, %{icon: "simple-gitlab"}, actor: @system)
 
     Ash.create!(
       Sitenav,
@@ -134,7 +135,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
 
     {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-    assert has_element?(view, "#app-navigation a[href='/dashboard'] .hero-beaker")
+    assert has_element?(view, "#app-navigation a[href='/dashboard'] .simple-gitlab")
 
     assert has_element?(
              view,
@@ -205,12 +206,12 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
   end
 
   test "the collapsed Home link uses its stored icon", %{conn: conn, home: home} do
-    Ash.update!(home, %{icon: "hero-beaker"}, actor: @system)
+    Ash.update!(home, %{icon: "simple-gitlab"}, actor: @system)
     {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     render_click(view, "toggle_nav")
 
-    assert has_element?(view, "#app-navigation a[aria-label='Home'] .hero-beaker")
+    assert has_element?(view, "#app-navigation a[aria-label='Home'] .simple-gitlab")
     refute has_element?(view, "#app-navigation a[aria-label='Home'] .hero-home")
   end
 

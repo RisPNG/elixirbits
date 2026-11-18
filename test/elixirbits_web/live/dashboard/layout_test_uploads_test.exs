@@ -61,14 +61,25 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
       render_click(element(view, "#upload-editor-#{choice}"))
       assert has_element?(view, "#upload-editor-#{choice}[aria-pressed=true]")
 
-      [constraint] =
-        view
-        |> render()
-        |> Floki.parse_document!()
-        |> Floki.attribute("#layout-test-upload-input [phx-hook=FileInput]", "data-file-editor")
+      markup = view |> render() |> Floki.parse_document!()
+      input = Floki.find(markup, "#layout-test-upload-input [phx-hook=FileInput]")
+      [constraint] = Floki.attribute(input, "data-file-editor")
 
       assert Jason.decode!(constraint) == editor
       assert has_element?(view, "#layout-test-upload-input [data-file-preview=true]")
+
+      presets = Floki.find(input, "template select[data-editor-action=aspect-ratio] option")
+
+      if editor == true do
+        assert Enum.map(presets, &(Floki.text(&1) |> String.trim())) == [
+                 "Free",
+                 "16:9",
+                 "9:16",
+                 "1:1"
+               ]
+      else
+        assert presets == []
+      end
     end
 
     render_click(element(view, "#showcase-uploads-preview"))

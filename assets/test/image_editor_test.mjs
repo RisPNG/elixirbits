@@ -16,8 +16,8 @@ class Element extends EventTarget {
     if (selector === "[data-editor-action=confirm]") return this.buttons.find(button => button.dataset.editorAction === "confirm")
     return this.nodes.get(selector)
   }
-  querySelectorAll() { return this.buttons }
-  closest() { return this.dataset.editorAction ? this : null }
+  querySelectorAll() { return this.controls }
+  closest() { return this.tagName === "button" && this.dataset.editorAction ? this : null }
   getBoundingClientRect() {
     const {x, y, width, height} = this.rect
     return {x, y, width, height, left: x, top: y, right: x + width, bottom: y + height}
@@ -79,17 +79,27 @@ class CropperSelection extends Element {
     if (this.dispatchEvent(event)) Object.assign(this, detail)
     return this
   }
-  $reset() { this.resetCount = (this.resetCount || 0) + 1; return this.$change(130, 65, 240, 120) }
 }
 
 class Dialog extends Element {
-  constructor() {
+  constructor(freeCrop = true) {
     super("dialog")
+    this.freeCrop = freeCrop
     this.buttons = ["rotate-left", "rotate-right", "flip-horizontal", "flip-vertical", "reset", "cancel", "confirm"].map(action => {
       const button = new Element("button")
       button.dataset.editorAction = action
+      button.disabled = action !== "cancel"
       return button
     })
+    this.controls = [...this.buttons]
+    if (freeCrop) {
+      const ratio = new Element("select")
+      ratio.dataset.editorAction = "aspect-ratio"
+      ratio.value = ""
+      ratio.disabled = true
+      this.controls.push(ratio)
+      this.nodes.set("[data-editor-action=aspect-ratio]", ratio)
+    }
     const container = new Element("div")
     const source = new Element("img")
     source.hidden = true
@@ -114,7 +124,7 @@ class Dialog extends Element {
     this.nodes.get("[data-editor-status]").textContent = "Loading image..."
     this.nodes.get("[data-editor-error]").hidden = true
   }
-  cloneNode(deep) { assert.equal(deep, true); return new Dialog() }
+  cloneNode(deep) { assert.equal(deep, true); return new Dialog(this.freeCrop) }
 }
 
 class Cropper {
@@ -159,9 +169,11 @@ function fixture() {
   const templateDialog = new Dialog()
   const template = {content: new Element("fragment")}
   template.content.nodes.set("dialog", templateDialog)
+  const fixedTemplate = {content: new Element("fragment")}
+  fixedTemplate.content.nodes.set("dialog", new Dialog(false))
   globalThis.document = {
     importNode(content, deep) {
-      assert.equal(content, template.content)
+      assert.ok(content === template.content || content === fixedTemplate.content)
       const fragment = new Element("fragment")
       fragment.nodes.set("dialog", content.querySelector("dialog").cloneNode(deep))
       return fragment
@@ -175,7 +187,7 @@ function fixture() {
   SuperImageCropper.instances = []
   const editor = new ImageEditor()
   return {
-    editor, dialogs, revoked, template, templateDialog,
+    editor, dialogs, revoked, template, fixedTemplate, templateDialog,
     cleanup() {
       editor.destroy()
       globalThis.document = original.document
@@ -189,9 +201,10 @@ test("exact dimensions and source-resolution ratio crops use the fork with the o
   const setup = fixture()
   try {
     const file = new File(["image"], "profile.png", {type: "image/png"})
-    const pending = setup.editor.edit(file, {width: 300, height: 150, template: setup.template})
+    const pending = setup.editor.edit(file, {width: 300, height: 150, template: setup.fixedTemplate})
     const cropper = Cropper.instances.at(-1)
     const dialog = setup.dialogs.at(-1)
+    assert.equal(dialog.querySelector("[data-editor-action=aspect-ratio]"), undefined)
     assert.equal(cropper.selection.aspectRatio, 2)
     assert.equal(cropper.options.template, null)
     assert.equal(cropper.options.container, dialog.querySelector(".file-editor-canvas"))
@@ -220,7 +233,7 @@ test("exact dimensions and source-resolution ratio crops use the fork with the o
     assert.equal(processor.destroyCount, 1)
     assert.equal(cropper.destroyed, true)
 
-    const ratioPending = setup.editor.edit(file, {ratio: 2, template: setup.template})
+    const ratioPending = setup.editor.edit(file, {ratio: 2, template: setup.fixedTemplate})
     const ratioCropper = Cropper.instances.at(-1)
     assert.equal(ratioCropper.selection.aspectRatio, 2)
     ratioCropper.ready()
@@ -235,6 +248,59 @@ test("exact dimensions and source-resolution ratio crops use the fork with the o
     ratioProcessor.reject(new DOMException("Aborted", "AbortError"))
     assert.equal(await ratioPending, null)
     await settled()
+  } finally { setup.cleanup() }
+})
+
+test("free crop presets resize the selection and return to an unconstrained crop", async () => {
+  const setup = fixture()
+  try {
+    const file = new File(["image"], "photo.png", {type: "image/png"})
+    const pending = setup.editor.edit(file, {template: setup.template})
+    const cropper = Cropper.instances.at(-1)
+    const dialog = setup.dialogs.at(-1)
+    const ratioInput = dialog.querySelector("[data-editor-action=aspect-ratio]")
+    assert.equal(ratioInput.disabled, true)
+    cropper.ready()
+    await settled()
+    assert.equal(ratioInput.disabled, false)
+
+    const {selection} = cropper
+    const initialCrop = [selection.x, selection.y, selection.width, selection.height]
+    const image = cropper.cropperImage.getBoundingClientRect()
+    for (const ratio of [16 / 9, 9 / 16, 1]) {
+      ratioInput.value = String(ratio)
+      ratioInput.dispatchEvent(new Event("change"))
+      assert.equal(selection.aspectRatio, ratio)
+      assert.ok(Math.abs(selection.width / selection.height - ratio) < 1e-6)
+      assert.ok(selection.x >= image.left && selection.x + selection.width <= image.right)
+      assert.ok(selection.y >= image.top && selection.y + selection.height <= image.bottom)
+    }
+
+    const squareCrop = [selection.x, selection.y, selection.width, selection.height]
+    ratioInput.value = ""
+    ratioInput.dispatchEvent(new Event("change"))
+    assert.equal(selection.aspectRatio, 0)
+    assert.deepEqual([selection.x, selection.y, selection.width, selection.height], squareCrop)
+    selection.$change(150, 70, 120, 80)
+    assert.equal(selection.width / selection.height, 1.5)
+
+    ratioInput.value = String(9 / 16)
+    ratioInput.dispatchEvent(new Event("change"))
+    dialog.click("reset")
+    assert.equal(ratioInput.value, "")
+    assert.equal(selection.aspectRatio, 0)
+    assert.deepEqual([selection.x, selection.y, selection.width, selection.height], initialCrop)
+
+    ratioInput.value = String(16 / 9)
+    ratioInput.dispatchEvent(new Event("change"))
+    dialog.click("confirm")
+    assert.equal(ratioInput.disabled, true)
+    const processor = SuperImageCropper.instances.at(-1)
+    assert.equal(processor.options.cropperInstance.getCropperSelection().aspectRatio, 16 / 9)
+    assert.equal(processor.options.outputWidth, undefined)
+    assert.equal(processor.options.outputHeight, undefined)
+    processor.resolve(new Blob(["cropped"], {type: "image/png"}))
+    assert.equal(await (await pending).text(), "cropped")
   } finally { setup.cleanup() }
 })
 
@@ -330,7 +396,7 @@ test("native Cropper rotate, flip, and reset actions remain available when proce
     assert.equal(cropper.cropperImage.resetCount, 1)
     assert.equal(cropper.cropperImage.scaleY, 1)
     assert.equal(cropper.cropperImage.fit, "contain")
-    assert.equal(cropper.selection.resetCount, 1)
+    assert.deepEqual([cropper.selection.x, cropper.selection.y, cropper.selection.width, cropper.selection.height], [130, 65, 240, 120])
     dialog.click("confirm")
     const failed = SuperImageCropper.instances.at(-1)
     failed.reject(new Error("Unsupported image"))
@@ -411,7 +477,7 @@ test("rotation and reset refit free and constrained selections without blocking 
   const setup = fixture()
   try {
     for (const options of [true, {ratio: 2}, {width: 200, height: 200}]) {
-      const pending = setup.editor.edit(new File(["image"], "profile.png", {type: "image/png"}), {...(options === true ? {} : options), template: setup.template})
+      const pending = setup.editor.edit(new File(["image"], "profile.png", {type: "image/png"}), {...(options === true ? {} : options), template: options === true ? setup.template : setup.fixedTemplate})
       const cropper = Cropper.instances.at(-1)
       cropper.ready()
       await settled()
