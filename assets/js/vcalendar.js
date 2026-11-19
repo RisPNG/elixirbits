@@ -1,3 +1,5 @@
+const hasAnchorPositioning = globalThis.CSS?.supports?.("position-area", "block-end") !== false
+
 const pad = (n) => String(n).padStart(2, "0")
 
 const parseInitial = (mode, value) => {
@@ -229,6 +231,7 @@ const VCalendar = {
         return
       }
       input.setAttribute("aria-expanded", String(event.newState === "open"))
+      if (!hasAnchorPositioning) return
       if (event.newState === "open") {
         window.addEventListener("scroll", this.onReposition, true)
         window.addEventListener("resize", this.onReposition)
@@ -248,7 +251,7 @@ const VCalendar = {
     this.popover.addEventListener("beforetoggle", this.onBeforeToggle)
   },
   positionPopover() {
-    if (!this.popover.matches(":popover-open")) return
+    if (!hasAnchorPositioning || !this.popover.matches(":popover-open")) return
     const control = this.el.getBoundingClientRect()
     const height = this.popover.scrollHeight + this.popover.offsetHeight - this.popover.clientHeight
     const style = getComputedStyle(this.popover)

@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@chenglou/pretext": ">=1.0.0",
+    "@zumer/snapdom": ">=3.8.1",
     "chart.js": ">=4.6.1",
     "cropperjs": ">=2.3.1",
     "phoenix": "file:../deps/phoenix",

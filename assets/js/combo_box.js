@@ -1,5 +1,7 @@
 import {PetalComboBox} from "../../deps/petal_components/assets/js/petal_components"
 
+const needsAnchorFallback = globalThis.CSS?.supports?.("position-area", "block-end") === false
+
 const ComboBox = {
   ...PetalComboBox,
 
@@ -47,6 +49,7 @@ const ComboBox = {
     if (!anchor) return
     const control = anchor.getBoundingClientRect()
     const scrollTop = this.list.scrollTop
+    if (needsAnchorFallback) this.panel.style.setProperty("--combobox-anchor-width", `${control.width}px`)
     this.panel.removeAttribute("data-flip")
     const panelHeight = this.panel.offsetHeight
     if (!panelHeight || (!control.top && !control.bottom)) return
@@ -57,9 +60,11 @@ const ComboBox = {
       .slice(0, 7)
       .map(row => Math.ceil(row.getBoundingClientRect().bottom - listTop + this.list.scrollTop))
     const chrome = panelHeight - this.list.offsetHeight
-    const gap = parseFloat(getComputedStyle(this.panel).marginTop) || 0
-    const viewportTop = window.visualViewport?.offsetTop || 0
-    const viewportHeight = window.visualViewport?.height || window.innerHeight
+    const style = getComputedStyle(this.panel)
+    const gap = parseFloat(style.marginTop) || 0
+    const viewport = window.visualViewport
+    const viewportTop = viewport?.offsetTop || 0
+    const viewportHeight = viewport?.height || window.innerHeight
     const below = viewportTop + viewportHeight - control.bottom - gap
     const above = control.top - viewportTop - gap
     const minimum = chrome + (rowEnds[0] || 0)
@@ -69,6 +74,15 @@ const ComboBox = {
     this.panel.toggleAttribute("data-flip", flip)
     this.list.style.maxHeight = `${height}px`
     this.list.scrollTop = scrollTop
+    if (needsAnchorFallback) {
+      const viewportLeft = viewport?.offsetLeft || 0
+      const viewportWidth = viewport?.width || window.innerWidth
+      const width = this.panel.offsetWidth
+      const alignRight = this.el.closest("[data-color-space-select]") ? style.direction !== "rtl" : style.direction === "rtl"
+      const left = alignRight ? control.right - width : control.left
+      this.panel.style.left = `${Math.max(viewportLeft + 8, Math.min(left, viewportLeft + viewportWidth - width - 8))}px`
+      this.panel.style.top = `${flip ? control.top - this.panel.offsetHeight - 2 * gap : control.bottom}px`
+    }
   },
 
   filter() {

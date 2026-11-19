@@ -1654,7 +1654,7 @@
         </label>
 
         <div class={[
-          "color-input-control grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-center gap-0",
+          "color-input-control grid grid-cols-[minmax(min(9.5rem,calc(100%_-_3.5rem)),2fr)_minmax(0,1fr)] items-center gap-0",
           !@text_look &&
             [
               "input-floating-wrapper min-h-11 rounded-default border bg-transparent text-content focus-within:border-brand focus-within:ring-2 focus-within:ring-brand",
@@ -1667,8 +1667,8 @@
             "overlay-dark cursor-not-allowed text-subcontent"
         ]}>
           <div class={[
-            "grid grid-flow-col grid-cols-[1.5rem_minmax(0,1fr)] auto-cols-auto items-center gap-2 min-w-0 pe-2",
-            !@text_look && "ps-3"
+            "grid grid-flow-col grid-cols-[1.5rem_minmax(0,1fr)] auto-cols-auto items-center gap-1 min-w-0 pe-2",
+            !@text_look && "ps-2"
           ]}>
             <button
               :if={@color_editable}
@@ -1734,10 +1734,24 @@
             >{if @value == "" && @render_as == "like-enabled" && @label in [nil, ""],
               do: @placeholder,
               else: @value}</span>
-            <.input_clear_button
-              :if={@input_clearable}
-              class="static! translate-y-0! self-center"
-            />
+            <div
+              :if={@color_editable}
+              class="grid grid-flow-col grid-cols-[1.5rem] auto-cols-[1.5rem] items-center"
+            >
+              <button
+                type="button"
+                data-color-eyedropper
+                aria-label={gettext("Pick a color from the page")}
+                disabled={@rest[:disabled] || @rest[:readonly]}
+                class="button-base grid size-6 place-items-center rounded-default text-subcontent cursor-pointer hover:text-content focus:ring-0 focus-visible:text-brand disabled:cursor-not-allowed"
+              >
+                <.icon name="tabler-color-picker" class="size-5" />
+              </button>
+              <.input_clear_button
+                :if={@input_clearable}
+                class="static! translate-y-0! self-center"
+              />
+            </div>
           </div>
           <div class={[
             "grid grid-cols-[minmax(0,1fr)] items-center min-w-0 self-stretch",
@@ -1831,7 +1845,8 @@
           role="dialog"
           aria-label="Choose color"
           data-color-popover
-          class="color-input-popover w-60 max-h-[calc(100%_-_0.5rem)] overflow-y-auto rounded-default border border-outline bg-surface p-3 text-content"
+          phx-hook="PopoverPlacement"
+          class="color-input-popover w-60 max-h-[min(calc(100%_-_0.5rem),var(--popover-room,100%))] overflow-y-auto rounded-default border border-outline bg-surface p-3 text-content"
         >
           <rgba-color-picker
             id={@color_picker_id}
@@ -1841,6 +1856,12 @@
           />
         </div>
 
+        <p
+          :if={@color_editable}
+          data-color-eyedropper-status
+          role="status"
+          class="mt-2 text-sm text-subcontent empty:sr-only"
+        />
         <p
           id={@color_error_id}
           data-color-error
@@ -1965,6 +1986,7 @@
         data-vc-theme="elixirbits"
         data-vc-mode={@type}
         aria-label={@label || "Calendar"}
+        phx-hook="PopoverPlacement"
         phx-update="ignore"
       />
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -2035,6 +2057,7 @@
         data-vc-theme="elixirbits"
         data-vc-mode={@type}
         aria-label="Calendar"
+        phx-hook="PopoverPlacement"
         phx-update="ignore"
       />
       <.error :for={msg <- @errors}>{msg}</.error>

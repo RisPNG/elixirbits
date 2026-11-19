@@ -865,6 +865,11 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(
                  document,
+                 "button[type=button][data-color-eyedropper][aria-label='Pick a color from the page']:not([name]):not([disabled]) + button[data-input-clear]"
+               ) != []
+
+        assert Floki.find(
+                 document,
                  "#accent_color_space_select[phx-hook=PetalComboBox] input[type=text]"
                ) != []
 
@@ -994,6 +999,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(document, "input#accent[type=text][name=accent][#{restriction}]") != []
         assert Floki.find(document, "button[data-color-trigger][disabled]") != []
+        assert Floki.find(document, "button[data-color-eyedropper][disabled]") != []
 
         assert Floki.find(
                  document,
@@ -1058,7 +1064,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
 
         assert Floki.find(
                  document,
-                 "[data-color-cycle], [data-color-trigger], [data-color-popover], [data-color-picker]"
+                 "[data-color-cycle], [data-color-trigger], [data-color-popover], [data-color-picker], [data-color-eyedropper]"
                ) == []
 
         assert length(Floki.find(document, "[data-color-space-select]")) ==

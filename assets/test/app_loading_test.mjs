@@ -34,6 +34,7 @@ test("page loading uses the current theme colors on every navigation", async () 
     colocatedHooks: {},
     FlashAutoDismiss: {},
     VCalendar: {},
+    PopoverPlacement: {},
     TelInput: {},
     PasswordVisibility: {},
     LiveTimer: {},

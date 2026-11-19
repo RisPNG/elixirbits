@@ -272,6 +272,7 @@
 @layer base {
   :root {
     --surface: var(--color-primary);
+    --surface-parent: var(--color-primary);
     --surface-a: var(--color-primary);
     --surface-b: var(--color-primary);
     --surface-fill: var(--color-primary);
@@ -310,13 +311,18 @@
   }
 }
 
-/* Alternating context slots preserve inherited inputs while publishing each layer's visible surface. */
+/* Local paint works on its own. Alternating context slots carry the surrounding surface. */
 
 @utility surface-colors {
   --surface-fill: var(--surface-base);
+  --surface-prior-alpha: 0;
+  --surface-total-alpha: clamp(0, calc(var(--surface-prior-alpha) + var(--surface-opacity-step, var(--surface-fill-alpha))), 1);
+  --surface-paint-alpha: calc((var(--surface-total-alpha) - var(--surface-prior-alpha)) / (1 - var(--surface-prior-alpha)));
+  --surface-underlay: color-mix(in srgb, var(--surface-fill), var(--surface-parent) calc(sign(var(--surface-paint-alpha)) * 100%));
   --surface-source: var(--surface-base, var(--surface-opacity-fill, var(--surface-parent)));
   --surface-background: var(--surface-modified, rgb(from var(--surface-source) r g b / var(--surface-paint-alpha)));
-  --surface-rendered: color-mix(in srgb, var(--surface-parent), rgb(from var(--surface-source) r g b / 1) calc(var(--surface-paint-alpha) * 100%));
+  --surface-rendered: color-mix(in srgb, var(--surface-underlay), rgb(from var(--surface-source) r g b / 1) calc(var(--surface-paint-alpha) * 100%));
+  --surface: var(--surface-modified, var(--surface-rendered));
   --surface-overlay-carry: calc(1 - sign(var(--surface-paint-alpha)));
   --surface-overlay-total-strength: clamp(0, calc(var(--surface-overlay-prior-strength) + var(--surface-overlay-step)), 1);
   --surface-modified: hsl(from var(--surface-overlay-source) h calc(s + (100 - s) * var(--surface-overlay-total-strength) * sign(s)) calc(l + (var(--surface-overlay-lightness) - l) * var(--surface-overlay-total-strength)) / 1);
@@ -324,9 +330,8 @@
   @container style(--surface-slot: 0) {
     --surface-slot: 1;
     --surface-parent: var(--surface-b);
+    --surface-underlay: var(--surface-parent);
     --surface-prior-alpha: var(--surface-reset, var(--surface-alpha-b));
-    --surface-total-alpha: clamp(0, calc(var(--surface-prior-alpha) + var(--surface-opacity-step, var(--surface-fill-alpha))), 1);
-    --surface-paint-alpha: calc((var(--surface-total-alpha) - var(--surface-prior-alpha)) / (1 - var(--surface-prior-alpha)));
     --surface-alpha-a: var(--surface-total-alpha);
     --surface-overlay-kind-a: var(--surface-overlay-kind, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-kind-b))));
     --surface-overlay-strength-a: var(--surface-overlay-total-strength, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-strength-b))));
@@ -338,9 +343,8 @@
   @container style(--surface-slot: 1) {
     --surface-slot: 0;
     --surface-parent: var(--surface-a);
+    --surface-underlay: var(--surface-parent);
     --surface-prior-alpha: var(--surface-reset, var(--surface-alpha-a));
-    --surface-total-alpha: clamp(0, calc(var(--surface-prior-alpha) + var(--surface-opacity-step, var(--surface-fill-alpha))), 1);
-    --surface-paint-alpha: calc((var(--surface-total-alpha) - var(--surface-prior-alpha)) / (1 - var(--surface-prior-alpha)));
     --surface-alpha-b: var(--surface-total-alpha);
     --surface-overlay-kind-b: var(--surface-overlay-kind, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-kind-a))));
     --surface-overlay-strength-b: var(--surface-overlay-total-strength, calc(var(--surface-overlay-carry) * var(--surface-reset, var(--surface-overlay-strength-a))));
@@ -794,6 +798,17 @@
   position-try-order: most-block-size;
 }
 
+@supports not (position-area: block-end) {
+  [data-calendar-popover][data-vc=calendar] {
+    width: max(var(--popover-anchor-width, 0rem), 17.5rem);
+    max-height: var(--popover-room, calc(100% - 1rem));
+  }
+
+  [data-calendar-popover][data-vc=calendar][data-vc-mode=time] {
+    width: var(--popover-anchor-width, 17.5rem);
+  }
+}
+
 /* Shared input utilities */
 
 @utility option-surface {
@@ -989,6 +1004,23 @@
 
 .pc-combo-box__panel[data-flip] {
   position-area: block-start span-inline-end;
+}
+
+@supports not (position-area: block-end) {
+  .core-selection-input .pc-combo-box__panel {
+    width: max(var(--combobox-anchor-width, 0rem), var(--combobox-min-width, 0rem));
+  }
+
+  .pc-combo-box:where(:not(.core-selection-input)) > .pc-combo-box__panel {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    width: max(100%, var(--combobox-min-width, 0rem));
+  }
+
+  .pc-combo-box:where(:not(.core-selection-input)) > .pc-combo-box__panel[data-flip] {
+    inset-block: auto 100%;
+  }
 }
 
 .pc-combo-box__list {
