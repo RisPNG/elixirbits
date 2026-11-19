@@ -357,7 +357,7 @@ const FileInput = {
     }
     const display = this.el.querySelector("[data-file-name]")
     const readonly = this.el.querySelector("[data-file-readonly-name]")
-    const elements = Array.from(source.querySelectorAll("[data-file-item]"))
+    const elements = Array.from(source.querySelectorAll("[data-file-item]")).filter(element => element.dataset.fileRemoving !== "true")
     const faces = new Map(Array.from(surface?.querySelectorAll("[data-file-item]") || [], element => [element.dataset.fileKey, element]))
     const hiddenUrls = new Set(this.replacements.values())
     const hasPending = this.files.length > 0 || elements.some(element => element.dataset.fileEntryRef)
@@ -408,8 +408,11 @@ const FileInput = {
     const filenameMode = !preview && this.selection !== "multiple"
     const count = `${items.length} ${items.length === 1 ? "file" : "files"}`
     const showCount = carousel && preview && (items.length > 0 || this.el.dataset.fileHasPlaceholder !== "true")
-    if (display) display.textContent = showCount ? count : (filenameMode ? active?.name : this.fileNames) || (display.dataset.fileDefaultName ?? this.placeholder)
-    if (readonly) readonly.textContent = showCount ? count : (filenameMode ? active?.name : this.fileNames) || (readonly.dataset.fileDefaultName ?? this.placeholder)
+    const countLabel = this.el.dataset.fileSelectedLabel
+    const summary = countLabel && items.length ? countLabel.replace("%{count}", items.length)
+      : showCount ? count : filenameMode ? active?.name : this.fileNames
+    if (display) display.textContent = summary || (display.dataset.fileDefaultName ?? this.placeholder)
+    if (readonly) readonly.textContent = summary || (readonly.dataset.fileDefaultName ?? this.placeholder)
     const position = `${items.findIndex(item => item.key === this.activeKey) + 1}/${items.length}`
     for (const element of new Set([...this.el.querySelectorAll("[data-file-position]"), ...(surface?.querySelectorAll("[data-file-position]") || [])])) element.textContent = position
     for (const item of items) {

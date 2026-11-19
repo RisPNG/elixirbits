@@ -33,6 +33,7 @@ import ColorInput from "./color_input"
 import NumberInput from "./number_input"
 import CinderPagination from "./cinder_pagination"
 import initInputControls from "./input_controls"
+import initViewMotion from "./view_motion"
 import topbar from "topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -41,8 +42,10 @@ const liveSocket = new LiveSocket("/live", Socket, {
   params: () => ({
     _csrf_token: csrfToken,
     user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    nav_open: document.querySelector("[data-navigation]")?.dataset.navigation !== "compact",
   }),
   hooks: {...colocatedHooks, PetalComboBox, FlashAutoDismiss, VCalendar, PopoverPlacement, TelInput, PasswordVisibility, LiveTimer, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput, CinderPagination},
+  dom: {onDocumentPatch: initViewMotion()},
 })
 
 // Show progress bar on live navigation and form submits

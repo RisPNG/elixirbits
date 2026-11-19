@@ -65,7 +65,7 @@
       id={@id}
       open={@open}
       class={[
-        "rounded-default inset-surface text-content",
+        "core-collapse rounded-default inset-surface text-content",
         @class
       ]}
       phx-mounted={JS.ignore_attributes("open")}
@@ -74,25 +74,86 @@
       <summary class="grid min-h-11 cursor-pointer list-none grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-2 rounded-default ps-3 pe-1 text-sm focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
         <div class="min-w-0 py-2 font-medium">{render_slot(@summary)}</div>
 
-        <span
-          aria-hidden="true"
-          class="grid size-9 place-items-center justify-self-center rounded-full hover:overlay-dark"
-        >
+        <span aria-hidden="true" class="grid size-9 place-items-center justify-self-center">
           <.icon
             name="hero-chevron-down-micro"
-            class="size-4 [[open]>summary_&]:rotate-180"
+            class="size-4 transition-transform duration-(--motion-duration) ease-(--motion-ease) [[open]>summary_&]:rotate-180"
           />
         </span>
       </summary>
 
-      <div class="px-3 pb-3 pt-2">{render_slot(@inner_block)}</div>
+      <div class="collapse-content">
+        <div class="collapse-body px-3 pb-3 pt-2">{render_slot(@inner_block)}</div>
+      </div>
     </details>
+  <% :tabs -> %>
+    <div
+      id={@id}
+      role="tablist"
+      aria-label={@label}
+      phx-hook=".Tabs"
+      class={[
+        "tabs inset-surface grid w-fit max-w-full grid-cols-[repeat(var(--tab-count),minmax(0,1fr))] rounded-default border border-outline p-1",
+        @class
+      ]}
+      style={"--tab-count: #{length(@tab)}; --tab-index: #{@active_index || 0}"}
+    >
+      <span :if={@active_index} data-tab-indicator aria-hidden="true" class="tab-indicator"></span>
+      <%= for {tab, index} <- Enum.with_index(@tab) do %>
+        <% attributes = %{
+          id: tab[:id] || "#{@id}-#{tab.value}",
+          role: "tab",
+          "aria-selected": to_string(index == @active_index),
+          "aria-controls": tab[:controls],
+          tabindex: if(index == (@active_index || 0), do: "0", else: "-1"),
+          class: "tab-option"
+        } %>
+        <%= if tab[:navigate] || tab[:patch] do %>
+          <.link navigate={tab[:navigate]} patch={tab[:patch]} {attributes}>
+            {render_slot(tab)}
+          </.link>
+        <% else %>
+          <button type="button" phx-click={tab[:click]} {attributes}>
+            {render_slot(tab)}
+          </button>
+        <% end %>
+      <% end %>
+    </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".Tabs">
+      export default {
+        mounted() {
+          this.el.addEventListener("keydown", event => {
+            const tabs = [...this.el.querySelectorAll('[role="tab"]')]
+            const current = tabs.indexOf(event.target)
+            if (current < 0) return
+
+            let next
+            switch (event.key) {
+              case "ArrowLeft": next = (current - 1 + tabs.length) % tabs.length; break
+              case "ArrowRight": next = (current + 1) % tabs.length; break
+              case "Home": next = 0; break
+              case "End": next = tabs.length - 1; break
+              default: return
+            }
+
+            event.preventDefault()
+            if (next === current) return
+            tabs[next].focus()
+            tabs[next].click()
+          })
+        },
+      }
+    </script>
   <% :entry_panel -> %>
-    <div class={[
-      "flex flex-col gap-4 border-b border-outline pb-4",
-      @columns == 2 && ((rem(@index, 2) == 1 && "border-l pl-6") || "pr-6"),
-      @class
-    ]}>
+    <div
+      id={@id}
+      data-entry-index={@index}
+      class={[
+        "flex flex-col gap-4 border-b border-outline pb-4",
+        @columns == 2 && ((rem(@index, 2) == 1 && "border-l pl-6") || "pr-6"),
+        @class
+      ]}
+    >
       <div class="grid grid-cols-[1fr_2.75rem] items-center gap-2 border-b border-outline pb-2">
         <p :if={@sequence == []} class="text-sm font-semibold text-content">
           {"#{@label} ##{@index + 1}"}
@@ -303,12 +364,7 @@
     </ul>
   <% :cinder_collection -> %>
     <div id={"#{@collection_id}-pagination"} phx-hook="CinderPagination">
-      <template
-        :if={@show_pagination}
-        data-cinder-summary
-        data-cinder-page-size-config={Jason.encode!(@page_size_config)}
-        data-cinder-page-size-class={@cinder_theme.page_size_dropdown_class}
-      >
+      <template :if={@show_pagination} data-cinder-summary>
         <div class={@cinder_theme.pagination_wrapper_class} data-key="pagination_wrapper_class">
           <div
             class={@cinder_theme.pagination_container_class}
@@ -334,6 +390,27 @@
             </div>
           </div>
         </div>
+      </template>
+      <template
+        :if={@show_pagination && @page_size_config.configurable}
+        data-cinder-page-size-template
+      >
+        <cinder-page-size
+          :for={position <- ~w(top bottom)}
+          id={"#{@collection_id}-pagination-page-size-#{position}"}
+          data-cinder-page-size={position}
+        >
+          <.input
+            id={"#{@collection_id}-pagination-page-size-#{position}-input"}
+            type="select"
+            name="page_size"
+            render_as="text"
+            options={@page_size_config.page_size_options}
+            value={@page_size_config.selected_page_size}
+            aria-label={gettext("Entries per page")}
+            clear_button={false}
+          />
+        </cinder-page-size>
       </template>
       {Cinder.Collection.collection(@collection_assigns)}
     </div>
@@ -1567,6 +1644,35 @@
         </label>
       </div>
 
+      <div
+        :if={@rest[:multiple]}
+        id={"#{@picker_id}-selection-pills"}
+        phx-update={@render_as != "like-enabled" && "ignore"}
+        data-selection-pills={to_string(@clear_button && @render_as != "like-enabled")}
+        data-remove-label={gettext("Remove")}
+        data-order={Jason.encode!(Enum.map(@selected_choices, &elem(&1, 0)))}
+        class="pc-combo-box__chips selection-pills"
+      >
+        <span
+          :for={{choice, label} <- @selected_choices}
+          :if={choice != ""}
+          class="pc-combo-box__chip motion-grow"
+          data-pc-combo-chip
+          data-value={choice}
+        >
+          <span class="pc-combo-box__chip-label">{label}</span>
+          <button
+            :if={@render_as != "like-enabled"}
+            type="button"
+            class="pc-combo-box__chip-remove"
+            data-pc-combo-chip-remove
+            data-value={choice}
+            aria-label={gettext("Remove %{choice}", choice: label)}
+            disabled={!@clear_button || @rest[:disabled] || @rest[:readonly]}
+          ><.icon name="hero-x-mark-mini" class="pc-combo-box__chip-remove-icon" /></button>
+        </span>
+      </div>
+
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
   <% :input_combobox_disabled -> %>
@@ -1817,6 +1923,7 @@
           role="dialog"
           aria-label="Choose color"
           data-color-popover
+          data-popover-motion
           phx-hook="PopoverPlacement"
           class="color-input-popover w-60 max-h-[min(calc(100%_-_0.5rem),var(--popover-room,100%))] overflow-y-auto rounded-default border border-outline bg-surface p-3 text-content"
         >
@@ -1954,6 +2061,7 @@
         id={"#{@id}-calendar"}
         popover="auto"
         data-calendar-popover
+        data-popover-motion
         data-vc="calendar"
         data-vc-theme="elixirbits"
         data-vc-mode={@type}
@@ -2025,6 +2133,7 @@
         id={"#{@id}-calendar"}
         popover="auto"
         data-calendar-popover
+        data-popover-motion
         data-vc="calendar"
         data-vc-theme="elixirbits"
         data-vc-mode={@type}
@@ -2225,6 +2334,9 @@
       data-file-has-value={to_string(@file_has_value)}
       data-file-has-placeholder={to_string(@file_has_placeholder)}
       data-file-editable-like={to_string(@file_editable_like)}
+      data-file-selected-label={
+        @selection == "multiple" && !@preview && gettext("%{count} selected", count: "%{count}")
+      }
       class={[
         "relative",
         @render_as in ["hidden", "hidden-enabled", "hidden-disabled"] && "hidden",
@@ -2352,7 +2464,9 @@
                 do: @file_readonly_name,
                 else: @file_placeholder
             }
-            aria-live={if @selection == "singles", do: "polite"}
+            aria-live={
+              if @selection == "singles" || (@selection == "multiple" && !@preview), do: "polite"
+            }
             class={[
               if(
                 @file_inline || @render_as == "like-enabled" ||
@@ -2388,6 +2502,9 @@
             @selection == "singles" && @preview ->
               @file_count_label
 
+            @selection == "multiple" && !@preview ->
+              if(@stored != [] || @file_entries != [], do: @file_selected_count, else: @file_name)
+
             (@file_inline || @render_as == "like-enabled") && @file_caption != [] ->
               render_slot(@file_caption, @file_caption_value)
 
@@ -2405,7 +2522,10 @@
           class="px-1 text-sm whitespace-nowrap text-subcontent"
         >{@file_position}</span>
         <div
-          :if={@clear_button && (@upload == nil || (@file_inline && !@preview))}
+          :if={
+            @clear_button &&
+              (@upload == nil || (@selection != "multiple" && @file_inline && !@preview))
+          }
           class={if @file_inline, do: "grid place-items-center", else: "contents"}
         >
           <button
@@ -2551,7 +2671,10 @@
         class={["min-w-0", @file_detached && @preview_as == "thumbnail" && "h-full"]}
       >
         <div
-          :if={@stored != [] or @file_entries != []}
+          :if={
+            @stored != [] or @file_entries != [] or
+              (@selection == "multiple" && @preview_as == "tag")
+          }
           data-file-server-previews
           class={[
             @previews_class,
@@ -2695,8 +2818,18 @@
       data-file-url={@url}
       data-file-content-type={@content_type}
       data-file-item-name={@file_name}
+      phx-remove={
+        @selection == "multiple" && @preview_as == "tag" &&
+          JS.set_attribute({"inert", ""})
+          |> JS.set_attribute({"data-file-removing", "true"})
+          |> JS.transition("motion-shrink", time: 250)
+      }
       hidden={@hidden}
-      class={["min-w-0", @hidden && "hidden"]}
+      class={[
+        "min-w-0",
+        @selection == "multiple" && @preview_as == "tag" && "motion-grow",
+        @hidden && "hidden"
+      ]}
     >
       <div
         data-file-preview-as={@preview_as}
@@ -2984,27 +3117,35 @@
   <% :calendar -> %>
     <%!-- Event calendar --%>
     <div id={@id} class="mt-4 flex flex-col gap-3">
-      <.cal_nav view={@view} cursor={@cursor} today={@today} />
-      <%= case @view do %>
-        <% :month -> %>
-          <.month_body events={@events} cursor={@cursor} today={@today} />
-        <% :year -> %>
-          <.year_body events={@events} cursor={@cursor} today={@today} />
-        <% :schedule -> %>
-          <.agenda_body events={@events} cursor={@cursor} active={@active_event} />
-        <% grid_view -> %>
-          <% grid = time_columns(grid_view, @cursor, @events, @resources, @today, @now_local) %>
-          <p :if={grid.columns == []} class="text-sm text-subcontent">No resources to show.</p>
+      <.cal_nav id={@id} view={@view} cursor={@cursor} today={@today} />
+      <div
+        id={"#{@id}-body"}
+        role="tabpanel"
+        aria-labelledby={"#{@id}-view-#{@view}"}
+        tabindex="0"
+        data-swipe-panel
+      >
+        <%= case @view do %>
+          <% :month -> %>
+            <.month_body events={@events} cursor={@cursor} today={@today} />
+          <% :year -> %>
+            <.year_body events={@events} cursor={@cursor} today={@today} />
+          <% :schedule -> %>
+            <.agenda_body events={@events} cursor={@cursor} active={@active_event} />
+          <% grid_view -> %>
+            <% grid = time_columns(grid_view, @cursor, @events, @resources, @today, @now_local) %>
+            <p :if={grid.columns == []} class="text-sm text-subcontent">No resources to show.</p>
 
-          <.time_body
-            :if={grid.columns != []}
-            id={@id}
-            columns={grid.columns}
-            now_col={grid.now_col}
-            now_minutes={grid.now_minutes}
-            active={@active_event}
-          />
-      <% end %>
+            <.time_body
+              :if={grid.columns != []}
+              id={@id}
+              columns={grid.columns}
+              now_col={grid.now_col}
+              now_minutes={grid.now_minutes}
+              active={@active_event}
+            />
+        <% end %>
+      </div>
     </div>
   <% :cal_nav -> %>
     <div class="grid grid-cols-[max-content_2.75rem_2.75rem_1fr_max-content] items-center gap-2">
@@ -3044,18 +3185,19 @@
 
       <h2 class="text-lg font-semibold text-content">{@period_title}</h2>
 
-      <div class="grid grid-cols-[repeat(6,max-content)] gap-2">
-        <.button
+      <.tabs id={"#{@id}-views"} label="Calendar views" active={to_string(@view)}>
+        <:tab
           :for={{value, label} <- CalendarUtils.views()}
-          type="button"
-          phx-click="calendar_change"
-          phx-value-view={value}
-          phx-value-date={Date.to_iso8601(@cursor)}
-          aria-pressed={if @view == value, do: "true", else: "false"}
+          id={"#{@id}-view-#{value}"}
+          value={to_string(value)}
+          click={
+            JS.push("calendar_change", value: %{view: value, date: Date.to_iso8601(@cursor)})
+          }
+          controls={"#{@id}-body"}
         >
           {label}
-        </.button>
-      </div>
+        </:tab>
+      </.tabs>
     </div>
   <% :time_body -> %>
     <div class="rounded-default border border-outline bg-primary">

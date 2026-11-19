@@ -21,14 +21,22 @@ defmodule ElixirbitsWeb.DashboardLiveTest do
     end
   end
 
-  test "navigation opens the component showcase without signing in", %{conn: conn} do
+  test "dashboard and showcase links navigate in the same LiveView session", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     result = view |> element("main a[href='/dashboard/dev_panel/layout_test']") |> render_click()
+    assert {:error, {:live_redirect, %{to: "/dashboard/dev_panel/layout_test"}}} = result
     {:ok, showcase, _html} = follow_redirect(result, conn, ~p"/dashboard/dev_panel/layout_test")
 
     assert has_element?(showcase, "#app-navigation a[aria-current=page]", "Layout Test")
     assert has_element?(showcase, "main h1", "Layout Test")
+
+    result = showcase |> element("header a[data-page-chrome=brand]") |> render_click()
+    assert {:error, {:live_redirect, %{to: "/dashboard"}}} = result
+    {:ok, home, _html} = follow_redirect(result, conn, ~p"/dashboard")
+
+    assert has_element?(home, "#app-navigation a[aria-current=page]", "Home")
+    assert has_element?(home, "main h1", "Elixirbits")
   end
 
   test "account and administration routes are absent", %{conn: conn} do

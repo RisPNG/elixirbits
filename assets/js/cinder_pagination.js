@@ -1,7 +1,22 @@
+import ComboBox from "./combo_box"
+
+customElements.define("cinder-page-size", class extends HTMLElement {
+  connectedCallback() {
+    const el = this.querySelector(".core-selection-input")
+    el.removeAttribute("phx-hook")
+    this.picker = {...ComboBox, el}
+    this.picker.mounted()
+  }
+
+  disconnectedCallback() {
+    this.picker.destroyed()
+  }
+})
+
 const CinderPagination = {
   mounted() {
     this.onFocusIn = event => {
-      this.focusedControl = this.topPagination?.contains(event.target) || event.target.matches("[data-cinder-page-size]") ? event.target : null
+      this.focusedControl = this.topPagination?.contains(event.target) || event.target.closest("cinder-page-size") ? event.target : null
     }
     this.onFocusOut = event => {
       const input = event.target
@@ -11,6 +26,7 @@ const CinderPagination = {
       input.value = ""
       if (!Number.isFinite(value)) return
       const page = Math.max(Number(input.min), Math.min(Number(input.max), Math.trunc(value)))
+      this.requestedPage = page === this.displayedPage ? null : page
       this.pushEventTo(input.getAttribute("phx-target"), "goto_page", {page})
     }
     this.onKeyDown = event => {
@@ -20,15 +36,30 @@ const CinderPagination = {
     }
     this.onChange = event => {
       const select = event.target
-      if (!select.matches("[data-cinder-page-size]")) return
+      if (!select.matches("select") || !select.closest("cinder-page-size")) return
+      this.requestedPage = null
       this.pageSize = select.value
-      this.pushEventTo(select.getAttribute("phx-target"), "change_page_size", {page_size: select.value})
+      this.pushEventTo(this.component, "change_page_size", {page_size: select.value})
+    }
+    this.onClick = event => {
+      const button = event.target.closest("button[phx-click=goto_page], button[phx-click=next_page], button[phx-click=prev_page]")
+      if (!button || button.disabled || !button.closest("[data-key=pagination_wrapper_class]")) return
+      const page = button.getAttribute("phx-value-page")
+      if (page !== null) this.requestedPage = Number(page)
+      else this.requestedPage = button.getAttribute("phx-click") === "next_page" ? "left" : "right"
     }
     this.el.addEventListener("focusin", this.onFocusIn)
     this.el.addEventListener("focusout", this.onFocusOut)
     this.el.addEventListener("keydown", this.onKeyDown)
     this.el.addEventListener("change", this.onChange)
-    this.observer = new MutationObserver(() => this.synchronize())
+    this.el.addEventListener("click", this.onClick)
+    this.observer = new MutationObserver(records => {
+      if (records.some(({attributeName, target}) => {
+        const element = target.nodeType === 1 ? target : target.parentElement
+        return !element?.closest("cinder-page-size") &&
+          (attributeName !== "title" || target.matches("[data-key=pagination_nav_class] > span > button[phx-value-page]"))
+      })) this.synchronize()
+    })
     this.synchronize()
   },
 
@@ -42,12 +73,13 @@ const CinderPagination = {
     this.el.removeEventListener("focusout", this.onFocusOut)
     this.el.removeEventListener("keydown", this.onKeyDown)
     this.el.removeEventListener("change", this.onChange)
+    this.el.removeEventListener("click", this.onClick)
+    this.pageAnimation?.cancel()
     this.topPagination?.remove()
     this.summary?.remove()
     for (const gap of this.el.querySelectorAll("[data-cinder-pagination-gap]")) gap.remove()
-    for (const select of this.el.querySelectorAll("[data-cinder-page-size]")) {
-      select.parentElement.removeAttribute("data-core-input")
-      select.replaceWith(document.createTextNode(select.dataset.cinderPageRange))
+    for (const slot of this.el.querySelectorAll("[data-cinder-page-size-slot]")) {
+      slot.replaceWith(document.createTextNode(slot.dataset.cinderPageRange))
     }
     for (const controls of this.el.querySelectorAll("[data-key=page_size_container_class]")) controls.hidden = false
     for (const indicator of this.el.querySelectorAll("[data-cinder-loading]")) indicator.remove()
@@ -59,27 +91,62 @@ const CinderPagination = {
     const focused = this.focusedControl
     const restoreFocus = focused && (document.activeElement === focused || (!focused.isConnected && document.activeElement === document.body))
     const focusedTop = this.topPagination?.contains(focused)
+    const focusedPicker = focused?.closest("cinder-page-size")
     let focusTarget
     const collection = this.el.querySelector("[data-key=container_class]")
     let pagination = collection?.querySelector(":scope > [data-key=pagination_wrapper_class]:not([data-cinder-pagination])")
     const loading = collection?.querySelector(":scope > [data-key=loading_overlay_class]")
     const summaryTemplate = this.el.querySelector("template[data-cinder-summary]")
-    const pageSizeConfigData = summaryTemplate?.dataset.cinderPageSizeConfig
-    const pageSizeConfig = pageSizeConfigData && JSON.parse(pageSizeConfigData)
+    const pageSizeSource = this.el.querySelector("template[data-cinder-page-size-template]")?.content
     const component = collection?.getAttribute("data-phx-component")
     if (this.component !== component) {
       this.component = component
-      this.pageSizeConfig = null
+      this.pageSizeSource = null
       this.pageSize = null
+      this.displayedPage = null
+      this.firstRow = null
+      this.requestedPage = null
+      this.pageAnimation?.cancel()
       this.summary?.remove()
       this.summary = null
     }
-    if (pageSizeConfig && this.pageSizeConfig !== pageSizeConfigData) {
-      this.pageSizeConfig = pageSizeConfigData
-      this.pageSize = String(pageSizeConfig.selected_page_size)
+    const pageSizeChanged = pageSizeSource && !this.pageSizeSource?.isEqualNode(pageSizeSource)
+    if (pageSizeChanged) {
+      const preset = pageSizeSource.querySelector("select")
+      if (this.pageSizeSource?.querySelector("select").value !== preset.value || !Array.from(preset.options).some(option => option.value === this.pageSize)) {
+        this.pageSize = preset.value
+      }
+      this.pageSizeSource = pageSizeSource.cloneNode(true)
     }
     if (loading) loading.hidden = false
 
+    if (!loading) {
+      const body = collection?.querySelector("[data-key=tbody_class]")
+      const current = pagination?.querySelector("[data-key=pagination_current_class]")
+      const page = current ? Number(current.textContent) : null
+      const firstRow = body?.querySelector("[data-item-id]")?.dataset.itemId
+      const request = this.requestedPage
+      let direction
+      if (typeof request === "number" && Number.isFinite(this.displayedPage) && page === request && page !== this.displayedPage) {
+        direction = page > this.displayedPage ? "left" : "right"
+      } else if (typeof request === "string" && firstRow && this.firstRow && firstRow !== this.firstRow) {
+        direction = request
+      }
+
+      if (typeof request === "number" ? page !== this.displayedPage : firstRow !== this.firstRow) {
+        this.requestedPage = null
+      }
+      this.displayedPage = page
+      this.firstRow = firstRow
+      if (body && direction && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const style = getComputedStyle(body)
+        this.pageAnimation?.cancel()
+        this.pageAnimation = body.animate(
+          [{translate: direction === "right" ? "-1.5rem" : "1.5rem", opacity: 0.6}, {translate: "0", opacity: 1}],
+          {duration: parseFloat(style.getPropertyValue("--motion-duration")), easing: style.getPropertyValue("--motion-ease").trim()},
+        )
+      }
+    }
     if (pagination || !summaryTemplate || !collection || collection.querySelector("[data-key=error_class]")) {
       this.summary?.remove()
       this.summary = null
@@ -111,9 +178,7 @@ const CinderPagination = {
       const navigation = pagination.querySelector("[data-key=pagination_nav_class]")
       const count = pagination.querySelector("[data-key=pagination_count_class]")
       const pageSizes = pagination.querySelector("[data-key=page_size_container_class]")
-      const sizeOptions = pageSizes?.querySelectorAll("button[phx-value-page_size]")
       const trigger = pageSizes?.querySelector("[data-key=page_size_dropdown_class]")
-      const options = sizeOptions?.length ? Array.from(sizeOptions, button => button.getAttribute("phx-value-page_size")) : pagination === this.summary && pageSizeConfig.configurable ? pageSizeConfig.page_size_options.map(String) : []
       if (trigger) this.pageSize = trigger.textContent.trim()
 
       pagination.querySelector("[data-cinder-loading]")?.remove()
@@ -126,44 +191,20 @@ const CinderPagination = {
         loading.hidden = true
       }
 
-      if (count && options.length) {
-        let select = count.querySelector("[data-cinder-page-size]")
-
-        if (!select) {
+      let sizeSlot = count?.querySelector("[data-cinder-page-size-slot]")
+      if (count && pageSizeSource) {
+        if (!sizeSlot) {
           const [, before, range, after] = count.textContent.match(/^(.*?)(\d+-\d+)(.*)$/s)
-          select = document.createElement("select")
-          select.id = `${this.el.id}-page-size-bottom`
-          select.dataset.cinderPageSize = ""
-          select.dataset.cinderPageRange = range
-          select.dataset.inputText = ""
-          select.setAttribute("aria-label", "Entries per page")
-          select.setAttribute("phx-target", sizeOptions?.[0]?.getAttribute("phx-target") || component)
-          count.replaceChildren(document.createTextNode(before), select, document.createTextNode(after))
-          count.dataset.coreInput = ""
+          sizeSlot = document.createElement("span")
+          sizeSlot.dataset.cinderPageSizeSlot = ""
+          sizeSlot.dataset.cinderPageRange = range
+          count.replaceChildren(document.createTextNode(before), sizeSlot, document.createTextNode(after))
         }
-
-        select.className = trigger?.className || summaryTemplate.dataset.cinderPageSizeClass
-        if (select.options.length !== options.length || options.some((size, index) => select.options[index].value !== size)) {
-          select.replaceChildren()
-          for (const size of options) {
-            const option = document.createElement("option")
-            option.value = size
-            option.textContent = size
-            select.append(option)
-          }
-        }
-
-        const selected = this.pageSize
-        for (const option of select.querySelectorAll("option")) {
-          if (option.value === selected) option.setAttribute("selected", "")
-          else option.removeAttribute("selected")
-        }
-        select.value = selected
         if (pageSizes) pageSizes.hidden = true
-      } else if (count?.querySelector("[data-cinder-page-size]")) {
-        const select = count.querySelector("[data-cinder-page-size]")
-        count.removeAttribute("data-core-input")
-        select.replaceWith(document.createTextNode(select.dataset.cinderPageRange))
+      } else if (sizeSlot) {
+        sizeSlot.replaceWith(document.createTextNode(sizeSlot.dataset.cinderPageRange))
+        sizeSlot = null
+        if (pageSizes) pageSizes.hidden = false
       }
 
       for (const button of navigation.querySelectorAll(":scope > button[phx-value-page]")) {
@@ -186,6 +227,15 @@ const CinderPagination = {
       )
 
       if (pages.length > 0) {
+        for (const page of pages) {
+          const button = page.querySelector("button[phx-value-page]")
+          const label = button?.getAttribute("title") ?? button?.getAttribute("data-tooltip")
+          if (label == null) continue
+          button.setAttribute("aria-label", label)
+          button.removeAttribute("title")
+          button.removeAttribute("data-tooltip")
+        }
+
         const firstPage = Number(pages[0].textContent.trim())
         const lastPage = Number(pages.at(-1).textContent.trim())
         const button = navigation.querySelector("button[phx-value-page]")
@@ -222,8 +272,7 @@ const CinderPagination = {
       top.dataset.cinderPagination = "top"
       top.setAttribute("phx-update", "ignore")
       top.querySelector("[data-key=page_size_container_class]")?.remove()
-      const topSize = top.querySelector("[data-cinder-page-size]")
-      if (topSize) topSize.id = `${this.el.id}-page-size-top`
+      top.querySelector("[data-cinder-page-size-slot]")?.replaceChildren()
       top.querySelector("[data-key=pagination_nav_class]").setAttribute("aria-label", "Pagination above results")
 
       for (const copy of [top, this.summary, ...pagination.querySelectorAll("[data-cinder-loading]")].filter(Boolean)) {
@@ -235,13 +284,14 @@ const CinderPagination = {
         }
       }
 
-      if (!this.topPagination?.isEqualNode(top)) {
+      if (!this.topPagination || !this.topSource.isEqualNode(top)) {
         for (const input of this.topPagination?.querySelectorAll("[data-cinder-pagination-gap]") || []) {
           const replacement = top.querySelector(`[data-cinder-pagination-gap=${input.dataset.cinderPaginationGap}]`)
           if (replacement) replacement.value = input.value
         }
         this.topPagination?.remove()
         this.topPagination = top
+        this.topSource = top.cloneNode(true)
         if (restoreFocus && focusedTop) {
           focusTarget = (focused.matches("[data-cinder-pagination-gap]") && top.querySelector(`[data-cinder-pagination-gap=${focused.dataset.cinderPaginationGap}]`)) || Array.from(top.querySelectorAll("button")).find(button =>
             !button.disabled && button.textContent === focused.textContent && button.getAttribute("title") === focused.getAttribute("title") && button.getAttribute("phx-click") === focused.getAttribute("phx-click")
@@ -249,16 +299,27 @@ const CinderPagination = {
         }
       }
 
-      if (restoreFocus && focused.matches("[data-cinder-page-size]")) {
-        const bar = focusedTop ? this.topPagination : pagination
-        focusTarget = bar.querySelector("[data-cinder-page-size]") || bar.querySelector("[aria-current=page]")
-      }
-
       const controls = collection.querySelector(":scope > [data-key=controls_class]")
       if (controls) {
         if (controls.nextElementSibling !== this.topPagination) controls.after(this.topPagination)
       } else if (collection.firstElementChild !== this.topPagination) {
         collection.prepend(this.topPagination)
+      }
+      if (sizeSlot) {
+        for (const [position, slot] of [["top", this.topPagination.querySelector("[data-cinder-page-size-slot]")], ["bottom", sizeSlot]]) {
+          if (!slot.firstElementChild || pageSizeChanged) {
+            slot.replaceChildren(pageSizeSource.querySelector(`[data-cinder-page-size=${position}]`).cloneNode(true))
+          }
+          const select = slot.querySelector("select")
+          if (select.value !== this.pageSize) {
+            select.value = this.pageSize
+            select.dispatchEvent(new Event("change"))
+          }
+        }
+      }
+      if (restoreFocus && focusedPicker && !focused.isConnected) {
+        const bar = focusedPicker.dataset.cinderPageSize === "top" ? this.topPagination : pagination
+        focusTarget = bar.querySelector("[data-pc-combo-trigger]") || bar.querySelector("[aria-current=page]")
       }
       if (focusTarget) {
         if (!["BUTTON", "INPUT", "SELECT"].includes(focusTarget.tagName)) focusTarget.setAttribute("tabindex", "-1")
@@ -270,7 +331,7 @@ const CinderPagination = {
       this.focusedControl = null
     }
 
-    this.observer.observe(this.el, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["phx-value-page", "disabled"]})
+    this.observer.observe(this.el, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["phx-value-page", "disabled", "title"]})
   },
 }
 

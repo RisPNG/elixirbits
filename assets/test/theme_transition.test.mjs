@@ -92,6 +92,7 @@ test("user choices persist immediately and change the page inside the native tra
 
   assert.equal(page.storage.get("phx:theme"), "dark")
   assert.equal(page.attributes.get("data-theme"), "light")
+  assert.equal(page.attributes.has("data-theme-wipe"), true)
   assert.equal(page.transitions.length, 1)
 
   const [transition] = page.transitions
@@ -99,6 +100,7 @@ test("user choices persist immediately and change the page inside the native tra
   assert.equal(page.attributes.get("data-theme"), "dark")
   transition.finish()
   await transition.finished
+  assert.equal(page.attributes.has("data-theme-wipe"), false)
 
   page.choose("light")
   assert.equal(transition.skipped, false)
@@ -155,6 +157,7 @@ test("finishing an older animation does not lose a newer pending transition", as
 
   older.finish()
   await older.finished
+  assert.equal(page.attributes.has("data-theme-wipe"), true)
   page.choose("dark")
   assert.equal(newer.skipped, true)
 
@@ -171,6 +174,7 @@ test("storage changes synchronize immediately and supersede pending user transit
   const [pending] = page.transitions
   page.synchronize("light")
   assert.equal(pending.skipped, true)
+  assert.equal(page.attributes.has("data-theme-wipe"), false)
 
   pending.update()
   pending.finish()

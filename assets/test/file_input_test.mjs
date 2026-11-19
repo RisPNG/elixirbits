@@ -1567,7 +1567,7 @@ test("an explicit singles preview placeholder returns after clearing or resettin
   } finally { setup.cleanup() }
 })
 
-test("preview-disabled singles show the active filename while multiple keeps its filename display", () => {
+test("preview-disabled singles show the active filename and multiple shows the selected count", () => {
   const setup = fixture({fileSelection: "singles", fileEditor: "false", filePreview: "false"})
   try {
     setup.root.nodes.delete("[data-file-preview-region]")
@@ -1577,11 +1577,14 @@ test("preview-disabled singles show the active filename while multiple keeps its
     assert.equal(setup.readonly.textContent, "image.png")
     assert.deepEqual(setup.created, [])
     setup.root.dataset.fileSelection = "multiple"
+    setup.root.dataset.fileSelectedLabel = "%{count} selected"
     setup.context.updated()
+    assert.equal(setup.name.textContent, "1 selected")
     setup.input.files = [image, new File(["pdf"], "document.pdf", {type: "application/pdf"})]
     setup.input.dispatchEvent(new UIEvent("input", {bubbles: true}))
     setup.input.dispatchEvent(new UIEvent("change", {bubbles: true}))
-    assert.equal(setup.name.textContent, "image.png, document.pdf")
+    assert.equal(setup.name.textContent, "2 selected")
+    assert.equal(setup.readonly.textContent, "2 selected")
   } finally { setup.cleanup() }
 })
 

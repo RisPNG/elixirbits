@@ -46,6 +46,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
 
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
+    assert_push_event(view, "swipe", %{id: "dashboard-page", direction: "left"})
     assert has_element?(view, "#layout-test-ecosystem-tab[aria-selected=\"true\"]")
     assert has_element?(view, "#layout-test-ecosystem-panel[aria-hidden=false]:not(.hidden)")
     assert has_element?(view, "#layout-test-dependency-form[novalidate]")
@@ -53,6 +54,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
     render_click(element(view, "#cinder-layout-grid"))
     assert has_element?(view, "#layout-test-cinder-collection[data-layout=grid]")
     assert has_element?(view, "#layout-test-local-panel.hidden[aria-hidden=true]")
+
+    render_click(element(view, "#layout-test-local-tab"))
+
+    assert_push_event(view, "swipe", %{id: "dashboard-page", direction: "right"})
+    assert has_element?(view, "#layout-test-local-panel[aria-hidden=false]:not(.hidden)")
   end
 
   test "local color changes and submissions preserve the selected syntax and transparency", %{

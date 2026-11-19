@@ -15,9 +15,12 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
 
     assert has_element?(view, "#app-navigation button[phx-value-code=DP][aria-expanded=false]")
 
-    view |> element("#app-navigation button[aria-label='Toggle Components']") |> render_click()
+    view |> element("#app-navigation button[aria-label='Components']") |> render_click()
 
-    assert has_element?(view, "#app-navigation a[href='/dashboard/dev_panel/layout_test']")
+    assert has_element?(
+             view,
+             "#nav-DP[data-open=true]:not([inert]) a[href='/dashboard/dev_panel/layout_test']"
+           )
 
     refute has_element?(
              view,
@@ -25,17 +28,22 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
            )
   end
 
-  test "the collapsed navigation keeps the Home icon and restores its sections", %{conn: conn} do
+  test "the compact navigation keeps groups visible and expands their sections", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     view |> element("button[phx-click=toggle_nav]") |> render_click()
     assert has_element?(view, "button[phx-click=toggle_nav][aria-expanded=false]")
     assert has_element?(view, "#app-navigation a[aria-label=Home] .hero-home")
-    refute has_element?(view, "#app-navigation button[phx-value-code=DP]")
+    assert has_element?(view, "[data-navigation=compact] button[phx-value-code=DP]")
+    assert has_element?(view, "#nav-DP[inert]")
 
-    view |> element("button[phx-click=toggle_nav]") |> render_click()
+    view |> element("#app-navigation button[aria-label='Components']") |> render_click()
     assert has_element?(view, "button[phx-click=toggle_nav][aria-expanded=true]")
-    assert has_element?(view, "#app-navigation button[phx-value-code=DP]")
+
+    assert has_element?(
+             view,
+             "[data-navigation=expanded][data-nav-staged=true] #nav-DP[data-open=true]"
+           )
   end
 
   test "direct showcase navigation expands its active parent", %{conn: conn} do
@@ -48,7 +56,27 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
              "#app-navigation a[href='/dashboard/dev_panel/layout_test'][aria-current=page]"
            )
 
-    view |> element("#app-navigation button[aria-label='Toggle Components']") |> render_click()
-    refute has_element?(view, "#nav-DP")
+    view |> element("#app-navigation button[aria-label='Components']") |> render_click()
+    assert has_element?(view, "#nav-DP[data-open=false][inert]")
+    assert has_element?(view, ".nav-group-highlight > button[phx-value-code=DP]")
+  end
+
+  test "the active branch stays visible when the browser requests a compact rail", %{conn: conn} do
+    conn = put_connect_params(conn, %{"nav_open" => false})
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+
+    assert has_element?(
+             view,
+             "[data-navigation=compact] .nav-group-highlight > button[phx-value-code=DP]"
+           )
+
+    assert has_element?(view, "#nav-DP[inert]")
+
+    view |> element("button[phx-click=toggle_nav]") |> render_click()
+
+    assert has_element?(
+             view,
+             "[data-navigation=expanded][data-nav-staged=true] #nav-DP[data-open=true]"
+           )
   end
 end

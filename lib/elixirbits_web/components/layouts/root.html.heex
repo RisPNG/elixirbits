@@ -9,6 +9,12 @@
       {assigns[:page_title]}
     </.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <link
+      rel="expect"
+      href="#app-content-ready"
+      blocking="render"
+      media="(prefers-reduced-motion: no-preference)"
+    />
     <script defer phx-track-static type="module" src={~p"/assets/app.js"}>
     </script>
 
@@ -22,6 +28,7 @@
         function setTheme(theme, animate = false) {
           const revision = ++themeRevision;
           themeTransition?.skipTransition();
+          document.documentElement.removeAttribute("data-theme-wipe");
 
           const current = document.documentElement.getAttribute("data-theme") || (darkScheme.matches ? "dark" : "light");
           const resolved = theme === "system" ? (darkScheme.matches ? "dark" : "light") : theme;
@@ -33,6 +40,7 @@
           }
 
           if (animate && current !== resolved && document.startViewTransition && !reducedMotion.matches) {
+            document.documentElement.setAttribute("data-theme-wipe", "");
             const transition = document.startViewTransition(() => {
               if (revision !== themeRevision) return;
               if (theme === "system") {
@@ -44,7 +52,10 @@
             themeTransition = transition;
             transition.ready.catch(() => {});
             transition.finished.then(() => {
-              if (themeTransition === transition) themeTransition = null;
+              if (themeTransition === transition) {
+                themeTransition = null;
+                document.documentElement.removeAttribute("data-theme-wipe");
+              }
             });
           } else if (theme === "system") {
             document.documentElement.removeAttribute("data-theme");
@@ -64,5 +75,6 @@
 
   <body class="bg-primary text-content">
     {@inner_content}
+    <span id="app-content-ready" hidden></span>
   </body>
 </html>

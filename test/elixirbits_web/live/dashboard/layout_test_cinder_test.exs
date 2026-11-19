@@ -142,7 +142,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
     assert has_element?(view, "#second-records-pagination", "EX001")
   end
 
-  test "the collection's native page-size and saved-state assigns configure its summary", %{
+  test "page-size and saved-state assigns configure the inline core select", %{
     conn: conn
   } do
     for {options, selected, configurable, presets} <- [
@@ -160,13 +160,32 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
       [template] =
         Floki.find(document, "#cinder-cinder_entry-pagination template[data-cinder-summary]")
 
-      [config] = Floki.attribute(template, "data-cinder-page-size-config")
-      config = Jason.decode!(config)
-
-      assert config["selected_page_size"] == selected
-      assert config["configurable"] == configurable
-      assert config["page_size_options"] == presets
       assert Floki.find(template, "button, input, select, [phx-click]") == []
+
+      pickers =
+        Floki.find(
+          document,
+          "#cinder-cinder_entry-pagination template[data-cinder-page-size-template] cinder-page-size"
+        )
+
+      positions = if configurable, do: ~w(bottom top), else: []
+      assert Enum.sort(Floki.attribute(pickers, "data-cinder-page-size")) == positions
+
+      for picker <- pickers do
+        assert [control] = Floki.find(picker, ".input-text-wrapper[phx-hook=PetalComboBox]")
+        assert [select] = Floki.find(control, "select.pc-combo-box__select")
+
+        assert Floki.attribute(select, "option", "value") == [
+                 "" | Enum.map(presets, &to_string/1)
+               ]
+
+        assert Floki.attribute(select, "option[selected]", "value") == [to_string(selected)]
+        assert [trigger] = Floki.find(control, "button[data-pc-combo-trigger]")
+        assert String.trim(Floki.text(trigger)) == to_string(selected)
+
+        assert [_search] =
+                 Floki.find(control, "[data-pc-combo-panel] input[aria-autocomplete=list]")
+      end
     end
   end
 
@@ -412,16 +431,16 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
       render_click(element(view, "#{selector} [phx-click=toggle_sort][phx-value-key=sequence]"))
       render_click(element(view, "#{selector} [phx-value-page_size='100']"))
 
-      [config] =
+      selected =
         view
         |> render()
         |> Floki.parse_document!()
         |> Floki.attribute(
-          "#{selector} template[data-cinder-summary]",
-          "data-cinder-page-size-config"
+          "#{selector} template[data-cinder-page-size-template] cinder-page-size select.pc-combo-box__select option[selected]",
+          "value"
         )
 
-      assert Jason.decode!(config)["selected_page_size"] == 100
+      assert selected == ["100", "100"]
       assert has_element?(view, "#{selector} input[name=search][value=Cinder]")
       assert has_element?(view, selector, "EX116")
       assert has_element?(view, selector, "EX006")

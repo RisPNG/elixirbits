@@ -153,18 +153,33 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.ActionsTest do
     assert has_element?(view, "#record-name-4[value='Kept edit']")
   end
 
-  test "calendar starts in month view and keeps view changes interactive", %{conn: conn} do
+  test "calendar views and periods swipe left when moving forward", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
 
-    assert has_element?(
-             view,
-             "#calendar-showcase button[aria-pressed=true][phx-value-view=month]"
-           )
+    assert has_element?(view, "#calendar-showcase-view-month[aria-selected=true]")
+
+    render_click(element(view, "#calendar-showcase-view-day"))
+    assert has_element?(view, "#calendar-showcase-view-day[aria-selected=true]")
+    assert_push_event(view, "swipe", %{id: "calendar-showcase", direction: "right"})
+
+    render_click(element(view, "#calendar-showcase-view-week"))
+    assert has_element?(view, "#calendar-showcase-view-week[aria-selected=true]")
+    assert_push_event(view, "swipe", %{id: "calendar-showcase", direction: "left"})
 
     render_click(
-      element(view, "#calendar-showcase button[phx-value-view=week][aria-pressed=false]")
+      element(view, ~s(#calendar-showcase button[aria-label="Previous calendar period"]))
     )
 
-    assert has_element?(view, "#calendar-showcase button[aria-pressed=true][phx-value-view=week]")
+    assert_push_event(view, "swipe", %{id: "calendar-showcase", direction: "right"})
+    render_click(element(view, "#calendar-showcase button", "Today"))
+    assert_push_event(view, "swipe", %{id: "calendar-showcase", direction: "left"})
+
+    render_click(element(view, ~s(#calendar-showcase button[aria-label="Next calendar period"])))
+    assert_push_event(view, "swipe", %{id: "calendar-showcase", direction: "left"})
+    render_click(element(view, "#calendar-showcase button", "Today"))
+    assert_push_event(view, "swipe", %{id: "calendar-showcase", direction: "right"})
+
+    render_click(element(view, "#calendar-showcase button", "Today"))
+    refute_push_event(view, "swipe", %{id: "calendar-showcase"})
   end
 end

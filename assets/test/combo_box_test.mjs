@@ -7,6 +7,7 @@ const nativeSource = await readFile(new URL("../../deps/petal_components/assets/
 const nativeUrl = `data:text/javascript;base64,${Buffer.from(nativeSource).toString("base64")}`
 const source = (await readFile(new URL("../js/combo_box.js", import.meta.url), "utf8"))
   .replace('"../../deps/petal_components/assets/js/petal_components"', JSON.stringify(nativeUrl))
+  .replace('"./popover_placement.js"', JSON.stringify(new URL("../js/popover_placement.js", import.meta.url).href))
 const ComboBox = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)).default
 const controlsSource = await readFile(new URL("../js/input_controls.js", import.meta.url), "utf8")
 const initInputControls = (await import(`data:text/javascript;base64,${Buffer.from(controlsSource).toString("base64")}`)).default
@@ -110,6 +111,13 @@ class Element extends EventTarget {
     }
   }
   appendChild(child) { this.append(child); return child }
+  insertBefore(child, reference) {
+    if (!reference) return this.appendChild(child)
+    child.remove()
+    child.parentElement = this
+    this.childNodes.splice(this.childNodes.indexOf(reference), 0, child)
+    return child
+  }
   prepend(child) { child.remove(); child.parentElement = this; this.childNodes.unshift(child) }
   remove() {
     if (this.parentElement) this.parentElement.childNodes.splice(this.parentElement.childNodes.indexOf(this), 1)
@@ -121,6 +129,7 @@ class Element extends EventTarget {
     this.content = ""
     this.append(...children)
   }
+  getAnimations() { return [] }
   focus() { document.activeElement = this }
   scrollIntoView(options = {}) {
     this.scrolledIntoView = true
@@ -152,9 +161,23 @@ class Element extends EventTarget {
       return this.style.maxHeight === "none" ? this.scrollHeight : Math.min(this.scrollHeight, Number.isFinite(limit) ? limit : 252)
     }
     if (this.layoutPanel) return 46 + (this.empty.hidden ? 0 : 36) + this.layoutPanel.offsetHeight
+    if (this.hasAttribute("data-pc-combo-group")) return this.scrollHeight
     return this.height
   }
-  get scrollHeight() { return this.children.reduce((total, child) => total + (child.hidden ? 0 : child.height), 0) }
+  get clientHeight() { return this.offsetHeight }
+  get offsetTop() {
+    const list = this.parentElement?.closest(".pc-combo-box__list")
+    if (!list) return 0
+    let top = 0
+    for (let child = this; child !== list; child = child.parentElement) {
+      for (const sibling of child.parentElement.children) {
+        if (sibling === child) break
+        top += sibling.offsetHeight
+      }
+    }
+    return top
+  }
+  get scrollHeight() { return this.children.reduce((total, child) => total + child.offsetHeight, 0) }
   getBoundingClientRect() {
     if (this.rect) return this.rect
     if (this.layoutPanel) {
@@ -166,10 +189,9 @@ class Element extends EventTarget {
       const top = this.parentElement.getBoundingClientRect().top + 46
       return {top, bottom: top + this.offsetHeight, height: this.offsetHeight}
     }
-    if (this.parentElement?.layoutList) {
-      const index = this.parentElement.children.indexOf(this)
-      const preceding = this.parentElement.children.slice(0, index).reduce((total, child) => total + (child.hidden ? 0 : child.height), 0)
-      const top = this.parentElement.getBoundingClientRect().top + preceding - this.parentElement.scrollTop
+    const list = this.parentElement?.closest(".pc-combo-box__list")
+    if (list) {
+      const top = list.getBoundingClientRect().top + this.offsetTop - list.scrollTop
       return {top, bottom: top + this.offsetHeight, height: this.offsetHeight}
     }
     return {top: 100, bottom: 144, height: this.offsetHeight}
@@ -195,7 +217,10 @@ document.activeElement = document.body
 document.createElement = name => new Element(name)
 document.querySelectorAll = selector => document.body.querySelectorAll(selector)
 document.getElementById = id => document.body.querySelectorAll("*").find(element => element.id === id) ?? null
-globalThis.getComputedStyle = () => ({marginTop: "4px"})
+globalThis.getComputedStyle = () => ({
+  marginTop: "4px",
+  getPropertyValue: name => name === "--motion-duration" ? "220ms" : "ease-in-out",
+})
 delete globalThis.MutationObserver
 
 test.afterEach(() => {
@@ -295,6 +320,11 @@ function picker({custom = false, multiple = false, externalClear = false, value 
   }
   if (externalClear) container.append(clear)
   else root.append(clear)
+  const pills = new Element()
+  if (core && multiple) {
+    pills.dataset.selectionPills = "true"
+    container.append(pills)
+  }
   document.body.append(container)
   const events = []
   select.addEventListener("input", () => events.push(["input", select.value]))
@@ -302,7 +332,7 @@ function picker({custom = false, multiple = false, externalClear = false, value 
   const context = {...ComboBox, el: root}
   context.mounted()
   const fixture = {
-    root, container, select, trigger, label, clear, panel, input, list, rows, create, empty, events, context,
+    root, container, select, trigger, label, clear, panel, input, list, rows, create, empty, events, context, pills,
     search(query) { input.value = query; input.dispatchEvent(new Event("input", {bubbles: true})) },
     key(key) { input.dispatchEvent(Object.assign(new Event("keydown", {cancelable: true}), {key})) },
   }
@@ -330,17 +360,59 @@ test("opens below with seven complete options and shrinks to one before flipping
   assert.equal(field.panel.hasAttribute("data-flip"), false)
 })
 
+test("an open dropdown slides to the opposite side and keeps its position while closing", () => {
+  const field = picker()
+  const slides = []
+  field.panel.getAnimations = () => []
+  field.panel.animate = keyframes => slides.push(keyframes)
+  field.trigger.rect = {top: 300, bottom: 344}
+  field.context.openPanel()
+  const initialTop = field.panel.getBoundingClientRect().top
+  assert.equal(slides.length, 0)
+
+  browser.visualViewport.height = 375
+  browser.visualViewport.dispatchEvent(new Event("resize"))
+  assert.equal(field.panel.hasAttribute("data-flip"), true)
+  assert.deepEqual(slides, [[{translate: `0 ${initialTop - field.panel.getBoundingClientRect().top}px`}, {translate: "0 0"}]])
+
+  const height = field.list.style.maxHeight
+  field.context.closePanel()
+  assert.equal(field.panel.hidden, true)
+  assert.equal(field.panel.inert, true)
+  assert.equal(field.panel.hasAttribute("data-flip"), true)
+  assert.equal(field.list.style.maxHeight, height)
+})
+
 test("measures wrapped rows and list headings instead of assuming a fixed row height", () => {
   const field = picker()
   field.rows[0].height = 48
   field.rows[1].height = 60
   const heading = new Element()
   heading.height = 24
-  field.list.prepend(heading)
+  const group = new Element()
+  group.setAttribute("data-pc-combo-group", "")
+  group.append(heading, ...field.rows.slice(0, 2))
+  field.list.prepend(group)
   field.trigger.rect = {top: 568, bottom: 612}
   field.context.openPanel()
   assert.equal(field.panel.hasAttribute("data-flip"), false)
   assert.equal(field.list.style.maxHeight, "132px")
+})
+
+test("a dropdown opening at zero visual height measures options and scrolls to the selected row", () => {
+  const field = picker({value: "20"})
+  for (const element of [field.list, ...field.rows]) {
+    element.getBoundingClientRect = () => ({top: 148, bottom: 148, height: 0})
+  }
+
+  field.trigger.dispatchEvent(new Event("click"))
+  assert.equal(field.list.style.maxHeight, "252px")
+  assert.equal(field.context.highlightedItem(), field.rows.at(-1))
+  assert.equal(field.list.scrollTop, field.rows.length * 36 - field.list.clientHeight)
+
+  field.key("Home")
+  assert.equal(field.context.highlightedItem(), field.rows[0])
+  assert.equal(field.list.scrollTop, 0)
 })
 
 test("tracks the visual viewport and preserves list scrolling while resizing", () => {
@@ -621,6 +693,34 @@ test("external multiple clear uses the native owner once and returns to working 
     controls.destroyed()
     delete globalThis.MutationObserver
   }
+})
+
+test("removing a choice keeps an inert pill through the exit while updating the native selection immediately", async () => {
+  const field = picker({multiple: true, options: [["Administrator", "admin"], ["Editor", "editor"]]})
+  field.context.choose(field.rows[1])
+  field.context.choose(field.rows[0])
+  const [editor, admin] = field.pills.children
+  assert.equal(editor.textContent, "Editor")
+  assert.equal(admin.textContent, "Administrator")
+  assert.ok(editor.classList.contains("motion-grow"))
+
+  const {promise, resolve} = Promise.withResolvers()
+  editor.getAnimations = () => [{finished: promise}]
+  const remove = editor.querySelector("[data-pc-combo-chip-remove]")
+  remove.focus()
+  const click = new Event("click", {bubbles: true})
+  Object.defineProperty(click, "target", {value: remove})
+  field.container.dispatchEvent(click)
+  assert.deepEqual(field.context.selectedValues(), ["admin"])
+  assert.equal(field.label.textContent, "1 selected")
+  assert.equal(document.activeElement, field.trigger)
+  assert.deepEqual(field.pills.children, [editor, admin])
+  assert.equal(editor.inert, true)
+  assert.ok(editor.classList.contains("motion-shrink"))
+  resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.deepEqual(field.pills.children, [admin])
 })
 
 test("keeps upstream presentation and navigation outside core selection inputs", () => {

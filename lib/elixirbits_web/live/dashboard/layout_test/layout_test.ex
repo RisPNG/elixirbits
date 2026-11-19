@@ -691,22 +691,52 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
   end
 
   def handle_event("calendar_change", %{"view" => view, "date" => date}, socket) do
-    {:noreply,
-     assign(socket,
-       calendar_view: CalendarUtils.parse_view(view),
-       calendar_cursor: Date.from_iso8601!(date)
-     )}
+    view = CalendarUtils.parse_view(view)
+    cursor = Date.from_iso8601!(date)
+    previous_view = socket.assigns.calendar_view
+
+    change =
+      if view == previous_view do
+        Date.diff(cursor, socket.assigns.calendar_cursor)
+      else
+        views = Keyword.keys(CalendarUtils.views())
+        Enum.find_index(views, &(&1 == view)) - Enum.find_index(views, &(&1 == previous_view))
+      end
+
+    socket = assign(socket, calendar_view: view, calendar_cursor: cursor)
+
+    socket =
+      if change != 0 do
+        push_event(
+          socket,
+          "swipe",
+          %{id: "calendar-showcase", direction: if(change > 0, do: "left", else: "right")},
+          dispatch: :before
+        )
+      else
+        socket
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
-  def handle_event("change_tab", %{"tab" => tab}, socket) do
-    {:noreply,
-     assign(
-       socket,
-       :current_tab,
-       if(tab in ["local", "ecosystem"], do: tab, else: socket.assigns.current_tab)
-     )}
+  def handle_event("change_tab", %{"tab" => tab}, socket) when tab in ~w(local ecosystem) do
+    if tab == socket.assigns.current_tab do
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> assign(:current_tab, tab)
+       |> push_event(
+         "swipe",
+         %{id: "dashboard-page", direction: if(tab == "ecosystem", do: "left", else: "right")},
+         dispatch: :before
+       )}
+    end
   end
+
+  def handle_event("change_tab", _params, socket), do: {:noreply, socket}
 
   def handle_event("show_flash", %{"kind" => kind}, socket) when kind in ~w(info error warning) do
     {:noreply,

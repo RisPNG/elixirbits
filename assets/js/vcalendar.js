@@ -1,4 +1,4 @@
-const hasAnchorPositioning = globalThis.CSS?.supports?.("position-area", "block-end") !== false
+import {hasAnchorPositioning, slidePopover} from "./popover_placement.js"
 
 const pad = (n) => String(n).padStart(2, "0")
 
@@ -233,6 +233,7 @@ const VCalendar = {
       input.setAttribute("aria-expanded", String(event.newState === "open"))
       if (!hasAnchorPositioning) return
       if (event.newState === "open") {
+        this.placementKnown = false
         window.addEventListener("scroll", this.onReposition, true)
         window.addEventListener("resize", this.onReposition)
         this.viewport?.addEventListener("scroll", this.onReposition)
@@ -242,8 +243,6 @@ const VCalendar = {
         window.removeEventListener("resize", this.onReposition)
         this.viewport?.removeEventListener("scroll", this.onReposition)
         this.viewport?.removeEventListener("resize", this.onReposition)
-        this.popover.removeAttribute("data-flip")
-        this.popover.style.maxHeight = ""
       }
     }
     input.addEventListener("click", this.onClick)
@@ -261,8 +260,12 @@ const VCalendar = {
     const below = viewportTop + viewportHeight - control.bottom - gap
     const above = control.top - viewportTop - gap
     const flip = below < height && above > below
+    const moving = this.placementKnown && flip !== this.popover.hasAttribute("data-flip")
+    const fromTop = moving ? this.popover.getBoundingClientRect().top : null
     this.popover.toggleAttribute("data-flip", flip)
     this.popover.style.maxHeight = `${Math.max(flip ? above : below, 0)}px`
+    this.placementKnown = true
+    if (moving) slidePopover(this.popover, fromTop)
   },
   updated() {
     if (!this.calendar) return

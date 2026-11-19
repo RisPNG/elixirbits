@@ -2864,8 +2864,9 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
       assert Floki.find(document, "button[phx-click=remove_upload][disabled]") != []
       assert Floki.find(document, "button[phx-click=cancel_upload][disabled]") != []
       assert Floki.text(document) =~ "portrait.png"
-      assert [classes] = Floki.attribute(document, "input#attachment-upload", "class")
-      assert "disabled:overlay-dark" in String.split(classes)
+
+      assert Floki.find(document, "[data-file-control].overlay-dark input#attachment-upload") !=
+               []
     end
   end
 
@@ -3212,6 +3213,7 @@ defmodule ElixirbitsWeb.CoreComponentsTest do
             not has_value? and render_as == "disabled" -> ""
             not has_value? -> "Choose a portrait"
             selection == "singles" and preview -> "1 file"
+            selection == "multiple" and not preview -> "1 selected"
             true -> "portrait.png"
           end
 

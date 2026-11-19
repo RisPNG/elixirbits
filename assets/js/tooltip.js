@@ -96,8 +96,11 @@ export default function initTooltips() {
     if (control.getAttribute("aria-describedby") !== ids) control.setAttribute("aria-describedby", ids)
 
     const {offsetWidth: width, offsetHeight: height} = tip
-    tip.style.left = `${Math.max(0, Math.min(x + OFFSET, window.innerWidth - width))}px`
-    tip.style.top = `${Math.max(0, y + OFFSET + height > window.innerHeight ? y - OFFSET - height : y + OFFSET)}px`
+    const left = Math.max(0, Math.min(x + OFFSET, window.innerWidth - width))
+    const above = y + OFFSET + height > window.innerHeight
+    tip.style.left = `${left}px`
+    tip.style.top = `${Math.max(0, above ? y - OFFSET - height : y + OFFSET)}px`
+    tip.style.transformOrigin = `${left < x + OFFSET ? "right" : "left"} ${above ? "bottom" : "top"}`
   }
 
   const refresh = () => {

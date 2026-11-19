@@ -255,39 +255,33 @@
     </section>
   </.collapse>
 
-  <div
-    id="layout-test-tabs"
-    role="tablist"
-    aria-label="Layout test sections"
-    class="grid grid-cols-[max-content_max-content] items-center gap-2"
-  >
-    <.button
+  <.tabs id="layout-test-tabs" label="Layout test sections" active={@current_tab}>
+    <:tab
       id="layout-test-local-tab"
-      type="button"
-      role="tab"
-      aria-selected={if(@current_tab == "local", do: "true", else: "false")}
-      phx-click="change_tab"
-      phx-value-tab="local"
+      value="local"
+      controls="layout-test-local-panel"
+      click={JS.push("change_tab", value: %{tab: "local"})}
     >
       Local
-    </.button>
+    </:tab>
 
-    <.button
+    <:tab
       id="layout-test-ecosystem-tab"
-      type="button"
-      role="tab"
-      aria-selected={if(@current_tab == "ecosystem", do: "true", else: "false")}
-      phx-click="change_tab"
-      phx-value-tab="ecosystem"
+      value="ecosystem"
+      controls="layout-test-ecosystem-panel"
+      click={JS.push("change_tab", value: %{tab: "ecosystem"})}
     >
       Ecosystem
-    </.button>
-  </div>
+    </:tab>
+  </.tabs>
 
   <div
     id="layout-test-local-panel"
     role="tabpanel"
+    aria-labelledby="layout-test-local-tab"
     aria-hidden={to_string(@current_tab != "local")}
+    hidden={@current_tab != "local"}
+    data-swipe-panel
     class={["space-y-6", @current_tab != "local" && "hidden"]}
   >
     <section class="grid grid-cols-[1fr_1fr] gap-4">
@@ -1801,7 +1795,10 @@
   <div
     id="layout-test-ecosystem-panel"
     role="tabpanel"
+    aria-labelledby="layout-test-ecosystem-tab"
     aria-hidden={to_string(@current_tab != "ecosystem")}
+    hidden={@current_tab != "ecosystem"}
+    data-swipe-panel
     class={["space-y-6", @current_tab != "ecosystem" && "hidden"]}
   >
     <section id="layout-test-cinder-collection-card" class="space-y-4">
@@ -2110,7 +2107,10 @@
             aria-valuenow={@showcase["ui_kit"]["progress"]}
             class="w-full h-2 rounded-full bg-primary overlay-dark overflow-hidden"
           >
-            <div class="h-full bg-brand" style={"width: #{@showcase["ui_kit"]["progress"]}%"}>
+            <div
+              class="h-full bg-brand transition-[width] duration-(--motion-duration) ease-(--motion-ease)"
+              style={"width: #{@showcase["ui_kit"]["progress"]}%"}
+            >
             </div>
           </div>
 
@@ -2121,10 +2121,10 @@
                 if index == String.to_integer(@showcase["ui_kit"]["step"]), do: "step"
               }
               class={[
-                "text-center text-sm pb-2 border-b-2",
+                "relative border-b-2 border-outline pb-2 text-center text-sm transition-colors duration-(--motion-duration) ease-(--motion-ease) after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:bg-brand after:transition-[scale] after:duration-(--motion-duration) after:ease-(--motion-ease)",
                 if(index <= String.to_integer(@showcase["ui_kit"]["step"]),
-                  do: "border-brand text-brand",
-                  else: "border-outline text-subcontent"
+                  do: "text-brand after:scale-x-100",
+                  else: "text-subcontent after:scale-x-0"
                 )
               ]}
             >
