@@ -1,4 +1,5 @@
 const colorForms = new WeakMap()
+let activeEyedropper
 
 const ColorInput = {
   mounted() {
@@ -35,14 +36,60 @@ const ColorInput = {
     this.onColorChanged = event => {
       if (event.target !== this.picker) return
       event.stopPropagation()
-      if (this.updatingPicker || !this.editable || this.input.matches(":disabled") || this.input.readOnly) return
+      if (this.updatingPicker) return
       const rgba = event.detail.value
       const alphaChanged = this.editingAlpha || rgba.a !== Math.round((this.state.rgba?.a ?? 1) * 100) / 100
-      this.revision++
-      this.error = ""
-      this.preview = {rgba, swatch: `rgb(${rgba.r} ${rgba.g} ${rgba.b} / ${rgba.a})`}
-      this.renderColor()
-      this.requestColor("pick", {rgba, alpha_changed: alphaChanged})
+      this.pickColor(rgba, alphaChanged)
+    }
+    this.onEyedropper = async event => {
+      const button = this.eyedropper
+      const input = this.input
+      if (!button || !event.composedPath().includes(button) || input.matches(":disabled") || input.readOnly) return
+      if (this.eyedropperSession) {
+        this.eyedropperSession.abort()
+        return
+      }
+
+      activeEyedropper?.abort()
+      const session = new AbortController()
+      this.eyedropperSession = activeEyedropper = session
+      const {signal} = session
+      const revision = this.revision
+      const value = input.value
+      this.eyedropperStatus.textContent = ""
+
+      try {
+        let rgba
+        if (typeof window.EyeDropper === "function") {
+          try {
+            const {sRGBHex} = await new window.EyeDropper().open({signal})
+            const rgb = Number.parseInt(sRGBHex.slice(1), 16)
+            rgba = {r: rgb >> 16, g: (rgb >> 8) & 255, b: rgb & 255, a: 1}
+          } catch (error) {
+            if (signal.aborted) return
+            if (error.name === "AbortError") {
+              // Chrome can expose the picker on Android versions that cannot open it.
+              const agent = navigator.userAgentData
+              if (agent?.platform !== "Android") return
+              const {platformVersion} = await agent.getHighEntropyValues(["platformVersion"]).catch(() => ({}))
+              if (!(Number.parseInt(platformVersion, 10) < 17)) return
+            }
+          }
+        }
+        if (!rgba && !signal.aborted) {
+          this.popover.hidePopover?.()
+          const {pickPageColor} = await import("./page_eyedropper")
+          if (!signal.aborted) rgba = await pickPageColor(button, signal)
+        }
+        if (rgba && !signal.aborted && this.input === input && this.revision === revision && input.value === value) {
+          this.pickColor(rgba, true)
+        }
+      } catch {
+        if (!signal.aborted) this.eyedropperStatus.textContent = "The page color could not be read. Try again."
+      } finally {
+        this.eyedropperSession = null
+        if (activeEyedropper === session) activeEyedropper = null
+      }
     }
     this.onInteraction = event => {
       const path = event.composedPath()
@@ -108,6 +155,7 @@ const ColorInput = {
     this.el.addEventListener("change", this.onInput)
     this.el.addEventListener("change", this.onSpaceSelection, true)
     this.el.addEventListener("color-changed", this.onColorChanged)
+    this.el.addEventListener("click", this.onEyedropper)
     this.el.addEventListener("blur", this.onBlur, true)
     this.el.addEventListener("mousedown", this.onInteraction, true)
     this.el.addEventListener("touchstart", this.onInteraction, true)
@@ -122,8 +170,13 @@ const ColorInput = {
     this.synchronize()
   },
 
+  disconnected() {
+    this.eyedropperSession?.abort()
+  },
+
   destroyed() {
     this.destroyedInput = true
+    this.eyedropperSession?.abort()
     this.pending?.resolve(null)
     this.pending = null
     if (this.liveSocket?.isConnected()) this.pushEvent("color_input", {id: this.el.id, selector_id: this.el.dataset.colorSpaceId, operation: "release"}, () => {})
@@ -132,6 +185,7 @@ const ColorInput = {
     this.el.removeEventListener("change", this.onInput)
     this.el.removeEventListener("change", this.onSpaceSelection, true)
     this.el.removeEventListener("color-changed", this.onColorChanged)
+    this.el.removeEventListener("click", this.onEyedropper)
     this.el.removeEventListener("blur", this.onBlur, true)
     this.el.removeEventListener("mousedown", this.onInteraction, true)
     this.el.removeEventListener("touchstart", this.onInteraction, true)
@@ -152,7 +206,12 @@ const ColorInput = {
 
   synchronize() {
     this.editable = this.el.dataset.colorEditable === "true"
+    const previousInput = this.input
     this.input = this.el.querySelector("[data-color-value]")
+    const eyedropper = this.el.querySelector("[data-color-eyedropper]")
+    if (this.eyedropperSession && (eyedropper !== this.eyedropper || this.input !== previousInput)) this.eyedropperSession.abort()
+    this.eyedropper = eyedropper
+    this.eyedropperStatus = this.el.querySelector("[data-color-eyedropper-status]")
     this.picker = this.el.querySelector("[data-color-picker]")
     if (this.picker && !customElements.get("rgba-color-picker") && !this.pickerLoading) {
       this.pickerLoading = import("vanilla-colorful/rgba-color-picker.js").then(() => {
@@ -259,6 +318,15 @@ const ColorInput = {
     this.renderColor()
   },
 
+  pickColor(rgba, alphaChanged) {
+    if (!this.editable || this.input.matches(":disabled") || this.input.readOnly) return
+    this.revision++
+    this.error = ""
+    this.preview = {rgba, swatch: `rgb(${rgba.r} ${rgba.g} ${rgba.b} / ${rgba.a})`}
+    this.renderColor()
+    this.requestColor("pick", {rgba, alpha_changed: alphaChanged})
+  },
+
   requestColor(operation, detail = {}) {
     if (!this.editable || this.input.matches(":disabled") || this.input.readOnly) return Promise.resolve(null)
     const input = this.input
@@ -342,10 +410,14 @@ const ColorInput = {
 
     const unavailable = this.input.disabled || this.input.readOnly
     this.trigger.disabled = unavailable
+    this.eyedropper.disabled = unavailable
     this.spaceText.disabled = unavailable
     this.spaceInput.disabled = unavailable
     this.spaceTrigger.disabled = unavailable
-    if ((this.input.matches(":disabled") || this.input.readOnly) && this.popover.matches(":popover-open")) this.popover.hidePopover()
+    if (this.input.matches(":disabled") || this.input.readOnly) {
+      this.eyedropperSession?.abort()
+      if (this.popover.matches(":popover-open")) this.popover.hidePopover()
+    }
     if (preview?.rgba) {
       this.updatingPicker = true
       this.picker.color = preview.rgba

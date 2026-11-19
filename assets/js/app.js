@@ -22,6 +22,7 @@ import PetalComboBox from "./combo_box"
 import {hooks as colocatedHooks} from "phoenix-colocated/elixirbits"
 import FlashAutoDismiss from "./flash_auto_dismiss"
 import VCalendar from "./vcalendar"
+import PopoverPlacement from "./popover_placement"
 import TelInput from "./tel_input"
 import initTooltips from "./tooltip"
 import PasswordVisibility from "./password_visibility"
@@ -41,7 +42,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
     _csrf_token: csrfToken,
     user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }),
-  hooks: {...colocatedHooks, PetalComboBox, FlashAutoDismiss, VCalendar, TelInput, PasswordVisibility, LiveTimer, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput, CinderPagination},
+  hooks: {...colocatedHooks, PetalComboBox, FlashAutoDismiss, VCalendar, PopoverPlacement, TelInput, PasswordVisibility, LiveTimer, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput, CinderPagination},
 })
 
 // Show progress bar on live navigation and form submits

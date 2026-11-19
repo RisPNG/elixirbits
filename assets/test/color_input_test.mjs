@@ -4,9 +4,10 @@ import {readFile} from "node:fs/promises"
 
 const source = (await readFile(new URL("../js/color_input.js", import.meta.url), "utf8"))
   .replace('import("vanilla-colorful/rgba-color-picker.js")', "globalThis.colorInputTestLoad()")
+  .replace('import("./page_eyedropper")', "globalThis.pageEyedropperTestLoad()")
 const ColorInput = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)).default
 
-const originalGlobals = Object.fromEntries(["document", "customElements", "colorInputTestLoad"].map(name => [name, globalThis[name]]))
+const originalGlobals = Object.fromEntries(["document", "customElements", "colorInputTestLoad", "pageEyedropperTestLoad", "window"].map(name => [name, globalThis[name]]))
 const fields = new Set()
 let fieldId = 0
 
@@ -128,11 +129,13 @@ function openInput(state = nativeColor(), options = {}) {
   wrapper.dataset.colorSpaceId = `${wrapper.id}_color_space_select`
   wrapper.dataset.colorState = JSON.stringify(state)
   wrapper.parentElement = root
-  const controls = Object.fromEntries(["input", "picker", "trigger", "popover", "swatch", "format", "error", "spaceInput", "spaceText", "spaceTrigger", "spaceLabel", "spaceSelect", "option"].map(name => [name, new Element()]))
+  const controls = Object.fromEntries(["input", "picker", "trigger", "eyedropper", "eyedropperStatus", "popover", "swatch", "format", "error", "spaceInput", "spaceText", "spaceTrigger", "spaceLabel", "spaceSelect", "option"].map(name => [name, new Element()]))
   const selectors = {
     "[data-color-value]": "input",
     "[data-color-picker]": "picker",
     "[data-color-trigger]": "trigger",
+    "[data-color-eyedropper]": "eyedropper",
+    "[data-color-eyedropper-status]": "eyedropperStatus",
     "[data-color-popover]": "popover",
     "[data-color-swatch]": "swatch",
     "[data-color-format]": "format",
@@ -156,7 +159,7 @@ function openInput(state = nativeColor(), options = {}) {
   controls.spaceSelect.querySelector = selector => selector === "input[type=text]" ? controls.spaceText : selector === "[data-pc-combo-trigger]" ? controls.spaceTrigger : null
   wrapper.querySelector = selector => {
     const control = selectors[selector]
-    if ((wrapper.dataset.colorEditable === "false" && ["picker", "trigger", "popover", "spaceInput", "spaceSelect"].includes(control)) || (wrapper.dataset.colorEditable !== "false" && control === "format")) return null
+    if ((wrapper.dataset.colorEditable === "false" && ["picker", "trigger", "eyedropper", "eyedropperStatus", "popover", "spaceInput", "spaceSelect"].includes(control)) || (wrapper.dataset.colorEditable !== "false" && control === "format")) return null
     return controls[control]
   }
   const requests = []
@@ -202,6 +205,11 @@ function openInput(state = nativeColor(), options = {}) {
       }
       controls.picker.dispatchEvent(new CustomEvent("color-changed", {bubbles: true, detail: {value}}))
     },
+    sample() {
+      const event = new Event("click", {bubbles: true})
+      Object.defineProperty(event, "composedPath", {value: () => [controls.eyedropper, wrapper]})
+      controls.eyedropper.dispatchEvent(event)
+    },
     open() { controls.popover.showPopover() },
     submit(submitter) {
       const event = Object.assign(new Event("submit", {bubbles: true, cancelable: true}), {submitter})
@@ -217,6 +225,83 @@ function openInput(state = nativeColor(), options = {}) {
 async function finishReplies() {
   await new Promise(resolve => setImmediate(resolve))
 }
+
+test("the native eyedropper opens on the button click and commits an opaque color in the selected format", async () => {
+  let select
+  globalThis.window = {EyeDropper: class {
+    open() { return new Promise(resolve => { select = resolve }) }
+  }}
+  const field = openInput(nativeColor("oklch(0.6 0.1 35 / 0.5)", "oklch", {rgba: {r: 181, g: 105, b: 84, a: .5}}))
+
+  field.sample()
+  select({sRGBHex: "#123456"})
+  await finishReplies()
+  const {operation, format, rgba, alpha_changed} = field.requests[0].payload
+  assert.deepEqual({operation, format, rgba, alpha_changed}, {
+    operation: "pick", format: "oklch", rgba: {r: 18, g: 52, b: 86, a: 1}, alpha_changed: true,
+  })
+})
+
+test("the page sampler uses the shared pick path and clears obsolete sampling results", async () => {
+  globalThis.window = {}
+  let select
+  globalThis.pageEyedropperTestLoad = async () => ({pickPageColor: () => new Promise(resolve => { select = resolve })})
+  const field = openInput(nativeColor("rgb(201 130 43)", "rgb"))
+
+  field.sample()
+  await finishReplies()
+  select({r: 18, g: 52, b: 86, a: 1})
+  await finishReplies()
+  assert.equal(field.requests[0].payload.operation, "pick")
+  assert.equal(field.requests[0].payload.format, "rgb")
+  assert.equal(field.requests[0].payload.alpha_changed, true)
+
+  field.sample()
+  await finishReplies()
+  field.clear()
+  select({r: 24, g: 68, b: 102, a: 1})
+  await finishReplies()
+  assert.deepEqual(field.requests.map(({payload}) => payload.operation), ["pick", "clear"])
+})
+
+test("a canceled native selection does not sample the page or change the field", async () => {
+  globalThis.window = {EyeDropper: class {
+    async open() { throw new DOMException("Canceled", "AbortError") }
+  }}
+  let pageOpened = false
+  globalThis.pageEyedropperTestLoad = async () => {
+    pageOpened = true
+    return {pickPageColor: async () => null}
+  }
+  const field = openInput()
+
+  field.sample()
+  await finishReplies()
+  assert.equal(pageOpened, false)
+  assert.equal(field.requests.length, 0)
+  assert.equal(field.controls.eyedropperStatus.textContent, "")
+})
+
+test("an exposed native picker that cannot open on older Android uses page sampling", async t => {
+  const original = Object.getOwnPropertyDescriptor(navigator, "userAgentData")
+  Object.defineProperty(navigator, "userAgentData", {configurable: true, value: {
+    platform: "Android",
+    async getHighEntropyValues() { return {platformVersion: "16.0.0"} },
+  }})
+  t.after(() => {
+    if (original) Object.defineProperty(navigator, "userAgentData", original)
+    else delete navigator.userAgentData
+  })
+  globalThis.window = {EyeDropper: class {
+    async open() { throw new DOMException("Canceled", "AbortError") }
+  }}
+  globalThis.pageEyedropperTestLoad = async () => ({pickPageColor: async () => ({r: 18, g: 52, b: 86, a: 1})})
+  const field = openInput()
+
+  field.sample()
+  await finishReplies()
+  assert.deepEqual(field.requests[0].payload.rgba, {r: 18, g: 52, b: 86, a: 1})
+})
 
 test("native rendered metadata opens unchanged without browser parsing or server requests", () => {
   const state = nativeColor("  OKLCH(65% .14 65 / .375)  ", "oklch", {swatch: "rgb(201 130 43 / .375)", rgba: {r: 201, g: 130, b: 43, a: .375}})
