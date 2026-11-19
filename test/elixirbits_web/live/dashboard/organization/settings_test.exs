@@ -231,6 +231,7 @@ defmodule ElixirbitsWeb.Dashboard.OrganizationLive.SettingsTest do
     conn = grant(conn, 7)
     {:ok, view, _html} = live(conn, ~p"/dashboard/admin/organization/update")
     render_click(view, "add_form", %{})
+    assert_push_event(view, "resize-entry", %{id: "form_addresses", index: 0, type: "grow"})
     render_click(view, "add_form", %{})
 
     for {index, number} <- [{0, 1}, {1, 2}] do
@@ -262,6 +263,7 @@ defmodule ElixirbitsWeb.Dashboard.OrganizationLive.SettingsTest do
     |> element("button[phx-click=remove_form][phx-value-path='form[addresses][1]']")
     |> render_click()
 
+    assert_push_event(view, "resize-entry", %{id: "form_addresses", index: 1, type: "shrink"})
     assert has_element?(view, "input[name='address_position[0]'][value='1'][max='1']")
     render_click(view, "add_form", %{})
     assert has_element?(view, "input[name='address_position[1]'][value='2'][max='2']")

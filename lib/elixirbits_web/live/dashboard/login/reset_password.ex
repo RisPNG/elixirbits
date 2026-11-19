@@ -5,6 +5,8 @@ defmodule ElixirbitsWeb.Dashboard.LoginLive.ResetPassword do
   alias Elixirbits.Accounts.User
   alias Elixirbits.CoreUtils.Resource
 
+  on_mount {ElixirbitsWeb.LiveUserAuth, :live_no_user}
+
   @impl true
   def mount(%{"token" => token}, _session, socket) do
     strategy = Info.strategy!(User, :password)

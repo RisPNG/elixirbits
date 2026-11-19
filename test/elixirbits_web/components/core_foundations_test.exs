@@ -216,6 +216,11 @@ defmodule ElixirbitsWeb.CoreFoundationsTest do
     assert Floki.find(document, "#account-roles-trigger [data-pc-combo-trigger-label]")
            |> Floki.text() =~ "2 selected"
 
+    assert Floki.attribute(document, "[data-selection-pills] button", "aria-label") == [
+             "Remove Editor",
+             "Remove Viewer"
+           ]
+
     assert Floki.find(document, "#account-roles-select optgroup[label=Available]") != []
     assert Floki.find(document, "#account-roles-select option[value=blocked][disabled]") != []
 
@@ -325,6 +330,11 @@ defmodule ElixirbitsWeb.CoreFoundationsTest do
     assert length(Floki.find(document, "#account-roles-select option[selected]")) == 2
     assert Floki.find(document, "#account-roles-select optgroup[label=Available]") != []
     assert Floki.find(document, "#account-roles-select option[value=blocked][disabled]") != []
+
+    assert Floki.attribute(document, "[data-selection-pills] button", "aria-label") == [
+             "Remove Editor",
+             "Remove Viewer"
+           ]
 
     assert Floki.find(
              document,

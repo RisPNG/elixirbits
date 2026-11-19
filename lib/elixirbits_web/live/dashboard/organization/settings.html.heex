@@ -120,12 +120,13 @@
               action={:create}
               type="button"
               phx-click="add_form"
+              phx-value-field="addresses"
               tooltip="Add"
             />
           </:actions>
         </.header>
 
-        <div class="grid grid-cols-[1fr_1fr] gap-y-4">
+        <div id={@form[:addresses].id} class="grid grid-cols-[1fr_1fr] gap-y-4">
           <.inputs_for :let={af} field={@form[:addresses]}>
             <% recorded_fields =
               af.source.data && Ash.Resource.get_metadata(af.source.data, :audit_recorded_fields)
@@ -144,7 +145,7 @@
                 true ->
                   af[:sequence].value
               end %>
-            <.entry_panel label="Address" index={af.index} columns={2}>
+            <.entry_panel id={"#{af.id}-panel"} label="Address" index={af.index} columns={2}>
               <:sequence>
                 <.input
                   field={af[:sequence]}
@@ -155,6 +156,7 @@
                   min={1}
                   max={length(@form.source.forms[:addresses] || [])}
                   step={1}
+                  clear_button={false}
                   disabled={!editable?}
                   aria-label={"Address #{position || "nil"} sequence"}
                   phx-debounce={nil}

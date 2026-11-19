@@ -45,11 +45,15 @@ defmodule ElixirbitsWeb do
     end
   end
 
-  def live_view do
+  def live_view(opts \\ []) do
     quote do
       use Phoenix.LiveView
       import Phoenix.LiveView, except: [put_flash: 3]
       import ElixirbitsWeb.CoreComponents.Flash, only: [put_flash: 3]
+
+      if unquote(Keyword.get(opts, :dashboard, false)) do
+        on_mount {ElixirbitsWeb.LiveUserAuth, :app_nav}
+      end
 
       on_mount {ElixirbitsWeb.LiveUserAuth, :timezone}
       on_mount {ElixirbitsWeb.CoreComponents, :inputs}
@@ -114,6 +118,8 @@ defmodule ElixirbitsWeb do
   @doc """
   When used, dispatch to the appropriate controller/live_view/etc.
   """
+  defmacro __using__(:dashboard_live_view), do: live_view(dashboard: true)
+
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end

@@ -1,5 +1,5 @@
 defmodule ElixirbitsWeb.Dashboard.RoleLive.Entry do
-  use ElixirbitsWeb, :live_view
+  use ElixirbitsWeb, :dashboard_live_view
 
   alias Elixirbits.AccessControl.Permissions
   alias Elixirbits.AccessControl.Role

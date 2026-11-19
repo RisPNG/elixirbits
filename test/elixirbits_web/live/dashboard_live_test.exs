@@ -1,6 +1,8 @@
 defmodule ElixirbitsWeb.DashboardLiveTest do
   use ElixirbitsWeb.ConnCase, async: true
 
+  import Phoenix.LiveViewTest
+
   test "dashboard renders inside the app layout", %{conn: conn} do
     conn = get(conn, ~p"/dashboard")
 
@@ -34,5 +36,22 @@ defmodule ElixirbitsWeb.DashboardLiveTest do
 
       assert Floki.text(Floki.find(document, "main")) =~ "Your account"
     end
+  end
+
+  test "guest navigation opens sign in and returns home through LiveView", %{conn: conn} do
+    {:ok, home, _html} = live(conn, ~p"/dashboard")
+
+    sign_in_link = home |> element("main a[href='/dashboard/sign-in']") |> render_click()
+    assert {:error, {:live_redirect, %{to: "/dashboard/sign-in"}}} = sign_in_link
+
+    {:ok, sign_in, _html} = follow_redirect(sign_in_link, conn, ~p"/dashboard/sign-in")
+    assert has_element?(sign_in, "#login-form")
+    refute has_element?(sign_in, "#app-navigation")
+
+    home_link = sign_in |> element("header a[href='/dashboard']") |> render_click()
+    assert {:error, {:live_redirect, %{to: "/dashboard"}}} = home_link
+
+    {:ok, home, _html} = follow_redirect(home_link, conn, ~p"/dashboard")
+    assert has_element?(home, "main a[href='/dashboard/sign-in']")
   end
 end

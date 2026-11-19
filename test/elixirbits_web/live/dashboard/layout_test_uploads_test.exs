@@ -138,6 +138,26 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
     assert has_element?(view, "#upload-editor-false[aria-pressed=true]")
   end
 
+  test "multiple files without previews count the saved and pending pills", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    render_click(element(view, "#upload-selection-multiple"))
+    render_click(element(view, "#showcase-uploads-preview"))
+    assert has_element?(view, "#layout-test-upload-input [data-file-name]", "1 selected")
+
+    upload =
+      file_input(view, "#layout-test-upload-form", :demo_files, [
+        %{name: "notes.txt", content: "Upload notes", type: "text/plain"}
+      ])
+
+    render_upload(upload, "notes.txt")
+    assert has_element?(view, "#layout-test-upload-input [data-file-name]", "2 selected")
+    assert has_element?(view, "#layout-test-upload-input [data-file-item]", "notes.txt")
+
+    render_click(element(view, "#layout-test-upload-input button[aria-label='Cancel notes.txt']"))
+    assert has_element?(view, "#layout-test-upload-input [data-file-name]", "1 selected")
+    refute has_element?(view, "#layout-test-upload-input [data-file-item]", "notes.txt")
+  end
+
   test "singles selection accepts one file at a time and keeps editing and cycling available", %{
     conn: conn
   } do

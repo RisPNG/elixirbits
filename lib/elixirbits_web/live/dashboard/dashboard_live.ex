@@ -1,5 +1,5 @@
 defmodule ElixirbitsWeb.DashboardLive do
-  use ElixirbitsWeb, :live_view
+  use ElixirbitsWeb, :dashboard_live_view
 
   @impl true
   def mount(_params, _session, socket) do

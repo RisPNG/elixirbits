@@ -16,6 +16,8 @@ defmodule ElixirbitsWeb.Layouts do
     timezone_options: [],
     path: nil,
     open?: false,
+    staged?: false,
+    active_codes: [],
     open_codes: []
   }
 
@@ -55,8 +57,10 @@ defmodule ElixirbitsWeb.Layouts do
   attr :entries, :list, required: true
   attr :by_parent, :map, required: true
   attr :open_codes, :list, required: true
+  attr :active_codes, :list, required: true
   attr :current_path, :string, default: nil
   attr :depth, :integer, required: true
+  attr :expanded, :boolean, required: true
 
   defp nav_branch(assigns) do
     dashboard_template(assign(assigns, :component, :nav_branch))
@@ -72,13 +76,14 @@ defmodule ElixirbitsWeb.Layouts do
   def theme_toggle(assigns) do
     ~H"""
     <div class={[
-      "inset-surface grid grid-cols-[2rem_2rem_2rem] items-center rounded-full p-1 text-subcontent",
+      "theme-toggle inset-surface relative grid grid-cols-[2rem_2rem_2rem] items-center rounded-full p-1 text-subcontent",
       @class
     ]}>
+      <span aria-hidden="true" class="theme-toggle-indicator bg-brand overlay-opacity-[0.14]"></span>
       <button
         type="button"
         aria-label="Use system theme"
-        class="grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand [:root:not([data-theme])_&]:bg-brand [:root:not([data-theme])_&]:overlay-opacity-[0.14] [:root:not([data-theme])_&]:text-content"
+        class="theme-toggle-button [:root:not([data-theme])_&]:text-content"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
       >
@@ -88,7 +93,7 @@ defmodule ElixirbitsWeb.Layouts do
       <button
         type="button"
         aria-label="Use light theme"
-        class="grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand [[data-theme=light]_&]:bg-brand [[data-theme=light]_&]:overlay-opacity-[0.14] [[data-theme=light]_&]:text-content"
+        class="theme-toggle-button [[data-theme=light]_&]:text-content"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
       >
@@ -98,7 +103,7 @@ defmodule ElixirbitsWeb.Layouts do
       <button
         type="button"
         aria-label="Use dark theme"
-        class="grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand [[data-theme=dark]_&]:bg-brand [[data-theme=dark]_&]:overlay-opacity-[0.14] [[data-theme=dark]_&]:text-content"
+        class="theme-toggle-button [[data-theme=dark]_&]:text-content"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
       >

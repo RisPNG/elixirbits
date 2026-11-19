@@ -179,6 +179,36 @@ defmodule ElixirbitsWeb.CoreComponents do
     core_components_template(assign(assigns, :component, :collapse))
   end
 
+  @doc """
+  Renders a tab list with a sliding selection indicator. Pass tabs in display order and set `active` to the selected tab's value. Use `click` for an in-page change, or `navigate` or `patch` for a LiveView link. Use `controls` to associate a tab with the ID of its panel.
+
+      <.tabs id="report-tabs" label="Reports" active={@report}>
+        <:tab value="sales" click={JS.push("report", value: %{report: "sales"})}>Sales</:tab>
+        <:tab value="stock" click={JS.push("report", value: %{report: "stock"})}>Stock</:tab>
+      </.tabs>
+  """
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :active, :string, required: true
+  attr :class, :any, default: nil
+
+  slot :tab, required: true do
+    attr :value, :string, required: true
+    attr :id, :string
+    attr :controls, :string
+    attr :click, :any
+    attr :navigate, :string
+    attr :patch, :string
+  end
+
+  def tabs(assigns) do
+    assigns =
+      assign(assigns, :active_index, Enum.find_index(assigns.tab, &(&1.value == assigns.active)))
+
+    core_components_template(assign(assigns, :component, :tabs))
+  end
+
+  attr :id, :string, default: nil
   attr :label, :string, required: true
   attr :index, :integer, required: true
   attr :columns, :integer, default: 1, values: [1, 2]
@@ -622,7 +652,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   This function accepts all HTML input types, considering that:
 
-    * `type="select"` renders a selection trigger with search inside its popup. Multiple choices show their selected count in the trigger.
+    * `type="select"` renders a selection trigger with search inside its popup. Multiple choices show their selected count in the trigger and the selected choices below it as pills.
 
     * `type="combobox"` shares the selection trigger and can offer new choices when `allow_custom` is `true`.
 
@@ -651,7 +681,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   ## File type
 
-  File fields keep picked files in the browser until submission. Pass `upload` for LiveView uploads and give `stored` the URLs already held on the record, wrapping a single-file value in a list. `selection` accepts `"single"` for one replacement, `"singles"` for a collection picked one file at a time, or `"multiple"` for a collection picked together. Without `selection`, LiveView's `max_entries` or a native multipart field's `multiple` determines the mode. The real upload configuration's `max_entries` remains the queue capacity; `"single"` requires `max_entries: 1`. Picking a single replacement hides the stored preview until the replacement is canceled or saved. With previews enabled, `"singles"` displays the file count in the picker and one preview with controls inside it to browse the collection; thumbnail filenames appear in the top-left corner on hover or keyboard focus, and the current position appears in the bottom-right corner on hover. Without previews, `"single"` and `"singles"` show the filename inside the input; `"singles"` also shows the current position and stacked navigation arrows.
+  File fields keep picked files in the browser until submission. Pass `upload` for LiveView uploads and give `stored` the URLs already held on the record, wrapping a single-file value in a list. `selection` accepts `"single"` for one replacement, `"singles"` for a collection picked one file at a time, or `"multiple"` for a collection picked together. Without `selection`, LiveView's `max_entries` or a native multipart field's `multiple` determines the mode. The real upload configuration's `max_entries` remains the queue capacity; `"single"` requires `max_entries: 1`. Picking a single replacement hides the stored preview until the replacement is canceled or saved. With previews enabled, `"singles"` displays the file count in the picker and one preview with controls inside it to browse the collection; thumbnail filenames appear in the top-left corner on hover or keyboard focus, and the current position appears in the bottom-right corner on hover. Without previews, `"single"` and `"singles"` show the filename inside the input, `"singles"` also shows the current position and stacked navigation arrows, and `"multiple"` shows the selected count.
 
   `preview` defaults to `false`, which shows filenames. Setting it to `true` supplies image previews and the browser's native PDF viewer. The `stored_preview` and `pending_preview` slots override media rendering for stored URLs and pending upload entries. `preview_as` defaults to `"thumbnail"` when previews are enabled and `"tag"` otherwise. Explicit `"tag"` hides the media and shows its filename chip; `"thumbnail"` supplies the media frame and corner clear button. Single and singles thumbnail filenames appear inside the top-left corner on hover or keyboard focus, while multiple thumbnail filenames stay below the frame. Both layouts reveal the clear button on hover or keyboard focus. Use `thumbnail_class` to size the displayed frame, and `preview_caption` or `pending_caption` to override filenames.
 
@@ -1006,8 +1036,7 @@ defmodule ElixirbitsWeb.CoreComponents do
     placeholder = assigns.rest[:placeholder]
 
     file_inline =
-      (selection != "multiple" && (!assigns.preview || selection == "singles")) ||
-        placeholder not in [nil, ""]
+      !assigns.preview || selection == "singles" || placeholder not in [nil, ""]
 
     file_steps = selection == "singles" && !assigns.preview
     file_detached = assigns.preview_id != nil && selection != "multiple"
@@ -1079,6 +1108,7 @@ defmodule ElixirbitsWeb.CoreComponents do
       |> assign(:file_steps, file_steps)
       |> assign(:file_detached, file_detached)
       |> assign(:file_name, file_name)
+      |> assign(:file_selected_count, gettext("%{count} selected", count: file_count))
       |> assign(:file_caption, file_caption)
       |> assign(:file_caption_value, file_caption_value)
       |> assign(:file_position, "#{if(file_count > 0, do: 1, else: 0)}/#{file_count}")
@@ -1737,17 +1767,18 @@ defmodule ElixirbitsWeb.CoreComponents do
         assigns.options
       end
 
+    selected_choices =
+      value
+      |> List.wrap()
+      |> Enum.uniq()
+      |> Enum.map(&{to_string(&1), option_display_label(&1, options)})
+
     assigns =
       assigns
       |> assign(:options, options)
       |> assign(:value, value)
-      |> assign(
-        :selected_labels,
-        value
-        |> List.wrap()
-        |> Enum.uniq()
-        |> Enum.map(&option_display_label(&1, options))
-      )
+      |> assign(:selected_choices, selected_choices)
+      |> assign(:selected_labels, Enum.map(selected_choices, &elem(&1, 1)))
       |> assign(:text_look, text_look)
       |> assign(:picker_id, assigns.id || assigns.name)
       |> assign(
@@ -2048,7 +2079,48 @@ defmodule ElixirbitsWeb.CoreComponents do
     end
   end
 
-  # Color input events
+  # Form event hooks
+
+  def on_mount({:repeatable_form, fields}, _params, _session, socket) do
+    socket =
+      Phoenix.LiveView.attach_hook(socket, :repeatable_form, :handle_event, fn
+        "add_form", params, %{assigns: %{form: form}} = socket ->
+          field =
+            case {params, fields} do
+              {%{"field" => name}, _} -> Enum.find(fields, &(to_string(&1) == name))
+              {_, [field]} -> field
+              _ -> nil
+            end
+
+          if field do
+            updated_form = AshPhoenix.Form.add_form(form, [field])
+            index = length(updated_form.source.forms[field]) - 1
+
+            {:halt, update_repeatable_entries(socket, updated_form, field, index, "grow")}
+          else
+            {:cont, socket}
+          end
+
+        "remove_form", %{"path" => path}, %{assigns: %{form: form}} = socket ->
+          case AshPhoenix.Form.parse_path!(form, path) do
+            [field, index] = path when is_integer(index) ->
+              if field in fields do
+                updated_form = AshPhoenix.Form.remove_form(form, path)
+                {:halt, update_repeatable_entries(socket, updated_form, field, index, "shrink")}
+              else
+                {:cont, socket}
+              end
+
+            _ ->
+              {:cont, socket}
+          end
+
+        _event, _params, socket ->
+          {:cont, socket}
+      end)
+
+    {:cont, socket}
+  end
 
   def on_mount(:inputs, _params, _session, socket) do
     socket =
@@ -2145,6 +2217,16 @@ defmodule ElixirbitsWeb.CoreComponents do
       end)
 
     {:cont, socket}
+  end
+
+  defp update_repeatable_entries(socket, form, field, index, type) do
+    socket
+    |> assign(:form, form)
+    |> Phoenix.LiveView.push_event(
+      "resize-entry",
+      %{id: form[field].id, index: index, type: type},
+      dispatch: :before
+    )
   end
 
   # Validation messages
@@ -2349,6 +2431,8 @@ defmodule ElixirbitsWeb.CoreComponents do
   @doc """
   Renders day, week, month, year, schedule, and resource views for a list of events. Emits `calendar_change` for navigation (`%{"view" => v, "date" => d}`) and event selection (`%{"event" => id}`). The consumer handles both kinds of event.
 
+  To animate navigation, push `"swipe"` with `%{id: calendar_id, direction: "left" | "right"}` and `dispatch: :before` when the view or cursor changes. Compare views in display order when switching views, and compare dates when navigating within a view.
+
   Events are plain maps. Only these keys are read (extra keys are ignored, so the consumer can keep its own domain fields on the same map):
 
     * `id`: echoed back on selection
@@ -2415,6 +2499,7 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   # Navigation and view preparation
 
+  attr :id, :string, required: true
   attr :view, :atom, required: true
   attr :cursor, :any, required: true
   attr :today, :any, required: true
@@ -3089,7 +3174,7 @@ defmodule ElixirbitsWeb.CinderTheme do
   set :page_size_label_class, "text-subcontent text-sm"
 
   set :page_size_dropdown_class,
-      "input-native-select inline-grid! field-sizing-content border-0 bg-transparent p-0 text-sm text-brand leading-5 focus:outline-none focus:ring-0 focus-visible:underline"
+      "inline-grid! field-sizing-content border-0 bg-transparent p-0 text-sm text-brand leading-5 focus:outline-none focus:ring-0 focus-visible:underline"
 
   set :page_size_dropdown_container_class,
       "bg-surface border border-outline rounded-default shadow-lg"

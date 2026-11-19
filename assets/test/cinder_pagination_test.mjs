@@ -4,8 +4,9 @@ import {getEventListeners} from "node:events"
 import {readFile} from "node:fs/promises"
 
 const source = await readFile(new URL("../js/cinder_pagination.js", import.meta.url), "utf8")
-const CinderPagination = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)).default
-const originalGlobals = Object.fromEntries(["document", "MutationObserver"].map(name => [name, globalThis[name]]))
+const simulatedSource = source.replace(/^import ComboBox from [^\r\n]+/m, "const ComboBox = {}\nconst customElements = {define() {}}\nconst HTMLElement = class {}")
+const CinderPagination = (await import(`data:text/javascript;base64,${Buffer.from(simulatedSource).toString("base64")}`)).default
+const originalGlobals = Object.fromEntries(["document", "MutationObserver", "matchMedia", "getComputedStyle"].map(name => [name, globalThis[name]]))
 const fixtures = new Set()
 
 class TextNode {
@@ -29,6 +30,7 @@ class Element extends EventTarget {
     this.parentElement = null
     this.content = this.tagName === "TEMPLATE" ? new Element("fragment") : ""
     this.inputValue = ""
+    this.animations = []
     this.dataset = new Proxy({}, {
       get: (_target, key) => this.getAttribute(`data-${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`) ?? undefined,
       set: (_target, key, value) => { this.setAttribute(`data-${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`, value); return true },
@@ -79,8 +81,12 @@ class Element extends EventTarget {
     const exclusions = [...selector.matchAll(/:not\(([^)]+)\)/g)]
     if (exclusions.some(match => this.matches(match[1]))) return false
     selector = selector.replace(/:not\([^)]+\)/g, "")
-    const tag = selector.match(/^[a-z]+/i)?.[0]
+    const typeSelector = selector.split("[", 1)[0]
+    const tag = typeSelector.match(/^[a-z][\w-]*/i)?.[0]
     if (tag && this.tagName !== tag.toUpperCase()) return false
+    for (const [, className] of typeSelector.matchAll(/\.([\w-]+)/g)) {
+      if (!this.classList.contains(className)) return false
+    }
     for (const [, name, value] of selector.matchAll(/\[([^=\]]+)(?:=["']?([^\]"']+)["']?)?\]/g)) {
       if (!this.hasAttribute(name) || (value !== undefined && this.getAttribute(name) !== value)) return false
     }
@@ -91,6 +97,15 @@ class Element extends EventTarget {
     return this.children.flatMap(child => [child, ...child.querySelectorAll("*")]).filter(child => child.matches(selector))
   }
   querySelector(selector) { return this.querySelectorAll(selector)[0] ?? null }
+  closest(selector) {
+    for (let element = this; element; element = element.parentElement) if (element.matches(selector)) return element
+    return null
+  }
+  animate(keyframes, options) {
+    const animation = {keyframes, options, cancelled: false, cancel() { this.cancelled = true }}
+    this.animations.push(animation)
+    return animation
+  }
   contains(node) {
     for (let element = node; element; element = element.parentElement) if (element === this) return true
     return false
@@ -175,6 +190,8 @@ globalThis.document = {
   querySelector(selector) { return this.head.querySelector(selector) || this.body.querySelector(selector) },
 }
 globalThis.document.activeElement = globalThis.document.body
+globalThis.matchMedia = () => ({matches: false})
+globalThis.getComputedStyle = () => ({getPropertyValue: property => ({"--motion-duration": "240ms", "--motion-ease": "ease"})[property]})
 globalThis.MutationObserver = class {
   constructor(callback) { this.callback = callback; this.observing = false }
   observe() { this.observing = true }
@@ -215,8 +232,6 @@ function openCollection(current = 1, maximum = 20, configuration = {}) {
       this.summaryTemplate?.remove()
       const template = new Element("template")
       template.dataset.cinderSummary = ""
-      template.dataset.cinderPageSizeConfig = JSON.stringify({selected_page_size: selected, default_page_size: pageSize, page_size_options: options, configurable: options.length > 1})
-      template.dataset.cinderPageSizeClass = "input-native-select text-brand"
       const summary = new Element()
       summary.dataset.key = "pagination_wrapper_class"
       summary.dataset.phxLoc = "11"
@@ -244,7 +259,41 @@ function openCollection(current = 1, maximum = 20, configuration = {}) {
       template.content.append(summary)
       root.prepend(template)
       this.summaryTemplate = template
+      this.configurePageSize(selected, options)
       if (context.observer) context.updated()
+    },
+    configurePageSize(selected, options) {
+      this.pageSizeOptions = options
+      this.pageSizeTemplate?.remove()
+      this.pageSizeTemplate = null
+      if (options.length <= 1) return
+      const template = new Element("template")
+      template.dataset.cinderPageSizeTemplate = ""
+      for (const position of ["top", "bottom"]) {
+        const picker = new Element("cinder-page-size")
+        picker.id = `${root.id}-${position}-page-size`
+        picker.dataset.cinderPageSize = position
+        const trigger = new Element("button")
+        trigger.id = `${picker.id}-trigger`
+        trigger.dataset.pcComboTrigger = ""
+        trigger.setAttribute("role", "combobox")
+        trigger.setAttribute("aria-label", "Entries per page")
+        trigger.textContent = selected
+        const select = new Element("select")
+        select.id = `${picker.id}-select`
+        select.className = "pc-combo-box__select"
+        for (const size of ["", ...options]) {
+          const option = new Element("option")
+          option.value = size
+          option.textContent = size
+          option.toggleAttribute("selected", size === selected)
+          select.append(option)
+        }
+        picker.append(trigger, select)
+        template.content.append(picker)
+      }
+      this.summaryTemplate.after(template)
+      this.pageSizeTemplate = template
     },
     patchResults(count, {layout = this.layout ?? "table", loading = false, error = false} = {}) {
       this.bottom?.remove()
@@ -264,6 +313,7 @@ function openCollection(current = 1, maximum = 20, configuration = {}) {
       } else for (let index = 0; index < count; index++) {
         const item = new Element(layout === "table" ? "tr" : "div")
         item.dataset.key = {table: "row_class", list: "list_item_class", grid: "grid_item_clickable_class"}[layout]
+        item.dataset.itemId = String(index + 1)
         item.textContent = `Record ${index + 1}`
         results.append(item)
       }
@@ -272,6 +322,7 @@ function openCollection(current = 1, maximum = 20, configuration = {}) {
       this.setLoading(loading)
     },
     patch(page, total = maximum, {pageSize = this.pageSize ?? 10, options = this.pageSizeOptions ?? [10, 25, 50, 100], count = total * pageSize} = {}) {
+      if (this.summaryTemplate?.isConnected && this.pageSizeOptions.join() !== options.join()) this.configurePageSize(pageSize, options)
       this.pageSize = pageSize
       this.pageSizeOptions = options
       this.bottom?.remove()
@@ -291,7 +342,6 @@ function openCollection(current = 1, maximum = 20, configuration = {}) {
       if (options.length > 1) {
         const trigger = new Element("button")
         trigger.dataset.key = "page_size_dropdown_class"
-        trigger.className = "input-native-select text-brand"
         trigger.textContent = this.pageSize
         const dropdown = new Element()
         dropdown.dataset.key = "page_size_dropdown_container_class"
@@ -359,10 +409,13 @@ function openCollection(current = 1, maximum = 20, configuration = {}) {
       return (position === "top" ? context.topPagination : context.summary || this.bottom).querySelector(`[data-cinder-pagination-gap=${side}]`)
     },
     pageSizeSelect(position = "bottom") {
-      return (position === "top" ? context.topPagination : context.summary || this.bottom)?.querySelector("[data-cinder-page-size]")
+      return (position === "top" ? context.topPagination : context.summary || this.bottom)?.querySelector("select.pc-combo-box__select")
+    },
+    pageSizeTrigger(position = "bottom") {
+      return (position === "top" ? context.topPagination : context.summary || this.bottom)?.querySelector("[data-pc-combo-trigger]")
     },
   }
-  if (configuration.paginationEnabled !== false) fixture.configureSummary(configuration.summary)
+  if (configuration.paginationEnabled !== false) fixture.configureSummary(configuration.summary ?? configuration)
   if (configuration.summary) {
     fixture.patchResults(configuration.summary.count ?? 7, configuration.summary)
   } else fixture.patch(current, maximum, configuration)
@@ -383,6 +436,11 @@ function pageButton(page, title, text, target = "17") {
   return button
 }
 
+function displayedCount(count) {
+  return count.childNodes.map(node => node.matches?.("[data-cinder-page-size-slot]") ?
+    node.querySelector("select").value : node.textContent).join("")
+}
+
 test("enabled collections show their count and inactive page marker in both bars", () => {
   for (const layout of ["table", "list", "grid"]) {
     for (const count of [10, 7, 0]) {
@@ -393,16 +451,15 @@ test("enabled collections show their count and inactive page marker in both bars
       for (const bar of [fixture.context.topPagination, fixture.context.summary]) {
         assert.ok(bar.isConnected)
         assert.match(bar.querySelector("[data-key=pagination_info_class]").textContent, /^Page 1 of 1/)
-        const select = bar.querySelector("[data-cinder-page-size]")
+        const select = bar.querySelector("select.pc-combo-box__select")
         const countInfo = bar.querySelector("[data-key=pagination_count_class]")
         assert.equal(select.value, "10")
-        assert.equal(select.getAttribute("phx-target"), "17")
-        assert.deepEqual(select.options.map(option => option.value), ["10", "25", "50", "100"])
-        assert.equal(countInfo.childNodes.map(node => node === select ? select.value : node.textContent).join(""), `(showing 10 of ${count})`)
+        assert.deepEqual(select.options.map(option => option.value), ["", "10", "25", "50", "100"])
+        assert.equal(displayedCount(countInfo), `(showing 10 of ${count})`)
         const current = bar.querySelector("[aria-current=page]")
         assert.equal(current.tagName, "SPAN")
         assert.equal(current.textContent, "1")
-        assert.equal(bar.querySelectorAll("button, input, [phx-click]").length, 0)
+        assert.equal(bar.querySelector("[data-key=pagination_nav_class]").querySelectorAll("button, input, [phx-click]").length, 0)
         for (const element of [bar, ...bar.querySelectorAll("*")]) {
           assert.equal(element.attributes.some(attribute => attribute.name.startsWith("data-phx-")), false)
         }
@@ -433,7 +490,6 @@ test("independent collections keep their own templates, presets, counts, and eve
   for (const position of ["top", "bottom"]) {
     assert.equal(first.pageSizeSelect(position).value, "25")
     assert.equal(second.pageSizeSelect(position).value, "100")
-    assert.equal(second.pageSizeSelect(position).getAttribute("phx-target"), "18")
   }
   assert.equal(first.context.summary.querySelector("[data-key=pagination_count_class]").childNodes.at(-1).textContent, " of 3)")
   assert.equal(second.context.summary.querySelector("[data-key=pagination_count_class]").childNodes.at(-1).textContent, " of 19)")
@@ -451,8 +507,8 @@ test("independent collections keep their own templates, presets, counts, and eve
   assert.equal(second.pageSizeSelect("top").value, "25")
   assert.deepEqual(second.requests, [{target: "18", event: "change_page_size", payload: {page_size: "25"}}])
   assert.equal(source.isEqualNode(originalSource), true)
-  assert.equal(JSON.parse(first.summaryTemplate.dataset.cinderPageSizeConfig).selected_page_size, 10)
-  assert.equal(JSON.parse(second.summaryTemplate.dataset.cinderPageSizeConfig).selected_page_size, 100)
+  assert.equal(first.pageSizeTemplate.content.querySelector("select").value, "10")
+  assert.equal(second.pageSizeTemplate.content.querySelector("select").value, "100")
 })
 
 test("disabled collections do not use a summary template outside their component", () => {
@@ -483,7 +539,7 @@ test("filtering between multiple pages and one page updates both summaries witho
     fixture.patchResults(count)
     for (const bar of [fixture.context.topPagination, fixture.context.summary]) {
       assert.equal(bar.querySelector("[data-key=pagination_count_class]").childNodes.at(-1).textContent, ` of ${count})`)
-      assert.equal(bar.querySelector("[data-cinder-page-size]").value, "10")
+      assert.equal(bar.querySelector("select.pc-combo-box__select").value, "10")
     }
   }
   const summary = fixture.context.summary
@@ -503,10 +559,10 @@ test("initial one-page summaries use the selected preset and fixed sizes remain 
     const fixture = openCollection(1, 1, {summary: {count: 7, selected}})
     const ids = []
     for (const position of ["top", "bottom"]) {
-      const select = fixture.pageSizeSelect(position)
-      assert.equal(select.value, String(selected))
-      assert.equal(select.getAttribute("aria-label"), "Entries per page")
-      ids.push(select.id)
+      const trigger = fixture.pageSizeTrigger(position)
+      assert.equal(fixture.pageSizeSelect(position).value, String(selected))
+      assert.equal(trigger.getAttribute("aria-label"), "Entries per page")
+      ids.push(trigger.id)
     }
     assert.equal(new Set(ids).size, 2)
   }
@@ -522,13 +578,13 @@ test("initial one-page summaries use the selected preset and fixed sizes remain 
 test("one-page selectors retain focus and values across unchanged updates and new result counts", () => {
   for (const position of ["top", "bottom"]) {
     const fixture = openCollection(1, 1, {summary: {count: 7, selected: 100}})
-    const select = fixture.pageSizeSelect(position)
-    select.focus()
+    const trigger = fixture.pageSizeTrigger(position)
+    trigger.focus()
     for (let update = 0; update < 3; update++) fixture.context.updated()
-    assert.equal(fixture.pageSizeSelect(position), select)
-    assert.equal(document.activeElement, select)
+    assert.equal(fixture.pageSizeTrigger(position), trigger)
+    assert.equal(document.activeElement, trigger)
     fixture.patchResults(3)
-    assert.equal(document.activeElement, fixture.pageSizeSelect(position))
+    assert.equal(document.activeElement, fixture.pageSizeTrigger(position))
     assert.equal(fixture.pageSizeSelect(position).value, "100")
     assert.equal(fixture.context.topPagination.querySelector("[data-key=pagination_count_class]").childNodes.at(-1).textContent, " of 3)")
     assert.deepEqual(fixture.requests, [])
@@ -540,7 +596,7 @@ test("summary template updates refresh both bars without losing preset focus or 
     for (const loading of [false, true]) {
       const fixture = openCollection(1, 1, {summary: {count: 7, selected: 100}})
       if (loading) fixture.setLoading(true)
-      fixture.pageSizeSelect(position).focus()
+      fixture.pageSizeTrigger(position).focus()
       const source = fixture.summaryTemplate.content.firstElementChild
       source.className = "summary-updated"
       const sourceInfo = source.querySelector("[data-key=pagination_info_class]")
@@ -548,7 +604,7 @@ test("summary template updates refresh both bars without losing preset focus or 
       sourceInfo.childNodes[0].textContent = "Results page 1 of 1"
       source.querySelector("[data-key=pagination_count_class]").textContent = "(displaying {start}-{count} from {count})"
       source.querySelector("[data-key=pagination_current_class]").className = "current-updated"
-      fixture.summaryTemplate.dataset.cinderPageSizeClass = "input-native-select preset-updated"
+      for (const picker of fixture.pageSizeTemplate.content.children) picker.className = "preset-updated"
       fixture.context.updated()
 
       for (const bar of [fixture.context.topPagination, fixture.context.summary]) {
@@ -556,23 +612,22 @@ test("summary template updates refresh both bars without losing preset focus or 
         assert.equal(bar.querySelector("[data-key=pagination_info_class]").className, "info-updated")
         assert.match(bar.querySelector("[data-key=pagination_info_class]").textContent, /^Results page 1 of 1/)
         const count = bar.querySelector("[data-key=pagination_count_class]")
-        const select = count.querySelector("[data-cinder-page-size]")
-        assert.equal(select.value, "100")
-        assert.equal(select.className, "input-native-select preset-updated")
-        assert.equal(count.childNodes.map(node => node === select ? select.value : node.textContent).join(""), "(displaying 100 from 7)")
+        assert.equal(count.querySelector("select.pc-combo-box__select").value, "100")
+        assert.equal(count.querySelector("[data-cinder-page-size]").className, "preset-updated")
+        assert.equal(displayedCount(count), "(displaying 100 from 7)")
         assert.equal(bar.querySelector("[data-key=pagination_current_class]").className, "current-updated")
         assert.equal(bar.querySelector("[data-cinder-loading]")?.textContent, loading ? "Loading..." : undefined)
       }
-      assert.equal(document.activeElement, fixture.pageSizeSelect(position))
+      assert.equal(document.activeElement, fixture.pageSizeTrigger(position))
       if (loading) assert.equal(fixture.loading.hidden, true)
 
-      fixture.summaryTemplate.dataset.cinderPageSizeClass = "input-native-select preset-refreshed"
+      for (const picker of fixture.pageSizeTemplate.content.children) picker.className = "preset-refreshed"
       fixture.context.updated()
       for (const bar of [fixture.context.topPagination, fixture.context.summary]) {
-        assert.equal(bar.querySelector("[data-cinder-page-size]").className, "input-native-select preset-refreshed")
-        assert.equal(bar.querySelector("[data-cinder-page-size]").value, "100")
+        assert.equal(bar.querySelector("[data-cinder-page-size]").className, "preset-refreshed")
+        assert.equal(bar.querySelector("select.pc-combo-box__select").value, "100")
       }
-      assert.equal(document.activeElement, fixture.pageSizeSelect(position))
+      assert.equal(document.activeElement, fixture.pageSizeTrigger(position))
       assert.deepEqual(fixture.requests, [])
     }
   }
@@ -585,13 +640,12 @@ test("replacing the collection or server page-size configuration resets the summ
   fixture.context.updated()
   for (const position of ["top", "bottom"]) {
     assert.equal(fixture.pageSizeSelect(position).value, "10")
-    assert.equal(fixture.pageSizeSelect(position).getAttribute("phx-target"), "18")
   }
   fixture.configureSummary({pageSize: 40, selected: 40, options: [10, 40, 80]})
   fixture.context.updated()
   for (const position of ["top", "bottom"]) {
     assert.equal(fixture.pageSizeSelect(position).value, "40")
-    assert.deepEqual(fixture.pageSizeSelect(position).options.map(option => option.value), ["10", "40", "80"])
+    assert.deepEqual(fixture.pageSizeSelect(position).options.map(option => option.value), ["", "10", "40", "80"])
   }
   fixture.configureSummary({pageSize: 100, options: []})
   fixture.context.updated()
@@ -609,18 +663,18 @@ test("either page-size selector can expand to one page and return to multiple pa
     const fixture = openCollection(1, 2, {count: 19})
     fixture.configureSummary()
     const select = fixture.pageSizeSelect(position)
-    select.focus()
+    fixture.pageSizeTrigger(position).focus()
     select.value = "100"
     select.dispatchEvent(new Event("change", {bubbles: true}))
     fixture.patchResults(19)
     const bar = position === "top" ? fixture.context.topPagination : fixture.context.summary
     const replacement = fixture.pageSizeSelect(position)
-    assert.equal(document.activeElement, replacement)
+    assert.equal(document.activeElement, fixture.pageSizeTrigger(position))
     for (const summary of [fixture.context.topPagination, fixture.context.summary]) {
-      const summarySelect = summary.querySelector("[data-cinder-page-size]")
+      const summarySelect = summary.querySelector("select.pc-combo-box__select")
       const count = summary.querySelector("[data-key=pagination_count_class]")
       assert.equal(summarySelect.value, "100")
-      assert.equal(count.childNodes.map(node => node === summarySelect ? summarySelect.value : node.textContent).join(""), "(showing 100 of 19)")
+      assert.equal(displayedCount(count), "(showing 100 of 19)")
     }
     assert.equal(bar.querySelector("[aria-current=page]").tagName, "SPAN")
     replacement.value = "10"
@@ -629,7 +683,7 @@ test("either page-size selector can expand to one page and return to multiple pa
     assert.equal(fixture.context.summary, null)
     assert.equal(fixture.pageSizeSelect("top").value, "10")
     assert.equal(fixture.pageSizeSelect("bottom").value, "10")
-    assert.equal(document.activeElement, fixture.pageSizeSelect(position))
+    assert.equal(document.activeElement, fixture.pageSizeTrigger(position))
     assert.deepEqual(fixture.requests, [
       {target: "17", event: "change_page_size", payload: {page_size: "100"}},
       {target: "17", event: "change_page_size", payload: {page_size: "10"}},
@@ -677,7 +731,7 @@ test("initial loading waits for records and later loading preserves the last one
   assert.equal(fixture.loading.hidden, true)
   for (const bar of [fixture.context.topPagination, fixture.context.summary]) {
     assert.equal(bar.querySelector("[data-key=pagination_count_class]").childNodes.at(-1).textContent, " of 7)")
-    assert.equal(bar.querySelector("[data-cinder-page-size]").value, "100")
+    assert.equal(bar.querySelector("select.pc-combo-box__select").value, "100")
     assert.equal(bar.querySelector("[data-cinder-loading]").textContent, "Loading...")
   }
   fixture.patchResults(3)
@@ -742,13 +796,14 @@ test("both count summaries offer the configured page sizes with distinct accessi
     const bar = position === "top" ? fixture.context.topPagination : fixture.bottom
     const count = bar.querySelector("[data-key=pagination_count_class]")
     const select = fixture.pageSizeSelect(position)
-    assert.equal(select.tagName, "SELECT")
-    assert.deepEqual(select.options.map(option => option.value), ["10", "25", "50", "100"])
+    const trigger = fixture.pageSizeTrigger(position)
+    assert.equal(trigger.getAttribute("role"), "combobox")
+    assert.deepEqual(select.options.map(option => option.value), ["", "10", "25", "50", "100"])
     assert.equal(select.value, "10")
-    assert.ok(select.getAttribute("aria-label"))
-    assert.ok(select.id)
-    ids.push(select.id)
-    assert.equal(count.childNodes.map(node => node === select ? select.value : node.textContent).join(""), "(showing 10 of 200)")
+    assert.ok(trigger.getAttribute("aria-label"))
+    assert.ok(trigger.id)
+    ids.push(trigger.id)
+    assert.equal(displayedCount(count), "(showing 10 of 200)")
   }
   assert.equal(new Set(ids).size, ids.length)
   assert.equal(fixture.bottom.querySelector("[data-key=page_size_container_class]").hidden, true)
@@ -758,7 +813,7 @@ test("changing either count selector uses Cinder's page-size event without affec
   const fixture = openCollection()
   for (const [position, value] of [["top", "25"], ["bottom", "50"]]) {
     const select = fixture.pageSizeSelect(position)
-    select.focus()
+    fixture.pageSizeTrigger(position).focus()
     select.value = value
     const count = fixture.requests.length
     select.dispatchEvent(new Event("change", {bubbles: true}))
@@ -769,7 +824,9 @@ test("changing either count selector uses Cinder's page-size event without affec
     assert.equal(String(request.payload.page_size), value)
   }
   const count = fixture.requests.length
-  fixture.controls.dispatchEvent(new Event("change", {bubbles: true}))
+  const unrelatedSelect = new Element("select")
+  fixture.controls.append(unrelatedSelect)
+  unrelatedSelect.dispatchEvent(new Event("change", {bubbles: true}))
   assert.equal(fixture.requests.length, count)
 })
 
@@ -779,17 +836,17 @@ test("page-size patches update both summaries, available options, and focused se
     ["top", 25, 8, [10, 25, 50, 100]],
     ["bottom", 40, 5, [10, 40, 80]],
   ]) {
-    const previous = fixture.pageSizeSelect(position)
+    const previous = fixture.pageSizeTrigger(position)
     previous.focus()
     fixture.patch(1, total, {pageSize, options, count: 200})
-    const replacement = fixture.pageSizeSelect(position)
+    const replacement = fixture.pageSizeTrigger(position)
     assert.notEqual(replacement, previous)
     assert.equal(document.activeElement, replacement)
     for (const bar of [fixture.context.topPagination, fixture.bottom]) {
-      const select = bar.querySelector("[data-cinder-page-size]")
+      const select = bar.querySelector("select.pc-combo-box__select")
       assert.equal(select.value, String(pageSize))
-      assert.deepEqual(select.options.map(option => option.value), options.map(String))
-      assert.equal(bar.querySelector("[data-key=pagination_count_class]").childNodes.map(node => node === select ? select.value : node.textContent).join(""), `(showing ${pageSize} of 200)`)
+      assert.deepEqual(select.options.map(option => option.value), ["", ...options.map(String)])
+      assert.equal(displayedCount(bar.querySelector("[data-key=pagination_count_class]")), `(showing ${pageSize} of 200)`)
     }
     assert.deepEqual(fixture.requests, [])
   }
@@ -1011,6 +1068,50 @@ test("navigation arrows use centered icon elements and retain their accessible a
   }
 })
 
+test("numbered page buttons keep accessible labels without tooltips on both bars", () => {
+  const fixture = openCollection()
+  for (const page of [1, 10]) {
+    if (page !== 1) fixture.patch(page)
+    const expectedPage = page + 1
+    for (const bar of [fixture.context.topPagination, fixture.bottom]) {
+      const button = bar.querySelectorAll(`button[phx-value-page='${expectedPage}']`)
+        .find(button => button.textContent.trim() === String(expectedPage))
+      assert.ok(button)
+      assert.equal(button.getAttribute("aria-label"), `Go to page ${expectedPage}`)
+      assert.equal(button.hasAttribute("title"), false)
+    }
+  }
+})
+
+test("confirmed page navigation slides only table rows in the requested direction", () => {
+  const fixture = openCollection()
+  fixture.patchResults(10)
+  fixture.patch(1)
+  const header = new Element("thead")
+  header.dataset.key = "thead_class"
+  fixture.collection.prepend(header)
+
+  const next = fixture.context.topPagination.querySelector("button[title='Next page']")
+  next.firstElementChild.dispatchEvent(new Event("click", {bubbles: true}))
+  fixture.context.updated()
+  fixture.setLoading(true)
+  fixture.setLoading(false)
+  assert.deepEqual(fixture.results.animations, [])
+
+  fixture.patch(2)
+  assert.equal(fixture.results.animations.length, 1)
+  assert.equal(fixture.results.animations[0].keyframes[0].translate, "1.5rem")
+  assert.deepEqual(header.animations, [])
+
+  fixture.bottom.querySelector("button[title='Previous page']").dispatchEvent(new Event("click", {bubbles: true}))
+  fixture.patch(1)
+  assert.equal(fixture.results.animations.length, 2)
+  assert.equal(fixture.results.animations[0].cancelled, true)
+  assert.equal(fixture.results.animations[1].keyframes[0].translate, "-1.5rem")
+  fixture.patch(2)
+  assert.equal(fixture.results.animations.length, 2)
+})
+
 test("hiding pagination removes its top copy and destroying removes listeners and generated controls", () => {
   const fixture = openCollection()
   fixture.context.updated()
@@ -1025,6 +1126,6 @@ test("hiding pagination removes its top copy and destroying removes listeners an
   assert.equal(fixture.root.querySelectorAll("[data-cinder-page-size]").length, 0)
   assert.equal(fixture.bottom.querySelector("[data-key=pagination_count_class]").textContent, "(showing 1-10 of 200)")
   assert.equal(fixture.bottom.querySelector("[data-key=page_size_container_class]").hidden, false)
-  for (const name of ["focusin", "focusout", "keydown", "change"]) assert.equal(getEventListeners(fixture.root, name).length, 0)
+  for (const name of ["focusin", "focusout", "keydown", "change", "click"]) assert.equal(getEventListeners(fixture.root, name).length, 0)
   assert.equal(fixture.context.observer.observing, false)
 })

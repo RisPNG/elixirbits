@@ -536,8 +536,8 @@ test("automatic tooltips require actual clipping and preserve explicit descripti
     observe() {}
     disconnect() {}
   }
-  const hover = target => {
-    const move = event("mousemove", {clientX: 30, clientY: 50})
+  const hover = (target, clientX = 30, clientY = 50) => {
+    const move = event("mousemove", {clientX, clientY})
     Object.defineProperty(move, "target", {value: target})
     document.dispatchEvent(move)
   }
@@ -600,10 +600,151 @@ test("automatic tooltips require actual clipping and preserve explicit descripti
     assert.equal(tip.textContent, "Open details")
     assert.equal(describedButton.getAttribute("aria-describedby"), "elixirbits-tooltip")
     assert.equal(icon.getAttribute("aria-describedby"), null)
+    assert.equal(tip.style.left, "44px")
+    assert.equal(tip.style.top, "64px")
+    assert.equal(tip.style.transformOrigin, "left top")
+
+    hover(icon, 470, 488)
+    assert.equal(tip.style.left, "420px")
+    assert.equal(tip.style.top, "450px")
+    assert.equal(tip.style.transformOrigin, "right bottom")
+    assert.equal(describedButton.getAttribute("aria-describedby"), "elixirbits-tooltip")
 
     hover(tip)
     assert.equal(tip.hidden, true)
     dispose()
+  } finally {
+    Object.assign(globalThis, originals)
+  }
+})
+
+test("entry removal shrinks before moving survivors and applies later patches in order", async () => {
+  const originals = {document: globalThis.document, window: globalThis.window, getComputedStyle: globalThis.getComputedStyle}
+  const window = new EventTarget()
+  window.matchMedia = () => ({matches: false})
+  const slides = []
+  const heights = []
+  let animation = Promise.withResolvers()
+  let origin = {left: 40, top: 100, height: 425}
+  const panel = (name, index, top, height, left = 0) => {
+    const classes = new Set()
+    const bounds = {left: origin.left + left, top: origin.top + top, width: 400, height}
+    return {
+      dataset: {entryIndex: String(index)},
+      classes,
+      classList: {
+        add: (...tokens) => tokens.forEach(token => classes.add(token)),
+        remove: (...tokens) => tokens.forEach(token => classes.delete(token)),
+      },
+      getAnimations: () => [{finished: animation.promise}],
+      getClientRects: () => [bounds],
+      getBoundingClientRect: () => bounds,
+      animate(keyframes) {
+        slides.push({name, keyframes})
+        return {finished: Promise.resolve()}
+      },
+    }
+  }
+  let panels = [panel("A", 0, 0, 80), panel("B", 1, 100, 100), panel("C", 2, 220, 130), panel("D", 3, 370, 55)]
+  const form = {inert: false}
+  const group = {
+    closest(selector) {
+      assert.equal(selector, "form")
+      return form
+    },
+    querySelectorAll: () => panels,
+    getBoundingClientRect: () => origin,
+    animate(keyframes) {
+      heights.push(keyframes.map(frame => parseFloat(frame.minHeight)))
+      return {finished: Promise.resolve()}
+    },
+  }
+  globalThis.window = window
+  globalThis.getComputedStyle = () => ({getPropertyValue: property => ({"--motion-duration": "220ms", "--motion-ease": "ease-in-out"})[property]})
+  globalThis.document = {
+    documentElement: {},
+    getElementById(id) {
+      assert.equal(id, "form_addresses")
+      return group
+    },
+  }
+
+  try {
+    const initialize = await loadHook("view_motion")
+    const applyPatch = initialize()
+    const patches = []
+    const removeAddress = () => window.dispatchEvent(event("phx:resize-entry", {
+      detail: {id: "form_addresses", index: 1, type: "shrink"},
+    }))
+
+    const firstRemoved = panels[1]
+    removeAddress()
+    applyPatch(() => {
+      patches.push("first removal")
+      origin = {left: 60, top: 80, height: 305}
+      panels = [panel("A", 0, 0, 80), panel("C", 1, 100, 130), panel("D", 2, 250, 55)]
+    })
+    assert.equal(form.inert, true)
+    assert.ok(firstRemoved.classes.has("motion-shrink"))
+    assert.deepEqual(patches, [])
+    assert.deepEqual(slides, [])
+    assert.deepEqual(heights, [])
+
+    animation.resolve()
+    await new Promise(setImmediate)
+    assert.equal(form.inert, false)
+    assert.equal(firstRemoved.classes.size, 0)
+    assert.deepEqual(patches, ["first removal"])
+    assert.deepEqual(heights, [[425, 305]])
+    const translate = frame => frame.translate.split(/\s+/).map(parseFloat)
+    assert.deepEqual(slides.map(({name, keyframes}) => ({name, moves: keyframes.map(translate)})), [
+      {name: "C", moves: [[0, 120], [0, 0]]},
+      {name: "D", moves: [[0, 120], [0, 0]]},
+    ])
+
+    animation = Promise.withResolvers()
+    const secondRemoved = panels[1]
+    removeAddress()
+    applyPatch(() => {
+      patches.push("second removal")
+      origin = {...origin, height: 155}
+      panels = [panel("A", 0, 0, 80), panel("D", 1, 100, 55)]
+    })
+    applyPatch(() => patches.push("later patch"))
+    animation.resolve()
+    await new Promise(setImmediate)
+    assert.equal(form.inert, false)
+    assert.equal(secondRemoved.classes.size, 0)
+    assert.deepEqual(patches, ["first removal", "second removal", "later patch"])
+    assert.equal(slides.length, 2)
+    assert.deepEqual(heights, [[425, 305]])
+
+    animation = Promise.withResolvers()
+    origin = {...origin, height: 290}
+    panels = [panel("A", 0, 0, 100), panel("B", 1, 0, 150, 400), panel("C", 2, 170, 100), panel("D", 3, 170, 120, 400)]
+    removeAddress()
+    applyPatch(() => {
+      origin = {...origin, height: 240}
+      panels = [panel("A", 0, 0, 100), panel("C", 1, 0, 100, 400), panel("D", 2, 120, 120)]
+    })
+    animation.resolve()
+    await new Promise(setImmediate)
+    assert.equal(heights.length, 2)
+    assert.equal(heights[1][0], 290)
+    assert.equal(heights[1].at(-1), 240)
+    assert.deepEqual(slides.slice(2).map(({name, keyframes}) => ({
+      name,
+      from: translate(keyframes[0]),
+      to: translate(keyframes.at(-1)),
+    })), [
+      {name: "C", from: [-400, 170], to: [0, 0]},
+      {name: "D", from: [400, 50], to: [0, 0]},
+    ])
+    for (const {keyframes} of slides.slice(2)) {
+      assert.equal(keyframes[0].opacity, 1)
+      assert(keyframes.slice(1, -1).some(frame => frame.opacity === 0))
+      assert.equal(keyframes.at(-1).opacity, 1)
+    }
   } finally {
     Object.assign(globalThis, originals)
   }
@@ -659,6 +800,7 @@ test("ISO week input preserves year identity through boundaries and calendar nav
 
   try {
     const source = (await readFile(new URL("../js/vcalendar.js", import.meta.url), "utf8"))
+      .replace('"./popover_placement.js"', JSON.stringify(new URL("../js/popover_placement.js", import.meta.url).href))
       .replace('await import("vanilla-calendar-pro")',
         "await globalThis.vcalendarTestDependencies")
     const hook = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)).default
@@ -765,6 +907,7 @@ test("calendar loading uses the latest patch and leaves removed inputs uninitial
 
   try {
     const source = (await readFile(new URL("../js/vcalendar.js", import.meta.url), "utf8"))
+      .replace('"./popover_placement.js"', JSON.stringify(new URL("../js/popover_placement.js", import.meta.url).href))
       .replace('await import("vanilla-calendar-pro")', "await globalThis.vcalendarTestDependencies")
     const hook = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#loading`)).default
     const input = new Element()
@@ -869,6 +1012,7 @@ test("calendar patches refresh native selections and preserve edits when server 
 
   try {
     const source = (await readFile(new URL("../js/vcalendar.js", import.meta.url), "utf8"))
+      .replace('"./popover_placement.js"', JSON.stringify(new URL("../js/popover_placement.js", import.meta.url).href))
       .replace('await import("vanilla-calendar-pro")',
         "await globalThis.vcalendarTestDependencies")
     const hook = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#patches`)).default

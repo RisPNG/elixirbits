@@ -539,8 +539,9 @@ defmodule ElixirbitsWeb.Dashboard.AdminPagesTest do
     assert has_element?(view, "nav a[href='/dashboard/admin/users']")
     refute has_element?(view, "nav a[href='/dashboard/admin/roles']")
     render_click(view, "toggle_nav")
-    refute has_element?(view, "nav a[href='/dashboard/admin/users']")
+    assert has_element?(view, "[data-navigation=compact] nav a[href='/dashboard/admin/users']")
+    refute has_element?(view, "[data-navigation=compact] nav a[href='/dashboard/admin/roles']")
     render_click(view, "toggle_nav")
-    assert has_element?(view, "nav a[href='/dashboard/admin/users']")
+    assert has_element?(view, "[data-navigation=expanded] nav a[href='/dashboard/admin/users']")
   end
 end

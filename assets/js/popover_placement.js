@@ -1,13 +1,34 @@
-import {PetalPopover, flipDecision} from "../../deps/petal_components/assets/js/petal_components"
+import {PetalPopover, flipDecision} from "../../deps/petal_components/assets/js/petal_components.js"
+
+export const hasAnchorPositioning = globalThis.CSS?.supports?.("position-area", "block-end") !== false
+
+export function slidePopover(panel, fromTop) {
+  if (fromTop == null || !panel.animate) return
+
+  const style = getComputedStyle(panel)
+  const time = style.getPropertyValue("--motion-duration").trim()
+  const duration = parseFloat(time) * (time.endsWith("ms") ? 1 : 1000)
+  if (!duration) return
+
+  panel.getAnimations().find(animation => animation.id === "popover-slide")?.cancel()
+  const offset = fromTop - panel.getBoundingClientRect().top
+  if (!offset) return
+
+  const easing = style.getPropertyValue("--motion-ease").trim()
+  panel.animate([{translate: `0 ${offset}px`}, {translate: "0 0"}], {id: "popover-slide", duration, easing})
+}
 
 const PopoverPlacement = {
   ...PetalPopover,
 
   mounted() {
+    if (hasAnchorPositioning && this.el.hasAttribute("data-calendar-popover")) return
+
     this.onSource = event => {
       if (event.newState !== "open") return
       this.source = event.source
       this.el.style.visibility = ""
+      this.top = null
     }
     this.el.addEventListener("beforetoggle", this.onSource)
     PetalPopover.mounted.call(this)
@@ -20,6 +41,19 @@ const PopoverPlacement = {
     if (!anchor) return
 
     const control = anchor.getBoundingClientRect()
+    const wasFlipped = this.el.hasAttribute("data-flip")
+    const previousTop = this.top
+
+    if (hasAnchorPositioning) {
+      this.top = this.el.offsetTop
+      const flip = this.top < control.top
+      const fromTop = previousTop != null && flip !== wasFlipped ?
+        previousTop + this.el.getBoundingClientRect().top - this.top : null
+      this.el.toggleAttribute("data-flip", flip)
+      if (fromTop != null) slidePopover(this.el, fromTop)
+      return
+    }
+
     const viewport = this.viewport()
     const right = viewport.left + viewport.width
     const bottom = viewport.top + viewport.height
@@ -48,15 +82,20 @@ const PopoverPlacement = {
     const left = (preferred < min || preferred > max) && alternate >= min && alternate <= max ? alternate : preferred
 
     this.el.style.setProperty("--popover-room", `${Math.max(0, room)}px`)
+    const fromTop = previousTop != null && flip !== wasFlipped ? this.el.getBoundingClientRect().top : null
+    this.el.toggleAttribute("data-flip", flip)
     this.el.style.top = flip ? "auto" : `${control.bottom}px`
     this.el.style.bottom = flip ? `${this.el.ownerDocument.documentElement.clientHeight - control.top}px` : "auto"
     this.el.style.left = `${Math.max(min, Math.min(left, max))}px`
+    this.top = this.el.offsetTop
+    if (fromTop != null) slidePopover(this.el, fromTop)
   },
 
   destroyed() {
+    if (!this.onSource) return
     this.el.removeEventListener("beforetoggle", this.onSource)
     PetalPopover.destroyed.call(this)
   },
 }
 
-export default globalThis.CSS?.supports?.("position-area", "block-end") === false ? PopoverPlacement : {}
+export default PopoverPlacement

@@ -3,6 +3,20 @@ defmodule ElixirbitsWeb.Dashboard.LoginLive.IndexTest do
 
   import Phoenix.LiveViewTest
 
+  test "signed-in visitors are redirected from the guest-only authentication pages", %{conn: conn} do
+    conn = log_in_user(conn, create_user())
+
+    for path <- [
+          ~p"/dashboard/sign-in",
+          ~p"/dashboard/register",
+          ~p"/dashboard/reset",
+          ~p"/dashboard/password-reset/sample",
+          ~p"/dashboard/magic_link/sample"
+        ] do
+      assert {:error, {:redirect, %{to: "/dashboard"}}} = live(conn, path)
+    end
+  end
+
   test "renders the sign in form with key elements", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/dashboard/sign-in")
 

@@ -1,5 +1,5 @@
 defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
-  use ElixirbitsWeb, :live_view
+  use ElixirbitsWeb, :dashboard_live_view
 
   alias Elixirbits.Users.UserService
   alias Elixirbits.AccessControl.Permissions
@@ -14,6 +14,7 @@ defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/dashboard/admin/users"}}
   on_mount {History, Elixirbits.Accounts.User}
   on_mount {Deletion, :entry}
+  on_mount {ElixirbitsWeb.CoreComponents, {:repeatable_form, [:addresses]}}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -225,13 +226,5 @@ defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
 
   def handle_event("remove_upload", _params, socket) do
     {:noreply, assign(socket, :existing_display_pic, nil)}
-  end
-
-  def handle_event("add_form", %{"field" => "addresses"}, socket) do
-    {:noreply, assign(socket, :form, AshPhoenix.Form.add_form(socket.assigns.form, [:addresses]))}
-  end
-
-  def handle_event("remove_form", %{"path" => path}, socket) do
-    {:noreply, assign(socket, :form, AshPhoenix.Form.remove_form(socket.assigns.form, path))}
   end
 end

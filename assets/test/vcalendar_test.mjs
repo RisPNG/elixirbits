@@ -4,6 +4,7 @@ import {getEventListeners} from "node:events"
 import {readFile} from "node:fs/promises"
 
 const source = (await readFile(new URL("../js/vcalendar.js", import.meta.url), "utf8"))
+  .replace('"./popover_placement.js"', JSON.stringify(new URL("../js/popover_placement.js", import.meta.url).href))
   .replace('import("vanilla-calendar-pro")', "globalThis.calendarTestLoad()")
 const VCalendar = (await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)).default
 const originalGlobals = Object.fromEntries(["document", "HTMLElement", "MutationObserver", "calendarTestLoad", "window", "getComputedStyle"].map(name => [name, globalThis[name]]))
@@ -340,14 +341,16 @@ test("closing and destroying calendars remove reposition listeners and stop geom
   const field = openInput()
   await field.ready
   assert.equal(field.input.rectReads, 0)
+  Object.assign(field.input.rect, {top: 580, bottom: 624})
   field.input.dispatchEvent(new Event("click"))
   field.input.dispatchEvent(new Event("click"))
+  const closingHeight = field.popover.style.maxHeight
   for (const target of [browser, viewport]) for (const name of ["scroll", "resize"]) {
     assert.equal(getEventListeners(target, name).length, 1)
   }
   field.popover.hidePopover()
-  assert.equal(field.popover.style.maxHeight, "")
-  assert.equal(field.popover.hasAttribute("data-flip"), false)
+  assert.equal(field.popover.style.maxHeight, closingHeight)
+  assert.equal(field.popover.hasAttribute("data-flip"), true)
   for (const target of [browser, viewport]) for (const name of ["scroll", "resize"]) {
     assert.equal(getEventListeners(target, name).length, 0)
   }

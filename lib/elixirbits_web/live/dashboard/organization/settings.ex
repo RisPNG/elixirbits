@@ -1,5 +1,5 @@
 defmodule ElixirbitsWeb.Dashboard.OrganizationLive.Settings do
-  use ElixirbitsWeb, :live_view
+  use ElixirbitsWeb, :dashboard_live_view
 
   alias Elixirbits.CoreUtils.Options.AddressLabel
   alias Elixirbits.CoreUtils.Resource
@@ -9,6 +9,7 @@ defmodule ElixirbitsWeb.Dashboard.OrganizationLive.Settings do
 
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/dashboard/admin/organization"}}
   on_mount {History, Organization}
+  on_mount {ElixirbitsWeb.CoreComponents, {:repeatable_form, [:addresses]}}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -131,13 +132,5 @@ defmodule ElixirbitsWeb.Dashboard.OrganizationLive.Settings do
       {:error, form} ->
         {:noreply, assign(socket, :form, form)}
     end
-  end
-
-  def handle_event("add_form", _params, socket) do
-    {:noreply, assign(socket, :form, AshPhoenix.Form.add_form(socket.assigns.form, [:addresses]))}
-  end
-
-  def handle_event("remove_form", %{"path" => path}, socket) do
-    {:noreply, assign(socket, :form, AshPhoenix.Form.remove_form(socket.assigns.form, path))}
   end
 end

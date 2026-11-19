@@ -1,5 +1,5 @@
 defmodule ElixirbitsWeb.Dashboard.UserLive.Index do
-  use ElixirbitsWeb, :live_view
+  use ElixirbitsWeb, :dashboard_live_view
 
   alias Elixirbits.Accounts.User
   alias ElixirbitsWeb.Dashboard.UserLive.Deletion

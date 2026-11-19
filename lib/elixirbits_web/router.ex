@@ -53,11 +53,14 @@ defmodule ElixirbitsWeb.Router do
     pipe_through :browser
 
     ash_authentication_live_session :dashboard_routes,
-      on_mount: [
-        {ElixirbitsWeb.LiveUserAuth, :live_user_optional},
-        {ElixirbitsWeb.LiveUserAuth, :app_nav}
-      ] do
+      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
       live "/", DashboardLive, :index
+      live "/sign-in", Dashboard.LoginLive.Index, :sign_in
+      live "/register", Dashboard.LoginLive.Register, :register
+      live "/reset", Dashboard.LoginLive.ForgotPassword, :forgot_password
+      live "/password-reset/:token", Dashboard.LoginLive.ResetPassword, :reset_password
+      live "/magic_link/:token", Dashboard.LoginLive.MagicLink, :sign_in
+      live "/confirm_new_user/:token", Dashboard.LoginLive.Confirm, :confirm
 
       scope "/admin", Dashboard do
         live "/users", UserLive.Index, :index
@@ -79,20 +82,6 @@ defmodule ElixirbitsWeb.Router do
 
     auth_routes AuthController, Elixirbits.Accounts.User, path: "/auth"
     get "/sign-out", AuthController, :sign_out
-
-    ash_authentication_live_session :login_routes,
-      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_no_user}] do
-      live "/sign-in", Dashboard.LoginLive.Index, :sign_in
-      live "/register", Dashboard.LoginLive.Register, :register
-      live "/reset", Dashboard.LoginLive.ForgotPassword, :forgot_password
-      live "/password-reset/:token", Dashboard.LoginLive.ResetPassword, :reset_password
-      live "/magic_link/:token", Dashboard.LoginLive.MagicLink, :sign_in
-    end
-
-    ash_authentication_live_session :confirmation_routes,
-      on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
-      live "/confirm_new_user/:token", Dashboard.LoginLive.Confirm, :confirm
-    end
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

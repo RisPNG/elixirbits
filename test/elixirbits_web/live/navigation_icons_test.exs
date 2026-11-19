@@ -222,4 +222,52 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
 
     assert has_element?(view, "#app-navigation a[aria-label='Home'] .hero-slash")
   end
+
+  test "the compact rail keeps groups visible and sibling disclosures replace one another", %{
+    conn: conn
+  } do
+    for code <- ~w(TOOLS REPORTS) do
+      Ash.create!(
+        Sitenav,
+        %{code: code, name: code, level: 1, roles_bypass: ["public"]},
+        actor: @system
+      )
+
+      Ash.create!(
+        Sitenav,
+        %{
+          code: "#{code}-DETAILS",
+          name: "#{code} details",
+          parent: code,
+          level: 2,
+          url: "#{String.downcase(code)}/details",
+          roles_bypass: ["public"]
+        },
+        actor: @system
+      )
+    end
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+    view |> element("button[aria-controls=app-navigation]") |> render_click()
+    assert has_element?(view, "[data-navigation=compact] button[aria-label=TOOLS]")
+    assert has_element?(view, "[data-navigation=compact] button[aria-label=REPORTS]")
+
+    view |> element("button[aria-label=TOOLS]") |> render_click()
+
+    assert has_element?(
+             view,
+             "[data-navigation=expanded] button[aria-label=TOOLS][aria-expanded=true]"
+           )
+
+    assert has_element?(view, "#nav-TOOLS:not([inert]) a", "TOOLS details")
+
+    view |> element("button[aria-label=REPORTS]") |> render_click()
+    assert has_element?(view, "button[aria-label=TOOLS][aria-expanded=false]")
+    assert has_element?(view, "#nav-TOOLS[inert]")
+    assert has_element?(view, "#nav-REPORTS:not([inert]) a", "REPORTS details")
+
+    view |> element("button[aria-label=REPORTS]") |> render_click()
+    assert has_element?(view, "#nav-REPORTS[inert]")
+  end
 end
