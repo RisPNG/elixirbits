@@ -11,11 +11,11 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
       Sitenav,
       %{
         code: "LT",
-        name: "Layout Test",
+        name: "Design Standards",
         description: "Showcases most, if not all, front-end components.",
         level: 2,
         parent: "DP",
-        url: "dashboard/dev_panel/layout_test",
+        url: "dashboard/dev_panel/design_standards",
         sequence: 3000,
         state: :ENABLED
       },
@@ -24,8 +24,9 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
       actor: %{system: true}
     )
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
+    assert has_element?(view, "h1", "Design Standards")
     assert has_element?(view, "#layout-test-local-tab[aria-selected=\"true\"]")
     assert has_element?(view, "#layout-test-local-panel[aria-hidden=false]:not(.hidden)")
     assert has_element?(view, "#layout-test-form[novalidate]")
@@ -81,10 +82,107 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
     assert has_element?(view, "#layout-test-local-panel[aria-hidden=false]:not(.hidden)")
   end
 
+  test "compact component tabs keep their selections and the collection uses searchable cards", %{
+    conn: conn
+  } do
+    conn = put_connect_params(conn, %{"compact_layout" => true})
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
+
+    compact = "#layout-test-compact"
+    group_tabs = "#{compact}-groups"
+    local_tabs = "#{compact}-local-tabs"
+    ecosystem_tabs = "#{compact}-ecosystem-tabs"
+    collection = "#{compact}-collection-pagination"
+    controls = "#{collection} form[phx-change=filter_change]"
+    cards = "#{collection} .identity-grid article"
+    page_info = "#{collection} [data-key=pagination_info_class]"
+
+    assert has_element?(view, "#{compact} h1", "Design Standards")
+    assert has_element?(view, "#{group_tabs}-local[aria-selected=true]")
+    assert has_element?(view, "#{local_tabs}-inputs[aria-selected=true]")
+    assert has_element?(view, "#{compact}-inputs[role=tabpanel]:not([hidden])")
+    refute has_element?(view, "#layout-test-core-table")
+
+    view |> element("#{local_tabs}-dates") |> render_click()
+    assert has_element?(view, "#{compact}-dates[role=tabpanel]:not([hidden])")
+    refute has_element?(view, "#{compact}-inputs:not([hidden])")
+
+    view |> element("#{group_tabs}-ecosystem") |> render_click()
+    render_async(view)
+    assert has_element?(view, "#{ecosystem_tabs}-lists[aria-selected=true]")
+    assert has_element?(view, cards, "Core inputs example 001")
+    assert has_element?(view, page_info, "Page 1 of 12")
+    refute has_element?(view, "#{collection} table")
+    refute has_element?(view, "#cinder-layout-choices")
+
+    view |> element("#{collection} button[title='Next page']") |> render_click()
+    render_async(view)
+    assert has_element?(view, page_info, "Page 2 of 12")
+    refute has_element?(view, cards, "Core inputs example 001")
+
+    view |> form(controls, search: "EX004") |> render_change()
+    render_async(view)
+    assert has_element?(view, cards, "Calendar example 004")
+    refute has_element?(view, cards, "Core inputs example 001")
+
+    view |> element("#{ecosystem_tabs}-ui-kit") |> render_click()
+    assert has_element?(view, "#{compact}-ui-kit[role=tabpanel]:not([hidden])")
+
+    view |> element("#{group_tabs}-local") |> render_click()
+    assert has_element?(view, "#{local_tabs}-dates[aria-selected=true]")
+
+    view |> element("#{group_tabs}-ecosystem") |> render_click()
+    assert has_element?(view, "#{ecosystem_tabs}-ui-kit[aria-selected=true]")
+    view |> element("#{ecosystem_tabs}-lists") |> render_click()
+    render_async(view)
+    assert has_element?(view, "#{controls} input[name=search][value=EX004]")
+    assert has_element?(view, cards, "Calendar example 004")
+
+    view |> form(controls, search: "Timers example") |> render_change()
+    render_async(view)
+    assert has_element?(view, cards, "Timers example 005")
+    refute has_element?(view, cards, "Calendar example 004")
+
+    render_click(view, "dashboard_layout", %{"compact" => false})
+    render_async(view)
+    assert has_element?(view, "#layout-test-core-table")
+    assert has_element?(view, "#layout-test-ecosystem-tab[aria-selected=true]")
+    assert has_element?(view, "#layout-test-cinder-collection[data-layout=table] table")
+    refute has_element?(view, group_tabs)
+  end
+
+  test "compact Layout Test exposes the full showcase catalogue through component tabs", %{
+    conn: conn
+  } do
+    conn = put_connect_params(conn, %{"compact_layout" => true})
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
+
+    for {topic, specimen} <- [
+          {"appearance", "#layout-test-compact-colors [data-color-token]"},
+          {"calendar", "#calendar-showcase"},
+          {"icons", "#layout-test-icon-preview"},
+          {"controls", "#layout-test-compact-flash"},
+          {"data", "#layout-test-compact-table"}
+        ] do
+      view |> element("#layout-test-compact-local-tabs-#{topic}") |> render_click()
+      assert has_element?(view, "#layout-test-compact-#{topic}:not([hidden]) #{specimen}")
+    end
+
+    view |> element("#layout-test-compact-groups-ecosystem") |> render_click()
+    view |> element("#layout-test-compact-ecosystem-tabs-ui-kit") |> render_click()
+    assert has_element?(view, "#layout-test-compact-ui-kit:not([hidden]) progress")
+    view |> element("#layout-test-compact-ecosystem-tabs-pages") |> render_click()
+
+    assert has_element?(
+             view,
+             "#layout-test-compact-pages:not([hidden]) a[href='/api/json/scalar']"
+           )
+  end
+
   test "local color changes and submissions preserve the selected syntax and transparency", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for value <- [
           "#12345678",
@@ -123,7 +221,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "invalid color edits and forged submissions retain their text until corrected", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for value <- [
           "#12",
@@ -177,7 +275,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "color-space combobox offers native output formats and keeps form selections", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     selector_id = "local_accent_color_space_select"
 
     document = view |> render() |> Floki.parse_document!()
@@ -228,7 +326,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "pasted color syntax selects its space and incomplete drafts keep the selected space", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     selector = "#local_accent_color_space_select"
     value = "color(xyz-d50 0.2 0.3 0.4 / 0.375)"
 
@@ -283,7 +381,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "native validation detects pasted syntax without rewriting the parent form", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     selector_id = "local_accent_color_space_select"
     value = "  OKLCH(0.656789 0.156789 123.456789 / 0.3756789)  "
 
@@ -346,7 +444,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "format conversions return native output and retain precision through a HEX display", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     value = "oklch(0.656789 0.156789 123.456789 / 0.3756789)"
 
     render_hook(view, "color_input", %{
@@ -376,7 +474,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   end
 
   test "successive format changes keep an optional empty color empty", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     selector_id = "local_accent_color_space_select"
     render_change(view, "local_change", %{"local" => %{"accent" => ""}})
 
@@ -398,7 +496,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "explicit color clearing keeps both fields empty through parent form updates", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     selector_id = "local_accent_color_space_select"
 
     render_hook(view, "color_input", %{
@@ -458,7 +556,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   end
 
   test "a picker color uses HEX when its format was explicitly cleared", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     selector_id = "local_accent_color_space_select"
 
     render_hook(view, "color_input", %{
@@ -496,7 +594,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   end
 
   test "picker edits retain source transparency until the alpha control changes", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     value = "rgb(18 52 86 / 0.3756789)"
 
     render_hook(view, "color_input", %{
@@ -543,7 +641,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   end
 
   test "picker integer alpha endpoints create colors from an empty field", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_change(view, "local_change", %{"local" => %{"accent" => ""}})
 
     for {alpha, expected} <- [{1, "rgb(24 68 102)"}, {0, "rgb(24 68 102 / 0)"}] do
@@ -567,7 +665,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "switching tabs keeps pending uploads mounted with their original file references", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-selection-singles"))
 
     upload =
@@ -605,7 +703,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "preview layout changes preserve native PDF viewers, captions, and upload actions", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     upload =
       file_input(view, "#layout-test-upload-form", :demo_files, [
@@ -672,7 +770,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   end
 
   test "flash buttons trigger layout flash output", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     render_click(element(view, "#layout-test-flash-kind-info"))
     render_click(element(view, "#layout-test-flash-show"))
@@ -731,7 +829,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   end
 
   test "dependency combobox keeps all choices available after a form selection", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(view, "#layout-test-form-section #layout-test-dependency-combobox")
 
@@ -753,7 +851,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   end
 
   test "core combobox retains its explicit ID and updates the matching form field", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     assert has_element?(view, "#layout-test-local-role")
 
     view
@@ -775,7 +873,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "upload previews become read-only and finished uploads consume entries", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     upload =
       file_input(view, "#layout-test-upload-form", :demo_files, [
@@ -804,7 +902,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   end
 
   test "dialog cancellation and calendar navigation update the showcase", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-dialog-open"))
     assert has_element?(view, "#layout-test-modal [role=dialog]")
     render_click(element(view, "#dialog-cancel"))
@@ -818,7 +916,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
 
   test "local datetime submission retains UTC and displays the resolved timezone", %{conn: conn} do
     conn = put_connect_params(conn, %{"user_timezone" => "America/New_York"})
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(view, "#local_launch_at[data-vc-timezone='America/New_York']")
 
@@ -840,7 +938,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
     conn: conn
   } do
     conn = put_connect_params(conn, %{"user_timezone" => "America/New_York"})
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for {value, message} <- [
           {"2026-03-08T02:30", "This local time does not exist."},
@@ -861,7 +959,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLiveTest do
   test "forged local submission without the required datetime receives a field error", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     html = render_submit(view, "local_save", %{"local" => %{"project_name" => "Planning"}})
     assert html =~ "Enter a valid date and time."
     refute has_element?(view, "#submitted-at")

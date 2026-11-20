@@ -10,13 +10,58 @@ defmodule ElixirbitsWeb.AuditLogLive.History do
   embed_templates "history.html"
 
   attr :audit, :map, required: true
+  attr :entry_sections, :list, required: true
   attr :user_timezone, :string, required: true
   def history(assigns)
+
+  defp changed_sections(%{fields: fields}, entry_sections) do
+    changed_fields =
+      fields
+      |> Enum.filter(&(&1.status == :changed))
+      |> Enum.group_by(&(&1.relationship || &1.attribute))
+
+    for {id, label, section_fields} <- entry_sections,
+        changes = Enum.flat_map(section_fields, &Map.get(changed_fields, &1, [])),
+        changes != [] do
+      change =
+        cond do
+          Enum.all?(changes, &(&1.relationship && not &1.before_present?)) -> :added
+          Enum.all?(changes, &(&1.relationship && not &1.after_present?)) -> :removed
+          true -> :changed
+        end
+
+      {id, label, change}
+    end
+  end
 
   def on_mount(resource, _params, _session, socket) do
     socket =
       socket
       |> assign(:audit, %{resource: resource})
+      |> attach_hook(:audit_edit_picker, :handle_params, fn params, uri, socket ->
+        case socket.assigns do
+          %{
+            live_action: :update,
+            audit: %{id: id} = audit,
+            form: %{source: %{data: record}}
+          }
+          when not is_nil(id) ->
+            uri = URI.parse(uri)
+
+            if (audit.open? or params["history"] == "true") and
+                 URI.parse(audit.path).path == socket.assigns.current_path and
+                 Map.drop(Plug.Conn.Query.decode(uri.query || ""), ["history", "version", "side"]) ==
+                   audit.query do
+              {socket, _record} = load_revision(socket, record, params, audit.options)
+              {:halt, socket}
+            else
+              {:cont, socket}
+            end
+
+          _ ->
+            {:cont, socket}
+        end
+      end)
       |> attach_hook(:audit_restore, :handle_event, fn
         "audit_value_change", %{"audit" => %{"side" => side}}, socket
         when side in ["previous", "current"] ->
@@ -143,13 +188,38 @@ defmodule ElixirbitsWeb.AuditLogLive.History do
     path = URI.to_string(uri)
     options = Keyword.put(opts, :path, socket.assigns.current_path)
     key = if record, do: Map.take(record, Ash.Resource.Info.primary_key(resource))
+    action = socket.assigns.live_action
+    version = if action == :read, do: params["version"]
+
+    requested? =
+      not is_nil(key) and action in [:read, :update] and
+        (params["history"] == "true" or not is_nil(version))
+
+    socket =
+      if requested? do
+        permissions = Permissions.load(socket.assigns.current_user)
+
+        socket
+        |> assign(:permissions, permissions)
+        |> assign(:current_user, permissions.user)
+        |> update(
+          :nav,
+          &%{&1 | user: permissions.user, items: Permissions.visible_sitenav(permissions)}
+        )
+      else
+        socket
+      end
 
     audit = %{
       resource: resource,
       id: key,
+      available?:
+        not is_nil(key) and
+          Permissions.can?(socket.assigns.permissions, socket.assigns.current_path, :update),
       path: path,
       query: query,
       options: options,
+      revision_path: if(action == :update, do: opts[:view_path]),
       history_path:
         URI.to_string(%{uri | query: Plug.Conn.Query.encode(Map.put(query, "history", "true"))}),
       close_path: path,
@@ -161,26 +231,12 @@ defmodule ElixirbitsWeb.AuditLogLive.History do
       preview: nil
     }
 
-    if socket.assigns.live_action == :read and not is_nil(record) and
-         (params["history"] == "true" or not is_nil(params["version"])) do
-      permissions = Permissions.load(socket.assigns.current_user)
-
-      socket =
-        socket
-        |> assign(:permissions, permissions)
-        |> assign(:current_user, permissions.user)
-        |> update(
-          :nav,
-          &%{&1 | user: permissions.user, items: Permissions.visible_sitenav(permissions)}
-        )
-
-      case AuditLog.history(resource, key, permissions.user, options) do
+    if requested? do
+      case AuditLog.history(resource, key, socket.assigns.current_user, options) do
         {:ok, history} ->
-          selected =
-            if params["version"],
-              do: Enum.find(history.revisions, &(to_string(&1.id) == params["version"]))
+          selected = if version, do: Enum.find(history.revisions, &(to_string(&1.id) == version))
 
-          if params["version"] && is_nil(selected) do
+          if version && is_nil(selected) do
             socket =
               socket
               |> assign(:audit, audit)

@@ -127,18 +127,31 @@ defmodule ElixirbitsWeb.LiveUserAuth do
              %{nav | timezone_form: to_form(%{"timezone" => timezone})}
            end)}
 
-        "toggle_nav", _params, socket ->
+        "toggle_nav", params, socket ->
+          compact? = params["layout"] == "compact"
+
           {:halt,
            update(socket, :nav, fn nav ->
              open_codes =
-               if !nav.open? and nav.open_codes == [], do: nav.active_codes, else: nav.open_codes
+               if (compact? or !nav.open?) and nav.open_codes == [],
+                 do: nav.active_codes,
+                 else: nav.open_codes
 
-             staged? = Enum.any?(nav.items, &(&1.parent in open_codes))
-             %{nav | open?: not nav.open?, open_codes: open_codes, staged?: staged?}
+             %{
+               nav
+               | open?: if(compact?, do: nav.open?, else: !nav.open?),
+                 open_codes: open_codes,
+                 staged?:
+                   if(compact?,
+                     do: nav.staged?,
+                     else: Enum.any?(nav.items, &(&1.parent in open_codes))
+                   )
+             }
            end)}
 
-        "toggle_nav_section", %{"code" => code}, socket ->
+        "toggle_nav_section", %{"code" => code} = params, socket ->
           nav = socket.assigns.nav
+          compact? = params["layout"] == "compact"
 
           case Enum.find(nav.items, &(&1.code == code)) do
             nil ->
@@ -148,16 +161,16 @@ defmodule ElixirbitsWeb.LiveUserAuth do
               ancestors = Enum.drop_while(nav.open_codes, &(&1 != entry.parent))
 
               open_codes =
-                if nav.open? && code in nav.open_codes,
+                if (compact? or nav.open?) and code in nav.open_codes,
                   do: ancestors,
                   else: [code | ancestors]
 
               {:halt,
                assign(socket, :nav, %{
                  nav
-                 | open?: true,
+                 | open?: nav.open? or !compact?,
                    open_codes: open_codes,
-                   staged?: !nav.open?
+                   staged?: if(compact?, do: nav.staged?, else: !nav.open?)
                })}
           end
 

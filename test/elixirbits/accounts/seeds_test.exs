@@ -160,7 +160,7 @@ defmodule Elixirbits.Accounts.SeedsTest do
       {"USERS", "admin/users", "dashboard/admin/users"},
       {"ROLES", "admin/roles", "dashboard/admin/roles"},
       {"ORG", "admin/organization", "dashboard/admin/organization"},
-      {"LT", "dev_panel/layout_test", "dashboard/dev_panel/layout_test"}
+      {"LT", "dashboard/dev_panel/layout_test", "dashboard/dev_panel/design_standards"}
     ]
 
     for {code, previous_url, _url} <- paths do

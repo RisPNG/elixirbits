@@ -172,10 +172,10 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
            )
 
     assert has_element?(view, "#user-timezone-select option[value='']", "Automatic (browser)")
-    view |> form("#user-timezone-form", timezone: "") |> render_change()
+    view |> form("#compact-timezone-form", timezone: "") |> render_change()
     assert has_element?(view, "#user-timezone-select[name=timezone] option[selected][value='']")
 
-    result = view |> form("#user-timezone-form", timezone: "") |> render_submit()
+    result = view |> form("#compact-timezone-form", timezone: "") |> render_submit()
     assert {:error, {:live_redirect, %{to: "/dashboard"}}} = result
     assert Ash.get!(User, user.id, actor: @system).timezone == nil
     {:ok, view, _html} = follow_redirect(result, conn, ~p"/dashboard")
@@ -272,7 +272,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
   test "the component showcase exposes the shared account preference form", %{conn: conn} do
     conn = log_in_user(conn, create_user())
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(view, "#app-navigation")
     assert has_element?(view, "button[popovertarget=account-menu]")

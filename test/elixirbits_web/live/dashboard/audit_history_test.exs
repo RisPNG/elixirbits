@@ -12,6 +12,7 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
   alias Elixirbits.Organizations.Organization
 
   @system %{system: true}
+  @section_summary "#audit-revision #audit-changed-sections"
 
   setup do
     for {code, path} <- [
@@ -39,7 +40,7 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
     {log_in_user(conn, actor), actor, grants}
   end
 
-  test "History appears only on saved View pages for editors", %{conn: conn} do
+  test "History appears on saved View and Update pages for editors", %{conn: conn} do
     target = create_user(display_name: "History target")
     role = Ash.create!(Role, %{code: "history-role", name: "History role"}, actor: @system)
     {manager_conn, _actor, _grants} = grant(conn, %{"USERS" => 15, "ROLES" => 15, "ORG" => 15})
@@ -57,8 +58,11 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
 
       for path <- [
             ~p"/dashboard/admin/users/#{target.id}/read",
+            ~p"/dashboard/admin/users/#{target.id}/update",
             ~p"/dashboard/admin/roles/#{role.id}/read",
-            ~p"/dashboard/admin/organization"
+            ~p"/dashboard/admin/roles/#{role.id}/update",
+            ~p"/dashboard/admin/organization",
+            ~p"/dashboard/admin/organization/update"
           ] do
         {:ok, view, _html} = live(operator_conn, path)
 
@@ -73,16 +77,69 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
 
     for path <- [
           ~p"/dashboard/admin/users/create",
-          ~p"/dashboard/admin/users/#{target.id}/update",
-          ~p"/dashboard/admin/roles/create",
-          ~p"/dashboard/admin/roles/#{role.id}/update",
-          ~p"/dashboard/admin/organization/update"
+          ~p"/dashboard/admin/roles/create"
         ] do
       {:ok, view, _html} = live(manager_conn, path)
       refute has_element?(view, "a[data-tooltip=History]")
       refute has_element?(view, "#audit-history-picker")
       refute has_element?(view, "#audit-revision")
     end
+  end
+
+  test "saved records without revisions open an empty History picker in View and Update", %{
+    conn: conn
+  } do
+    role =
+      Ash.create!(Role, %{code: "no-revisions", name: "Saved role"},
+        actor: @system,
+        context: %{ash_paper_trail_disabled?: true}
+      )
+
+    {conn, _actor, _grants} = grant(conn, %{"ROLES" => 5})
+
+    for path <- [
+          ~p"/dashboard/admin/roles/#{role.id}/read",
+          ~p"/dashboard/admin/roles/#{role.id}/update"
+        ] do
+      {:ok, view, _html} = live(conn, path)
+      view |> element("header a[data-tooltip=History]") |> render_click()
+      assert_patch(view, path <> "?history=true")
+      assert has_element?(view, "#audit-history-picker", "No revisions recorded.")
+      refute has_element?(view, "#audit-history-picker a[id^='revision-']")
+      view |> element("#audit-history-picker a", "Close") |> render_click()
+      assert_patch(view, path)
+      refute has_element?(view, "#audit-history-picker")
+    end
+  end
+
+  test "Update opens saved revisions separately and keeps the draft", %{conn: conn} do
+    role = Ash.create!(Role, %{code: "draft-history", name: "Saved role"}, actor: @system)
+    {conn, actor, _grants} = grant(conn, %{"ROLES" => 5})
+    {:ok, history} = AuditLog.history(Role, role.id, actor)
+    revision = hd(history.revisions)
+    path = ~p"/dashboard/admin/roles/#{role.id}/update"
+    revision_path = ~p"/dashboard/admin/roles/#{role.id}/read?#{%{version: revision.id}}"
+
+    {:ok, view, _html} = live(conn, path)
+    view |> form("#role-form", form: %{name: "Role draft"}) |> render_change()
+    view |> element("header a[data-tooltip=History]") |> render_click()
+    assert_patch(view, path <> "?history=true")
+
+    assert has_element?(
+             view,
+             "#audit-history-picker a[href='#{revision_path}'][target='_blank'][rel=noopener]"
+           )
+
+    assert has_element?(view, "#form_name[value='Role draft']")
+
+    {:ok, revision_view, _html} = live(conn, revision_path)
+    assert has_element?(revision_view, "#audit-revision")
+    assert has_element?(revision_view, "#role-form input[name='form[name]'][value='Saved role']")
+
+    view |> element("#audit-history-picker a", "Close") |> render_click()
+    assert_patch(view, path)
+    assert has_element?(view, "#form_name[value='Role draft']")
+    refute has_element?(view, "#audit-history-picker")
   end
 
   test "readers cannot forge the picker or historical revision query", %{conn: conn} do
@@ -182,6 +239,21 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
 
     assert has_element?(
              view,
+             "#{@section_summary} [data-audit-section=account][data-audit-section-side=previous]",
+             "Account"
+           )
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=personal][data-audit-section-side=previous]",
+             "Personal"
+           )
+
+    refute has_element?(view, "#user-form [data-audit-section]")
+    refute has_element?(view, "[data-audit-section=addresses], [data-audit-section=roles]")
+
+    assert has_element?(
+             view,
              "input[name='form[display_name]'][value='Selected saved name'][data-audit-changed=true][data-audit-side=previous]"
            )
 
@@ -216,6 +288,18 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
              "version" => selected.id,
              "side" => "current"
            }
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=account][data-audit-section-side=current]"
+           )
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=personal][data-audit-section-side=current]"
+           )
+
+    refute has_element?(view, "[data-audit-section-side=previous]")
 
     assert has_element?(
              view,
@@ -268,6 +352,7 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
     assert_patch(view)
     assert has_element?(view, "input[name='form[display_name]'][value=\"Today's current name\"]")
     refute has_element?(view, "#user-form [data-audit-changed=true]")
+    refute has_element?(view, "[data-audit-section]")
 
     render_click(view, "request_restore")
     refute has_element?(view, "#confirm-restore")
@@ -366,7 +451,82 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
     assert Ash.get!(User, target.id, actor: @system).display_name == "Updated name"
   end
 
-  test "foreign revisions are rejected and Update ignores historical query parameters", %{
+  test "History preserves the selected revision and restore preview when switching layouts", %{
+    conn: conn
+  } do
+    {conn, actor, _grants} = grant(conn, %{"USERS" => 15, "ROLES" => 16})
+    user = create_user(display_name: "Earlier saved name")
+    role = Ash.create!(Role, %{code: "history-layout", name: "History layout"}, actor: @system)
+
+    selected_user =
+      Ash.update!(user, %{display_name: "Selected saved name", roles: [role.code]}, actor: actor)
+
+    {:ok, history} = AuditLog.history(User, user.id, actor)
+    selected = hd(history.revisions)
+    Ash.update!(selected_user, %{display_name: "Current name"}, actor: actor)
+
+    conn = put_connect_params(conn, %{"compact_layout" => true})
+    path = ~p"/dashboard/admin/users/#{user.id}/read"
+    {:ok, view, _html} = live(conn, path)
+
+    view |> element("header a[data-tooltip=History]") |> render_click()
+    assert_patch(view, path <> "?history=true")
+    view |> element("#audit-history-picker #revision-#{selected.id}") |> render_click()
+    assert_patch(view, path <> "?version=#{selected.id}")
+
+    historical_name =
+      "input[name='form[display_name]'][value='Selected saved name'][data-audit-side=previous]"
+
+    assert has_element?(view, "#user-form[data-dashboard-layout=compact]")
+    assert has_element?(view, "#audit-value-form input[value=previous][checked]")
+    assert has_element?(view, historical_name)
+
+    for {section, label} <- [{"account", "Account"}, {"roles", "Roles"}] do
+      assert has_element?(
+               view,
+               "#{@section_summary} [data-audit-section=#{section}][data-audit-section-side=previous]",
+               label
+             )
+    end
+
+    refute has_element?(view, "[role=tab] [data-audit-section]")
+
+    view |> form("#audit-value-form", audit: %{side: "current"}) |> render_change()
+    assert_patch(view)
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=account][data-audit-section-side=current]"
+           )
+
+    assert has_element?(view, "[role=tab][data-tab-value=roles]")
+    refute has_element?(view, "[data-audit-section=roles]")
+
+    view |> form("#audit-value-form", audit: %{side: "previous"}) |> render_change()
+    assert_patch(view, path <> "?version=#{selected.id}")
+
+    view |> element("button[phx-click=request_restore]") |> render_click()
+    assert has_element?(view, "#confirm-restore", "Current name")
+    assert has_element?(view, "#confirm-restore", "Selected saved name")
+
+    render_click(view, "dashboard_layout", %{"compact" => false})
+    assert has_element?(view, "#user-form[data-dashboard-layout=expanded]")
+    assert has_element?(view, "#audit-value-form input[value=previous][checked]")
+    assert has_element?(view, "#confirm-restore", "Selected saved name")
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=roles][data-audit-section-side=previous]"
+           )
+
+    refute has_element?(view, "#user-form [data-audit-section]")
+
+    view |> element("#confirm-restore button[phx-click=cancel_restore]") |> render_click()
+    refute has_element?(view, "#confirm-restore")
+    assert has_element?(view, historical_name)
+  end
+
+  test "foreign revisions are rejected and Update always keeps its current values", %{
     conn: conn
   } do
     {conn, actor, _grants} = grant(conn, %{"USERS" => 15})
@@ -403,8 +563,8 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
     assert has_element?(edit, "#form_display_name[value='Editable current']")
     assert has_element?(edit, "#user-form button[type=submit]")
     refute has_element?(edit, "#audit-revision")
-    refute has_element?(edit, "#audit-history-picker")
-    refute has_element?(edit, "a[data-tooltip=History]")
+    assert has_element?(edit, "#audit-history-picker")
+    assert has_element?(edit, "a[data-tooltip=History]")
   end
 
   test "saved address order is preserved in Previous, Current, and restoration", %{conn: conn} do
@@ -735,6 +895,20 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
 
     assert has_element?(
              view,
+             "#{@section_summary} [data-audit-section=details][data-audit-section-side=previous]",
+             "Details"
+           )
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=addresses][data-audit-section-side=previous]",
+             "Addresses"
+           )
+
+    refute has_element?(view, "[data-audit-section=regional], [data-audit-section=contact]")
+
+    assert has_element?(
+             view,
              "#form-#{selected.id}-previous_name[data-audit-side=previous]",
              "Selected organization"
            )
@@ -784,6 +958,16 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
 
     assert has_element?(
              view,
+             "#{@section_summary} [data-audit-section=details][data-audit-section-side=current]"
+           )
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=addresses][data-audit-section-side=current]"
+           )
+
+    assert has_element?(
+             view,
              "#form-#{selected.id}-current_name[data-audit-side=current]",
              "Today's organization"
            )
@@ -796,7 +980,7 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
 
     assert has_element?(
              view,
-             "#organization-form [data-audit-changed=true][data-audit-side=current]",
+             "#organization-form [data-audit-changed=true][data-audit-side=current][data-audit-added=true]",
              "New branch"
            )
 
@@ -839,6 +1023,67 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
            ]
   end
 
+  test "Previous marks addresses added by the selected save, including a blank address", %{
+    conn: conn
+  } do
+    {conn, actor, _grants} = grant(conn, %{"USERS" => 15})
+
+    target =
+      create_user(addresses: [%{line_1: "Retained address"}])
+      |> Ash.load!(:addresses, actor: @system)
+
+    [retained] = target.addresses
+
+    saved =
+      Ash.update!(
+        target,
+        %{addresses: [%{id: retained.id}, %{line_1: "New address"}, %{}]},
+        actor: actor
+      )
+
+    {:ok, history} = AuditLog.history(User, target.id, actor)
+    selected = hd(history.revisions)
+    Ash.update!(saved, %{display_name: "Later name"}, actor: actor)
+
+    path = ~p"/dashboard/admin/users/#{target.id}/read"
+    {:ok, view, _html} = live(conn, path <> "?version=#{selected.id}")
+
+    section =
+      "#{@section_summary} [data-audit-section=addresses][data-audit-section-side=previous][data-audit-section-change=added]"
+
+    added =
+      "[data-audit-side=previous][data-audit-added=true][aria-description='Added by this revision']"
+
+    new_line = "input[name='form[addresses][1][line_1]'][value='New address']"
+    blank_line = "input[name='form[addresses][2][line_1]']"
+    retained_line = "input[name='form[addresses][0][line_1]'][value='Retained address']"
+
+    assert has_element?(view, section, "Addresses")
+    assert has_element?(view, section, "Added")
+    assert has_element?(view, new_line <> added)
+    assert has_element?(view, "span[aria-label='Address 3 sequence']" <> added, "3")
+    assert has_element?(view, blank_line)
+    refute has_element?(view, blank_line <> "[data-audit-changed=true]")
+    assert has_element?(view, retained_line)
+    refute has_element?(view, retained_line <> "[data-audit-changed=true]")
+
+    render_click(view, "dashboard_layout", %{"compact" => true})
+    assert has_element?(view, section, "Addresses")
+    assert has_element?(view, section, "Added")
+    refute has_element?(view, "[role=tab] [data-audit-section]")
+    assert has_element?(view, new_line <> added)
+
+    view |> form("#audit-value-form", audit: %{side: "current"}) |> render_change()
+    assert_patch(view)
+    assert has_element?(view, new_line)
+    assert has_element?(view, blank_line)
+
+    refute has_element?(
+             view,
+             "[data-audit-section=addresses], #user-form [data-audit-added=true]"
+           )
+  end
+
   test "address removal marks blank native fields while clearing and refilling remain changes",
        %{conn: conn} do
     {conn, actor, _grants} = grant(conn, %{"USERS" => 15})
@@ -866,6 +1111,12 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
       "input[name='form[addresses][0][line_1]'][data-audit-changed=true][data-audit-side=previous]"
 
     assert has_element?(cleared_view, cleared_selector)
+
+    assert has_element?(
+             cleared_view,
+             "#{@section_summary} [data-audit-section=addresses][data-audit-section-side=previous][data-audit-section-change=changed]",
+             "Changed"
+           )
 
     cleared_input =
       cleared_view |> render() |> Floki.parse_document!() |> Floki.find(cleared_selector)
@@ -919,7 +1170,13 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
     {:ok, current_view, _html} =
       live(conn, path <> "?version=#{refilled_revision.id}&side=current")
 
-    for view <- [deleted_view, current_view] do
+    for {view, side} <- [{deleted_view, "previous"}, {current_view, "current"}] do
+      assert has_element?(
+               view,
+               "#{@section_summary} [data-audit-section=addresses][data-audit-section-side=#{side}][data-audit-section-change=removed]",
+               "Removed"
+             )
+
       document =
         view
         |> render()
@@ -1035,6 +1292,11 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
 
     assert has_element?(view, "#audit-value-form input[value=previous][checked]:not([disabled])")
 
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=addresses][data-audit-section-side=previous]"
+           )
+
     for field <- ["email", "username"] do
       assert has_element?(
                view,
@@ -1118,6 +1380,17 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
 
     assert has_element?(
              view,
+             "#{@section_summary} [data-audit-section=details][data-audit-section-side=previous]"
+           )
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=permissions][data-audit-section-side=previous]",
+             "Permissions"
+           )
+
+    assert has_element?(
+             view,
              "input[name='form[name]'][value='Created role'][data-audit-changed=true][data-audit-side=previous]"
            )
 
@@ -1134,6 +1407,16 @@ defmodule ElixirbitsWeb.Dashboard.AuditHistoryTest do
              "version" => created.id,
              "side" => "current"
            }
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=details][data-audit-section-side=current]"
+           )
+
+    assert has_element?(
+             view,
+             "#{@section_summary} [data-audit-section=permissions][data-audit-section-side=current]"
+           )
 
     assert has_element?(
              view,

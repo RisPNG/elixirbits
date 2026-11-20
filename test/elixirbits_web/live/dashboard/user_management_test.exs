@@ -37,6 +37,67 @@ defmodule ElixirbitsWeb.Dashboard.UserManagementTest do
     %{conn: log_in_user(conn, user), user: user, grants: grants}
   end
 
+  test "the Users identity grid preserves search and pagination across dashboard layouts", %{
+    conn: conn
+  } do
+    manager = grant(conn, %{"USERS" => 15})
+
+    for index <- 1..11 do
+      create_user(
+        username: "identity#{index}",
+        display_name: "Saved display #{index}",
+        first_name: "Unlisted",
+        last_name: "Identity fallback"
+      )
+    end
+
+    conn = put_connect_params(manager.conn, %{"compact_layout" => true})
+    {:ok, view, _html} = live(conn, ~p"/dashboard/admin/users")
+    render_async(view)
+
+    collection = "#users-table-pagination"
+    controls = "#{collection} form[phx-change=filter_change]"
+    page_info = "#{collection} [data-key=pagination_info_class]"
+    assert has_element?(view, "#{collection} .identity-grid article .identity-actions")
+    assert has_element?(view, "#{controls} [hidden] input[name='filters[username]']")
+
+    view |> form(controls, search: "identity") |> render_change()
+    render_async(view)
+    assert has_element?(view, page_info, "Page 1 of 2")
+
+    view |> element("#{collection} button[title='Go to page 2']") |> render_click()
+    render_async(view)
+    assert has_element?(view, page_info, "Page 2 of 2")
+
+    render_click(view, "dashboard_layout", %{"compact" => false})
+    render_async(view)
+    assert has_element?(view, page_info, "Page 2 of 2")
+    assert has_element?(view, "#{controls} input[name=search][value=identity]")
+    assert has_element?(view, "#{collection} thead th", "Username")
+    assert has_element?(view, "#{collection} thead th", "Display name")
+    refute has_element?(view, "#{collection} thead th", "Roles")
+    refute has_element?(view, "#{collection} tbody", "Unlisted Identity fallback")
+
+    view
+    |> with_target("#{collection} [data-key=container_class]")
+    |> render_hook("change_page_size", %{page_size: "25"})
+
+    render_async(view)
+    render_click(view, "dashboard_layout", %{"compact" => true})
+
+    document = view |> render_async() |> Floki.parse_document!()
+
+    assert Floki.attribute(
+             document,
+             "#{collection} template[data-cinder-page-size-template] option[selected]",
+             "value"
+           ) == ["25", "25"]
+
+    assert has_element?(view, "#{collection} .identity-grid article", "Saved display 11")
+    assert has_element?(view, "#{collection} .identity-grid article h2", "identity11")
+    assert length(Floki.find(document, "#{collection} .identity-grid article")) == 11
+  end
+
   test "user creation, update, and deletion controls follow independent permissions", %{
     conn: conn
   } do
@@ -127,6 +188,30 @@ defmodule ElixirbitsWeb.Dashboard.UserManagementTest do
     assert has_element?(saved_view, "input[name='form[display_name]'][value='Managed account']")
     refute has_element?(saved_view, "#user-form button[type=submit]")
     refute has_element?(saved_view, "a[data-tooltip=Update]")
+  end
+
+  test "compact user sections keep the same form and return to a section with errors", %{
+    conn: conn
+  } do
+    manager = grant(conn, %{"USERS" => 7})
+    conn = put_connect_params(manager.conn, %{"compact_layout" => true})
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/admin/users/create")
+    assert has_element?(view, "#user-form[data-dashboard-layout=compact]")
+    assert has_element?(view, "#user-entry-sections [data-tab-value=account][aria-selected=true]")
+    assert has_element?(view, "#user-entry-account input[name='form[email]']")
+
+    view |> element("#user-entry-sections [data-tab-value=personal]") |> render_click()
+    assert has_element?(view, "#user-entry-account[hidden] input[name='form[email]']")
+    assert has_element?(view, "#user-entry-personal:not([hidden])")
+
+    view |> form("#user-form", form: %{email: "invalid", first_name: "Maya"}) |> render_submit()
+    assert has_element?(view, "#user-entry-account:not([hidden])")
+    assert has_element?(view, "#user-entry-personal[hidden] input[value=Maya]")
+
+    render_click(view, "dashboard_layout", %{"compact" => false})
+    assert has_element?(view, "#user-form[data-dashboard-layout=expanded] input[value=Maya]")
+    refute has_element?(view, "#user-entry-sections")
   end
 
   test "address numbers swap complete drafts and retain their order after saving", %{conn: conn} do

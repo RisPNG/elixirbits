@@ -54,7 +54,7 @@ defmodule ElixirbitsWeb.Router do
 
     ash_authentication_live_session :dashboard_routes,
       on_mount: [{ElixirbitsWeb.LiveUserAuth, :live_user_optional}] do
-      live "/", DashboardLive, :index
+      live "/", DashboardLive.Index, :index
       live "/sign-in", Dashboard.LoginLive.Index, :sign_in
       live "/register", Dashboard.LoginLive.Register, :register
       live "/reset", Dashboard.LoginLive.ForgotPassword, :forgot_password
@@ -76,7 +76,7 @@ defmodule ElixirbitsWeb.Router do
       end
 
       scope "/dev_panel", Dashboard do
-        live "/layout_test", LayoutTestLive, :index
+        live "/design_standards", DesignStandardsLive.Index, :index
       end
     end
 

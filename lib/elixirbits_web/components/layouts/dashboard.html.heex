@@ -1,13 +1,13 @@
 <%= case @component do %>
   <% :dashboard -> %>
     <div
-      class="shell-surface grid min-h-screen grid-rows-[4rem_minmax(0,1fr)]"
+      class="dashboard-shell shell-surface grid min-h-screen"
       data-user-timezone={@user_timezone}
     >
       <header
         data-page-chrome="header"
         class={[
-          "shell-surface sticky top-0 z-30 grid items-center gap-3 px-4",
+          "dashboard-expanded-header shell-surface sticky top-0 z-30 grid items-center gap-3 px-4",
           (@show_nav? && "grid-cols-[2.75rem_minmax(0,1fr)_max-content]") ||
             "grid-cols-[minmax(0,1fr)_max-content]"
         ]}
@@ -119,9 +119,11 @@
         </div>
       </header>
 
+      <.dashboard_compact nav={@nav} by_parent={@by_parent} user_timezone={@user_timezone} />
+
       <div
         class="dashboard-grid grid min-w-0 grid-cols-[minmax(0,1fr)]"
-        data-navigation={if @show_nav?, do: if(@nav.open?, do: "expanded", else: "compact")}
+        data-navigation={if @show_nav?, do: if(@nav.open?, do: "expanded", else: "collapsed")}
         data-nav-staged={if @nav.staged?, do: "true"}
       >
         <aside
@@ -129,7 +131,7 @@
           id="app-navigation"
           data-page-chrome="rail"
           aria-label="Application navigation"
-          class="shell-surface sticky top-16 h-[calc(100dvh-4rem)] min-h-0 self-start overflow-x-hidden overflow-y-auto"
+          class="dashboard-expanded-rail shell-surface sticky top-16 h-[calc(100dvh-4rem)] min-h-0 self-start overflow-x-hidden overflow-y-auto"
         >
           <nav class="px-3 py-4">
             <.nav_branch
@@ -144,7 +146,7 @@
           </nav>
         </aside>
 
-        <main class="workspace-canvas min-w-0 px-8 py-10">
+        <main class="dashboard-workspace workspace-canvas min-w-0">
           <div id="dashboard-page" class="mx-auto min-w-0 max-w-[80rem]">
             <div class={@content_class}>
               {render_slot(@inner_block)}

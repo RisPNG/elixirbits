@@ -1,9 +1,9 @@
 <section
   :if={@audit.selected}
   id="audit-revision"
-  class="space-y-3 rounded-default border border-outline bg-primary p-4"
+  class="space-y-3 rounded-default border border-outline bg-primary p-4 [container-type:inline-size]"
 >
-  <div class="grid grid-cols-[minmax(0,1fr)_max-content] items-start gap-4">
+  <div class="audit-revision-heading grid grid-cols-[minmax(0,1fr)_max-content] items-start gap-4">
     <div class="space-y-1">
       <h2 class="text-lg font-semibold text-content">Revision history</h2>
       <p class="text-sm text-subcontent">
@@ -14,7 +14,7 @@
         Restored from revision {@audit.selected.restored_from_version_id}.
       </p>
     </div>
-    <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
+    <div class="audit-revision-actions grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
       <.button patch={@audit.path} variant={:neutral}>Current view</.button>
       <.button
         :if={@audit.history.can_restore?}
@@ -24,12 +24,13 @@
       >Restore this version</.button>
     </div>
   </div>
+
   <.form
     :let={value_form}
     for={to_form(%{"side" => to_string(@audit.side)}, as: "audit")}
     id="audit-value-form"
     phx-change="audit_value_change"
-    class="[&_label:has(input[value=previous])]:text-error [&_label:has(input[value=previous])]:border-error! [&_label:has(input[value=current])]:text-success [&_label:has(input[value=current])]:border-success!"
+    class="space-y-2 [&_label:has(input[value=previous])]:text-error [&_label:has(input[value=previous])]:border-error! [&_label:has(input[value=current])]:text-success [&_label:has(input[value=current])]:border-success!"
   >
     <.input
       field={value_form[:side]}
@@ -37,62 +38,119 @@
       type="radio"
       variant="card"
       aria-label="Revision values"
+      aria-describedby="audit-comparison-description"
       options={[
         {"Previous value", "previous"},
         {"Current value", "current"}
       ]}
     />
+    <p id="audit-comparison-description" class="text-sm text-subcontent">
+      {if @audit.side == :previous,
+        do: "Shows the selected revision compared with the record before that save.",
+        else: "Shows today's saved values compared with the selected revision."}
+    </p>
   </.form>
+
+  <% changed_sections = changed_sections(@audit, @entry_sections) %>
+  <div :if={changed_sections != []} id="audit-changed-sections" class="space-y-2">
+    <h3 id="audit-changed-sections-heading" class="text-sm font-medium text-content">
+      Changed sections
+    </h3>
+    <ul
+      aria-labelledby="audit-changed-sections-heading"
+      class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),max-content))] justify-items-start gap-2"
+    >
+      <li
+        :for={{id, label, change} <- changed_sections}
+        data-audit-section={id}
+        data-audit-section-side={@audit.side}
+        data-audit-section-change={change}
+        class={[
+          "status-pill max-w-full whitespace-normal text-content",
+          if(change == :added or (change == :changed and @audit.side == :current),
+            do: "bg-success",
+            else: "bg-error"
+          )
+        ]}
+      >
+        <span>{label} · {Phoenix.Naming.humanize(change)}</span>
+      </li>
+    </ul>
+  </div>
 </section>
 
 <.modal :if={@audit.open?} id="audit-history-picker" on_cancel={JS.patch(@audit.close_path)}>
   <:title>History</:title>
-  <p class="text-sm text-subcontent">
-    Select a revision to view its saved values and changed fields.
+  <p :if={@audit.history.revisions == []} class="text-sm text-subcontent">
+    No revisions recorded.
   </p>
-  <nav aria-label="Saved revisions" class="mt-4 max-h-96 space-y-2 overflow-y-auto">
-    <p :if={@audit.history.revisions == []} class="text-sm text-subcontent">
-      No revisions recorded.
-    </p>
-    <.link
-      :for={revision <- @audit.history.revisions}
-      id={"revision-#{revision.id}"}
-      patch={
+  <p :if={@audit.history.revisions != []} class="text-sm text-subcontent">
+    {if @audit.revision_path,
+      do: "Revisions open in a new tab so you can keep editing here.",
+      else: "Select a revision to see its saved values and changes."}
+  </p>
+  <nav
+    :if={@audit.history.revisions != []}
+    aria-label="Saved revisions"
+    class="mt-4 max-h-96 space-y-2 overflow-y-auto"
+  >
+    <%= for revision <- @audit.history.revisions do %>
+      <% revision_url =
         URI.to_string(%{
-          URI.parse(@audit.path)
+          URI.parse(@audit.revision_path || @audit.path)
           | query: Plug.Conn.Query.encode(Map.put(@audit.query, "version", revision.id))
-        })
-      }
-      aria-current={@audit.selected && @audit.selected.id == revision.id && "true"}
-      class={[
-        "block rounded-default border p-3 text-sm focus-visible:outline-2 focus-visible:outline-brand",
-        if(@audit.selected && @audit.selected.id == revision.id,
-          do: "border-brand bg-secondary",
-          else: "border-outline bg-primary"
-        )
-      ]}
-    >
-      <span class="block font-medium text-content">{revision.author}</span>
-      <time datetime={DateTime.to_iso8601(revision.at)} class="block text-subcontent">{Calendar.strftime(
-        DateTime.shift_zone!(revision.at, @user_timezone),
-        "%d %b %Y, %H:%M:%S"
-      )}</time>
-      <span class="block text-subcontent">
-        {if revision.restored_from_version_id do
-          "Restored a previous version"
-        else
-          case revision.action do
-            :create -> "Created"
-            :update -> "Updated"
-            :destroy -> "Deleted"
-          end
-        end}
-      </span>
-    </.link>
+        }) %>
+      <.link
+        id={"revision-#{revision.id}"}
+        href={@audit.revision_path && revision_url}
+        target={@audit.revision_path && "_blank"}
+        rel={@audit.revision_path && "noopener"}
+        patch={if is_nil(@audit.revision_path), do: revision_url}
+        aria-current={@audit.selected && @audit.selected.id == revision.id && "true"}
+        class={[
+          "block rounded-default border p-3 text-sm focus-visible:outline-2 focus-visible:outline-brand",
+          if(@audit.selected && @audit.selected.id == revision.id,
+            do: "border-brand bg-secondary",
+            else: "border-outline bg-primary"
+          )
+        ]}
+      >
+        <span class="block font-medium text-content">{revision.author}</span>
+        <time datetime={DateTime.to_iso8601(revision.at)} class="block text-subcontent">{Calendar.strftime(
+          DateTime.shift_zone!(revision.at, @user_timezone),
+          "%d %b %Y, %H:%M:%S"
+        )}</time>
+        <span class="block text-subcontent">
+          {if revision.restored_from_version_id do
+            "Restored a previous version"
+          else
+            case revision.action do
+              :create -> "Created"
+              :update -> "Updated"
+              :destroy -> "Deleted"
+            end
+          end}
+        </span>
+      </.link>
+    <% end %>
   </nav>
-  <div class="mt-4 grid grid-cols-[1fr_1fr] gap-2">
-    <.button patch={@audit.close_path} variant={:neutral}>Cancel</.button>
-    <.button patch={@audit.path} variant={:neutral}>Current view</.button>
+  <div class={[
+    "mt-4 grid gap-2",
+    if(@audit.revision_path || @audit.history.revisions == [],
+      do: "grid-cols-[1fr]",
+      else: "grid-cols-[1fr_1fr]"
+    )
+  ]}>
+    <.button patch={@audit.close_path} variant={:neutral}>
+      {if @audit.revision_path || @audit.history.revisions == [], do: "Close", else: "Cancel"}
+    </.button>
+    <.button
+      :if={is_nil(@audit.revision_path) && @audit.history.revisions != []}
+      patch={@audit.path}
+      variant={:neutral}
+    >
+      Current view
+    </.button>
   </div>
 </.modal>
 

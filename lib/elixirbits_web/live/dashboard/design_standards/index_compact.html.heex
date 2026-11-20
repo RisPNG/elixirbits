@@ -1,0 +1,1396 @@
+<section id="layout-test-compact" class="space-y-4" data-dashboard-layout="compact">
+  <.header level={1}>{@page_title}</.header>
+
+  <div class="sticky top-14 z-20 grid justify-items-center py-2">
+    <.tabs
+      id="layout-test-compact-groups"
+      label="Design Standards groups"
+      active={@current_tab}
+      class="shadow-card"
+    >
+      <:tab
+        :for={{group, _components} <- @compact_components}
+        value={group}
+        controls={"layout-test-compact-#{group}"}
+        click={JS.push("change_tab", value: %{tab: group})}
+      >
+        {String.capitalize(group)}
+      </:tab>
+    </.tabs>
+  </div>
+
+  <section
+    :for={{group, components} <- @compact_components}
+    id={"layout-test-compact-#{group}"}
+    role="tabpanel"
+    aria-labelledby={"layout-test-compact-groups-#{group}"}
+    hidden={@current_tab != group}
+  >
+    <div class="relative z-10 -mb-px overflow-x-auto pb-px [scrollbar-width:none]">
+      <.tabs
+        id={"layout-test-compact-#{group}-tabs"}
+        label={"#{String.capitalize(group)} components"}
+        active={@compact_component_tabs[group]}
+        type={:connected}
+        class="min-w-[calc(var(--tab-count)*5rem+2*var(--tab-inset))]"
+      >
+        <:tab
+          :for={{component, label} <- components}
+          value={component}
+          controls={"layout-test-compact-#{component}"}
+          click={JS.push("change_component_tab", value: %{tab: component})}
+        >
+          {label}
+        </:tab>
+      </.tabs>
+    </div>
+
+    <div class="tabs-connected-panel">
+      <section
+        :for={{component, _label} <- components}
+        id={"layout-test-compact-#{component}"}
+        role="tabpanel"
+        aria-labelledby={"layout-test-compact-#{group}-tabs-#{component}"}
+        hidden={@compact_component_tabs[group] != component}
+        class="min-w-0 space-y-4 p-3"
+      >
+        <%= case component do %>
+          <% input_section when input_section in ~w(inputs dates) -> %>
+            <% dates? = input_section == "dates"
+            date_types = ~w(date time week month datetime-local)
+
+            examples =
+              Enum.filter(@input_examples, fn {_field, type, _label} ->
+                type in date_types == dates?
+              end)
+
+            render_as = @input_config["render_as"]
+
+            checked_state =
+              case Enum.map([:enabled, :switch], fn field ->
+                     Phoenix.HTML.Form.normalize_value("checkbox", @local_form[field].value)
+                   end) do
+                [true, true] -> "true"
+                [false, false] -> "false"
+                _ -> "mixed"
+              end %>
+
+            <.collapse id={"layout-test-compact-#{input_section}-options"}>
+              <:summary>Input options</:summary>
+
+              <div class="space-y-4">
+                <fieldset class="space-y-2">
+                  <legend class="text-sm font-medium">Display mode</legend>
+                  <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <.button
+                      :for={mode <- @input_render_modes}
+                      type="button"
+                      class="whitespace-normal! px-2!"
+                      aria-pressed={to_string(render_as == mode)}
+                      phx-click="set_input_config"
+                      phx-value-option="render_as"
+                      phx-value-choice={mode}
+                    >
+                      {Phoenix.Naming.humanize(String.replace(mode, "-", "_"))}
+                    </.button>
+                  </div>
+                </fieldset>
+
+                <fieldset
+                  :for={
+                    {option, label, choices, selected} <- [
+                      {"variant", "Checkbox and switch",
+                       [{"default", "Default"}, {"alt", "Inline"}], @input_config["variant"]},
+                      {"checked", "Checked state", [{"false", "Unchecked"}, {"true", "Checked"}],
+                       checked_state},
+                      {"select_mode", "Select", [{"single", "Single"}, {"multiple", "Multiple"}],
+                       @input_config["select_mode"]},
+                      {"combobox_mode", "Combobox",
+                       [{"single", "Single"}, {"multiple", "Multiple"}],
+                       @input_config["combobox_mode"]}
+                    ]
+                  }
+                  :if={!dates?}
+                  class="space-y-2"
+                >
+                  <legend class="text-sm font-medium">{label}</legend>
+                  <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <.button
+                      :for={{value, choice} <- choices}
+                      type="button"
+                      class="whitespace-normal! px-2!"
+                      aria-pressed={to_string(selected == value)}
+                      phx-click="set_input_config"
+                      phx-value-option={option}
+                      phx-value-choice={value}
+                    >
+                      {choice}
+                    </.button>
+                  </div>
+                </fieldset>
+
+                <fieldset class="space-y-2">
+                  <legend class="text-sm font-medium">Input states</legend>
+                  <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <.button
+                      :for={
+                        {state, label} <- [
+                          {"empty", "Empty values"},
+                          {"unlabeled", "No labels"},
+                          {"placeholder", "Placeholders"},
+                          {"required", "Required"},
+                          {"errors", "Errors"},
+                          {"disabled", "Disabled"},
+                          {"readonly", "Read-only"},
+                          {"fieldset_disabled", "Disabled fieldset"},
+                          {"tooltip", "Tooltips"},
+                          {"constraints", "Constraints"},
+                          {"datalist", "Datalist"},
+                          {"multiple", "Multiple files"},
+                          {"capture", "Camera capture"},
+                          {"custom_class", "Custom class"},
+                          {"custom_error_class", "Custom error class"},
+                          {"prompt", "Select prompt"},
+                          {"textarea_size", "Textarea size"}
+                        ]
+                      }
+                      :if={
+                        !dates? or
+                          state not in ~w(readonly constraints datalist multiple capture prompt textarea_size)
+                      }
+                      type="button"
+                      class="whitespace-normal! px-2!"
+                      aria-pressed={to_string(@input_states[state])}
+                      phx-click="toggle_input_state"
+                      phx-value-state={state}
+                    >
+                      {label}
+                    </.button>
+                  </div>
+                </fieldset>
+              </div>
+            </.collapse>
+
+            <.form
+              for={@local_form}
+              id={
+                if dates?,
+                  do: "layout-test-compact-date-form",
+                  else: "layout-test-compact-input-form"
+              }
+              phx-change="local_change"
+              phx-submit={if dates?, do: "local_save"}
+              class="min-w-0 space-y-4"
+            >
+              <fieldset disabled={@input_states["fieldset_disabled"]} class="min-w-0 space-y-4">
+                <div
+                  :for={{field_name, type, label} <- examples}
+                  id={"layout-test-compact-input-example-#{type}"}
+                  data-input-type={type}
+                  data-input-mode={render_as}
+                  data-input-variant={
+                    if type == "radio-card", do: "card", else: @input_config["variant"]
+                  }
+                  class={[
+                    "min-w-0 space-y-1",
+                    type == "radio-card" && "[&_[data-core-input]>div]:grid-cols-[minmax(0,1fr)]"
+                  ]}
+                >
+                  <% field = @local_form[field_name]
+
+                  hidden? =
+                    type == "hidden" or render_as in ~w(hidden hidden-enabled hidden-disabled)
+
+                  selection? = type in ~w(select combobox)
+                  text? = type in ~w(text email password search url tel textarea)
+                  constraints? = @input_states["constraints"] %>
+
+                  <p
+                    :if={@input_states["unlabeled"] or hidden?}
+                    class="text-xs font-medium text-subcontent"
+                  >
+                    {label}
+                  </p>
+
+                  <.input
+                    field={
+                      if @input_states["errors"] do
+                        %{
+                          field
+                          | errors: [{"Example validation error", []}],
+                            form: %{
+                              field.form
+                              | params: Map.delete(field.form.params, "_unused_#{field.field}")
+                            }
+                        }
+                      else
+                        field
+                      end
+                    }
+                    id={if type == "combobox", do: "layout-test-local-role", else: field.id}
+                    type={if type == "radio-card", do: "radio", else: type}
+                    label={
+                      unless @input_states["unlabeled"] or
+                               (selection? and @input_states["prompt"]),
+                             do: label
+                    }
+                    value={field.value}
+                    options={
+                      case type do
+                        type when type in ~w(select combobox) ->
+                          @role_options
+
+                        "radio" ->
+                          [{"Email", "email"}, {"Telephone", "phone"}]
+
+                        "radio-card" ->
+                          [
+                            {"8-core CPU", "8-core", description: "32 GB RAM"},
+                            {"6-core CPU", "6-core", description: "24 GB RAM"},
+                            {"4-core CPU", "4-core", description: "16 GB RAM", disabled: true}
+                          ]
+
+                        _ ->
+                          []
+                      end
+                    }
+                    variant={if type == "radio-card", do: "card", else: @input_config["variant"]}
+                    render_as={render_as}
+                    timezone={@user_timezone}
+                    placeholder={if @input_states["placeholder"], do: "Example #{label}"}
+                    prompt={if selection? and @input_states["prompt"], do: "Choose a role"}
+                    tooltip={
+                      if @input_states["tooltip"], do: "#{label} input in #{render_as} mode"
+                    }
+                    required={@input_states["required"]}
+                    disabled={@input_states["disabled"]}
+                    readonly={text? and @input_states["readonly"]}
+                    min={if type == "number" and constraints?, do: 0}
+                    max={if type == "number" and constraints?, do: 100_000}
+                    step={if type == "number" and constraints?, do: 5}
+                    minlength={if text? and constraints?, do: 3}
+                    maxlength={if text? and constraints?, do: 200}
+                    pattern={if type == "text" and constraints?, do: "[^<>]+"}
+                    size={if type == "text" and constraints?, do: 12}
+                    list={
+                      if type == "text" and @input_states["datalist"],
+                        do: "layout-test-compact-input-cities"
+                    }
+                    multiple={
+                      case type do
+                        "file" -> @input_states["multiple"]
+                        "select" -> @input_config["select_mode"] == "multiple"
+                        "combobox" -> @input_config["combobox_mode"] == "multiple"
+                        _ -> false
+                      end
+                    }
+                    capture={if type == "file" and @input_states["capture"], do: "environment"}
+                    accept={
+                      cond do
+                        type != "file" -> nil
+                        @input_states["capture"] -> "image/*"
+                        @input_states["multiple"] or constraints? -> "image/*,.pdf"
+                        true -> nil
+                      end
+                    }
+                    rows={
+                      if type == "textarea",
+                        do: if(@input_states["textarea_size"], do: 6, else: 4)
+                    }
+                    class={
+                      if @input_states["custom_class"] and
+                           type not in ~w(checkbox switch radio radio-card hidden) do
+                        [
+                          "input-floating-control block w-full min-h-11 rounded-default border border-brand bg-transparent px-3 text-content disabled:overlay-dark disabled:text-subcontent disabled:cursor-not-allowed",
+                          (@input_states["disabled"] or render_as in ~w(disabled like-disabled)) and
+                            "overlay-dark text-subcontent cursor-not-allowed",
+                          type == "textarea" and "input-floating-textarea",
+                          type == "password" and "pr-12"
+                        ]
+                      end
+                    }
+                    error_class={
+                      if @input_states["custom_error_class"], do: "border-error bg-transparent"
+                    }
+                    aria-label={"#{label}, #{render_as}"}
+                  />
+
+                  <p :if={hidden?} class="text-xs text-subcontent">
+                    <%= cond do %>
+                      <% render_as == "hidden-disabled" -> %>
+                        The control and its value are omitted.
+                      <% type == "hidden" and render_as == "like-enabled" -> %>
+                        The value is hidden and does not submit.
+                      <% render_as in ~w(hidden hidden-enabled) or (type == "hidden" and render_as in ~w(enabled text text-enabled)) -> %>
+                        The value is hidden and submits unless disabled.
+                      <% true -> %>
+                        This hidden input uses the selected display mode.
+                    <% end %>
+                  </p>
+                </div>
+              </fieldset>
+
+              <datalist
+                :if={!dates? and @input_states["datalist"]}
+                id="layout-test-compact-input-cities"
+              >
+                <option value="Ipoh" />
+                <option value="Kuala Lumpur" />
+                <option value="George Town" />
+              </datalist>
+
+              <div :if={dates?} class="grid grid-cols-[max-content] justify-end">
+                <.action_button action={:save} type="submit" />
+              </div>
+            </.form>
+
+            <p :if={dates? and @submitted_at} class="text-sm text-content">
+              Last submitted datetime
+              <time id="submitted-at" datetime={DateTime.to_iso8601(@submitted_at)}>
+                {Calendar.strftime(
+                  DateTime.shift_zone!(@submitted_at, @user_timezone),
+                  "%-d %b %Y, %H:%M %Z"
+                )}
+              </time>
+              <span id="submitted-at-utc" class="block text-subcontent">
+                Submitted UTC {DateTime.to_iso8601(@submitted_at)}
+              </span>
+            </p>
+          <% "uploads" -> %>
+            <% options = @showcase["uploads"]
+            selection = options["selection"]
+            preview_id = if selection != "multiple", do: "layout-test-compact-upload-preview"
+            pending? = @uploads.demo_files.entries != [] %>
+
+            <.collapse id="layout-test-compact-upload-options">
+              <:summary>Upload options</:summary>
+
+              <div class="space-y-4">
+                <fieldset class="space-y-2">
+                  <legend class="text-sm font-medium">Display mode</legend>
+                  <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <.button
+                      :for={mode <- @input_render_modes}
+                      type="button"
+                      class="whitespace-normal! px-2!"
+                      aria-pressed={to_string(@upload_mode == mode)}
+                      phx-click="set_showcase_option"
+                      phx-value-section="uploads"
+                      phx-value-option="render_as"
+                      phx-value-choice={mode}
+                    >
+                      {Phoenix.Naming.humanize(String.replace(mode, "-", "_"))}
+                    </.button>
+                  </div>
+                </fieldset>
+
+                <fieldset class="space-y-2">
+                  <legend class="text-sm font-medium">File selection</legend>
+                  <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <.button
+                      :for={
+                        {choice, label} <- [
+                          {"single", "Single file"},
+                          {"singles", "Singles"},
+                          {"multiple", "Multiple files"}
+                        ]
+                      }
+                      type="button"
+                      class="whitespace-normal! px-2!"
+                      aria-pressed={to_string(selection == choice)}
+                      disabled={pending?}
+                      phx-click="set_showcase_option"
+                      phx-value-section="uploads"
+                      phx-value-option="selection"
+                      phx-value-choice={choice}
+                    >
+                      {label}
+                    </.button>
+                  </div>
+                  <p :if={pending?} class="text-sm text-subcontent">
+                    Save or cancel selected files before changing selection mode.
+                  </p>
+                </fieldset>
+
+                <fieldset class="space-y-2">
+                  <legend class="text-sm font-medium">Preview layout</legend>
+                  <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <.button
+                      :for={style <- ~w(tag thumbnail)}
+                      type="button"
+                      class="whitespace-normal! px-2!"
+                      aria-pressed={to_string(options["preview_as"] == style)}
+                      disabled={!options["preview"]}
+                      phx-click="set_showcase_option"
+                      phx-value-section="uploads"
+                      phx-value-option="preview_as"
+                      phx-value-choice={style}
+                    >
+                      {String.capitalize(style)}
+                    </.button>
+                  </div>
+                </fieldset>
+
+                <fieldset class="space-y-2">
+                  <legend class="text-sm font-medium">Image editor</legend>
+                  <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <.button
+                      :for={
+                        {choice, label} <- [
+                          {"false", "Editor off"},
+                          {"true", "Free crop"},
+                          {"presets", "Crop with presets"},
+                          {"exact", "512 × 512 pixels"},
+                          {"ratio", "16:9 crop"}
+                        ]
+                      }
+                      type="button"
+                      class="whitespace-normal! px-2!"
+                      aria-pressed={to_string(options["editor"] == choice)}
+                      disabled={selection == "multiple" or !options["preview"]}
+                      phx-click="set_showcase_option"
+                      phx-value-section="uploads"
+                      phx-value-option="editor"
+                      phx-value-choice={choice}
+                    >
+                      {label}
+                    </.button>
+                  </div>
+                </fieldset>
+
+                <fieldset class="space-y-2">
+                  <legend class="text-sm font-medium">Upload states</legend>
+                  <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                    <.button
+                      :for={
+                        {option, label} <- [
+                          {"labels", "Labels"},
+                          {"disabled", "Native disabled"},
+                          {"required", "Required"},
+                          {"tooltip", "Tooltips"},
+                          {"stored", "Stored files"},
+                          {"preview", "Preview"},
+                          {"errors", "Errors"}
+                        ]
+                      }
+                      type="button"
+                      class="whitespace-normal! px-2!"
+                      aria-pressed={to_string(options[option])}
+                      phx-click="toggle_showcase_option"
+                      phx-value-section="uploads"
+                      phx-value-option={option}
+                    >
+                      {label}
+                    </.button>
+                  </div>
+                </fieldset>
+              </div>
+            </.collapse>
+
+            <.form
+              for={@upload_form}
+              id="layout-test-compact-upload-form"
+              phx-change="upload_change"
+              phx-submit="upload_save"
+              class="min-w-0 space-y-4"
+            >
+              <.input
+                type="file"
+                name="files"
+                label={if options["labels"], do: "Files"}
+                upload={@uploads.demo_files}
+                selection={selection}
+                preview_id={preview_id}
+                thumbnail_class={if preview_id, do: "h-full w-full", else: "h-32 w-full"}
+                stored={
+                  cond do
+                    !options["stored"] -> []
+                    selection == "single" -> Enum.take(@stored_files, 1)
+                    true -> @stored_files
+                  end
+                }
+                preview={options["preview"]}
+                editor={
+                  case options["editor"] do
+                    "true" -> true
+                    "presets" -> %{presets: [{16, 9}, {3, 2}]}
+                    "exact" -> %{width: 512, height: 512}
+                    "ratio" -> %{ratio: 16 / 9}
+                    _ -> false
+                  end
+                }
+                preview_as={if options["preview"], do: options["preview_as"], else: "tag"}
+                render_as={@upload_mode}
+                disabled={options["disabled"]}
+                required={options["required"]}
+                tooltip={
+                  if options["tooltip"], do: "Choose PNG, JPEG, GIF, WebP, PDF, or text files"
+                }
+                errors={if options["errors"], do: ["Choose a supported file."], else: []}
+                aria-label="Upload files"
+              >
+                <:preview_caption :let={url}>
+                  <span class="truncate">{Map.get(@preview_names, url, Path.basename(url))}</span>
+                </:preview_caption>
+                <:pending_caption :let={entry}>
+                  <span class="truncate">{entry.client_name}</span>
+                </:pending_caption>
+              </.input>
+
+              <div
+                :if={@upload_mode == "enabled"}
+                class="grid grid-cols-[max-content] justify-end"
+              >
+                <.action_button
+                  action={:save}
+                  type="submit"
+                  tooltip="Save files"
+                  disabled={options["disabled"]}
+                />
+              </div>
+            </.form>
+
+            <.file_preview
+              :if={preview_id && options["preview"]}
+              id={preview_id}
+              class={if options["preview_as"] == "thumbnail", do: "h-40 w-full", else: "w-full"}
+            />
+
+            <p
+              :if={@uploaded_names != []}
+              id="uploaded-names"
+              role="status"
+              class="break-words text-sm"
+            >
+              {Enum.join(@uploaded_names, ", ")}
+            </p>
+          <% "appearance" -> %>
+            <section aria-labelledby="layout-test-compact-theme-title" class="space-y-3">
+              <h2 id="layout-test-compact-theme-title" class="text-sm font-semibold">
+                Theme toggle
+              </h2>
+              <div class="grid grid-cols-[max-content_minmax(0,1fr)] items-center justify-items-start gap-2">
+                <Layouts.theme_toggle />
+                <.button
+                  type="button"
+                  aria-pressed={to_string(@showcase["theme"]["inset"])}
+                  phx-click="toggle_showcase_option"
+                  phx-value-section="theme"
+                  phx-value-option="inset"
+                >Inset card</.button>
+              </div>
+              <div
+                id="layout-test-compact-theme-preview"
+                class={[
+                  "rounded-default p-3 text-content",
+                  @showcase["theme"]["inset"] && "border border-outline bg-secondary"
+                ]}
+              >
+                <p class="text-sm font-medium">Primary text</p>
+                <p class="text-sm text-subcontent">Secondary text</p>
+              </div>
+            </section>
+
+            <section
+              id="layout-test-compact-colors"
+              aria-labelledby="layout-test-compact-colors-title"
+              class="space-y-3"
+            >
+              <h2 id="layout-test-compact-colors-title" class="text-sm font-semibold">
+                System colors
+              </h2>
+              <ul class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                <li
+                  :for={{token, color_class} <- @appearance_colors}
+                  id={"layout-test-compact-color-#{token}"}
+                  data-color-token={"color-#{token}"}
+                  class="min-w-0 space-y-2 rounded-default inset-surface p-2 text-center"
+                >
+                  <div
+                    aria-hidden="true"
+                    class={[
+                      "grid min-h-10 grid-cols-[max-content_max-content] items-center justify-center gap-2 rounded-default border border-outline",
+                      color_class
+                    ]}
+                  >
+                    <span
+                      :if={token not in ["outline", "dark", "light"]}
+                      class={[
+                        "text-sm font-semibold",
+                        case token do
+                          token when token in ["content", "subcontent"] -> "text-content-inverse"
+                          "brand" -> "text-content-inverse dark:text-content"
+                          _ -> "text-content"
+                        end
+                      ]}
+                    >Aa</span>
+                    <span
+                      :if={token not in ["outline", "dark", "light"]}
+                      class={[
+                        "text-xs",
+                        case token do
+                          token when token in ["content", "subcontent"] ->
+                            "text-subcontent-inverse"
+
+                          "brand" ->
+                            "text-subcontent-inverse dark:text-subcontent"
+
+                          _ ->
+                            "text-subcontent"
+                        end
+                      ]}
+                    >Aa</span>
+                  </div>
+                  <code class="block text-xs [overflow-wrap:anywhere]">color-{token}</code>
+                </li>
+              </ul>
+            </section>
+
+            <.collapse
+              :for={
+                {demo, title, samples} <- [
+                  {"background-opacity", "Background opacity",
+                   [{"opacity", nil, "overlay-opacity", "text-content", @appearance_opacities}]},
+                  {"overlay-strength", "Overlay strength", @appearance_overlays}
+                ]
+              }
+              id={"layout-test-compact-#{demo}-panel"}
+            >
+              <:summary>{title}</:summary>
+              <div id={"layout-test-compact-#{demo}"} class="space-y-4">
+                <section
+                  :for={{kind, heading, step, content_class, strengths} <- samples}
+                  class="space-y-2"
+                >
+                  <h3 :if={heading} class="text-sm font-medium">{heading}</h3>
+                  <ul
+                    aria-label={heading || title}
+                    class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2"
+                  >
+                    <li :for={{strength, css_class} <- strengths} class="min-w-0 space-y-1">
+                      <div
+                        id={"layout-test-compact-#{kind}-#{strength}"}
+                        class={[
+                          "grid min-h-10 place-items-center rounded-default border border-outline bg-brand text-sm font-medium",
+                          css_class,
+                          cond do
+                            kind == "opacity" and strength == 100 ->
+                              "text-content-inverse dark:text-content"
+
+                            kind == "light" and strength >= 50 ->
+                              "text-content dark:text-content-inverse"
+
+                            true ->
+                              content_class
+                          end
+                        ]}
+                      >
+                        {strength}%
+                      </div>
+                      <code class="block text-center text-xs text-subcontent [overflow-wrap:anywhere]">
+                        {css_class}
+                      </code>
+                    </li>
+                  </ul>
+
+                  <div class={[
+                    "rounded-default border border-outline bg-brand p-2",
+                    content_class,
+                    step
+                  ]}>
+                    <p class="text-sm">10% combined</p>
+                    <div class={["mt-2 rounded-default border border-outline p-2", step]}>
+                      <p class="text-sm">20% combined</p>
+                      <div class={["mt-2 rounded-default border border-outline p-2", step]}>
+                        <p class="text-sm">30% combined</p>
+                        <div class={["mt-2 rounded-default border border-outline p-2", step]}>
+                          <p class="text-sm">40% combined</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </.collapse>
+          <% "calendar" -> %>
+            <.collapse id="layout-test-compact-calendar-display">
+              <:summary>Event display</:summary>
+              <.form
+                :let={form}
+                for={to_form(@showcase["calendar"], as: :showcase)}
+                id="layout-test-compact-calendar-options"
+                phx-change="showcase_change"
+                phx-value-section="calendar"
+                class="space-y-3"
+              >
+                <.input type="checkbox" field={form[:events]} label="Show events" />
+                <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] subgap-2">
+                  <.input
+                    type="select"
+                    field={form[:variant]}
+                    label="Event style"
+                    options={[{"Solid", "solid"}, {"Outline", "outline"}]}
+                  />
+                  <.input
+                    type="select"
+                    field={form[:color]}
+                    label="Event color"
+                    options={
+                      for color <- ~w(brand info success warning error neutral),
+                          do: {String.capitalize(color), color}
+                    }
+                  />
+                </div>
+              </.form>
+            </.collapse>
+
+            <ElixirbitsWeb.CoreComponents.calendar
+              id="calendar-showcase"
+              events={
+                if @showcase["calendar"]["events"],
+                  do:
+                    Enum.map(@calendar_events, fn event ->
+                      Map.merge(event, %{
+                        variant: String.to_existing_atom(@showcase["calendar"]["variant"]),
+                        color: String.to_existing_atom(@showcase["calendar"]["color"])
+                      })
+                    end),
+                  else: []
+              }
+              resources={@calendar_resources}
+              timezone={@user_timezone}
+              view={@calendar_view}
+              cursor={@calendar_cursor}
+              active_event={@calendar_selected}
+              compact
+            />
+            <p
+              :for={event <- @calendar_events}
+              :if={event.id == @calendar_selected}
+              id="calendar-selection"
+              class="text-sm text-content"
+            >
+              Selected event: {event.title}
+            </p>
+
+            <.card_inset id="layout-test-compact-timer" class="space-y-3">
+              <% mode = @showcase["calendar"]["timer"] %>
+              <div class="grid grid-cols-[minmax(0,1fr)_max-content] items-center gap-2">
+                <.header level={3}>Timer</.header>
+                <span
+                  id={"demo-#{mode}-timer"}
+                  phx-hook="LiveTimer"
+                  data-mode={mode}
+                  data-target={
+                    DateTime.to_iso8601(
+                      if mode == "elapsed", do: @timer_start, else: @timer_finish
+                    )
+                  }
+                  class="text-xl font-semibold tabular-nums text-content"
+                >
+                  {if mode == "elapsed", do: "0:00", else: "in 1:00"}
+                </span>
+              </div>
+              <div
+                class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2"
+                role="group"
+                aria-label="Timer mode"
+              >
+                <.button
+                  :for={option <- ~w(elapsed countdown)}
+                  id={"timer-mode-#{option}"}
+                  type="button"
+                  aria-pressed={to_string(mode == option)}
+                  phx-click="set_showcase_option"
+                  phx-value-section="calendar"
+                  phx-value-option="timer"
+                  phx-value-choice={option}
+                  class="px-1!"
+                >
+                  {String.capitalize(option)}
+                </.button>
+              </div>
+              <div class="grid justify-items-end">
+                <.button id="timer-reset" type="button" variant={:text} phx-click="reset_timer">
+                  Restart timer
+                </.button>
+              </div>
+            </.card_inset>
+          <% "icons" -> %>
+            <% options = @showcase["icons"] %>
+            <.card_inset
+              id="layout-test-icon-preview"
+              class="grid min-h-24 place-items-center text-center"
+            >
+              <div class="grid min-w-0 justify-items-center gap-2">
+                <.icon
+                  name={options["name"]}
+                  class={[
+                    case options["size"] do
+                      "4" -> "size-4"
+                      "5" -> "size-5"
+                      "8" -> "size-8"
+                      "12" -> "size-12"
+                    end,
+                    case options["color"] do
+                      "content" -> "text-content"
+                      "brand" -> "text-brand"
+                      "info" -> "text-info"
+                      "success" -> "text-success"
+                      "warning" -> "text-warning"
+                      "error" -> "text-error"
+                    end
+                  ]}
+                />
+                <span :if={options["label"]} class="text-sm font-medium [overflow-wrap:anywhere]">
+                  {options["name"]}
+                </span>
+              </div>
+            </.card_inset>
+
+            <.form
+              :let={form}
+              for={to_form(options, as: :showcase)}
+              id="layout-test-compact-icon-options"
+              phx-change="showcase_change"
+              phx-value-section="icons"
+              class="space-y-3"
+            >
+              <.input
+                field={form[:name]}
+                type="select"
+                label="Icon"
+                options={[
+                  {"Sparkles", "hero-sparkles"},
+                  {"Bolt", "hero-bolt"},
+                  {"Settings", "hero-cog-6-tooth"},
+                  {"Command line", "hero-command-line"},
+                  {"Server stack", "hero-server-stack"},
+                  {"Save", "tabler-device-floppy"},
+                  {"GitLab", "simple-gitlab"}
+                ]}
+              />
+              <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] subgap-2">
+                <.input field={form[:size]} type="select" label="Size" options={~w(4 5 8 12)} />
+                <.input
+                  field={form[:color]}
+                  type="select"
+                  label="Color"
+                  options={
+                    for color <- ~w(content brand info success warning error),
+                        do: {String.capitalize(color), color}
+                  }
+                />
+              </div>
+              <.input field={form[:label]} type="checkbox" label="Show icon name" />
+            </.form>
+          <% "controls" -> %>
+            <section id="layout-test-compact-header" class="space-y-3">
+              <.header>Header and button</.header>
+
+              <.form
+                for={to_form(@showcase["header"], as: :showcase)}
+                id="layout-test-compact-button-form"
+                phx-change="showcase_change"
+                phx-value-section="header"
+              >
+                <.input
+                  name="showcase[variant]"
+                  type="select"
+                  label="Button style"
+                  options={
+                    Enum.map(
+                      ~w(default text neutral primary danger),
+                      &{String.capitalize(&1), &1}
+                    )
+                  }
+                  value={@showcase["header"]["variant"]}
+                />
+              </.form>
+
+              <div class="grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-2">
+                <.button
+                  :for={
+                    {option, label} <- [
+                      {"actions", "Action"},
+                      {"disabled", "Disabled"},
+                      {"tooltip", "Tooltip"},
+                      {"navigation", "Navigation"}
+                    ]
+                  }
+                  type="button"
+                  aria-pressed={to_string(@showcase["header"][option])}
+                  phx-click="toggle_showcase_option"
+                  phx-value-section="header"
+                  phx-value-option={option}
+                >
+                  {label}
+                </.button>
+              </div>
+
+              <.card_inset>
+                <.header level={3}>
+                  Example title
+                  <:actions :if={@showcase["header"]["actions"]}>
+                    <.button
+                      type="button"
+                      variant={
+                        if @showcase["header"]["variant"] != "default",
+                          do: String.to_existing_atom(@showcase["header"]["variant"])
+                      }
+                      disabled={@showcase["header"]["disabled"]}
+                      tooltip={if @showcase["header"]["tooltip"], do: "Try this example action"}
+                      navigate={if @showcase["header"]["navigation"], do: ~p"/dashboard"}
+                      phx-click={if not @showcase["header"]["navigation"], do: "show_flash"}
+                      phx-value-kind="info"
+                    >
+                      {if @showcase["header"]["navigation"], do: "Home", else: "Action"}
+                    </.button>
+                  </:actions>
+                </.header>
+              </.card_inset>
+            </section>
+
+            <section id="layout-test-compact-flash" class="space-y-3 border-t border-outline pt-4">
+              <.header>Flashes</.header>
+
+              <.form
+                for={to_form(@showcase["flash"], as: :showcase)}
+                id="layout-test-compact-flash-form"
+                phx-change="showcase_change"
+                phx-value-section="flash"
+                class="grid grid-cols-[1fr_1fr] subgap-2"
+              >
+                <.input
+                  name="showcase[kind]"
+                  type="select"
+                  label="Kind"
+                  options={[{"Info", "info"}, {"Warning", "warning"}, {"Error", "error"}]}
+                  value={@showcase["flash"]["kind"]}
+                />
+                <.input
+                  name="showcase[duration]"
+                  type="select"
+                  label="Duration"
+                  options={[
+                    {"Default", "default"},
+                    {"1 second", "1000"},
+                    {"5 seconds", "5000"},
+                    {"8 seconds", "8000"}
+                  ]}
+                  value={@showcase["flash"]["duration"]}
+                />
+              </.form>
+
+              <div class="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                <.button
+                  :for={
+                    {option, label} <- [
+                      {"title", "Title"},
+                      {"icon", "Icon"},
+                      {"spinner", "Spinner"}
+                    ]
+                  }
+                  type="button"
+                  aria-pressed={to_string(@showcase["flash"][option])}
+                  phx-click="toggle_showcase_option"
+                  phx-value-section="flash"
+                  phx-value-option={option}
+                  class="px-1"
+                >
+                  {label}
+                </.button>
+              </div>
+              <.button type="button" variant={:primary} phx-click="preview_flash">Show flash</.button>
+            </section>
+          <% "data" -> %>
+            <section id="layout-test-compact-core-table" class="space-y-3">
+              <.header>Core Table</.header>
+
+              <div class="grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-2">
+                <.button
+                  :for={
+                    {option, label} <- [
+                      {"empty", "Empty"},
+                      {"actions", "Actions"},
+                      {"clickable", "Clickable"},
+                      {"status", "Status"}
+                    ]
+                  }
+                  type="button"
+                  aria-pressed={to_string(@showcase["table"][option])}
+                  phx-click="toggle_showcase_option"
+                  phx-value-section="table"
+                  phx-value-option={option}
+                >
+                  {label}
+                </.button>
+              </div>
+
+              <div class="overflow-x-auto rounded-default">
+                <.table
+                  id="layout-test-compact-table"
+                  rows={if @showcase["table"]["empty"], do: [], else: @table_examples}
+                  row_click={
+                    if @showcase["table"]["clickable"],
+                      do: fn row ->
+                        JS.push("inspect_table_row", value: %{section: row.section})
+                      end
+                  }
+                >
+                  <:col :let={row} label="Section">{row.section}</:col>
+                  <:col :let={row} :if={@showcase["table"]["status"]} label="Status">
+                    <span class="status-pill bg-success text-content">{row.status}</span>
+                  </:col>
+                  <:action :let={row} :if={@showcase["table"]["actions"]}>
+                    <.action_button
+                      action={:read}
+                      tooltip={"Inspect #{row.section}"}
+                      phx-click="inspect_table_row"
+                      phx-value-section={row.section}
+                    />
+                  </:action>
+                </.table>
+              </div>
+
+              <p :if={@table_selection} role="status" class="text-sm text-content">
+                Selected row: {@table_selection}
+              </p>
+            </section>
+
+            <section
+              id="layout-test-compact-core-list"
+              class="space-y-3 border-t border-outline pt-4"
+            >
+              <.header>Core List</.header>
+
+              <div class="grid grid-cols-[1fr_max-content] items-center gap-2">
+                <.form
+                  for={to_form(@showcase["list"], as: :showcase)}
+                  id="layout-test-compact-list-form"
+                  phx-change="showcase_change"
+                  phx-value-section="list"
+                >
+                  <.input
+                    name="showcase[count]"
+                    type="select"
+                    label="Items"
+                    options={~w(1 2 4)}
+                    value={@showcase["list"]["count"]}
+                  />
+                </.form>
+                <.button
+                  type="button"
+                  aria-pressed={to_string(@showcase["list"]["titles"])}
+                  phx-click="toggle_showcase_option"
+                  phx-value-section="list"
+                  phx-value-option="titles"
+                >
+                  Titles
+                </.button>
+              </div>
+
+              <.list>
+                <:item
+                  :for={
+                    {title, value} <-
+                      Enum.take(@list_examples, String.to_integer(@showcase["list"]["count"]))
+                  }
+                  title={if @showcase["list"]["titles"], do: title, else: ""}
+                >
+                  {value}
+                </:item>
+              </.list>
+            </section>
+          <% "actions" -> %>
+            <.form
+              for={@record_form}
+              id="layout-test-compact-record-form"
+              phx-change="record_change"
+              phx-submit="record_action"
+              class="space-y-4"
+            >
+              <.input type="hidden" name="action" value="save" />
+              <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max justify-end gap-2">
+                <.action_button
+                  action={:back}
+                  phx-click="record_action"
+                  phx-value-action="back"
+                />
+                <.action_button
+                  action={:create}
+                  phx-click="record_action"
+                  phx-value-action="create"
+                />
+                <.action_button action={:save} type="submit" />
+                <.action_button
+                  :for={action <- [:history, :send, :archive]}
+                  action={action}
+                  phx-click="record_action"
+                  phx-value-action={action}
+                  disabled={is_nil(@record_selected)}
+                />
+              </div>
+
+              <.card_inset :for={entry <- @record_entries} class="space-y-3">
+                <.input
+                  id={"record-name-#{entry["id"]}"}
+                  name={"records[#{entry["id"]}][name]"}
+                  label="Name"
+                  value={entry["name"]}
+                  render_as={
+                    if(entry["id"] == @record_selected, do: @record_mode, else: "text-disabled")
+                  }
+                />
+                <div class="grid grid-cols-[1fr_max-content_max-content_max-content] items-center gap-2">
+                  <span class="text-xs text-subcontent">{entry["status"]}</span>
+                  <.action_button
+                    :for={action <- [:read, :update, :delete]}
+                    action={action}
+                    phx-click="record_action"
+                    phx-value-action={action}
+                    phx-value-id={entry["id"]}
+                  />
+                </div>
+              </.card_inset>
+              <p role="status" class="text-sm text-subcontent">{@record_message}</p>
+            </.form>
+
+            <section class="space-y-3 border-t border-outline pt-4">
+              <.header>Dialog</.header>
+              <div class="grid grid-cols-[1fr_1fr] gap-2">
+                <.button
+                  :for={{option, label} <- [{"title", "Title"}, {"actions", "Actions"}]}
+                  type="button"
+                  aria-pressed={to_string(@showcase["dialog"][option])}
+                  phx-click="toggle_showcase_option"
+                  phx-value-section="dialog"
+                  phx-value-option={option}
+                >
+                  {label}
+                </.button>
+              </div>
+              <.button type="button" variant={:neutral} phx-click="show_modal">Open dialog</.button>
+            </section>
+          <% "lists" -> %>
+            <.cinder_collection
+              id="layout-test-compact-collection"
+              query={@showcase_query}
+              layout={:grid}
+              container_class="identity-grid"
+              class="identity-collection"
+              show_sort={false}
+              search={[label: "Search examples", placeholder: "Code or name"]}
+              url_state={%{filters: @cinder_preview_state}}
+              on_state_change={:cinder_preview_state_change}
+              query_opts={[authorize?: false]}
+            >
+              <:controls :let={controls}>
+                <.cinder_controls controls={controls} show_field_filters={false} />
+              </:controls>
+              <:col field="code" label="Code" search filter sort />
+              <:col field="name" label="Name" search filter sort />
+              <:col field="state" label="State" filter sort />
+              <:col field="sequence" label="#" sort />
+              <:item :let={entry}>
+                <article data-item-id={entry.id} class="min-w-0 space-y-1">
+                  <h3 class="text-sm font-semibold">{entry.name}</h3>
+                  <p class="text-xs text-subcontent">{entry.code}</p>
+                  <p class="text-xs text-subcontent">{Phoenix.Naming.humanize(entry.state)}</p>
+                </article>
+              </:item>
+            </.cinder_collection>
+          <% "ui-kit" -> %>
+            <% kit = @showcase["ui_kit"] %>
+            <.form
+              for={to_form(kit, as: :showcase)}
+              id="layout-test-compact-kit-form"
+              phx-change="showcase_change"
+              phx-value-section="ui_kit"
+              class="grid grid-cols-[1fr_1fr] items-start subgap-2 gap-y-4"
+            >
+              <.input
+                name="showcase[alert]"
+                type="select"
+                label="Alert"
+                value={kit["alert"]}
+                options={Enum.map(~w(info success warning error), &{String.capitalize(&1), &1})}
+              />
+              <.input
+                name="showcase[badge]"
+                type="select"
+                label="Badge"
+                value={kit["badge"]}
+                options={
+                  Enum.map(~w(brand outline success warning), &{String.capitalize(&1), &1})
+                }
+              />
+              <.input
+                name="showcase[progress]"
+                type="number"
+                label="Progress (%)"
+                value={kit["progress"]}
+                min="0"
+                max="100"
+                step="1"
+              />
+              <.input
+                name="showcase[step]"
+                type="select"
+                label="Step"
+                value={kit["step"]}
+                options={~w(1 2 3)}
+              />
+            </.form>
+
+            <div
+              id="layout-test-compact-kit-alert"
+              role="status"
+              class={[
+                "grid grid-cols-[1.25rem_1fr] items-center gap-2 rounded-default border p-3 text-sm overlay-opacity-[0.12]",
+                case kit["alert"] do
+                  "success" -> "border-success bg-success"
+                  "warning" -> "border-warning bg-warning"
+                  "error" -> "border-error bg-error"
+                  _ -> "border-info bg-info"
+                end
+              ]}
+            >
+              <.icon
+                name={
+                  case kit["alert"] do
+                    "success" -> "hero-check-circle"
+                    "warning" -> "hero-exclamation-triangle"
+                    "error" -> "hero-x-circle"
+                    _ -> "hero-information-circle"
+                  end
+                }
+                class="size-5"
+              />
+              <span>{String.capitalize(kit["alert"])} alert</span>
+            </div>
+
+            <span class={[
+              "status-pill text-content",
+              case kit["badge"] do
+                "outline" -> "border border-outline"
+                "success" -> "bg-success"
+                "warning" -> "bg-warning"
+                _ -> "bg-brand"
+              end
+            ]}>
+              {String.capitalize(kit["badge"])} badge
+            </span>
+
+            <progress
+              aria-label="Example progress"
+              max="100"
+              value={kit["progress"]}
+              class="block h-2 w-full accent-brand"
+            />
+
+            <ol
+              aria-label="Example steps"
+              class="grid grid-cols-[1fr_1fr_1fr] gap-2 text-center text-xs"
+            >
+              <li
+                :for={{step, label} <- [{"1", "Start"}, {"2", "Review"}, {"3", "Done"}]}
+                aria-current={step == kit["step"] && "step"}
+                class={[
+                  "rounded-default px-1 py-2",
+                  if(step == kit["step"],
+                    do: "bg-brand overlay-opacity-[0.12] text-content",
+                    else: "inset-surface text-subcontent"
+                  )
+                ]}
+              >
+                {label}
+              </li>
+            </ol>
+
+            <.collapse id="layout-test-compact-kit-menu">
+              <:summary>Example menu</:summary>
+              <ul class="grid grid-cols-[1fr] gap-1 text-sm">
+                <li>
+                  <.link
+                    navigate={~p"/dashboard"}
+                    class="block rounded-default px-3 py-2 hover:overlay-dark"
+                  >Dashboard</.link>
+                </li>
+                <li>
+                  <.link
+                    href="/api/json/scalar"
+                    class="block rounded-default px-3 py-2 hover:overlay-dark"
+                  >API browser</.link>
+                </li>
+                <li>
+                  <.link
+                    href="/dashboard/admin"
+                    class="block rounded-default px-3 py-2 hover:overlay-dark"
+                  >Admin surface</.link>
+                </li>
+              </ul>
+            </.collapse>
+          <% "pages" -> %>
+            <.header>Dependency pages</.header>
+
+            <.form
+              for={@dependency_form}
+              id="layout-test-compact-dependency-form"
+              phx-change="dependency_change"
+            >
+              <.input
+                type="combobox"
+                field={@dependency_form[:component_search]}
+                label="Find a dependency"
+                options={@dependency_options}
+                multiple={@showcase["combobox"]["mode"] == "multiple"}
+                prompt="Select a page"
+              />
+            </.form>
+
+            <div class="grid grid-cols-[1fr] gap-2">
+              <.card_inset
+                :for={
+                  page <-
+                    if(@selected_dependencies == [],
+                      do: @dependency_pages,
+                      else: @selected_dependencies
+                    )
+                }
+                id={"layout-test-compact-dependency-#{page.id}"}
+                class="space-y-2"
+              >
+                <.header level={3}>
+                  {page.name}
+                  <:actions>
+                    <.action_button action={:read} href={page.path} tooltip={"Open #{page.name}"} />
+                  </:actions>
+                </.header>
+                <div class="grid grid-cols-[minmax(0,1fr)_max-content] items-center gap-1">
+                  <p class="break-all text-xs text-subcontent">{page.source}</p>
+                  <span class="status-pill bg-primary overlay-dark text-content">{page.availability}</span>
+                </div>
+              </.card_inset>
+            </div>
+        <% end %>
+      </section>
+    </div>
+  </section>
+</section>
+
+<.modal :if={@show_modal} id="layout-test-modal" on_cancel={JS.push("hide_modal")}>
+  <:title :if={@showcase["dialog"]["title"]}>Example dialog</:title>
+  <div :if={@showcase["dialog"]["actions"]} class="grid grid-cols-[1fr_1fr] gap-2">
+    <.button type="button" variant={:neutral} phx-click="hide_modal">Cancel</.button>
+    <.button type="button" variant={:primary} phx-click="hide_modal">Confirm</.button>
+  </div>
+  <.button
+    :if={!@showcase["dialog"]["actions"]}
+    type="button"
+    variant={:neutral}
+    phx-click="hide_modal"
+  >
+    Close
+  </.button>
+</.modal>

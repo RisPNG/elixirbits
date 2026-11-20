@@ -1,0 +1,179 @@
+<% editable? =
+  @live_action in [:create, :update] and can?(@permissions, @current_path, @live_action)
+
+grants_editable? = editable? and can?(@permissions, @current_path, :su) %>
+<History.history audit={@audit} user_timezone={@user_timezone} entry_sections={@entry_sections} />
+<.form
+  for={@form}
+  id="role-form"
+  data-dashboard-layout="compact"
+  phx-change={if editable?, do: "validate"}
+  phx-submit={if editable?, do: "save"}
+  class="space-y-6 record-entry-compact"
+>
+  <.page>
+    <:title>
+      {case @live_action do
+        :create -> "New Role"
+        :read -> "Role Details"
+        :update -> "Edit Role"
+      end}
+    </:title>
+
+    <:actions>
+      <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
+        <.action_button action={:back} navigate={~p"/dashboard/admin/roles"} />
+        <.action_button
+          :if={@live_action == :update and can?(@permissions, @current_path, :read)}
+          action={:read}
+          navigate={~p"/dashboard/admin/roles/#{@role.id}/read"}
+        />
+        <.action_button
+          :if={@audit.available?}
+          action={:history}
+          patch={@audit.history_path}
+        />
+        <.action_button :if={editable?} action={:save} type="submit" />
+        <.action_button
+          :if={@live_action == :read and can?(@permissions, @current_path, :update)}
+          action={:update}
+          navigate={~p"/dashboard/admin/roles/#{@role.id}/update"}
+        />
+        <.action_button
+          :if={
+            @live_action == :update and @role.code != "superuser" and
+              can?(@permissions, @current_path, :delete)
+          }
+          action={:delete}
+          type="button"
+          phx-click="request_delete"
+        />
+      </div>
+    </:actions>
+
+    <div
+      :if={@role}
+      class="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-3 border-b border-outline pb-4"
+    >
+      <span class="grid size-11 place-items-center rounded-default bg-secondary text-brand">
+        <.icon name="hero-key" class="size-5" />
+      </span>
+
+      <div class="min-w-0 space-y-1 [overflow-wrap:anywhere]">
+        <p class="text-base font-semibold text-content">{@role.name}</p>
+        <p class="text-sm text-subcontent">{@role.code}</p>
+      </div>
+    </div>
+
+    <div>
+      <.tabs
+        id="role-entry-sections"
+        type={:connected}
+        label="Role sections"
+        active={@entry_section}
+      >
+        <:tab
+          :for={{id, label, _fields} <- @entry_sections}
+          value={id}
+          controls={"role-entry-#{id}"}
+          click={JS.push("entry_section", value: %{section: id})}
+        >
+          {label}
+        </:tab>
+      </.tabs>
+
+      <div class="tabs-connected-panel">
+        <section
+          id="role-entry-details"
+          role="tabpanel"
+          aria-labelledby="role-entry-sections-details"
+          hidden={@entry_section != "details"}
+          class="min-w-0 p-4"
+        >
+          <fieldset disabled={!editable?} class="grid min-w-0 gap-4">
+            <.input :if={is_nil(@role)} field={@form[:code]} type="text" label="Code" />
+            <.input
+              :if={@role}
+              name="role_code"
+              value={@role.code}
+              type="text"
+              label="Code"
+              disabled
+            />
+            <.input field={@form[:name]} type="text" label="Name" />
+            <.input field={@form[:description]} type="textarea" label="Description" />
+          </fieldset>
+        </section>
+
+        <section
+          id="role-entry-permissions"
+          role="tabpanel"
+          aria-labelledby="role-entry-sections-permissions"
+          hidden={@entry_section != "permissions"}
+          class="min-w-0 space-y-5 p-4"
+        >
+          <div
+            :for={[%{group: group} | _] = pages <- Enum.chunk_by(@pages, & &1.group)}
+            class="space-y-3"
+          >
+            <h2 :if={group} class="text-sm font-medium text-subcontent">{group}</h2>
+
+            <div
+              :for={page <- pages}
+              class="grid min-w-0 gap-2 border-b border-outline pb-3 last:border-0 last:pb-0"
+            >
+              <div class="min-w-0 space-y-1">
+                <label
+                  id={"permission-label-#{page.code}"}
+                  for={
+                    if grants_editable?,
+                      do: "permission-level-#{page.code}-trigger",
+                      else: "permission-level-#{page.code}"
+                  }
+                  class="block text-sm font-medium text-content [overflow-wrap:anywhere]"
+                >
+                  {page.name}
+                </label>
+
+                <p
+                  :if={page.public?}
+                  id={"permission-hint-#{page.code}"}
+                  class="text-xs text-subcontent"
+                >
+                  Public read access
+                </p>
+              </div>
+
+              <% grant_change =
+                Enum.find(
+                  @audit.fields,
+                  &(&1.key == "role_perms.#{page.code}.level" and &1.status == :changed)
+                ) %>
+              <.input
+                field={@permission_form[page.code]}
+                type="combobox"
+                id={"permission-level-#{page.code}"}
+                options={@levels}
+                role="group"
+                aria-labelledby={"permission-label-#{page.code}"}
+                aria-describedby={if page.public?, do: "permission-hint-#{page.code}"}
+                clear_button={false}
+                disabled={!grants_editable?}
+                data-audit-side={@audit.selected && to_string(@audit.side)}
+                data-audit-changed={grant_change && "true"}
+                data-audit-added={grant_change && !grant_change.before_present? && "true"}
+                data-audit-removed={grant_change && !grant_change.after_present? && "true"}
+              />
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </.page>
+</.form>
+<.delete_confirmation
+  :if={@to_delete}
+  label="role"
+  name={@to_delete.name}
+  remove_assignments?={@remove_assignments?}
+/>

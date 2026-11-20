@@ -11,10 +11,29 @@ defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
   alias ElixirbitsWeb.AuditLogLive.History
   alias ElixirbitsWeb.Dashboard.UserLive.Deletion
 
+  @entry_sections [
+    {"account", "Account",
+     [
+       :email,
+       :username,
+       :display_name,
+       :password,
+       :password_confirmation,
+       :display_pic_url,
+       :display_pic_name
+     ]},
+    {"personal", "Personal",
+     [:first_name, :middle_name, :last_name, :tel_no, :sex, :dob, :locale, :timezone]},
+    {"addresses", "Addresses", [:addresses]}
+  ]
+
+  on_mount {Layouts, {:entry_sections, @entry_sections}}
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/dashboard/admin/users"}}
   on_mount {History, Elixirbits.Accounts.User}
   on_mount {Deletion, :entry}
   on_mount {ElixirbitsWeb.CoreComponents, {:repeatable_form, [:addresses]}}
+
+  embed_templates "entry_compact.html"
 
   @impl true
   def mount(_params, _session, socket) do
@@ -58,6 +77,7 @@ defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
 
           {socket, user} =
             History.load_revision(socket, user, params,
+              view_path: ~p"/dashboard/admin/users/#{user.id}/read",
               preserve_fields: [:display_pic_url, :display_pic_name]
             )
 
@@ -116,6 +136,8 @@ defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
         if socket.assigns.live_action == :read, do: Enum.map(user.roles, &{&1, &1}), else: []
       end
 
+    roles_visible? = can_assign_roles? or socket.assigns.live_action == :read
+
     {:noreply,
      socket
      |> assign(:page_title, title)
@@ -123,6 +145,17 @@ defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
      |> assign(:existing_display_pic, user && user.display_pic_url)
      |> assign(:form, to_form(form))
      |> assign(:can_assign_roles?, can_assign_roles?)
+     |> assign(
+       :entry_sections,
+       if(roles_visible?,
+         do: @entry_sections ++ [{"roles", "Roles", [:roles]}],
+         else: @entry_sections
+       )
+     )
+     |> update(:entry_section, fn
+       "roles" when not roles_visible? -> "account"
+       section -> section
+     end)
      |> assign(:role_options, roles)
      |> assign(
        :sex_options,
@@ -172,7 +205,7 @@ defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
 
     cond do
       not form.valid? ->
-        {:noreply, assign(socket, :form, to_form(form))}
+        {:noreply, Layouts.show_invalid_entry(socket, form)}
 
       not Ash.can?(form.source, socket.assigns.current_user) ->
         {:noreply, put_flash(socket, :error, "You do not have permission to save these changes.")}
@@ -215,7 +248,7 @@ defmodule ElixirbitsWeb.Dashboard.UserLive.Entry do
 
           {:error, form} ->
             if new_display_pic, do: Upload.delete(new_display_pic)
-            {:noreply, assign(socket, :form, to_form(form))}
+            {:noreply, Layouts.show_invalid_entry(socket, form)}
         end
     end
   end

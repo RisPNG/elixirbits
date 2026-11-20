@@ -7,9 +7,20 @@ defmodule ElixirbitsWeb.Dashboard.OrganizationLive.Settings do
   alias Elixirbits.Organizations.Organization
   alias ElixirbitsWeb.AuditLogLive.History
 
+  on_mount {Layouts,
+            {:entry_sections,
+             [
+               {"details", "Details", [:name, :registration_no, :tax_identification_no]},
+               {"regional", "Regional", [:base_currency, :locale, :timezone]},
+               {"contact", "Contact", [:email, :phone]},
+               {"addresses", "Addresses", [:addresses]}
+             ]}}
+
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/dashboard/admin/organization"}}
   on_mount {History, Organization}
   on_mount {ElixirbitsWeb.CoreComponents, {:repeatable_form, [:addresses]}}
+
+  embed_templates "settings_compact.html"
 
   @impl true
   def mount(_params, _session, socket) do
@@ -35,7 +46,10 @@ defmodule ElixirbitsWeb.Dashboard.OrganizationLive.Settings do
         load: [:addresses]
       )
 
-    {socket, organization} = History.load_revision(socket, organization, params)
+    {socket, organization} =
+      History.load_revision(socket, organization, params,
+        view_path: ~p"/dashboard/admin/organization"
+      )
 
     form =
       case organization do
@@ -130,7 +144,7 @@ defmodule ElixirbitsWeb.Dashboard.OrganizationLive.Settings do
          |> push_navigate(to: ~p"/dashboard/admin/organization")}
 
       {:error, form} ->
-        {:noreply, assign(socket, :form, form)}
+        {:noreply, Layouts.show_invalid_entry(socket, form)}
     end
   end
 end

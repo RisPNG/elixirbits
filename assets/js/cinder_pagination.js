@@ -121,7 +121,7 @@ const CinderPagination = {
     if (loading) loading.hidden = false
 
     if (!loading) {
-      const body = collection?.querySelector("[data-key=tbody_class]")
+      const body = collection?.querySelector("[data-key=tbody_class], .identity-grid[data-key=grid_container_class]")
       const current = pagination?.querySelector("[data-key=pagination_current_class]")
       const page = current ? Number(current.textContent) : null
       const firstRow = body?.querySelector("[data-item-id]")?.dataset.itemId

@@ -1,0 +1,101 @@
+<.page
+  id="users-collection"
+  class="space-y-4"
+  data-dashboard-layout="compact"
+>
+  <:title>{@page_title}</:title>
+
+  <:actions :let={position} :if={can?(@permissions, @current_path, :create)}>
+    <.action_button
+      navigate={~p"/dashboard/admin/users/create"}
+      id={if position == :top, do: "new-user", else: "new-user-bottom"}
+      action={:create}
+    />
+  </:actions>
+
+  <.cinder_collection
+    id={@collection_id}
+    query={@query}
+    actor={@current_user}
+    query_opts={[authorize?: true]}
+    layout={:grid}
+    container_class="identity-grid"
+    class="identity-collection"
+    show_sort={false}
+    show_filters={true}
+    url_state={%{filters: @collection_state}}
+    on_state_change={:collection_state_change}
+  >
+    <:controls :let={controls}>
+      <.cinder_controls controls={controls} show_field_filters={false} />
+    </:controls>
+
+    <:col
+      :for={{field, label} <- @collection_fields}
+      field={Atom.to_string(field)}
+      label={label}
+      sort
+      filter
+      search
+    />
+
+    <:item :let={user}>
+      <article
+        aria-label={user.email}
+        data-item-id={user.id}
+        class="grid h-full min-w-0 grid-rows-[1fr_auto] gap-3 [overflow-wrap:anywhere]"
+      >
+        <div class="min-w-0 space-y-3">
+          <img
+            :if={user.display_pic_url}
+            src={user.display_pic_url}
+            alt=""
+            width="40"
+            height="40"
+            class="size-10 rounded-full object-cover"
+          />
+          <span
+            :if={!user.display_pic_url}
+            aria-hidden="true"
+            class="grid size-10 place-items-center rounded-full bg-secondary text-sm font-medium text-brand"
+          >
+            {String.upcase(String.slice(user.display_name || to_string(user.email), 0, 1))}
+          </span>
+
+          <div class="space-y-1 text-sm">
+            <h2 :if={user.username} class="font-semibold text-content">
+              <span class="sr-only">Username</span> {user.username}
+            </h2>
+            <p :if={user.display_name} class="text-subcontent">{user.display_name}</p>
+            <p class="text-subcontent">{user.email}</p>
+          </div>
+        </div>
+
+        <div class="identity-actions">
+          <.action_button
+            :if={can?(@permissions, @current_path, :read)}
+            action={:read}
+            navigate={~p"/dashboard/admin/users/#{user.id}/read"}
+          />
+          <.action_button
+            :if={can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/dashboard/admin/users/#{user.id}/update"}
+          />
+          <.action_button
+            :if={can?(@permissions, @current_path, :delete)}
+            action={:delete}
+            phx-click="request_delete"
+            phx-value-id={user.id}
+          />
+        </div>
+      </article>
+    </:item>
+  </.cinder_collection>
+</.page>
+
+<.delete_confirmation
+  :if={@to_delete}
+  label="user"
+  name={@to_delete.display_name || to_string(@to_delete.email)}
+/>

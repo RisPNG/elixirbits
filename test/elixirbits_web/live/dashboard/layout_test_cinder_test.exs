@@ -2,7 +2,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest.CollectionPreview do
   use Phoenix.LiveView, layout: false
 
   alias ElixirbitsWeb.CoreComponents
-  alias ElixirbitsWeb.Dashboard.LayoutTestLive.CinderEntry
+  alias ElixirbitsWeb.Dashboard.DesignStandardsLive.CinderEntry
 
   def mount(_params, session, socket) do
     {:ok,
@@ -190,7 +190,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   end
 
   test "all Cinder layouts default to ten records per page", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
     for layout <- ~w(table list grid) do
@@ -215,7 +215,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   end
 
   test "search resets pagination and clearing it restores all sample pages", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
     for layout <- ~w(table list grid) do
@@ -245,7 +245,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   end
 
   test "native filters and sorting apply to the sample records", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
     render_click(element(view, "#cinder-layout-list"))
 
@@ -268,7 +268,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   end
 
   test "collection controls change page size and hide only the chosen controls", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
     selector = "#layout-test-cinder-collection"
 
@@ -292,7 +292,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   test "core text, search, and select filters retain each other when changed or cleared", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
     selector = "#layout-test-cinder-collection"
     filter_form = "#layout-test-cinder-component-table-filters"
@@ -346,7 +346,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   end
 
   test "native page-size presets reset the page and display the requested records", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
     selector = "#layout-test-cinder-collection"
     page_size_config = Cinder.PageSize.parse(nil)
@@ -381,7 +381,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   end
 
   test "changing the native page size retains filters and sorting", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
     selector = "#layout-test-cinder-collection"
 
@@ -421,7 +421,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   test "one-page presets can restore multiple pages while retaining filters and sorting", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
     for layout <- ~w(table list grid) do
@@ -459,7 +459,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   test "unconfigured or invalid native page sizes leave the current results unchanged", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
     selector = "#layout-test-cinder-collection"
 
@@ -484,7 +484,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   end
 
   test "grid column controls keep the current page and rows", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
     render_click(element(view, "#cinder-layout-grid"))
     selector = "#layout-test-cinder-collection"
@@ -504,8 +504,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestCinderTest do
   end
 
   test "sample identities remain stable across resource reads" do
-    resource = ElixirbitsWeb.Dashboard.LayoutTestLive.CinderEntry
-    query = Ash.Query.for_read(resource, :read)
+    query = Ash.Query.for_read(ElixirbitsWeb.Dashboard.DesignStandardsLive.CinderEntry, :read)
     first = Ash.read!(query)
     second = Ash.read!(query)
 

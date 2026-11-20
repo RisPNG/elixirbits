@@ -8,9 +8,18 @@ defmodule ElixirbitsWeb.Dashboard.RoleLive.Entry do
   alias ElixirbitsWeb.AuditLogLive.History
   alias ElixirbitsWeb.Dashboard.RoleLive.Deletion
 
+  on_mount {Layouts,
+            {:entry_sections,
+             [
+               {"details", "Details", [:code, :name, :description]},
+               {"permissions", "Permissions", [:permissions, :role_perms]}
+             ]}}
+
   on_mount {ElixirbitsWeb.LiveUserAuth, {:require_page_access, "/dashboard/admin/roles"}}
   on_mount {History, Role}
   on_mount {Deletion, :entry}
+
+  embed_templates "entry_compact.html"
 
   @impl true
   def mount(_params, _session, socket) do
@@ -60,7 +69,10 @@ defmodule ElixirbitsWeb.Dashboard.RoleLive.Entry do
               load: [:role_perms]
             )
 
-          {socket, role} = History.load_revision(socket, role, params)
+          {socket, role} =
+            History.load_revision(socket, role, params,
+              view_path: ~p"/dashboard/admin/roles/#{role.id}/read"
+            )
 
           form =
             AshPhoenix.Form.for_update(role, :update,
@@ -156,7 +168,7 @@ defmodule ElixirbitsWeb.Dashboard.RoleLive.Entry do
          |> push_navigate(to: ~p"/dashboard/admin/roles/#{role.id}/read")}
 
       {:error, form} ->
-        {:noreply, assign(socket, :form, form)}
+        {:noreply, Layouts.show_invalid_entry(socket, form)}
     end
   end
 end

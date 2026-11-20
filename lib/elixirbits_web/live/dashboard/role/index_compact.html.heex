@@ -1,0 +1,83 @@
+<.page id="roles-collection" data-dashboard-layout="compact" class="space-y-4">
+  <:title>{@page_title}</:title>
+
+  <:actions :let={position} :if={can?(@permissions, @current_path, :create)}>
+    <.action_button
+      navigate={~p"/dashboard/admin/roles/create"}
+      id={if position == :top, do: "new-role", else: "new-role-bottom"}
+      action={:create}
+    />
+  </:actions>
+
+  <.cinder_collection
+    id={@collection_id}
+    query={@query}
+    actor={@current_user}
+    query_opts={[authorize?: true]}
+    layout={:grid}
+    container_class="identity-grid"
+    class="identity-collection"
+    show_sort={false}
+    show_filters={true}
+    url_state={%{filters: @collection_state}}
+    on_state_change={:collection_state_change}
+  >
+    <:controls :let={controls}>
+      <.cinder_controls controls={controls} show_field_filters={false} />
+    </:controls>
+
+    <:col
+      :for={{field, label} <- @collection_fields}
+      field={Atom.to_string(field)}
+      label={label}
+      sort
+      filter
+      search
+    />
+
+    <:item :let={role}>
+      <article
+        aria-labelledby={"role-card-name-#{role.id}"}
+        data-item-id={role.id}
+        class="grid h-full min-w-0 grid-rows-[1fr_auto] gap-3 [overflow-wrap:anywhere]"
+      >
+        <div class="space-y-1">
+          <h2 id={"role-card-name-#{role.id}"} class="text-sm font-semibold">{role.name}</h2>
+          <p class="text-xs text-subcontent">{role.code}</p>
+          <p
+            :if={role.description not in [nil, ""]}
+            class="line-clamp-2 text-xs text-subcontent"
+          >
+            {role.description}
+          </p>
+        </div>
+
+        <div class="identity-actions">
+          <.action_button
+            :if={can?(@permissions, @current_path, :read)}
+            action={:read}
+            navigate={~p"/dashboard/admin/roles/#{role.id}/read"}
+          />
+          <.action_button
+            :if={can?(@permissions, @current_path, :update)}
+            action={:update}
+            navigate={~p"/dashboard/admin/roles/#{role.id}/update"}
+          />
+          <.action_button
+            :if={role.code != "superuser" and can?(@permissions, @current_path, :delete)}
+            action={:delete}
+            phx-click="request_delete"
+            phx-value-id={role.id}
+          />
+        </div>
+      </article>
+    </:item>
+  </.cinder_collection>
+</.page>
+
+<.delete_confirmation
+  :if={@to_delete}
+  label="role"
+  name={@to_delete.name}
+  remove_assignments?={@remove_assignments?}
+/>

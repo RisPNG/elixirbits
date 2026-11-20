@@ -42,7 +42,8 @@ const liveSocket = new LiveSocket("/live", Socket, {
   params: () => ({
     _csrf_token: csrfToken,
     user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    nav_open: document.querySelector("[data-navigation]")?.dataset.navigation !== "compact",
+    nav_open: document.querySelector("[data-navigation]")?.dataset.navigation !== "collapsed",
+    compact_layout: (document.querySelector(".dashboard-compact-header")?.getClientRects().length ?? 0) > 0,
   }),
   hooks: {...colocatedHooks, PetalComboBox, FlashAutoDismiss, VCalendar, PopoverPlacement, TelInput, PasswordVisibility, LiveTimer, UploadPdfPreview, FileInput, FilePreview, ColorInput, NumberInput, CinderPagination},
   dom: {onDocumentPatch: initViewMotion()},

@@ -174,6 +174,7 @@ defmodule Elixirbits.CoreUtils.Resource.AuditLog do
     {record, form_relationships} =
       Enum.reduce(definition.relationships, {record, %{}}, fn relationship, {record, forms} ->
         saved_children = Map.get(state.related, relationship.name, %{})
+        baseline_children = Map.get(before_state.related, relationship.name, %{})
         primary_key = Ash.Resource.Info.primary_key(relationship.resource)
 
         positions =
@@ -189,8 +190,7 @@ defmodule Elixirbits.CoreUtils.Resource.AuditLog do
               do: field.record_key
 
         removed_children =
-          before_state.related
-          |> Map.get(relationship.name, %{})
+          baseline_children
           |> Map.take(removed_keys)
           |> Map.reject(fn {_key, values} ->
             Enum.any?(saved_children, fn {_key, saved} ->
@@ -241,6 +241,7 @@ defmodule Elixirbits.CoreUtils.Resource.AuditLog do
               audit_recorded_fields: MapSet.new(Map.keys(values)),
               audit_changed_fields: changed,
               audit_change_side: if(removed?, do: :previous, else: side),
+              audit_added?: not removed? and not Map.has_key?(baseline_children, key),
               audit_removed?: removed?
             })
           end)
@@ -260,8 +261,7 @@ defmodule Elixirbits.CoreUtils.Resource.AuditLog do
                 {Ash.Resource.get_metadata(child, :audit_record_key), child}
               end)
 
-            before_state.related
-            |> Map.get(relationship.name, %{})
+            baseline_children
             |> ordered_relationship_snapshots(relationship)
             |> Enum.with_index()
             |> Enum.reduce(saved_children, fn {{key, _values}, index}, children ->

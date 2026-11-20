@@ -4,7 +4,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLocalControlsTest do
   import Phoenix.LiveViewTest
 
   test "header options configure one preview and its action remains usable", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(view, "#layout-test-header-card summary", "Button style: default")
 
@@ -51,7 +51,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLocalControlsTest do
   end
 
   test "flash configuration reaches the shared renderer", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-flash-kind-warning"))
 
     for option <- ~w(title icon spinner) do
@@ -71,7 +71,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLocalControlsTest do
   end
 
   test "table and list options alter one preview while inspection works", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-core-table tr:first-child button"))
     assert has_element?(view, "#table-selection", "Header")
     render_click(element(view, "#table-option-actions"))
@@ -93,7 +93,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLocalControlsTest do
   end
 
   test "icon and theme options configure a single preview", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#icon-name-tabler-device-floppy"))
     render_click(element(view, "#icon-size-12"))
     render_click(element(view, "#icon-color-success"))
@@ -113,7 +113,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLocalControlsTest do
   end
 
   test "calendar, timer, and dialog options retain their interactions", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(view, "toggle_showcase_option", %{"section" => "calendar", "option" => "events"})
     refute has_element?(view, "#calendar-showcase button[phx-value-event=planning]")
     render_click(view, "toggle_showcase_option", %{"section" => "calendar", "option" => "events"})

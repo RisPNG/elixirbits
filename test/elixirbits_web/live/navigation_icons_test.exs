@@ -202,6 +202,9 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
     assert has_element?(view, "#app-navigation a[href='/reports/details']", "Details")
     refute has_element?(view, "#app-navigation a[href='/reports/details'] .hero-beaker")
     refute has_element?(view, "#app-navigation a[href='/reports/details'] .hero-slash")
+    assert has_element?(view, "#compact-navigation a[href='/reports/details']", "Details")
+    refute has_element?(view, "#compact-navigation a[href='/reports/details'] .hero-beaker")
+    refute has_element?(view, "#compact-navigation a[href='/reports/details'] .hero-slash")
     assert Ash.get!(Sitenav, child.id, actor: @system).icon == "hero-beaker"
   end
 
@@ -223,7 +226,7 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
     assert has_element?(view, "#app-navigation a[aria-label='Home'] .hero-slash")
   end
 
-  test "the compact rail keeps groups visible and sibling disclosures replace one another", %{
+  test "the collapsed rail keeps groups visible and sibling disclosures replace one another", %{
     conn: conn
   } do
     for code <- ~w(TOOLS REPORTS) do
@@ -250,8 +253,28 @@ defmodule ElixirbitsWeb.NavigationIconsTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard")
 
     view |> element("button[aria-controls=app-navigation]") |> render_click()
-    assert has_element?(view, "[data-navigation=compact] button[aria-label=TOOLS]")
-    assert has_element?(view, "[data-navigation=compact] button[aria-label=REPORTS]")
+    assert has_element?(view, "[data-navigation=collapsed] button[aria-label=TOOLS]")
+    assert has_element?(view, "[data-navigation=collapsed] button[aria-label=REPORTS]")
+
+    view
+    |> element("#compact-navigation button[aria-controls=compact-nav-TOOLS]")
+    |> render_click()
+
+    assert has_element?(view, "#compact-nav-TOOLS[data-open=true]:not([inert])")
+    assert has_element?(view, "[data-navigation=collapsed]")
+
+    view
+    |> element("#compact-navigation button[aria-controls=compact-nav-REPORTS]")
+    |> render_click()
+
+    assert has_element?(view, "#compact-nav-TOOLS[data-open=false][inert]")
+    assert has_element?(view, "#compact-nav-REPORTS[data-open=true]:not([inert])")
+
+    view
+    |> element("#compact-navigation button[aria-controls=compact-nav-REPORTS]")
+    |> render_click()
+
+    assert has_element?(view, "#compact-nav-REPORTS[data-open=false][inert]")
 
     view |> element("button[aria-label=TOOLS]") |> render_click()
 

@@ -190,6 +190,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :id, :string, required: true
   attr :label, :string, required: true
   attr :active, :string, required: true
+  attr :type, :atom, default: :segmented, values: [:segmented, :connected]
   attr :class, :any, default: nil
 
   slot :tab, required: true do
@@ -590,6 +591,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   Renders Cinder collection controls with the shared input components.
   """
   attr :controls, :map, required: true
+  attr :show_field_filters, :boolean, default: true
 
   def cinder_controls(assigns) do
     fields = Enum.map(assigns.controls.filters, fn {_name, filter} -> filter end)
@@ -851,16 +853,17 @@ defmodule ElixirbitsWeb.CoreComponents do
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
-    {form_timezone, changed_fields, change_side, removed?} =
+    {form_timezone, changed_fields, change_side, added?, removed?} =
       case field.form.source do
         %AshPhoenix.Form{opts: opts, data: data} ->
           {get_in(opts[:context] || %{}, [:shared, :user_timezone]),
            data && Ash.Resource.get_metadata(data, :audit_changed_fields),
            data && Ash.Resource.get_metadata(data, :audit_change_side),
+           data && Ash.Resource.get_metadata(data, :audit_added?),
            data && Ash.Resource.get_metadata(data, :audit_removed?)}
 
         _ ->
-          {nil, nil, nil, nil}
+          {nil, nil, nil, nil, nil}
       end
 
     rest =
@@ -868,6 +871,7 @@ defmodule ElixirbitsWeb.CoreComponents do
         assigns.rest
         |> Map.put(:"data-audit-changed", "true")
         |> Map.put(:"data-audit-side", to_string(change_side || :previous))
+        |> Map.put(:"data-audit-added", added? && "true")
         |> Map.put(:"data-audit-removed", removed? && "true")
       else
         assigns.rest
@@ -881,9 +885,19 @@ defmodule ElixirbitsWeb.CoreComponents do
         |> Map.put_new(
           :"aria-description",
           cond do
-            removed? -> "Removed value"
-            rest[:"data-audit-side"] == "current" -> "Different from the selected revision"
-            true -> "Changed by this revision"
+            rest[:"data-audit-removed"] in [true, "true"] ->
+              "Removed value"
+
+            rest[:"data-audit-added"] in [true, "true"] ->
+              if rest[:"data-audit-side"] == "current",
+                do: "Added since the selected revision",
+                else: "Added by this revision"
+
+            rest[:"data-audit-side"] == "current" ->
+              "Different from the selected revision"
+
+            true ->
+              "Changed by this revision"
           end
         )
       else
@@ -2458,6 +2472,10 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   attr :active_event, :any, default: nil, doc: "id of the highlighted event"
 
+  attr :compact, :boolean,
+    default: false,
+    doc: "fits calendar controls and views in a narrow content column"
+
   def calendar(assigns) do
     tz = assigns.timezone
     now_local = DateTime.shift_zone!(assigns.now || DateTime.utc_now(), tz)
@@ -2503,6 +2521,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :view, :atom, required: true
   attr :cursor, :any, required: true
   attr :today, :any, required: true
+  attr :compact, :boolean, required: true
 
   defp cal_nav(assigns) do
     period_title =
@@ -2537,16 +2556,18 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :now_col, :any, default: nil
   attr :now_minutes, :any, default: nil
   attr :active, :any, default: nil
+  attr :compact, :boolean, required: true
 
   defp time_body(assigns) do
     ncols = length(assigns.columns)
-    col_w = (@base - @gutter) / max(ncols, 1)
+    width = if assigns.compact, do: @gutter + 140 * ncols, else: @base
+    col_w = (width - @gutter) / max(ncols, 1)
 
     assigns =
       assigns
       |> assign(:ncols, ncols)
       |> assign(:col_w, col_w)
-      |> assign(:width, @base)
+      |> assign(:width, width)
       |> assign(:gutter, @gutter)
       |> assign(:hour, @hour)
       |> assign(:day, @day_minutes)
@@ -2560,6 +2581,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :events, :list, required: true
   attr :cursor, :any, required: true
   attr :today, :any, required: true
+  attr :compact, :boolean, required: true
 
   defp month_body(assigns) do
     assigns = assign(assigns, :days, List.flatten(CalendarUtils.month_grid(assigns.cursor)))
@@ -2570,6 +2592,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :events, :list, required: true
   attr :cursor, :any, required: true
   attr :today, :any, required: true
+  attr :compact, :boolean, required: true
 
   defp year_body(assigns) do
     assigns =
@@ -2593,6 +2616,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :events, :list, required: true
   attr :cursor, :any, required: true
   attr :active, :any, default: nil
+  attr :compact, :boolean, required: true
 
   defp agenda_body(assigns) do
     {from, to} = CalendarUtils.window(:schedule, assigns.cursor)

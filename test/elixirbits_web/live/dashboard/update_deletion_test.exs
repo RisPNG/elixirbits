@@ -41,7 +41,7 @@ defmodule ElixirbitsWeb.Dashboard.UpdateDeletionTest do
     }
   end
 
-  test "update pages place View before Save and Delete at both ends", %{conn: conn} do
+  test "update pages place View and History before Save and Delete at both ends", %{conn: conn} do
     target = create_user(display_name: "Existing account")
     role = Ash.create!(Role, %{code: "existing", name: "Existing role"}, actor: @system)
     manager = grant(conn, %{"USERS" => 15, "ROLES" => 15})
@@ -64,7 +64,7 @@ defmodule ElixirbitsWeb.Dashboard.UpdateDeletionTest do
             label
           end)
 
-        assert labels == ["Back", "View", "Save", "Delete"]
+        assert labels == ["Back", "View", "History", "Save", "Delete"]
 
         assert has_element?(
                  view,

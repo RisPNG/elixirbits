@@ -1,0 +1,279 @@
+<% editable? =
+  @live_action == :update and can?(@permissions, @current_path, @form.source.type) %>
+<History.history audit={@audit} user_timezone={@user_timezone} entry_sections={@entry_sections} />
+<.form
+  for={@form}
+  id="organization-form"
+  data-dashboard-layout="compact"
+  phx-change={if editable?, do: "validate"}
+  phx-submit={if editable?, do: "save"}
+  class="space-y-6 record-entry-compact"
+>
+  <.page>
+    <:title>{@page_title}</:title>
+
+    <:actions :if={
+      @live_action == :update or can?(@permissions, @current_path, @form.source.type)
+    }>
+      <div class="grid grid-cols-[max-content] grid-flow-col auto-cols-max items-center gap-2">
+        <.action_button
+          :if={@live_action == :update}
+          action={:read}
+          navigate={~p"/dashboard/admin/organization"}
+        />
+        <.action_button
+          :if={@audit.available?}
+          action={:history}
+          patch={@audit.history_path}
+        />
+        <.action_button
+          :if={@live_action == :read and can?(@permissions, @current_path, @form.source.type)}
+          action={:update}
+          navigate={~p"/dashboard/admin/organization/update"}
+        />
+        <.action_button
+          :if={editable?}
+          action={:save}
+          type="submit"
+          tooltip="Save settings"
+        />
+      </div>
+    </:actions>
+
+    <% render_as = if editable?, do: "enabled", else: "disabled" %>
+
+    <div
+      :if={@form[:name].value not in [nil, ""]}
+      class="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-center gap-3 border-b border-outline pb-4"
+    >
+      <span
+        class="inset-surface grid size-12 place-items-center rounded-default"
+        aria-hidden="true"
+      >
+        <.icon name="hero-building-office" class="size-6 text-subcontent" />
+      </span>
+      <p class="min-w-0 font-semibold text-content [overflow-wrap:anywhere]">
+        {@form[:name].value}
+      </p>
+    </div>
+
+    <div>
+      <.tabs
+        id="organization-entry-sections"
+        type={:connected}
+        label="Organization sections"
+        active={@entry_section}
+      >
+        <:tab
+          :for={{id, label, _fields} <- @entry_sections}
+          value={id}
+          controls={"organization-entry-#{id}"}
+          click={JS.push("entry_section", value: %{section: id})}
+        >
+          {label}
+        </:tab>
+      </.tabs>
+
+      <div class="tabs-connected-panel">
+        <section
+          :for={{id, _label, _fields} <- @entry_sections}
+          id={"organization-entry-#{id}"}
+          role="tabpanel"
+          aria-labelledby={"organization-entry-sections-#{id}"}
+          hidden={@entry_section != id}
+          class="min-w-0 p-4"
+        >
+          <div class="grid min-w-0 gap-4">
+            <%= case id do %>
+              <% "details" -> %>
+                <.input field={@form[:name]} type="text" label="Name" render_as={render_as} />
+                <.input
+                  field={@form[:registration_no]}
+                  type="text"
+                  label="Registration number"
+                  render_as={render_as}
+                />
+                <.input
+                  field={@form[:tax_identification_no]}
+                  type="text"
+                  label="Tax identification number"
+                  render_as={render_as}
+                />
+              <% "regional" -> %>
+                <.input
+                  field={@form[:base_currency]}
+                  type="combobox"
+                  label="Base currency"
+                  options={@currency_options}
+                  clear_button={false}
+                  required
+                  render_as={render_as}
+                />
+                <div class="grid grid-cols-[minmax(0,2fr)_minmax(0,4fr)] subgap-2">
+                  <.input
+                    field={@form[:locale]}
+                    type="combobox"
+                    label="Locale"
+                    options={@locale_options}
+                    clear_button={false}
+                    required
+                    render_as={render_as}
+                  />
+                  <.input
+                    field={@form[:timezone]}
+                    type="combobox"
+                    label="Timezone"
+                    options={@timezone_options}
+                    clear_button={false}
+                    required
+                    render_as={render_as}
+                  />
+                </div>
+              <% "contact" -> %>
+                <.input field={@form[:email]} type="email" label="Email" render_as={render_as} />
+                <.input field={@form[:phone]} type="tel" label="Phone" render_as={render_as} />
+              <% "addresses" -> %>
+                <.button
+                  :if={editable? and can?(@permissions, @current_path, :create)}
+                  type="button"
+                  phx-click="add_form"
+                  phx-value-field="addresses"
+                  variant={:neutral}
+                  class="justify-self-start"
+                >
+                  <.icon name="hero-plus-micro" class="size-4" /> Add address
+                </.button>
+
+                <p
+                  :if={@form.source.forms[:addresses] in [nil, []]}
+                  class="text-sm text-subcontent"
+                >
+                  No addresses.
+                </p>
+
+                <div id={@form[:addresses].id} class="grid min-w-0 gap-4">
+                  <.inputs_for :let={af} field={@form[:addresses]}>
+                    <% recorded_fields =
+                      af.source.data &&
+                        Ash.Resource.get_metadata(af.source.data, :audit_recorded_fields)
+
+                    position =
+                      cond do
+                        editable? ->
+                          af.index + 1
+
+                        Ash.Resource.get_metadata(af.source.data, :audit_removed?) ->
+                          nil
+
+                        recorded_fields && not MapSet.member?(recorded_fields, "sequence") ->
+                          Ash.Resource.get_metadata(af.source.data, :audit_position) + 1
+
+                        true ->
+                          af[:sequence].value
+                      end %>
+                    <.entry_panel id={"#{af.id}-panel"} label="Address" index={af.index}>
+                      <:sequence>
+                        <.input
+                          field={af[:sequence]}
+                          name={"address_position[#{af.index}]"}
+                          type={if editable?, do: "number", else: "text"}
+                          render_as={if editable?, do: "text", else: "text-disabled"}
+                          value={position || "nil"}
+                          min={1}
+                          max={length(@form.source.forms[:addresses] || [])}
+                          step={1}
+                          clear_button={false}
+                          disabled={!editable?}
+                          aria-label={"Address #{position || "nil"} sequence"}
+                          phx-debounce={nil}
+                          class="min-w-0 w-full appearance-none border-0 bg-transparent p-0 py-1 text-left text-sm font-semibold text-content focus:outline-none focus:ring-0 focus-visible:underline disabled:text-subcontent disabled:cursor-not-allowed"
+                        />
+                      </:sequence>
+                      <:actions>
+                        <.action_button
+                          :if={
+                            editable? and
+                              (af.source.type == :create or
+                                 can?(@permissions, @current_path, :delete))
+                          }
+                          action={:delete}
+                          type="button"
+                          phx-click="remove_form"
+                          phx-value-path={af.name}
+                          tooltip="Remove address"
+                        />
+                      </:actions>
+
+                      <div class="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] subgap-2">
+                        <.input
+                          id={"#{af.id}_label_select"}
+                          field={af[:label]}
+                          type="combobox"
+                          label="Label"
+                          options={@label_options}
+                          prompt="None"
+                          render_as={render_as}
+                        />
+                        <.input
+                          field={af[:other_label]}
+                          type="text"
+                          label="Nickname"
+                          render_as={render_as}
+                        />
+                      </div>
+                      <.input
+                        field={af[:contact_name]}
+                        type="text"
+                        label="Contact name"
+                        render_as={render_as}
+                      />
+                      <.input
+                        field={af[:contact_tel_no]}
+                        type="text"
+                        label="Contact"
+                        render_as={render_as}
+                      />
+                      <.input
+                        field={af[:line_1]}
+                        type="text"
+                        label="Line 1"
+                        render_as={render_as}
+                      />
+                      <.input
+                        field={af[:line_2]}
+                        type="text"
+                        label="Line 2"
+                        render_as={render_as}
+                      />
+                      <.input
+                        field={af[:line_3]}
+                        type="text"
+                        label="Line 3"
+                        render_as={render_as}
+                      />
+                      <div class="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] subgap-2">
+                        <.input
+                          field={af[:postal_code]}
+                          type="text"
+                          label="Postal code"
+                          render_as={render_as}
+                        />
+                        <.input field={af[:city]} type="text" label="City" render_as={render_as} />
+                      </div>
+                      <.input field={af[:state]} type="text" label="State" render_as={render_as} />
+                      <.input
+                        field={af[:country]}
+                        type="text"
+                        label="Country"
+                        render_as={render_as}
+                      />
+                    </.entry_panel>
+                  </.inputs_for>
+                </div>
+            <% end %>
+          </div>
+        </section>
+      </div>
+    </div>
+  </.page>
+</.form>

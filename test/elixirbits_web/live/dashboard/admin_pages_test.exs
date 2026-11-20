@@ -231,6 +231,64 @@ defmodule ElixirbitsWeb.Dashboard.AdminPagesTest do
     assert Enum.find(role.role_perms, &(&1.sitenav_code == "ROLES")).level == 12
   end
 
+  test "compact role entries retain grant drafts across tabs and viewport changes", %{conn: conn} do
+    conn = conn |> grant(%{"ROLES" => 16}) |> put_connect_params(%{"compact_layout" => true})
+    {:ok, create, _} = live(conn, ~p"/dashboard/admin/roles/create")
+
+    assert has_element?(create, "#role-form[data-dashboard-layout=compact]")
+    assert has_element?(create, "#role-entry-sections [role=tab][aria-selected=true]", "Details")
+    assert has_element?(create, "#role-entry-details:not([hidden])")
+    assert has_element?(create, "#role-entry-permissions[hidden] #permission-level-USERS-trigger")
+
+    create
+    |> form("#role-form", form: %{code: "compact-viewer", name: "Compact viewer"})
+    |> render_change()
+
+    create |> element("#role-entry-sections-permissions") |> render_click()
+    create |> form("#role-form", page_levels: %{"USERS" => "4"}) |> render_change()
+
+    render_click(create, "dashboard_layout", %{"compact" => false})
+    assert has_element?(create, "#role-form[data-dashboard-layout=expanded]")
+    refute has_element?(create, "#role-entry-sections")
+    assert has_element?(create, "#permission-level-USERS-select option[selected][value='4']")
+
+    render_click(create, "dashboard_layout", %{"compact" => true})
+    assert has_element?(create, "#role-entry-sections-permissions[aria-selected=true]")
+    assert has_element?(create, "#role-entry-permissions:not([hidden])")
+    assert has_element?(create, "#role-entry-details[hidden] input[value='Compact viewer']")
+
+    create_result = create |> form("#role-form") |> render_submit()
+    role = Ash.get!(Role, %{code: "compact-viewer"}, actor: %{system: true})
+    view_path = ~p"/dashboard/admin/roles/#{role.id}/read"
+    {:ok, view, _} = follow_redirect(create_result, conn, view_path)
+
+    assert has_element?(view, "#role-entry-details fieldset[disabled]")
+    refute has_element?(view, "#role-form button[type=submit]")
+    view |> element("#role-entry-sections-permissions") |> render_click()
+
+    assert has_element?(
+             view,
+             "#role-entry-permissions input#permission-level-USERS[disabled][value=Read]"
+           )
+
+    edit_path = ~p"/dashboard/admin/roles/#{role.id}/update"
+    edit_result = view |> element("#role-form header a[href='#{edit_path}']") |> render_click()
+    {:ok, edit, _} = follow_redirect(edit_result, conn, edit_path)
+    assert has_element?(edit, "#role-entry-details:not([hidden]) input[name=role_code][disabled]")
+    edit |> element("#role-entry-sections-permissions") |> render_click()
+    edit |> form("#role-form", page_levels: %{"USERS" => "5"}) |> render_change()
+
+    {:ok, view, _} =
+      edit |> form("#role-form") |> render_submit() |> follow_redirect(conn, view_path)
+
+    view |> element("#role-entry-sections-permissions") |> render_click()
+
+    assert has_element?(
+             view,
+             "#role-entry-permissions input#permission-level-USERS[disabled][value='Read + Update']"
+           )
+  end
+
   test "permission comboboxes retain all choices and save an explicit zero grant", %{
     conn: conn
   } do
@@ -539,8 +597,8 @@ defmodule ElixirbitsWeb.Dashboard.AdminPagesTest do
     assert has_element?(view, "nav a[href='/dashboard/admin/users']")
     refute has_element?(view, "nav a[href='/dashboard/admin/roles']")
     render_click(view, "toggle_nav")
-    assert has_element?(view, "[data-navigation=compact] nav a[href='/dashboard/admin/users']")
-    refute has_element?(view, "[data-navigation=compact] nav a[href='/dashboard/admin/roles']")
+    assert has_element?(view, "[data-navigation=collapsed] nav a[href='/dashboard/admin/users']")
+    refute has_element?(view, "[data-navigation=collapsed] nav a[href='/dashboard/admin/roles']")
     render_click(view, "toggle_nav")
     assert has_element?(view, "[data-navigation=expanded] nav a[href='/dashboard/admin/users']")
   end

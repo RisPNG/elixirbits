@@ -85,11 +85,11 @@ Ash.create!(
   },
   %{
     code: "LT",
-    name: "Layout Test",
+    name: "Design Standards",
     description: "Showcases most, if not all, front-end components.",
     level: 2,
     parent: "DP",
-    url: "dashboard/dev_panel/layout_test",
+    url: "dashboard/dev_panel/design_standards",
     sequence: 3000,
     state: :ENABLED,
     roles_bypass: ["public"],

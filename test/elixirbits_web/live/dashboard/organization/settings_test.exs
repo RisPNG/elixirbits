@@ -28,6 +28,46 @@ defmodule ElixirbitsWeb.Dashboard.OrganizationLive.SettingsTest do
     log_in_user(conn, actor)
   end
 
+  test "compact settings keep address drafts and reveal the section that needs correction", %{
+    conn: conn
+  } do
+    conn =
+      conn
+      |> log_in_user(create_user(roles: ["superuser"]))
+      |> put_connect_params(%{"compact_layout" => true})
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/admin/organization/update")
+    assert has_element?(view, "#organization-form[data-dashboard-layout=compact]")
+    assert has_element?(view, "#organization-entry-details:not([hidden])")
+
+    view |> element("#organization-entry-sections [data-tab-value=addresses]") |> render_click()
+    view |> element("#organization-entry-addresses button[phx-click=add_form]") |> render_click()
+
+    view
+    |> form("#organization-form",
+      form: %{name: "", addresses: %{"0" => %{line_1: "Branch office"}}}
+    )
+    |> render_submit()
+
+    assert has_element?(view, "#organization-entry-details:not([hidden])")
+
+    assert has_element?(
+             view,
+             "#organization-entry-addresses[hidden] input[value='Branch office']"
+           )
+
+    result =
+      view
+      |> form("#organization-form", form: %{name: "Branch company"})
+      |> render_submit()
+
+    {:ok, view, _html} = follow_redirect(result, conn, ~p"/dashboard/admin/organization")
+    assert has_element?(view, "#organization-entry-details span#form_name", "Branch company")
+
+    view |> element("#organization-entry-sections [data-tab-value=addresses]") |> render_click()
+    assert has_element?(view, "#organization-entry-addresses:not([hidden]) span", "Branch office")
+  end
+
   test "an authorized operator creates settings and updates their nested address", %{conn: conn} do
     actor = create_user(roles: ["superuser"])
     conn = log_in_user(conn, actor)

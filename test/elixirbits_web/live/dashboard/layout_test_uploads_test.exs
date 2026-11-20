@@ -9,7 +9,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   @pdf "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF"
 
   test "one upload input starts with a single selection and a saved image preview", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(
              view,
@@ -50,7 +50,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   end
 
   test "editor constraints require preview and reset when previews are turned off", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for {choice, editor} <- [
           {"false", false},
@@ -108,7 +108,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "multiple selection resets editing and enables it again after returning to single", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-editor-exact"))
     render_click(element(view, "#upload-selection-multiple"))
 
@@ -139,7 +139,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   end
 
   test "multiple files without previews count the saved and pending pills", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-selection-multiple"))
     render_click(element(view, "#showcase-uploads-preview"))
     assert has_element?(view, "#layout-test-upload-input [data-file-name]", "1 selected")
@@ -161,7 +161,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "singles selection accepts one file at a time and keeps editing and cycling available", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-selection-singles"))
     render_click(element(view, "#upload-editor-true"))
 
@@ -208,7 +208,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "a saved image edit replaces its URL while cancellation retains every saved file", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     image =
       file_input(view, "#layout-test-upload-form", :demo_files, [
@@ -290,7 +290,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "re-editing the first pending file retains its order when the queue is saved", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-selection-singles"))
 
     image =
@@ -355,7 +355,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "single without preview shows its filename in the picker and preserves pending media", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#showcase-uploads-preview"))
     assert has_element?(view, "#layout-test-upload-input [data-file-name]", "logo.svg")
     assert Floki.find(preview_document(view), "[data-file-collection][hidden]") != []
@@ -420,7 +420,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "singles filename mode retains saved names, positions, and parked native PDF viewers", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     image =
       file_input(view, "#layout-test-upload-form", :demo_files, [
@@ -491,7 +491,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   end
 
   test "cancelling a single replacement restores its mounted saved preview", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     upload =
       file_input(view, "#layout-test-upload-form", :demo_files, [
@@ -518,7 +518,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "saving a single image then PDF replaces saved media and retains its caption", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     image =
       file_input(view, "#layout-test-upload-form", :demo_files, [
@@ -558,7 +558,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "multiple files append saved image, PDF, and text data with removable captions", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-selection-multiple"))
     refute has_element?(view, "#layout-test-upload-preview")
     refute has_element?(view, "#layout-test-upload-input template[data-phx-portal]")
@@ -631,7 +631,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   end
 
   test "the same queue accepts GIF, WebP, and text files and saves their bytes", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for {name, type, bytes} <- [
           {"animation.gif", "image/gif",
@@ -660,7 +660,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   end
 
   test "pending files lock selection changes until the queue is cancelled or saved", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     upload =
       file_input(view, "#layout-test-upload-form", :demo_files, [
@@ -728,7 +728,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   end
 
   test "selection changes retain saved files and single renders only the first", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     image =
       file_input(view, "#layout-test-upload-form", :demo_files, [
@@ -763,7 +763,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "cancelling one entry retains other selections and read-only mode preserves previews", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-selection-multiple"))
 
     upload =
@@ -798,7 +798,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   end
 
   test "one upload input exposes every render mode for each selection mode", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     modes =
       ElixirbitsWeb.CoreComponents.__components__().input.attrs
@@ -836,7 +836,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   test "hidden-disabled preserves incomplete image and PDF uploads until they finish", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-selection-multiple"))
     image = @image <> :binary.copy(<<0>>, 100 - byte_size(@image))
     pdf = @pdf <> :binary.copy("\n", 100 - byte_size(@pdf))
@@ -900,7 +900,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.UploadsTest do
   end
 
   test "upload states, preview toggles, and layouts preserve pending files", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#upload-selection-multiple"))
 
     upload =
