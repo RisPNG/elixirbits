@@ -4,9 +4,12 @@ defmodule ElixirbitsWeb.Layouts do
   """
   use ElixirbitsWeb, :html
 
-  # root.html.heex contains the shared HTML document. index.html.heex and dashboard.html.heex define the page shells.
+  import Phoenix.LiveView, only: [attach_hook: 4, get_connect_params: 1]
+
+  # root.html.heex contains the shared HTML document. The other templates define the page shells and dashboard navigation.
   embed_templates "layouts/{root,index}.html"
   embed_templates "layouts/dashboard.html", suffix: "_template"
+  embed_templates "layouts/dashboard_compact.html", suffix: "_template"
 
   @no_nav %{
     items: [],
@@ -16,6 +19,24 @@ defmodule ElixirbitsWeb.Layouts do
     active_codes: [],
     open_codes: []
   }
+
+  def on_mount(:dashboard_layout, _params, _session, socket) do
+    socket =
+      socket
+      |> assign(:compact_layout?, (get_connect_params(socket) || %{})["compact_layout"] == true)
+      |> attach_hook(:dashboard_layout, :handle_event, fn
+        "dashboard_layout", %{"compact" => compact}, socket when is_boolean(compact) ->
+          {:halt, assign(socket, :compact_layout?, compact)}
+
+        "dashboard_layout", _params, socket ->
+          {:halt, socket}
+
+        _event, _params, socket ->
+          {:cont, socket}
+      end)
+
+    {:cont, socket}
+  end
 
   @doc """
   Renders the dashboard layout.
@@ -60,6 +81,24 @@ defmodule ElixirbitsWeb.Layouts do
 
   defp nav_branch(assigns) do
     dashboard_template(assign(assigns, :component, :nav_branch))
+  end
+
+  attr :nav, :map, required: true
+  attr :by_parent, :map, required: true
+
+  defp dashboard_compact(assigns) do
+    dashboard_compact_template(assign(assigns, :component, :dashboard))
+  end
+
+  attr :entries, :list, required: true
+  attr :by_parent, :map, required: true
+  attr :open_codes, :list, required: true
+  attr :active_codes, :list, required: true
+  attr :current_path, :string, required: true
+  attr :depth, :integer, required: true
+
+  defp dashboard_compact_nav(assigns) do
+    dashboard_compact_template(assign(assigns, :component, :nav_branch))
   end
 
   @doc """

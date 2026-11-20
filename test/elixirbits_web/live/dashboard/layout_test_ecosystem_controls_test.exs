@@ -4,7 +4,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.EcosystemControlsTest do
   import Phoenix.LiveViewTest
 
   test "core combobox preserves single and multiple dependency selections", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(
              view,
@@ -47,7 +47,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.EcosystemControlsTest do
   end
 
   test "core combobox display and disabled controls keep the selected preview", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(
              view,
@@ -94,7 +94,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.EcosystemControlsTest do
   end
 
   test "UI kit controls update one preview for each primitive", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
     for kind <- ~w(info success warning error) do
@@ -123,7 +123,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.EcosystemControlsTest do
   end
 
   test "dependency page selection keeps every route reachable from one preview", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-ecosystem-tab"))
 
     pages = [

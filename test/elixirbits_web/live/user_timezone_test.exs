@@ -16,8 +16,18 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
     assert has_element?(view, "main", "America/New_York")
     view |> element("button[phx-click=toggle_nav]") |> render_click()
     assert has_element?(view, "[data-user-timezone='America/New_York']")
+
+    render_click(view, "dashboard_layout", %{"compact" => true})
+
+    assert has_element?(
+             view,
+             "#dashboard-home[data-dashboard-layout=compact]",
+             "America/New_York"
+           )
+
     refute has_element?(view, "#user-timezone-form")
     refute has_element?(view, "#account-menu")
+    refute has_element?(view, "#compact-timezone-form")
   end
 
   test "missing or invalid browser timezones use UTC", %{conn: conn} do
@@ -29,7 +39,7 @@ defmodule ElixirbitsWeb.UserTimezoneTest do
 
   test "the component showcase receives the shared browser timezone", %{conn: conn} do
     conn = put_connect_params(conn, %{"user_timezone" => "Asia/Singapore"})
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     assert has_element?(view, "[data-user-timezone='Asia/Singapore']")
     assert has_element?(view, "#app-navigation")
   end

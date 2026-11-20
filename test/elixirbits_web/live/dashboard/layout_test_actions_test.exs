@@ -4,7 +4,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.ActionsTest do
   import Phoenix.LiveViewTest
 
   test "entry panels add, select, edit, save, and restore the saved state", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(view, "#record-entry-panels.grid")
     assert has_element?(view, "#record-entry-2")
@@ -54,7 +54,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.ActionsTest do
   end
 
   test "record actions change the selected entry and support an empty collection", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#record-option-count-4"))
     render_click(element(view, "#record-read-2"))
     render_click(element(view, "#record-option-selected-send"))
@@ -86,7 +86,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.ActionsTest do
   end
 
   test "one action preview exposes every action and its state controls", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for action <- ~w(create read history update save send archive delete back) do
       render_click(element(view, "#record-option-selected-#{action}"))
@@ -125,7 +125,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.ActionsTest do
   test "entry count and render controls retain edits and keep any selected entry visible", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(view, "#record-select-4")
     refute has_element?(view, "#record-entry-4")
@@ -154,7 +154,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive.ActionsTest do
   end
 
   test "calendar views and periods swipe left when moving forward", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(view, "#calendar-showcase-view-month[aria-selected=true]")
 

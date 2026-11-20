@@ -190,6 +190,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :id, :string, required: true
   attr :label, :string, required: true
   attr :active, :string, required: true
+  attr :type, :atom, default: :segmented, values: [:segmented, :connected]
   attr :class, :any, default: nil
 
   slot :tab, required: true do
@@ -589,6 +590,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   Renders Cinder collection controls with the shared input components.
   """
   attr :controls, :map, required: true
+  attr :show_field_filters, :boolean, default: true
 
   def cinder_controls(assigns) do
     fields = Enum.map(assigns.controls.filters, fn {_name, filter} -> filter end)
@@ -2457,6 +2459,10 @@ defmodule ElixirbitsWeb.CoreComponents do
 
   attr :active_event, :any, default: nil, doc: "id of the highlighted event"
 
+  attr :compact, :boolean,
+    default: false,
+    doc: "fits calendar controls and views in a narrow content column"
+
   def calendar(assigns) do
     tz = assigns.timezone
     now_local = DateTime.shift_zone!(assigns.now || DateTime.utc_now(), tz)
@@ -2502,6 +2508,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :view, :atom, required: true
   attr :cursor, :any, required: true
   attr :today, :any, required: true
+  attr :compact, :boolean, required: true
 
   defp cal_nav(assigns) do
     period_title =
@@ -2536,16 +2543,18 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :now_col, :any, default: nil
   attr :now_minutes, :any, default: nil
   attr :active, :any, default: nil
+  attr :compact, :boolean, required: true
 
   defp time_body(assigns) do
     ncols = length(assigns.columns)
-    col_w = (@base - @gutter) / max(ncols, 1)
+    width = if assigns.compact, do: @gutter + 140 * ncols, else: @base
+    col_w = (width - @gutter) / max(ncols, 1)
 
     assigns =
       assigns
       |> assign(:ncols, ncols)
       |> assign(:col_w, col_w)
-      |> assign(:width, @base)
+      |> assign(:width, width)
       |> assign(:gutter, @gutter)
       |> assign(:hour, @hour)
       |> assign(:day, @day_minutes)
@@ -2559,6 +2568,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :events, :list, required: true
   attr :cursor, :any, required: true
   attr :today, :any, required: true
+  attr :compact, :boolean, required: true
 
   defp month_body(assigns) do
     assigns = assign(assigns, :days, List.flatten(CalendarUtils.month_grid(assigns.cursor)))
@@ -2569,6 +2579,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :events, :list, required: true
   attr :cursor, :any, required: true
   attr :today, :any, required: true
+  attr :compact, :boolean, required: true
 
   defp year_body(assigns) do
     assigns =
@@ -2592,6 +2603,7 @@ defmodule ElixirbitsWeb.CoreComponents do
   attr :events, :list, required: true
   attr :cursor, :any, required: true
   attr :active, :any, default: nil
+  attr :compact, :boolean, required: true
 
   defp agenda_body(assigns) do
     {from, to} = CalendarUtils.window(:schedule, assigns.cursor)

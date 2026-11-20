@@ -1,0 +1,44 @@
+<div id="dashboard-home" class="space-y-6" data-dashboard-layout="compact">
+  <.header level={1}>{@page_title}</.header>
+
+  <nav
+    :if={@launcher_groups != []}
+    id="dashboard-home-launcher"
+    aria-label="Workspace shortcuts"
+    class="space-y-6"
+  >
+    <section
+      :for={group <- @launcher_groups}
+      id={group.id}
+      aria-labelledby={"#{group.id}-title"}
+      class="space-y-3"
+    >
+      <h2 id={"#{group.id}-title"} class="text-lg font-medium text-content">{group.name}</h2>
+
+      <ul class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+        <li :for={item <- group.shortcuts} class="min-w-0">
+          <.link
+            navigate={"/" <> item.url}
+            class="grid h-full min-h-20 min-w-0 content-start justify-items-start gap-2 rounded-default panel-surface p-3 text-sm font-medium text-content shadow-card transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            <span
+              aria-hidden="true"
+              class="grid size-8 place-items-center rounded-default inset-surface"
+            >
+              <.icon
+                name={Map.get(@shortcut_icons, item.url, "hero-arrow-top-right-on-square")}
+                class="size-5"
+              />
+            </span>
+            <span class="min-w-0 [overflow-wrap:anywhere]">{item.name}</span>
+          </.link>
+        </li>
+      </ul>
+    </section>
+  </nav>
+
+  <.card>
+    <.header>Timezone</.header>
+    <p class="break-words text-sm text-content">{@user_timezone}</p>
+  </.card>
+</div>

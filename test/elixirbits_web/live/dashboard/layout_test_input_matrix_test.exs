@@ -5,10 +5,37 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
   alias ElixirbitsWeb.CoreComponents
 
+  test "compact Inputs and Dates cover every core input type", %{conn: conn} do
+    conn = put_connect_params(conn, %{"compact_layout" => true})
+    {:ok, view, html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
+    document = Floki.parse_document!(html)
+
+    types =
+      Enum.find(CoreComponents.__components__().input.attrs, &(&1.name == :type)).opts[:values]
+
+    specimens =
+      Floki.attribute(
+        document,
+        "#layout-test-compact [data-input-type][data-input-mode]",
+        "data-input-type"
+      )
+
+    assert Enum.sort(specimens) == Enum.sort(["radio-card" | types])
+
+    view |> element("#layout-test-compact-local-tabs-dates") |> render_click()
+
+    for field <- ~w(week month) do
+      assert has_element?(
+               view,
+               "#layout-test-compact-dates:not([hidden]) #local_launch_#{field}[phx-hook=VCalendar]"
+             )
+    end
+  end
+
   test "native file specimens keep preview and editing off for single and multiple selections", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     selector = "#layout-test-input-example-file [phx-hook=FileInput]"
     assert has_element?(view, "#{selector}[data-file-preview=false][data-file-editor=false]")
@@ -30,7 +57,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   test "supported types and the radio card specimen expose their selection controls", %{
     conn: conn
   } do
-    {:ok, _view, html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, _view, html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     document = Floki.parse_document!(html)
     attributes = CoreComponents.__components__().input.attrs
     types = Enum.find(attributes, &(&1.name == :type)).opts[:values]
@@ -83,7 +110,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
   test "changing display modes keeps the same specimens and applies their submission semantics",
        %{conn: conn} do
-    {:ok, view, html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     specimen_ids =
       Floki.attribute(Floki.parse_document!(html), "[data-input-mode][data-input-type]", "id")
@@ -137,7 +164,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   end
 
   test "radio cards select and submit independently of the normal radio group", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(
              view,
@@ -167,7 +194,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   test "like-enabled specimens retain each input's visible controls without submitting fields", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
     render_click(element(view, "#layout-test-input-render-like-enabled"))
 
     assert has_element?(view, "#layout-test-input-example-password [data-password-display]")
@@ -223,7 +250,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   end
 
   test "like-enabled radio groups retain all choices and the selected state", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     view
     |> form("#layout-test-form", local: %{compute_plan: "8-core", contact_method: "phone"})
@@ -258,7 +285,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   test "like-enabled multiple choices and textarea sizing follow the enabled specimens", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for control <- ~w(select combobox) do
       render_click(element(view, "#layout-test-input-#{control}-mode-multiple"))
@@ -397,7 +424,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   end
 
   test "radio cards share required, error, empty, and disabled showcase states", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for state <- ~w(required errors) do
       render_click(element(view, "#layout-test-input-state-#{state}"))
@@ -420,7 +447,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
   test "disabled fieldsets preserve native control attributes and remain independent of direct disabled state",
        %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     view
     |> form("#layout-test-form", local: %{project_name: "Preserved draft"})
@@ -479,7 +506,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   end
 
   test "checkbox and switch variants and checked states change the actual controls", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for variant <- ~w(default alt) do
       render_click(element(view, "#layout-test-input-variant-#{variant}"))
@@ -512,7 +539,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   end
 
   test "label, placeholder, required, and error states combine on the same example", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for state <- ~w(unlabeled placeholder required errors) do
       render_click(element(view, "#layout-test-input-state-#{state}"))
@@ -533,7 +560,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
   test "text boolean modes preserve native changes and submission while read-only sentences follow their state",
        %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for mode <- ~w(text text-enabled) do
       render_click(element(view, "#layout-test-input-render-#{mode}"))
@@ -598,7 +625,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   end
 
   test "checked choices follow edited values and update empty specimens", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     render_change(view, "local_change", %{
       "local" => %{"enabled" => "false", "switch" => "false"}
@@ -632,7 +659,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
   test "attribute controls combine native constraints, presentation, and type-specific options",
        %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for state <-
           ~w(readonly tooltip constraints datalist multiple capture custom_class custom_error_class prompt textarea_size errors) do
@@ -678,7 +705,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   end
 
   test "empty values remain editable and restore the earlier populated fields", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     render_click(element(view, "#layout-test-input-state-empty"))
     render_click(element(view, "#layout-test-input-state-disabled"))
@@ -709,7 +736,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   test "select and combobox selection modes preserve their values independently", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     assert has_element?(
              view,
@@ -820,7 +847,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
 
   test "disabled forms handle omitted fields on change and submission without losing retained values",
        %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     render_change(view, "local_change", %{
       "local" => %{"project_name" => "Kuching", "email" => "new@example.com"}
@@ -849,7 +876,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   test "empty multiple selection markers clear merged values on change and submission", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for control <- ~w(select combobox) do
       render_click(element(view, "#layout-test-input-#{control}-mode-multiple"))
@@ -888,7 +915,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   test "omitted multiple choices retain values when their controls cannot be edited", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     for control <- ~w(select combobox) do
       render_click(element(view, "#layout-test-input-#{control}-mode-multiple"))
@@ -914,7 +941,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestInputMatrixTest do
   end
 
   test "submission shows validation errors after earlier unused field metadata", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/layout_test")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/dev_panel/design_standards")
 
     render_change(view, "local_change", %{
       "local" => %{

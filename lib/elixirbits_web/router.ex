@@ -36,10 +36,10 @@ defmodule ElixirbitsWeb.Router do
 
     live_session :dashboard_routes,
       on_mount: [{ElixirbitsWeb.LiveNavigation, :app_nav}] do
-      live "/", DashboardLive, :index
+      live "/", DashboardLive.Index, :index
 
       scope "/dev_panel", Dashboard do
-        live "/layout_test", LayoutTestLive, :index
+        live "/design_standards", DesignStandardsLive.Index, :index
       end
     end
   end

@@ -1,9 +1,71 @@
-defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
+defmodule ElixirbitsWeb.Dashboard.DesignStandardsLive.Index do
   use ElixirbitsWeb, :live_view
 
   alias ElixirbitsWeb.CoreComponents.Calendar, as: CalendarUtils
   alias Elixirbits.CoreUtils.Parse
   alias Elixirbits.CoreUtils.Parse.Color
+  alias ElixirbitsWeb.Dashboard.DesignStandardsLive.CinderEntry
+
+  on_mount {Layouts, :dashboard_layout}
+
+  embed_templates "index_compact.html"
+
+  @compact_components [
+    {"local",
+     [
+       {"inputs", "Inputs"},
+       {"dates", "Dates"},
+       {"uploads", "Uploads"},
+       {"actions", "Actions"},
+       {"appearance", "Appearance"},
+       {"calendar", "Calendar"},
+       {"icons", "Icons"},
+       {"controls", "Controls"},
+       {"data", "Data"}
+     ]},
+    {"ecosystem", [{"lists", "Lists"}, {"ui-kit", "UI kit"}, {"pages", "Pages"}]}
+  ]
+
+  @role_options [{"Administrator", "admin"}, {"Designer", "designer"}, {"Viewer", "viewer"}]
+
+  @appearance_colors [
+    {"primary", "bg-primary"},
+    {"secondary", "bg-secondary"},
+    {"content", "bg-content"},
+    {"subcontent", "bg-subcontent"},
+    {"brand", "bg-brand"},
+    {"info", "bg-info"},
+    {"success", "bg-success"},
+    {"warning", "bg-warning"},
+    {"error", "bg-error"},
+    {"outline", "bg-transparent"},
+    {"dark", "bg-transparent overlay-dark"},
+    {"light", "bg-transparent overlay-light"}
+  ]
+
+  @appearance_opacities [
+    {10, "overlay-opacity"},
+    {25, "overlay-opacity-[0.25]"},
+    {50, "overlay-opacity-[0.5]"},
+    {100, "overlay-opacity-[1]"}
+  ]
+
+  @appearance_overlays [
+    {"dark", "Dark overlay", "overlay-dark", "text-content-inverse dark:text-content",
+     [
+       {10, "overlay-dark"},
+       {25, "overlay-dark-[0.25]"},
+       {50, "overlay-dark-[0.5]"},
+       {100, "overlay-dark-[1]"}
+     ]},
+    {"light", "Light overlay", "overlay-light", "text-content-inverse dark:text-content",
+     [
+       {10, "overlay-light"},
+       {25, "overlay-light-[0.25]"},
+       {50, "overlay-light-[0.5]"},
+       {100, "overlay-light-[1]"}
+     ]}
+  ]
 
   @dependency_pages [
     %{
@@ -38,7 +100,45 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
                         &(&1.name == :render_as)
                       ).opts[:values]
 
+  @input_examples [
+    {:project_name, "text", "Text"},
+    {:email, "email", "Email"},
+    {:password, "password", "Password"},
+    {:budget, "number", "Number"},
+    {:launch_date, "date", "Date"},
+    {:launch_time, "time", "Time"},
+    {:launch_week, "week", "Week"},
+    {:launch_month, "month", "Month"},
+    {:launch_at, "datetime-local", "Datetime"},
+    {:accent, "color", "Color"},
+    {:search, "search", "Search"},
+    {:website, "url", "URL"},
+    {:phone, "tel", "Telephone"},
+    {:native_role, "select", "Select"},
+    {:role, "combobox", "Combobox"},
+    {:notes, "textarea", "Textarea"},
+    {:enabled, "checkbox", "Checkbox"},
+    {:switch, "switch", "Switch"},
+    {:upload, "file", "File"},
+    {:contact_method, "radio", "Radio"},
+    {:compute_plan, "radio-card", "Radio card"},
+    {:hidden_token, "hidden", "Hidden"}
+  ]
+
   @upload_options [accept: ~w(.png .jpg .jpeg .gif .webp .pdf .txt), max_file_size: 1_000_000]
+
+  @table_examples [
+    %{section: "Header", scope: "Page framing", status: "Ready"},
+    %{section: "Inputs", scope: "Form states", status: "Ready"},
+    %{section: "Dependencies", scope: "Combobox + pages", status: "Ready"}
+  ]
+
+  @list_examples [
+    {"Surface", "Local core components"},
+    {"Theme", "Shared dark and light tokens"},
+    {"Flash", "Global toast stack"},
+    {"Tabs", "Single LiveView state"}
+  ]
 
   @showcase_defaults %{
     "header" => %{
@@ -203,6 +303,12 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
        }
      ])
      |> assign(:current_tab, "local")
+     |> assign(:role_options, @role_options)
+     |> assign(:compact_components, @compact_components)
+     |> assign(
+       :compact_component_tabs,
+       Map.new(@compact_components, fn {group, [{first, _label} | _]} -> {group, first} end)
+     )
      |> assign(:dependency_form, to_form(%{}, as: :dependency))
      |> assign(:dependency_pages, @dependency_pages)
      |> assign(:dependency_options, @dependency_options)
@@ -237,6 +343,7 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
        )
      )
      |> assign(:input_render_modes, @input_render_modes)
+     |> assign(:input_examples, @input_examples)
      |> assign(:input_populated_values, %{})
      |> assign(:input_config, %{
        "render_as" => "enabled",
@@ -245,9 +352,14 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
        "combobox_mode" => "single"
      })
      |> assign(:showcase, @showcase_defaults)
+     |> assign(:appearance_colors, @appearance_colors)
+     |> assign(:appearance_opacities, @appearance_opacities)
+     |> assign(:appearance_overlays, @appearance_overlays)
      |> assign(:cinder_preview_state, %{})
      |> assign(:selected_dependencies, [])
      |> assign(:table_selection, nil)
+     |> assign(:table_examples, @table_examples)
+     |> assign(:list_examples, @list_examples)
      |> assign(:input_states, %{
        "empty" => false,
        "unlabeled" => false,
@@ -267,8 +379,8 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
        "prompt" => false,
        "textarea_size" => false
      })
-     |> assign(:page_title, "Layout Test")
-     |> assign(:showcase_query, Ash.Query.sort(__MODULE__.CinderEntry, sequence: :asc))}
+     |> assign(:page_title, "Design Standards")
+     |> assign(:showcase_query, Ash.Query.sort(CinderEntry, sequence: :asc))}
   end
 
   @impl true
@@ -722,21 +834,37 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
 
   @impl true
   def handle_event("change_tab", %{"tab" => tab}, socket) when tab in ~w(local ecosystem) do
-    if tab == socket.assigns.current_tab do
-      {:noreply, socket}
-    else
-      {:noreply,
-       socket
-       |> assign(:current_tab, tab)
-       |> push_event(
-         "swipe",
-         %{id: "dashboard-page", direction: if(tab == "ecosystem", do: "left", else: "right")},
-         dispatch: :before
-       )}
+    cond do
+      tab == socket.assigns.current_tab ->
+        {:noreply, socket}
+
+      socket.assigns.compact_layout? ->
+        {:noreply, assign(socket, :current_tab, tab)}
+
+      true ->
+        {:noreply,
+         socket
+         |> assign(:current_tab, tab)
+         |> push_event(
+           "swipe",
+           %{id: "dashboard-page", direction: if(tab == "ecosystem", do: "left", else: "right")},
+           dispatch: :before
+         )}
     end
   end
 
   def handle_event("change_tab", _params, socket), do: {:noreply, socket}
+
+  def handle_event("change_component_tab", %{"tab" => tab}, socket) do
+    group = socket.assigns.current_tab
+    {^group, components} = List.keyfind(@compact_components, group, 0)
+
+    if List.keymember?(components, tab, 0) do
+      {:noreply, update(socket, :compact_component_tabs, &Map.put(&1, group, tab))}
+    else
+      {:noreply, socket}
+    end
+  end
 
   def handle_event("show_flash", %{"kind" => kind}, socket) when kind in ~w(info error warning) do
     {:noreply,
@@ -886,5 +1014,78 @@ defmodule ElixirbitsWeb.Dashboard.LayoutTestLive do
        :cinder_preview_state,
        Map.new(state, fn {key, value} -> {to_string(key), value} end)
      )}
+  end
+end
+
+defmodule ElixirbitsWeb.Dashboard.DesignStandardsLive.CinderEntry do
+  use Ash.Resource, data_layer: :embedded
+
+  actions do
+    defaults []
+
+    read :read do
+      primary? true
+
+      pagination do
+        offset? true
+        countable true
+        required? false
+      end
+
+      manual fn query, _data_layer_query, _context ->
+        sections = [
+          "Core inputs",
+          "Live uploads",
+          "Record actions",
+          "Calendar",
+          "Timers",
+          "Cinder collection",
+          "Cinder table",
+          "Cinder grid",
+          "Combobox",
+          "Buttons",
+          "Tables",
+          "Dialogs"
+        ]
+
+        entries =
+          Enum.map(1..120, fn sequence ->
+            number = sequence |> Integer.to_string() |> String.pad_leading(3, "0")
+            suffix = sequence |> Integer.to_string(16) |> String.pad_leading(12, "0")
+            section = Enum.at(sections, rem(sequence - 1, length(sections)))
+
+            struct!(query.resource,
+              id: "01a0f4c2-c400-7000-8000-#{suffix}",
+              code: "EX#{number}",
+              name: "#{section} example #{number}",
+              description: "Sample #{section} record for pagination, filtering, and sorting.",
+              level: rem(sequence - 1, 3) + 1,
+              url: "/dashboard/dev_panel/design_standards?example=#{number}",
+              sequence: sequence,
+              state: if(rem(sequence, 4) == 0, do: :DISABLED, else: :ENABLED),
+              inserted_at: ~U[2026-10-01 00:00:00Z],
+              updated_at: ~U[2026-10-01 00:00:00Z]
+            )
+          end)
+
+        with {:ok, matches} <-
+               query |> Ash.Query.unset([:limit, :offset, :page]) |> Ash.Query.apply_to(entries),
+             {:ok, page} <- Ash.Query.apply_to(query, entries) do
+          {:ok, page, %{full_count: length(matches)}}
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_v7_primary_key :id
+    attribute :code, :string, allow_nil?: false, public?: true
+    attribute :name, :string, allow_nil?: false, public?: true
+    attribute :description, :string, public?: true
+    attribute :level, :integer, public?: true
+    attribute :url, :string, public?: true
+    attribute :sequence, :integer, public?: true
+    attribute :state, Elixirbits.CoreUtils.Options.SitenavState, public?: true
+    timestamps()
   end
 end

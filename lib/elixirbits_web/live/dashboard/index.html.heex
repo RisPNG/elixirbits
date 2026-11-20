@@ -1,0 +1,43 @@
+<Layouts.dashboard user_timezone={@user_timezone} flash={@flash} nav={@nav}>
+  <%= if @compact_layout? do %>
+    <.index_compact {assigns} />
+  <% else %>
+    <div id="dashboard-home" class="space-y-6" data-dashboard-layout="expanded">
+      <.header level={1}>
+        Elixirbits
+      </.header>
+
+      <section class="grid grid-cols-[3fr_1fr] items-start gap-6">
+        <div class="min-w-0 space-y-5">
+          <.header>
+            Workspace sections
+          </.header>
+
+          <div class="grid grid-cols-[1fr_1fr] gap-4">
+            <.link
+              :for={item <- @nav.items}
+              :if={item.url not in [nil, "dashboard"]}
+              navigate={"/" <> item.url}
+              class="grid grid-cols-[2.75rem_minmax(0,1fr)_1.25rem] items-center gap-3 rounded-default panel-surface shadow-card p-5 text-content transition-colors hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+            >
+              <span class="grid size-11 place-items-center rounded-default inset-surface">
+                <.icon
+                  name={Map.get(@shortcut_icons, item.url, "hero-arrow-top-right-on-square")}
+                  class="size-5"
+                />
+              </span>
+
+              <span class="min-w-0 font-medium">{item.name}</span>
+              <.icon name="hero-arrow-up-right-micro" class="size-4 text-subcontent" />
+            </.link>
+          </div>
+        </div>
+
+        <.card class="min-w-0">
+          <.header>Timezone</.header>
+          <p class="break-words text-sm text-content">{@user_timezone}</p>
+        </.card>
+      </section>
+    </div>
+  <% end %>
+</Layouts.dashboard>

@@ -1,0 +1,233 @@
+<%= case @component do %>
+  <% :dashboard -> %>
+    <header
+      data-page-chrome="header"
+      class="dashboard-compact-header shell-surface sticky top-0 z-30 grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-2 px-3"
+    >
+      <button
+        type="button"
+        commandfor="compact-navigation"
+        command="show-modal"
+        phx-click={if @nav.items != [], do: JS.push("toggle_nav", value: %{layout: "compact"})}
+        aria-label="Open navigation and settings"
+        aria-haspopup="dialog"
+        data-page-chrome="menu"
+        class="grid size-11 cursor-pointer place-items-center rounded-default text-subcontent hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+      >
+        <.icon name="hero-bars-3" class="size-6" />
+      </button>
+
+      <.link
+        navigate={~p"/dashboard"}
+        data-page-chrome="brand"
+        class="grid w-fit max-w-full grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2"
+      >
+        <img src={~p"/images/logo.svg"} width="28" height="28" alt="" />
+        <span class="truncate text-sm font-semibold">
+          Elixirbits
+        </span>
+      </.link>
+
+      <dialog
+        id="compact-navigation"
+        aria-labelledby="compact-navigation-title"
+        phx-hook=".CompactNavigation"
+        phx-mounted={JS.ignore_attributes("open")}
+        class="dashboard-compact-navigation shell-surface text-content"
+      >
+        <div class="shell-surface sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-2 border-b border-outline px-4 py-2">
+          <h2 id="compact-navigation-title" class="text-base font-semibold">Menu</h2>
+          <button
+            type="button"
+            commandfor="compact-navigation"
+            command="close"
+            aria-label="Close menu"
+            autofocus
+            class="grid size-11 cursor-pointer place-items-center rounded-default text-subcontent hover:overlay-dark focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            <.icon name="hero-x-mark" class="size-6" />
+          </button>
+        </div>
+
+        <div class="mx-auto max-w-[36rem] space-y-6 px-4 py-4">
+          <nav :if={@nav.items != []} aria-label="Application navigation">
+            <.dashboard_compact_nav
+              entries={Map.get(@by_parent, nil, [])}
+              by_parent={@by_parent}
+              open_codes={@nav.open_codes}
+              current_path={@nav.path}
+              active_codes={@nav.active_codes}
+              depth={0}
+            />
+          </nav>
+
+          <fieldset>
+            <legend class="mb-2 text-sm font-semibold">Appearance</legend>
+            <.tabs
+              id="compact-appearance-tabs"
+              label="Appearance"
+              active="system"
+              class="theme-toggle w-full"
+            >
+              <:tab
+                value="system"
+                click={JS.dispatch("phx:set-theme", detail: %{theme: "system"})}
+              >
+                System
+              </:tab>
+              <:tab value="light" click={JS.dispatch("phx:set-theme", detail: %{theme: "light"})}>
+                Light
+              </:tab>
+              <:tab value="dark" click={JS.dispatch("phx:set-theme", detail: %{theme: "dark"})}>
+                Dark
+              </:tab>
+            </.tabs>
+          </fieldset>
+        </div>
+      </dialog>
+    </header>
+
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".CompactNavigation">
+      export default {
+        mounted() {
+          const header = this.el.closest("header")
+          this.events = new AbortController()
+          const options = {signal: this.events.signal}
+
+          if (!("commandForElement" in HTMLButtonElement.prototype)) {
+            header.addEventListener("click", event => {
+              const button = event.target.closest('button[commandfor="compact-navigation"]')
+              if (button?.getAttribute("command") === "show-modal") this.el.showModal()
+              if (button?.getAttribute("command") === "close") this.el.close()
+            }, options)
+          }
+
+          this.el.addEventListener("click", event => {
+            if (event.target.closest("a[href]") && event.button === 0 &&
+                !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+              this.el.close()
+            }
+          }, options)
+
+          this.headerObserver = new ResizeObserver(([entry]) => {
+            const compact = entry.contentRect.width > 0
+            const content = document.querySelector("[data-dashboard-layout]")
+            if (content && (this.compactLayout ?? (content.dataset.dashboardLayout === "compact")) !== compact) {
+              this.pushEvent("dashboard_layout", {compact})
+            }
+            this.compactLayout = compact
+
+            if (!compact) this.el.close()
+          })
+          this.headerObserver.observe(header)
+
+          const root = document.documentElement
+          this.syncTheme = () => {
+            const theme = root.dataset.theme || "system"
+            const tablist = this.el.querySelector("#compact-appearance-tabs")
+            for (const [index, tab] of Array.from(tablist.querySelectorAll("[role=tab]")).entries()) {
+              const active = tab.dataset.tabValue === theme
+              tab.setAttribute("aria-selected", String(active))
+              tab.tabIndex = active ? 0 : -1
+              if (active) tablist.style.setProperty("--tab-index", index)
+            }
+          }
+          this.themeObserver = new MutationObserver(this.syncTheme)
+          this.themeObserver.observe(root, {attributeFilter: ["data-theme"]})
+          this.syncTheme()
+        },
+
+        updated() {
+          this.syncTheme()
+        },
+
+        destroyed() {
+          this.events.abort()
+          this.headerObserver.disconnect()
+          this.themeObserver.disconnect()
+        },
+      }
+    </script>
+  <% :nav_branch -> %>
+    <ul class="grid gap-1">
+      <li :for={entry <- @entries}>
+        <% children = Map.get(@by_parent, entry.code, [])
+        open? = children != [] && entry.code in @open_codes
+        active? = entry.code in @active_codes
+        group? = is_nil(entry.url) || children != []
+        icon = if @depth == 0, do: entry.icon
+        row_class = ["nav-row", icon && "nav-row-root"]
+        controls = "compact-nav-#{entry.code}"
+        toggle = JS.push("toggle_nav_section", value: %{code: entry.code, layout: "compact"}) %>
+
+        <div class={[
+          "rounded-default",
+          group? && "nav-group",
+          group? && (open? || active?) && "nav-group-highlight"
+        ]}>
+          <%= if entry.url do %>
+            <div class={children != [] && "nav-row-with-toggle grid items-center"}>
+              <.link
+                navigate={"/" <> entry.url}
+                aria-current={
+                  if active?,
+                    do: if(@current_path == "/" <> entry.url, do: "page", else: "location")
+                }
+                class={[row_class, active? && "nav-row-current"]}
+              >
+                <.icon :if={icon} name={icon} class="size-5" />
+                <span class="min-w-0 [overflow-wrap:anywhere]">{entry.name}</span>
+              </.link>
+              <button
+                :if={children != []}
+                type="button"
+                phx-click={toggle}
+                aria-label={"Toggle #{entry.name}"}
+                aria-expanded={to_string(open?)}
+                aria-controls={controls}
+                class="nav-row-toggle grid size-11 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-brand"
+              >
+                <.icon name="hero-chevron-down-micro" class="nav-chevron size-4" />
+              </button>
+            </div>
+          <% else %>
+            <button
+              type="button"
+              phx-click={toggle}
+              aria-expanded={if children != [], do: to_string(open?)}
+              aria-controls={if children != [], do: controls}
+              disabled={children == []}
+              class={[row_class, children != [] && "nav-row-disclosure"]}
+            >
+              <.icon :if={icon} name={icon} class="size-5" />
+              <span class="min-w-0 [overflow-wrap:anywhere]">{entry.name}</span>
+              <.icon
+                :if={children != []}
+                name="hero-chevron-down-micro"
+                class="nav-chevron size-4"
+              />
+            </button>
+          <% end %>
+
+          <div
+            :if={children != []}
+            id={controls}
+            class="nav-disclosure"
+            data-open={to_string(open?)}
+            inert={!open?}
+          >
+            <div class="nav-disclosure-clip">
+              <.dashboard_compact_nav
+                entries={children}
+                by_parent={@by_parent}
+                current_path={@current_path}
+                active_codes={@active_codes}
+                open_codes={@open_codes}
+                depth={@depth + 1}
+              />
+            </div>
+          </div>
+        </div>
+      </li>
+    </ul>
+<% end %>
